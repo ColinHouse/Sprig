@@ -53,8 +53,8 @@ EOF
 cat > "$PKG/INSTALL.md" <<'EOF'
 # Install and run
 
-Requires JDK 26 or newer on PATH for this alpha. It has been run on OpenJDK
-26.0.1; Java 17 runtime validation is pending.
+Requires JDK 17 or newer on PATH. It has been run end-to-end on OpenJDK
+17.0.19 and 26.0.1.
 
 1. Extract this archive.
 2. Run `bin/sprig version`.

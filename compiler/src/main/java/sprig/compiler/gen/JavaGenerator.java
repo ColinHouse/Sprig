@@ -777,36 +777,53 @@ public final class JavaGenerator {
         w.map(match.span);
         String temp = freshTemp("m");
         w.line(javaType(match.scrutinee.type) + " " + temp + " = " + emitExpr(match.scrutinee) + ";");
+        // When the scrutinee's static type is already the concrete variant case,
+        // javac rejects a redundant `instanceof Case binder` pattern on older
+        // JDKs. The checker guarantees exactly one reachable branch here, so
+        // bind the scrutinee directly instead.
+        boolean concreteScrutinee = match.scrutinee.type instanceof VariantCaseType
+                && match.matchedType instanceof VariantCaseType;
+        boolean unconditional = false;
         boolean first = true;
         for (Stmt.Match.Branch branch : match.branches) {
             String condition;
             if (match.matchedType instanceof EnumType enumType) {
                 condition = temp + " == " + typeNames.get(enumType.decl) + "." + branch.caseName;
+            } else if (concreteScrutinee) {
+                condition = null;
+                unconditional = true;
             } else {
                 condition = temp + " instanceof " + javaType(branch.binderType);
             }
-            if (branch.binderSymbol != null) {
+            if (condition != null && branch.binderSymbol != null) {
                 condition += " " + localName(branch.binderSymbol);
             }
             w.map(branch.caseTypeRef.span);
             if (first) {
-                w.line("if (" + condition + ") {");
+                w.line(condition == null ? "{" : "if (" + condition + ") {");
             } else {
                 w.dedent();
-                w.line("} else if (" + condition + ") {");
+                w.line(condition == null ? "} else {" : "} else if (" + condition + ") {");
             }
             w.indent();
+            if (condition == null && branch.binderSymbol != null) {
+                w.line(javaType(branch.binderType) + " " + localName(branch.binderSymbol) + " = " + temp + ";");
+            }
             for (Stmt child : branch.body) {
                 emitStmt(w, child);
             }
             first = false;
         }
         w.dedent();
-        w.line("} else {");
-        w.indent();
-        w.line("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\");");
-        w.dedent();
-        w.line("}");
+        if (unconditional) {
+            w.line("}");
+        } else {
+            w.line("} else {");
+            w.indent();
+            w.line("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\");");
+            w.dedent();
+            w.line("}");
+        }
     }
 
     // ------------------------------------------------------------------

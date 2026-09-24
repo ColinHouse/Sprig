@@ -25,11 +25,11 @@ the JVM. The language design remains Sprig v0.7.
 
 ## Runtime and build requirements
 
-The source is compiled with `javac --release 17`; the only runtime exercised so
-far is OpenJDK 26.0.1 on macOS Apple Silicon, and hosted CI covers Linux. The
-documented runtime requirement is JDK 26 or newer until a Java 17 runtime run
-is observed. The source archive contains the compiler/runtime, ANTLR 4.13.2
-and its license notices; it does not contain a JDK.
+The source is compiled with `javac --release 17` and verified end-to-end on
+OpenJDK 17.0.19 and 26.0.1 (macOS Apple Silicon); hosted CI covers Linux for
+both JDKs. The supported runtime is JDK 17 or newer. The source archive
+contains the compiler/runtime, ANTLR 4.13.2 and its license notices; it does
+not contain a JDK.
 
 ## Known limits
 

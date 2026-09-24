@@ -17,13 +17,13 @@ to be readable by people and predictable for coding agents.
 [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fcolinhouse.github.io%2FSprig%2F&label=docs)](https://colinhouse.github.io/Sprig/)
 [![License](https://img.shields.io/github/license/ColinHouse/Sprig)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/ColinHouse/Sprig?include_prereleases&label=release)](https://github.com/ColinHouse/Sprig/releases)
-[![JDK](https://img.shields.io/badge/JDK-26%2B-blue)](https://adoptium.net/)
+[![JDK](https://img.shields.io/badge/JDK-17%2B-blue)](https://adoptium.net/)
 
 > **Current version `v0.1.0-alpha.1` — an alpha.** The compiler parses,
 > checks, emits Java and runs on the JVM, but it is **not self-hosted** and has
 > no package manager, language server or standard-library distribution yet.
-> `javac --release 17` builds the classes; only JDK 26 has been exercised at
-> runtime. See [release status](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md)
+> It builds with `javac --release 17` and has been run end-to-end on JDK 17
+> and 26. See [release status](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md)
 > and [known limitations](docs/KNOWN_LIMITATIONS.md).
 
 ## What Sprig is
@@ -53,7 +53,7 @@ The compiler is the current stage; the v0.7 language design kit lives in
 
 ## Quick start
 
-Requirements: **JDK 26 or newer** (the only runtime tested so far), Python
+Requirements: **JDK 17 or newer** (tested on 17.0.19 and 26.0.1), Python
 3.12+ for the test scripts, and `curl` for the first build.
 
 ```bash
@@ -147,8 +147,8 @@ does not compile itself. User-defined generics, inheritance, `match`
 expressions, arrays, varargs, full Java generic/annotation interop, file IO, a
 package manager, a language server and stage-1 self-hosting are **not
 implemented**. Runtime numeric errors do not always carry an exact source
-span. Only macOS Apple Silicon with OpenJDK 26 has been exercised locally;
-hosted CI covers Linux. See
+span. Local verification covers macOS Apple Silicon with OpenJDK 17.0.19 and
+26.0.1; hosted CI covers Linux. See
 [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 
 ## Contributing
@@ -182,7 +182,7 @@ Sprig 是一门缩进式、静态类型的 JVM 语言，核心特性包括：sea
 stage-0 编译器实现：解析 `.spr` → 类型检查 → 生成 Java → `javac` → JVM
 运行；**尚未自举**，也没有包管理器、LSP、IDE 插件或标准库发行版。
 
-构建与运行（需要 JDK 26 或更新版本）：
+构建与运行（需要 JDK 17 或更新版本）：
 
 ```bash
 git clone https://github.com/ColinHouse/Sprig.git

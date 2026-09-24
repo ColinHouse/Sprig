@@ -10,8 +10,8 @@ issues instead of guessing.
 
 ## Local setup
 
-Requirements: JDK 26 or newer (the tested runtime), Python 3.12 or newer, and
-`curl` for the first ANTLR download. From the repository root:
+Requirements: JDK 17 or newer (tested on 17.0.19 and 26.0.1), Python 3.12 or
+newer, and `curl` for the first ANTLR download. From the repository root:
 
 ```bash
 ./scripts/build.sh

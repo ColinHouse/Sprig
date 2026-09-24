@@ -6,14 +6,14 @@
 
 ## What is verified
 
-- Built and tested from source on macOS Apple Silicon with OpenJDK 26.0.1 and
-  Python 3.14.6; hosted CI runs the same suite on Linux.
+- Built and tested from source on macOS Apple Silicon with OpenJDK 26.0.1,
+  OpenJDK 17.0.19 and Python 3.14.6; hosted CI runs the same suite on Linux
+  for JDK 17 and 26.
 - `scripts/build.sh`, `scripts/test.sh` and the grammar smoke harness pass on
-  that environment, and the documented snippets are executed by
+  those environments, and the documented snippets are executed by
   `tools/verify-doc-snippets.py`.
 - The compiler source is compiled with `javac --release 17` (classfile version
-  61), but a Java 17 **runtime** run has not been observed. The documented
-  runtime requirement is JDK 26 or newer.
+  61) and runs on JDK 17 or newer.
 - Tests, diagnostics and documentation examples are run from the working tree;
   the numbers quoted in the README and this site come from those runs.
 

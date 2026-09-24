@@ -7,8 +7,13 @@
 > workflow and a tag-driven prerelease workflow were added, and the site now
 > defaults to the `/Sprig/` base path. The original license/repository/asset
 > blockers below are therefore resolved or explicitly owned by the project
-> owner; the remaining technical caveats (Java 17 runtime not observed,
-> documented limitations) still apply.
+> owner. In addition, the first hosted CI run exposed a real portability bug:
+> an inferred-case `match` emitted a redundant `instanceof` pattern that
+> javac 17 rejects. `JavaGenerator.emitMatch` now binds the scrutinee directly
+> when its static type is already the concrete case, and the full 100-check
+> suite passes under both JDK 17.0.19 and JDK 26.0.1 locally. The documented
+> criteria in sections 8 and 10 below are superseded by this update where they
+> mention Java 17 as unverified.
 
 **Round date:** 2026-09-25
 **Scope:** repository organization, documentation site, README/contribution
@@ -159,7 +164,8 @@ digest.
 | Command | Result |
 |---|---|
 | `./scripts/build.sh` (clean clone) | Passed; ANTLR downloaded and checksum-verified |
-| `./scripts/test.sh` (clean clone) | **100 passed, 0 failed** |
+| `./scripts/test.sh` (clean clone, JDK 26.0.1) | **100 passed, 0 failed** |
+| `./scripts/build.sh` + `./scripts/test.sh` (JDK 17.0.19) | **100 passed, 0 failed** after the `emitMatch` portability fix |
 | `./tools/test-grammar.sh` | **21/21 passed** |
 | `./scripts/check-docs.sh` | **17/17 documented snippets/examples passed; VitePress production build passed** |
 | F1 incomplete expression (`check --json`) | `SPR-SYNTAX-ERROR`, exit 1 (no internal error) |
@@ -190,9 +196,10 @@ checking (semantics/correctness/recovery), `javac` success and JVM behavior
   note; it does not fail the build and needs a focused generic-varargs audit.
 - Uncaught runtime numeric errors carry the source file but not a precise
   arithmetic-expression span.
-- Java 17 runtime execution is unverified (source is compiled with
-  `--release 17`); the documented requirement is JDK 26 or newer.
-- CI and the Pages workflow are configured but have never run on GitHub.
+- Java 17 runtime execution is now verified locally (100/100); hosted CI for
+  JDK 17 and 26 is running on the publication branch.
+- The first hosted CI run failed on JDK 17 because of the `instanceof` codegen
+  bug; it is fixed and covered by existing acceptance/review fixtures.
 - Full Java generics/annotations, arrays/varargs, `short`/`byte` adapters,
   standard library, package manager, LSP and stage-1 self-hosting remain
   unimplemented. These are documented, not hidden.
