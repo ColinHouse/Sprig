@@ -1,120 +1,97 @@
-# Language Tour
+# 语言导览
 
-This tour covers the language as the stage-0 compiler actually implements it.
-Every snippet on this page is a real file under `website/snippets/` in the
-repository and is executed by `tools/verify-doc-snippets.py` during
-documentation checks.
+本页介绍当前 stage-0 编译器实际实现的 Sprig。页面中的每一段示例都是
+`website/snippets/` 下的真实文件，由 `tools/verify-doc-snippets.py` 在文档检查时执行。
 
-The normative documents are the
-[language spec (v0.7 design)](/reference/LANGUAGE_SPEC) and the
-[implemented feature status](/reference/FEATURE_STATUS_IMPLEMENTED). Where the
-design kit proposes more than the compiler does, this page follows the
-compiler.
+权威文档是[语言规范（v0.7 设计）](/en/reference/LANGUAGE_SPEC)与
+[已实现功能状态](/en/reference/FEATURE_STATUS_IMPLEMENTED)。当设计稿超出当前实现时，
+本页以编译器实际行为为准。
 
-## Layout and comments
+## 布局与注释
 
-Blocks are indentation-based. The first code line starts at column 1, one
-indent level is any consistent number of spaces, and tabs are rejected with
-`SPR-LEX-TAB`. Newlines inside `()`, `[]` and `{}` are ignored, so calls and
-literals may span lines. `#` starts a comment.
+代码块由缩进决定。第一个代码行必须从第 1 列开始，同一个块内缩进必须一致，
+制表符会被拒绝（`SPR-LEX-TAB`）。`()`、`[]`、`{}` 内的换行会被忽略，因此调用和
+字面量可以跨行书写。`#` 开始注释。
 
-## Bindings
+## 绑定
 
 <<< @/snippets/variables.spr
 
-`let` binds once and cannot be reassigned; `var` can. Local bindings infer
-their type from the initializer, while class fields always need an explicit
-type. There is no implicit truthiness: conditions must be `Bool`.
+`let` 只能绑定一次，`var` 可以重新赋值。局部绑定从初始化表达式推断类型，类字段
+必须显式标注类型。Sprig 没有 truthiness：条件必须是 `Bool`。
 
-## Functions
+## 函数
 
 <<< @/snippets/functions.spr
 
-Every named function and method declares parameter types and a return type,
-including `-> Unit`. Calls use positional arguments. A function that can fail
-adds `throws ErrorType` (see [errors](#errors) below).
+所有具名函数和方法都要声明参数类型与返回类型，包括 `-> Unit`。调用使用位置参数。
+可能失败的操作通过 `throws ErrorType` 声明（见下文「错误」）。
 
-## Classes
+## 类
 
 <<< @/snippets/classes.spr
 
-A class declares `let` (immutable) and `var` (mutable) fields with optional
-defaults. Construction is always named: `Hero(name="Ada", health=80)`.
-Missing, unknown or duplicate fields are compile errors. Methods access the
-current instance's fields without a prefix; parameters and locals may not
-shadow a field.
+类用 `let`（不可变）和 `var`（可变）声明字段，字段可以有默认值。构造必须使用具名
+参数：`Hero(name="Ada", health=80)`；缺失、未知或重复的字段都是编译错误。方法内直接
+访问当前实例的字段，参数和局部变量不允许遮蔽字段。
 
-## Enums, variants and match
+## enum、variant 与 match
 
 <<< @/snippets/variants.spr
 
-`enum` cases carry no payload. `variant` declares a sealed sum type whose
-cases have immutable named fields. `match` is a **statement**: each case names
-one enum or variant case, optionally binding the payload with `as node`.
-Missing, duplicate, wrong-type and unreachable branches are compile errors;
-there is no `default` or wildcard, and no fallthrough. Because the match is
-exhaustive by construction, adding a case to a variant forces every visitor to
-handle it — the property the compiler itself relies on in
-`tests/visitor/ast_visitor.spr`, a multi-visitor AST interpreter written in
-Sprig and run by the test suite.
+`enum` 的 case 不携带负载。`variant` 声明封闭的 sum type，case 的字段具名且不可变。
+`match` 是**语句**：每个分支写一个 enum 或 variant case，可以用 `as node` 绑定负载。
+缺失、重复、类型错误和不可达的分支都会报错；没有 `default` 或通配分支，也没有
+fallthrough。穷尽性由编译器保证，因此给 variant 增加 case 时，所有漏掉它的 visitor
+都会编译失败——仓库里的 AST visitor 实验正依赖这一点。
 
-## Collections
+## 集合
 
 <<< @/snippets/collections.spr
 
-`List[T]` and `Map[K,V]` are read-only; `MutableList[T]` and `MutableMap[K,V]`
-are mutable. `toMutableList()`, `toList()`, `toMutableMap()` and `toMap()`
-produce new outer collections. Mutation through an immutable type is rejected
-with `SPR-COLLECTION-IMMUTABLE`. Indexing, `in`, `get`, `set`, `append`,
-`sort` and the higher-order `map`/`filter`/`forEach` methods are implemented.
-Floating-point map keys are rejected because IEEE equality and hashing
-disagree for `NaN` and signed zero.
+`List[T]` 与 `Map[K,V]` 是只读的，`MutableList[T]` 与 `MutableMap[K,V]` 可变。
+`toMutableList()`、`toList()`、`toMutableMap()`、`toMap()` 会生成新的外层集合。
+通过不可变类型修改集合会得到 `SPR-COLLECTION-IMMUTABLE`。索引、`in`、`get`、`set`、
+`append`、`sort` 以及高阶方法 `map`/`filter`/`forEach` 均已实现。浮点数不能作为
+Map 的键，因为 IEEE 相等与哈希在 `NaN` 和有符号零上不一致。
 
-## Nullability
+## 可空性
 
 <<< @/snippets/nullable.spr
 
-`null` is only assignable to `T?`. A value narrows to non-null inside a proven
-`!= null` branch; using a possibly-null value where non-null is required is
-`SPR-TYPE-NULLABLE`. Mutable fields are not narrowed across calls. Java
-reference results are conservatively nullable (see
-[JVM interoperability](/guide/jvm-interop)).
+`null` 只能赋给 `T?`。在确认 `!= null` 的分支内，值会被收窄为非空；把可能为空的值
+用于非空场景会得到 `SPR-TYPE-NULLABLE`。可变字段不会跨调用被收窄。Java 引用结果
+保守地视为可空，见 [JVM 互操作](/guide/jvm-interop)。
 
-## Errors
+## 错误
 
 <<< @/snippets/errors.spr
 
-A function declares the error types it can raise with `throws`. Callers must
-either handle them with `try`/`catch` (plus optional `finally`) or declare the
-same effect; `SPR-FLOW-THROWS` is reported otherwise. `Error` values expose a
-`message` field. Java checked exceptions can be caught as the imported Java
-exception class.
+函数用 `throws` 声明可能抛出的错误类型。调用方必须用 `try`/`catch`（可选 `finally`）
+处理，或者声明同样的效果，否则会得到 `SPR-FLOW-THROWS`。`Error` 提供 `message`
+字段。Java 受检异常可以作为导入的 Java 异常类被捕获。
 
-## Lambdas
+## Lambda
 
 <<< @/snippets/lambdas.spr
 
-Lambdas are expressions: `fn(x: Int) => expression`. Arities 0 through 3 are
-supported, bodies are single expressions, and a lambda cannot declare
-`throws`. A lambda that captures a `var` local is rejected
-(`SPR-TYPE-CAPTURE`); copy it into a `let` binding first.
+Lambda 是表达式：`fn(x: Int) => expression`，支持 0 到 3 个参数，函数体是单个表达式，
+不能声明 `throws`。捕获 `var` 局部变量会被拒绝（`SPR-TYPE-CAPTURE`），请先复制到
+`let` 绑定。
 
-## Modules
+## 模块
 
 <<< @/snippets/modules/main.spr
 
 <<< @/snippets/modules/math_module.spr
 
-`import "./file.spr" as alias` imports another Sprig file. Imports must appear
-before any declaration or statement. The imported module initializes once;
-import cycles are rejected with `SPR-NAME-IMPORT-CYCLE`. Importing Java
-classes uses the same syntax with a qualified class name:
-`import java.time.LocalDate as LocalDate`.
+`import "./file.spr" as alias` 导入另一个 Sprig 文件。import 必须出现在任何声明或
+语句之前；被导入模块只初始化一次；导入环会得到 `SPR-NAME-IMPORT-CYCLE`。导入 Java
+类使用同样的语法，只是换成全限定类名：`import java.time.LocalDate as LocalDate`。
 
-## What is not in the language
+## 尚未实现
 
-User-defined generics, inheritance and interfaces, `match` expressions,
-`%=`, tuples/destructuring, arrays, varargs, string interpolation and function
-types in source are **not implemented**. See
-[Known limitations](/reference/KNOWN_LIMITATIONS) for the full list, and the
-[stage-1 roadmap](/reference/STAGE1_ROADMAP) for what comes next.
+用户自定义泛型、继承与接口、`match` 表达式、`%=`、元组与解构、数组、变长参数、
+字符串插值、源码中的函数类型都**尚未实现**。完整列表见
+[已知限制](/reference/known-limitations)，后续规划见
+[Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。

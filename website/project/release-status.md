@@ -1,42 +1,33 @@
-# Release status
+# 发布状态
 
-**Compiler candidate:** `0.1.0-alpha.1` (language design: Sprig v0.7)
-**Repository:** <https://github.com/ColinHouse/Sprig>
-**License:** Apache-2.0
+**编译器候选版本：** `0.1.0-alpha.1`（语言设计：Sprig v0.7）
+**仓库：** <https://github.com/ColinHouse/Sprig>
+**许可证：** Apache-2.0
 
-## What is verified
+## 已经验证的内容
 
-- Built and tested from source on macOS Apple Silicon with OpenJDK 26.0.1,
-  OpenJDK 17.0.19 and Python 3.14.6; hosted CI runs the same suite on Linux
-  for JDK 17 and 26.
-- `scripts/build.sh`, `scripts/test.sh` and the grammar smoke harness pass on
-  those environments, and the documented snippets are executed by
-  `tools/verify-doc-snippets.py`.
-- The compiler source is compiled with `javac --release 17` (classfile version
-  61) and runs on JDK 17 or newer.
-- Tests, diagnostics and documentation examples are run from the working tree;
-  the numbers quoted in the README and this site come from those runs.
+- 在 macOS Apple Silicon 上使用 OpenJDK 17.0.19、26.0.1 与 Python 3.14.6 从源码
+  构建并测试通过；托管 CI 在 Linux 上以 JDK 17 和 26 运行同一套测试。
+- `scripts/build.sh`、`scripts/test.sh` 与语法 smoke harness 通过；文档示例由
+  `tools/verify-doc-snippets.py` 实际执行。
+- 编译器源码以 `javac --release 17` 构建（classfile 61），可在 JDK 17 或更新版本运行。
+- README 与本站引用的测试数字都来自这些实际运行。
 
-## Releases
+## 发行包
 
-Prereleases are published from version tags by
-`.github/workflows/release.yml`, which rebuilds the compiler, runs the test
-suite, packages the archive with `scripts/package-alpha.sh`, and attaches the
-ZIP and its SHA-256 sidecar. The release notes are in the repository under
-`docs/releases/`.
+**目前还没有可下载的正式发行包。** 请从源码构建（见[快速开始](/guide/getting-started)）。
 
-An alpha is an early build: it is published so the project can be evaluated,
-not because it is production-ready.
+发行流程已经准备好：`.github/workflows/release.yml` 会在推送 `v*` 标签时重新构建编译器、
+运行测试、用 `scripts/package-alpha.sh` 打包 ZIP 与 SHA-256 校验文件，并发布为
+prerelease。发行说明存放在仓库的 `docs/releases/`。**在发行包经过实际打包与验收之前，
+不会创建 Release。**
 
-## What is not claimed
+## 尚未宣称的能力
 
-- Stage-1 self-hosting, a package manager, a language server, a standard
-  library distribution and full Java generics/array interop are **not**
-  implemented.
-- Numerical results are not certified for algorithmic stability or physical
-  units.
-- No platform other than macOS Apple Silicon (local) and Linux (CI) has been
-  exercised.
+- Stage-1 自举、包管理器、语言服务器、标准库发行版、完整的 Java 泛型/数组互操作都
+  **尚未实现**。
+- 数值结果不保证算法稳定性或物理量单位正确。
+- 除 macOS Apple Silicon（本地）与 Linux（CI）之外没有验证其他平台。
 
-See [Known limitations](/reference/KNOWN_LIMITATIONS) and the
-[stage-1 roadmap](/reference/STAGE1_ROADMAP).
+另见[已知限制](/reference/known-limitations)与
+[Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。

@@ -1,7 +1,7 @@
-# Examples
+# 示例
 
-Every file under `examples/` is compiled and executed by `scripts/test.sh` on
-each test run. The listings below are the real files, not retyped copies.
+`examples/` 下的每个文件都会在每次运行 `scripts/test.sh` 时被编译并执行。下面的
+清单是真实文件，不是重新录入的副本。
 
 ## Hello world
 
@@ -33,15 +33,10 @@ Fizz
 FizzBuzz
 ```
 
-<details>
-<summary>Show all 15 lines</summary>
+程序遍历 `range(1, 16)`，每行打印一个值：3 的倍数替换为 `Fizz`，5 的倍数替换为
+`Buzz`，15 的倍数替换为 `FizzBuzz`。
 
-The program iterates `range(1, 16)` and prints one value per line, replacing
-multiples of 3 with `Fizz`, of 5 with `Buzz` and of 15 with `FizzBuzz`.
-
-</details>
-
-## Shapes: classes, variants and match
+## Shapes：类、variant 与 match
 
 <<< @/../examples/shapes.spr
 
@@ -54,11 +49,10 @@ radius=2.0
 drawn=2
 ```
 
-This example combines a class with defaults, a sealed `variant`, an `enum`,
-two exhaustive `match` statements, a nullable return type and immutable
-collections.
+这个例子组合了带默认值的类、sealed `variant`、`enum`、两个穷尽 `match`、可空返回
+类型以及不可变集合。
 
-## Word counting
+## 词频统计
 
 <<< @/../examples/word_count.spr
 
@@ -74,7 +68,7 @@ dog: 1
 sorted keys: [brown, dog, fox, jumps, lazy, over, quick, the]
 ```
 
-## Numerical precision policy
+## 数值精度策略
 
 <<< @/../examples/numeric_science.spr
 
@@ -84,19 +78,16 @@ sorted keys: [brown, dog, fox, jumps, lazy, over, quick, the]
 true
 ```
 
-The mean uses binary64 `Float`; the money-like value uses `Decimal`, so
-`0.1 + 0.2` is exactly `0.3` instead of a binary approximation. The last line
-makes the floating-point error explicit instead of hiding it.
+均值使用 binary64 `Float`，金额式的值使用 `Decimal`，因此 `0.1 + 0.2` 精确等于
+`0.3`；最后一行把浮点误差显式展示出来，而不是隐藏它。
 
-## Larger programs in the test suite
+## 测试套件中的更大程序
 
-- `tests/runtime/` — eighteen end-to-end programs with golden stdout:
-  arithmetic, functions, control flow, classes, variants, enums, nullability,
-  errors, collections, lambdas, strings, modules, assertions, formatting and
-  JVM interop.
-- `tests/visitor/ast_visitor.spr` — a small AST interpreter with four visitor
-  classes (printer, evaluator, simplifier, size counter) written entirely in
-  Sprig; adding a variant case breaks visitors that miss it.
-- `tests/visitor/mini_pipeline.spr` — a bootstrap-slice experiment.
-- `tests/numeric/` — checked arithmetic, conversion and precision tests with
-  an independent Python oracle.
+- `tests/runtime/`：18 个带 golden stdout 的端到端程序，覆盖算术、函数、控制流、
+  类、variant、enum、可空性、错误、集合、lambda、字符串、模块、断言、格式化与
+  JVM 互操作。
+- `tests/visitor/ast_visitor.spr`：完全用 Sprig 编写的小型 AST 解释器，包含四个
+  visitor 类（打印、求值、化简、节点计数）；给 variant 增加 case 会让漏掉它的
+  visitor 编译失败。
+- `tests/visitor/mini_pipeline.spr`：自举可行性切片实验。
+- `tests/numeric/`：受检算术、转换与精度测试，并带有独立的 Python oracle。

@@ -1,30 +1,32 @@
 # Sprig
 
 <p align="center">
-  <img src="icon.png" alt="Sprig icon" width="180">
+  <img src="website/public/logo-round.png" alt="Sprig icon" width="170">
 </p>
 
 **An indentation-based, statically typed language for the JVM** with sealed
 variants, exhaustive `match`, checked numerics and explicit interop — designed
 to be readable by people and predictable for coding agents.
 
+**Docs:** [简体中文](https://colinhouse.github.io/Sprig/) ·
+[English](https://colinhouse.github.io/Sprig/en/) ·
 [Repository](https://github.com/ColinHouse/Sprig) ·
-[Documentation](https://colinhouse.github.io/Sprig/) ·
 [Examples](https://github.com/ColinHouse/Sprig/tree/main/examples) ·
 [Known limitations](docs/KNOWN_LIMITATIONS.md)
 
 [![CI](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fcolinhouse.github.io%2FSprig%2F&label=docs)](https://colinhouse.github.io/Sprig/)
 [![License](https://img.shields.io/github/license/ColinHouse/Sprig)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/ColinHouse/Sprig?include_prereleases&label=release)](https://github.com/ColinHouse/Sprig/releases)
+[![Status](https://img.shields.io/badge/status-alpha-orange)](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md)
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue)](https://adoptium.net/)
 
-> **Current version `v0.1.0-alpha.1` — an alpha.** The compiler parses,
-> checks, emits Java and runs on the JVM, but it is **not self-hosted** and has
-> no package manager, language server or standard-library distribution yet.
-> It builds with `javac --release 17` and has been run end-to-end on JDK 17
-> and 26. See [release status](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md)
-> and [known limitations](docs/KNOWN_LIMITATIONS.md).
+> **Current version `v0.1.0-alpha.1` — an alpha. There is no downloadable
+> release yet; build from source.** The compiler parses, checks, emits Java
+> and runs on the JVM, but it is **not self-hosted** and has no package
+> manager, language server or standard-library distribution. It builds with
+> `javac --release 17` and has been run end-to-end on JDK 17 and 26. See the
+> [release notes draft](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
+> [known limitations](docs/KNOWN_LIMITATIONS.md).
 
 ## What Sprig is
 
@@ -113,15 +115,17 @@ The authoritative list is
 
 ## Documentation
 
-The official documentation site is built from this repository with VitePress:
+The official documentation site is built from this repository with VitePress
+and is bilingual: Simplified Chinese at <https://colinhouse.github.io/Sprig/>
+and English at <https://colinhouse.github.io/Sprig/en/>.
 
-- **Site:** <https://colinhouse.github.io/Sprig/>
 - **Source:** [`website/`](website/) — `cd website && npm ci && npm run docs:dev`
 - **Reference documents:** [`docs/`](docs/) for implementation semantics and
-  [`spec/`](spec/) for the v0.7 design kit.
-
-Reference and project pages on the site are generated from the root documents
-during the site build, so there is one authoritative copy of each.
+  [`spec/`](spec/) for the v0.7 design kit. These authoritative documents are
+  English; the site generates the English reference pages from them at build
+  time, so there is one copy of each.
+- **Brand assets:** `assets/brand/` holds the source artwork and the generator
+  for the site logo, favicons and social card.
 
 ## Repository layout
 

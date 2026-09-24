@@ -11,7 +11,7 @@ conditions.
 |---|---|
 | Compiler, grammar, runtime, scripts, tests, acceptance suite | Apache-2.0 |
 | Example programs and documentation under `docs/`, `spec/`, `website/` | Apache-2.0, unless a file says otherwise |
-| Site assets derived from `icon.png` (resizing/format changes only) | Owner-supplied; see the icon note below |
+| Site assets derived from `assets/brand/icon-source.png` (crop/mask/resize only) | Owner-supplied; see the icon note below |
 | Generated Java/class output produced by the compiler | Not restricted by this project; you own your programs |
 | ANTLR 4.13.2 (downloaded dependency, bundled in release archives) | BSD, see `THIRD_PARTY_NOTICES.md` |
 

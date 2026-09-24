@@ -1,11 +1,10 @@
-/* Sprig palette sampled from the project icon: rose blossom, slate, cream. */
+/* Sprig palette sampled from the project artwork: rose blossom, slate, cream. */
 :root {
   --vp-c-brand-1: #a8496a;
   --vp-c-brand-2: #bd5c7d;
   --vp-c-brand-3: #d07b96;
   --vp-c-brand-soft: rgba(168, 73, 106, 0.14);
 
-  --vp-c-bg-alt: #fdfaf6;
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(120deg, #4c5165 20%, #a8496a);
   --vp-home-hero-image-background-image: linear-gradient(
@@ -16,9 +15,21 @@
   --vp-home-hero-image-filter: blur(48px);
 }
 
+/* Light theme only: a warm paper background for code blocks and sections. */
+:root:not(.dark) {
+  --vp-c-bg-alt: #fdfaf6;
+}
+
 .dark {
   --vp-c-brand-1: #e8a3ba;
   --vp-c-brand-2: #d98fa8;
   --vp-c-brand-3: #c77b95;
   --vp-c-brand-soft: rgba(232, 163, 186, 0.16);
+
+  /* Avoid a bright white halo behind the transparent round mark. */
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(120, 62, 84, 0.5) 30%,
+    rgba(58, 61, 78, 0.6)
+  );
 }

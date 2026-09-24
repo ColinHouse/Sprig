@@ -1,27 +1,27 @@
-# Getting Started
+# 快速开始
 
-This page builds the stage-0 compiler from source and runs a first Sprig
-program. All commands are executed from the repository root.
+本页从源码构建 stage-0 编译器，并运行第一个 Sprig 程序。以下命令都在仓库根目录执行。
 
-## Requirements
+## 环境要求
 
-| Tool | Version | Why |
+| 工具 | 版本 | 用途 |
 |---|---|---|
-| JDK | 17 or newer | The compiler builds with `javac --release 17` and has been run end-to-end on OpenJDK 17.0.19 and 26.0.1 (macOS Apple Silicon); hosted CI exercises both on Linux. |
-| Python | 3.12 or newer | Test and acceptance scripts. |
-| `curl` | any | The first build downloads the pinned ANTLR 4.13.2 tool JAR if it is missing. |
-| Node.js | 20 or newer | Only needed to build this documentation site. |
+| JDK | 17 或更新 | 编译器以 `javac --release 17` 构建，已在 OpenJDK 17.0.19 与 26.0.1（macOS Apple Silicon）上端到端运行；托管 CI 在 Linux 上覆盖两个版本。 |
+| Python | 3.12 或更新 | 测试与验收脚本。 |
+| `curl` | 任意 | 首次构建时下载固定版本的 ANTLR 4.13.2 工具 JAR。 |
+| Node.js | 20 或更新 | 仅在本地构建本文档站时需要。 |
 
-## Build the compiler
+## 构建编译器
 
 ```bash
+git clone https://github.com/ColinHouse/Sprig.git
+cd Sprig
 ./scripts/build.sh
 ```
 
-The script downloads `antlr-4.13.2-complete.jar` from Maven Central when
-`tools/antlr-4.13.2-complete.jar` is absent, verifies its SHA-256 digest,
-regenerates the parser from `grammar/`, compiles `compiler/` and `runtime/`
-with `javac --release 17`, and writes `bin/sprig`.
+当 `tools/antlr-4.13.2-complete.jar` 不存在时，脚本会从 Maven Central
+下载它并校验 SHA-256，然后从 `grammar/` 重新生成解析器，用
+`javac --release 17` 编译 `compiler/` 和 `runtime/`，最后生成 `bin/sprig`。
 
 ```text
 Generating ANTLR4 parser...
@@ -32,7 +32,7 @@ Built Sprig stage-0 compiler.
   compiler:  .../build/sprig-compiler.jar
 ```
 
-## Run your first program
+## 运行第一个程序
 
 <<< @/../examples/hello.spr
 
@@ -44,10 +44,9 @@ Built Sprig stage-0 compiler.
 Hello, Ada!
 ```
 
-`run` type-checks the file, generates Java source, compiles it with `javac`
-and executes the result on the JVM.
+`run` 会先做类型检查，再生成 Java 源码、调用 `javac`，最后在 JVM 上执行。
 
-## Command line
+## 命令行
 
 ```text
 Usage: sprig <command> [options]
@@ -60,43 +59,37 @@ Usage: sprig <command> [options]
   version
 ```
 
-| Command | What it does |
+| 命令 | 作用 |
 |---|---|
-| `check` | Runs the lexer, layout adapter, parser, name resolution and type checking. Writes nothing. |
-| `run` | Does everything `check` does, then emits Java, invokes `javac` and runs the program. |
-| `build` | Emits generated Java sources and `.class` files under `-d <dir>` (default `build/out`). |
-| `explain` | Prints the meaning of a stable diagnostic code such as `SPR-MATCH-NONEXHAUSTIVE`. |
-| `codes` | Lists every diagnostic code. |
-| `--json` | Wraps the result in a single machine-readable JSON document. |
-| `--syntax-only` | Stops after lexing, layout and parsing. |
+| `check` | 运行词法、缩进、解析、名称解析与类型检查，不写任何文件。 |
+| `run` | 在 `check` 之后生成 Java、调用 `javac` 并运行程序。 |
+| `build` | 把生成的 Java 源码与 `.class` 文件写入 `-d <dir>`（默认 `build/out`）。 |
+| `explain` | 解释一个稳定的诊断码，例如 `SPR-MATCH-NONEXHAUSTIVE`。 |
+| `codes` | 列出全部诊断码。 |
+| `--json` | 把结果封装为单个机器可读的 JSON 文档。 |
+| `--syntax-only` | 只做词法、缩进与解析。 |
 
-See [Tooling and JSON](/guide/tooling) for the JSON envelope and stable error
-codes.
+JSON 结果与稳定诊断码见[工具与 JSON](/guide/tooling)。
 
-## Run the project tests
+## 运行项目测试
 
 ```bash
 ./scripts/test.sh
 ```
 
-This runs syntax positives and negatives, 46 semantic expectation cases,
-runtime programs with golden stdout, visitor programs, examples, numeric
-boundary tests, parser recovery fuzzing, and the independent acceptance
-matrices. The suite prints a final `N passed, 0 failed` line and exits non-zero
-on any failure.
+该脚本会运行语法正反例、46 个语义期望用例、带 golden stdout 的运行时程序、
+visitor 程序、示例、数值边界、解析器恢复模糊测试以及独立验收矩阵，最后输出
+`N passed, 0 failed`，任何失败都会以非零状态退出。
 
-An independent grammar smoke harness is also available:
+独立的语法 smoke harness：
 
 ```bash
 ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
 ```
 
-## Common first-run problems
+## 常见问题
 
-- **`JDK required`** — install JDK 17 or newer and make sure `java` and
-  `javac` are on `PATH`.
-- **Checksum mismatch for ANTLR** — delete
-  `tools/antlr-4.13.2-complete.jar` and rebuild so it is downloaded again.
-- **`SPR-LEX-TAB`** — Sprig indentation uses spaces, never tabs.
-- **A Java reference result is reported as nullable** — this is intentional.
-  Narrow it with a `!= null` check before calling methods on it.
+- **提示 `JDK required`**：安装 JDK 17 或更新版本，并确保 `java` 与 `javac` 在 `PATH` 中。
+- **ANTLR 校验和不匹配**：删除 `tools/antlr-4.13.2-complete.jar` 后重新构建，让脚本重新下载。
+- **`SPR-LEX-TAB`**：Sprig 的缩进只能使用空格，不能使用制表符。
+- **Java 引用结果被报告为可空**：这是有意设计；请先用 `!= null` 判空再调用方法。
