@@ -56,12 +56,14 @@ compiler or runtime:
 
 No dependency listed here is modified by this repository.
 
-## Project icon and mascot (`icon.png`)
+## Project icon and mascot (`assets/brand/icon-source.png`)
 
-The icon at the repository root was supplied by the project owner, who
-approved its use for this project. It is used to derive the README image, site
-logo, favicons and social preview image by **resizing and format changes
-only**; the artwork itself was not redesigned or recolored.
+The artwork was supplied by the project owner, who approved its use for this
+project. `assets/brand/generate.py` derives the README image, site logo,
+favicons, Apple touch icon and social preview image by **cropping, masking and
+resizing only**; the character was not redesigned or recolored. A separate
+"S" monogram is generated for 16–32px favicons because the detailed
+illustration is not legible at that size.
 
 Recorded caveat: the artwork's origin is not independently documented in this
 repository, and the cat silhouette on the laptop and mug resembles GitHub's
@@ -75,6 +77,7 @@ approval.
 
 All prose, compiler source, tests and examples were written for this project
 (or generated with AI assistance as described in `AI_DISCLOSURE.md`). No
-third-party fonts, images or datasets are committed beyond `icon.png` and the
-site assets derived from it. The documentation references JDK classes by name
-but does not redistribute JDK code.
+third-party fonts, images or datasets are committed beyond
+`assets/brand/icon-source.png` and the site assets derived from it. The
+documentation references JDK classes by name but does not redistribute JDK
+code.

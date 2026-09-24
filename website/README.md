@@ -1,6 +1,8 @@
 # Sprig documentation site
 
-VitePress source for the official Sprig documentation.
+VitePress source for the official Sprig documentation, built as a bilingual
+site: **Simplified Chinese is the default locale at `/`**, English lives under
+`/en/`.
 
 ## Commands
 
@@ -18,16 +20,29 @@ snippets through the real compiler and then builds the site.
 
 ## Page sources
 
-- Hand-written pages: `index.md`, `guide/`, `examples.md`,
-  `project/release-status.md`.
-- **Generated pages:** `scripts/sync-reference.mjs` copies the authoritative
-  root documents (`docs/`, `spec/docs/`, `grammar/README.md`,
-  `CONTRIBUTING.md`, `AI_DISCLOSURE.md`, `LICENSE_STATUS.md`,
-  `THIRD_PARTY_NOTICES.md`) into `generated/` on every `docs:dev` and
-  `docs:build`. `generated/` is gitignored. Never edit the copies; edit the
-  root document.
-- `snippets/` contains real `.spr` programs included by the guide and
-  executed by `tools/verify-doc-snippets.py`.
+| Path | Content |
+|---|---|
+| `index.md`, `guide/`, `examples.md`, `reference/`, `project/` | Chinese pages (default locale). |
+| `en/` | English pages. |
+| `scripts/sync-reference.mjs` | Generates English reference/project pages from the authoritative root documents into `generated/en/` on every build. |
+| `snippets/` | Real `.spr` programs shared by both languages, executed by `tools/verify-doc-snippets.py`. |
+| `public/` | Generated brand assets (see `assets/brand/`). |
+
+Only the hand-written Chinese pages and the English `en/` pages are committed;
+`generated/` is gitignored and rebuilt by `docs:dev`/`docs:build`. Never edit a
+generated copy — edit the root document it comes from.
+
+Reference material (language spec, numeric semantics, diagnostics, grammar) is
+authoritative in English only; the Chinese site marks it as such in
+`reference/index.md` and links to the English pages.
+
+## Brand assets
+
+`public/logo-round.png`, the favicons, `public/apple-touch-icon.png` and
+`public/og-image.png` are produced by `assets/brand/generate.py` from
+`assets/brand/icon-source.png`. The source artwork is only cropped, masked and
+resized. See `assets/brand/README.md` and `THIRD_PARTY_NOTICES.md` for the
+provenance note.
 
 ## Base path and deployment
 
@@ -41,10 +56,3 @@ DOCS_BASE=/ npm run docs:build
 `.github/workflows/docs.yml` deploys to GitHub Pages and derives the base path
 from `actions/configure-pages`. The repository must have Pages configured with
 **Source: GitHub Actions**.
-
-## Icon assets
-
-`public/logo.png`, the favicons and `public/og-image.png` are resized copies of
-the project icon at the repository root (`icon.png`). The artwork was not
-redesigned or recolored; see `THIRD_PARTY_NOTICES.md` for the provenance and
-rights items that still need owner confirmation.

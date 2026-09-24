@@ -63,5 +63,5 @@ AI-assisted contributions are welcome when they meet the same gates:
 - No part of the project is developed fully automatically. Every merged change
   has human review.
 - Passing tests is evidence, not proof. The
-  [known limitations](/reference/KNOWN_LIMITATIONS) list states what is not
-  covered.
+  [known limitations](https://colinhouse.github.io/Sprig/en/reference/KNOWN_LIMITATIONS)
+  page states what is not covered.
