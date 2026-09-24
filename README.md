@@ -17,15 +17,16 @@ to be readable by people and predictable for coding agents.
 [![CI](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fcolinhouse.github.io%2FSprig%2F&label=docs)](https://colinhouse.github.io/Sprig/)
 [![License](https://img.shields.io/github/license/ColinHouse/Sprig)](LICENSE)
-[![Status](https://img.shields.io/badge/status-alpha-orange)](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md)
+[![Release](https://img.shields.io/github/v/release/ColinHouse/Sprig?include_prereleases&label=release)](https://github.com/ColinHouse/Sprig/releases)
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue)](https://adoptium.net/)
 
-> **Current version `v0.1.0-alpha.1` — an alpha. There is no downloadable
-> release yet; build from source.** The compiler parses, checks, emits Java
-> and runs on the JVM, but it is **not self-hosted** and has no package
-> manager, language server or standard-library distribution. It builds with
-> `javac --release 17` and has been run end-to-end on JDK 17 and 26. See the
-> [release notes draft](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
+> **Current version `v0.1.0-alpha.1` — published as a prerelease.** Download
+> the archive from the [releases page](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
+> or build from source. The compiler parses, checks, emits Java and runs on
+> the JVM, but it is **not self-hosted** and has no package manager, language
+> server or standard-library distribution. It builds with `javac --release 17`
+> and has been run end-to-end on JDK 17 and 26. See the
+> [release notes](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
 > [known limitations](docs/KNOWN_LIMITATIONS.md).
 
 ## What Sprig is
@@ -55,8 +56,21 @@ The compiler is the current stage; the v0.7 language design kit lives in
 
 ## Quick start
 
-Requirements: **JDK 17 or newer** (tested on 17.0.19 and 26.0.1), Python
-3.12+ for the test scripts, and `curl` for the first build.
+Requirements: **JDK 17 or newer** (tested on 17.0.19 and 26.0.1). Python 3.12+
+and `curl` are only needed for the test suite and source build.
+
+**Option A — download the alpha archive** (compiler/runtime + ANTLR, no JDK):
+
+```bash
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.1.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.1.0-alpha.1-jdk.zip
+cd sprig-v0.1.0-alpha.1-jdk
+./bin/sprig run examples/hello.spr
+```
+
+**Option B — build from source:**
 
 ```bash
 git clone https://github.com/ColinHouse/Sprig.git
@@ -186,7 +200,10 @@ Sprig 是一门缩进式、静态类型的 JVM 语言，核心特性包括：sea
 stage-0 编译器实现：解析 `.spr` → 类型检查 → 生成 Java → `javac` → JVM
 运行；**尚未自举**，也没有包管理器、LSP、IDE 插件或标准库发行版。
 
-构建与运行（需要 JDK 17 或更新版本）：
+安装（需要 JDK 17 或更新版本）：从
+[Releases](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
+下载 `sprig-v0.1.0-alpha.1-jdk.zip`，用同名 `.sha256` 文件校验后解压即可；
+也可以从源码构建：
 
 ```bash
 git clone https://github.com/ColinHouse/Sprig.git

@@ -126,7 +126,7 @@ export default defineConfig({
           ]
         },
         footer: {
-          message: 'Sprig 采用 Apache-2.0 许可证 · Alpha 阶段，尚无可下载的发行包',
+          message: 'Sprig 采用 Apache-2.0 许可证 · v0.1.0-alpha.1 已作为 prerelease 发布',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }
@@ -218,7 +218,7 @@ export default defineConfig({
         },
         footer: {
           message:
-            'Sprig is licensed under Apache-2.0 · Alpha stage, no downloadable release yet',
+            'Sprig is licensed under Apache-2.0 · v0.1.0-alpha.1 published as a prerelease',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }

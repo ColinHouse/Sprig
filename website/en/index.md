@@ -38,11 +38,13 @@ It is **not self-hosted**, and has no package manager, language server, IDE
 plugin or standard-library distribution yet.
 
 ::: info Release status
-**There is no downloadable release yet.** Build from source with
-[Getting Started](/en/guide/getting-started). The packaging and release
-workflows are in place; the first alpha archive will be published only after it
-has actually been built and smoke-tested. See
-[Release status](/en/project/release-status).
+**`v0.1.0-alpha.1` is published as a prerelease.** Download the ZIP and
+`.sha256` checksum from the
+[releases page](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
+(compiler, runtime, ANTLR and launcher; **no JDK included**), or build from
+source with [Getting Started](/en/guide/getting-started). This is an alpha,
+not a stable release; see [Release status](/en/project/release-status) for
+what was verified.
 :::
 
 ## Your first program

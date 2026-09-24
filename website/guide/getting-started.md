@@ -1,6 +1,21 @@
 # 快速开始
 
-本页从源码构建 stage-0 编译器，并运行第一个 Sprig 程序。以下命令都在仓库根目录执行。
+本页说明如何获得 stage-0 编译器并运行第一个 Sprig 程序。
+
+## 安装方式
+
+**方式 A：下载 Alpha 发行包**（包含编译器、runtime、ANTLR 与启动脚本，不含 JDK）：
+
+```bash
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.1.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.1.0-alpha.1-jdk.zip
+cd sprig-v0.1.0-alpha.1-jdk
+./bin/sprig run examples/hello.spr
+```
+
+**方式 B：从源码构建**，见下文。
 
 ## 环境要求
 
