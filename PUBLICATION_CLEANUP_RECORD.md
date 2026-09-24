@@ -78,7 +78,10 @@ carry a `TokenSource`, removing the documented ANTLR-recovery
 | `tools/verify-doc-snippets.py` | Executes documented snippets and examples against the real compiler. |
 | `scripts/check-docs.sh` | Runs snippet verification plus the VitePress production build. |
 | `acceptance/README.md` | Explains the independent acceptance suite. |
-| `.github/workflows/docs.yml` | Prepared GitHub Pages deployment (not executed). |
+| `.github/workflows/docs.yml` | GitHub Pages deployment workflow. |
+| `.github/workflows/release.yml` | Tag-driven prerelease workflow (tests + archive + notes). |
+| `LICENSE`, `NOTICE` | Apache-2.0 license text and project NOTICE (owner decision). |
+| `README` icon and badges | Links the icon, repository, docs site, CI, license and release status. |
 | `PUBLICATION_READINESS_REPORT.md`, `PUBLICATION_CLEANUP_RECORD.md` | This audit's outputs. |
 
 ## Did not delete

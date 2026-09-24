@@ -1,5 +1,15 @@
 # Sprig — publication readiness report
 
+> **Update (owner decisions applied, 2026-09-25):** the project owner selected
+> **Apache-2.0** (with its express patent grant) and confirmed the repository
+> destination <https://github.com/ColinHouse/Sprig>. A `LICENSE`, `NOTICE`,
+> README badges and icon, repository About metadata, a Pages deployment
+> workflow and a tag-driven prerelease workflow were added, and the site now
+> defaults to the `/Sprig/` base path. The original license/repository/asset
+> blockers below are therefore resolved or explicitly owned by the project
+> owner; the remaining technical caveats (Java 17 runtime not observed,
+> documented limitations) still apply.
+
 **Round date:** 2026-09-25
 **Scope:** repository organization, documentation site, README/contribution
 documents, license and asset review, and a clean-environment audit. This round

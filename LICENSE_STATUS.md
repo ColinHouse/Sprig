@@ -1,48 +1,38 @@
-# Project license status
+# License
 
-**No license has been selected.** The Sprig project owner has not chosen a
-license for the compiler, runtime, documentation, examples, website or
-generated artifacts. This repository does not grant public redistribution
-rights for those project materials, and no release will be published until the
-owner records a license.
+Sprig is licensed under the **Apache License, Version 2.0** (the full text is
+in [`LICENSE`](LICENSE)). The license includes an express patent grant
+(section 3) and the standard Apache copyright, notice and redistribution
+conditions.
 
-## Decision guide for the owner
+## Scope
 
-The choice affects different parts of the project, so it is worth deciding
-deliberately rather than copying another project:
-
-| Component | What a license must cover |
+| Material | License |
 |---|---|
-| Compiler source (`compiler/`, `grammar/`) | Use, modification and redistribution of the tool. |
-| Runtime (`runtime/`) | Redistribution **inside generated/compiled user programs**; this is the most permissive requirement in practice. |
-| Examples, tests, docs, website | Reuse of prose, code snippets and images. |
-| The icon and mascot (`icon.png` and assets derived from it) | Copyright/rights confirmed by the owner; see `THIRD_PARTY_NOTICES.md`. |
+| Compiler, grammar, runtime, scripts, tests, acceptance suite | Apache-2.0 |
+| Example programs and documentation under `docs/`, `spec/`, `website/` | Apache-2.0, unless a file says otherwise |
+| Site assets derived from `icon.png` (resizing/format changes only) | Owner-supplied; see the icon note below |
+| Generated Java/class output produced by the compiler | Not restricted by this project; you own your programs |
+| ANTLR 4.13.2 (downloaded dependency, bundled in release archives) | BSD, see `THIRD_PARTY_NOTICES.md` |
 
-Common candidate directions, for discussion only — none is chosen here:
+## Notice and attribution
 
-- **Permissive** (MIT / Apache-2.0 / BSD): simplest adoption, including
-  commercial use. Apache-2.0 additionally grants patent terms and requires
-  notices; MIT/BSD are shorter.
-- **Weak copyleft** (MPL-2.0 / LGPL): modifications to covered files stay
-  open; linking/generated output typically remains unrestricted. LGPL is more
-  complex for a runtime embedded in user programs.
-- **Strong copyleft** (GPL-3.0): derivative works must be distributed under
-  the same terms. This can deter commercial users of a compiler/runtime.
-- **Dual licensing or no license**: reserving all rights keeps the project
-  closed until a decision is made; it is the current state.
+- [`NOTICE`](NOTICE) carries the project copyright line and the ANTLR
+  attribution, as Apache-2.0 expects for redistributed derivatives.
+- Site fonts and build tooling (VitePress, Vue, Shiki, MiniSearch, Inter) keep
+  their own MIT / OFL-1.1 licenses; see `THIRD_PARTY_NOTICES.md`.
 
-A common split is a permissive license for the runtime and examples so user
-programs are unencumbered, with the same or a different license for the
-compiler. That split is a decision for the owner, not something this
-repository assumes.
+## Icon provenance
 
-## Current blockers
+The icon at the repository root was supplied by the project owner and is used
+for the README, site logo, favicons and social preview image. Its origin and
+the possible third-party reference in the artwork (a cat silhouette resembling
+GitHub's Octocat mark) are still the owner's to confirm; the artwork is not
+claimed to be original or unrestricted. See `THIRD_PARTY_NOTICES.md`.
 
-1. The owner selects a license and adds its text (for example `LICENSE`) and
-   updates this file and `README.md`.
-2. The icon/mascot rights and any third-party marks in the artwork are
-   confirmed (see `THIRD_PARTY_NOTICES.md`).
-3. Only then can the repository be pushed publicly and a release be created.
+## Contributing and redistribution
 
-ANTLR 4.13.2 keeps its own BSD license, reproduced in
-`THIRD_PARTY_NOTICES.md`. It does not determine Sprig's own license.
+By contributing, you agree that your contribution is licensed under
+Apache-2.0. Redistributions must keep the `LICENSE`, `NOTICE` and
+`THIRD_PARTY_NOTICES.md` files, and modified files must carry prominent
+notices stating that they were changed.

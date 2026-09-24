@@ -35,6 +35,8 @@ const banner = (source) =>
 // those to the website routes the generated pages actually live at.
 const linkMap = new Map([
   ['README.md', '/'],
+  ['LICENSE', 'https://github.com/ColinHouse/Sprig/blob/main/LICENSE'],
+  ['NOTICE', 'https://github.com/ColinHouse/Sprig/blob/main/NOTICE'],
   ['CONTRIBUTING.md', '/project/contributing'],
   ['AI_DISCLOSURE.md', '/project/ai-disclosure'],
   ['LICENSE_STATUS.md', '/project/license-status'],

@@ -20,22 +20,23 @@ cp "$ANTLR" "$PKG/lib/antlr-4.13.2-complete.jar"
 cp -R "$ROOT/runtime/src/main/java/sprig" "$PKG/runtime/src/main/java/"
 cp "$ROOT/examples/hello.spr" "$PKG/examples/"
 cp "$ROOT/docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md" "$PKG/"
-cp "$ROOT/THIRD_PARTY_NOTICES.md" "$ROOT/LICENSE_STATUS.md" "$PKG/"
+cp "$ROOT/LICENSE" "$ROOT/NOTICE" "$ROOT/LICENSE_STATUS.md" "$PKG/"
+cp "$ROOT/THIRD_PARTY_NOTICES.md" "$PKG/"
 cp "$ROOT/docs/NUMERIC_SEMANTICS.md" "$ROOT/docs/KNOWN_LIMITATIONS.md" "$PKG/docs/"
 cat > "$PKG/README.md" <<'EOF'
 # Sprig v0.1.0-alpha.1 candidate package
 
-This local candidate contains the Java stage-0 compiler/runtime and ANTLR
-4.13.2. It compiles Sprig source to Java, invokes `javac`, then runs on the JVM.
-It is not self-hosted. The project license has not been selected; do not
-redistribute this candidate publicly until the owner records a license.
+This package contains the Java stage-0 compiler/runtime and ANTLR 4.13.2. It
+compiles Sprig source to Java, invokes `javac`, then runs on the JVM. It is
+not self-hosted. Sprig is licensed under Apache-2.0 (`LICENSE`, `NOTICE`);
+ANTLR keeps its own BSD license (`THIRD_PARTY_NOTICES.md`).
 
 See `INSTALL.md` for the quick start, `docs/NUMERIC_SEMANTICS.md` for numeric
 rules, and `docs/KNOWN_LIMITATIONS.md` for supported boundaries.
 EOF
 {
   echo "Candidate: $VERSION"
-  echo "Source revision: no Git metadata; local candidate only"
+  echo "Source revision: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo 'no Git metadata')"
   echo "Build Java:"
   java -version 2>&1
   echo "Compiler JAR SHA-256:"
@@ -44,10 +45,10 @@ EOF
   (cd "$PKG/lib" && shasum -a 256 antlr-4.13.2-complete.jar)
 } > "$PKG/BUILD_INFO.txt"
 cat > "$PKG/LEGAL_STATUS.txt" <<'EOF'
-Sprig project license: NOT YET SELECTED.
-This package is a local release candidate for owner review. Do not redistribute
-it publicly until the project owner selects and records a license.
-The bundled ANTLR dependency's license is reproduced in THIRD_PARTY_NOTICES.md.
+Sprig project license: Apache License 2.0 (see LICENSE and NOTICE).
+The bundled ANTLR dependency's BSD license is reproduced in
+THIRD_PARTY_NOTICES.md. The project icon is owner-supplied; see the notice
+file for the recorded provenance caveat.
 EOF
 cat > "$PKG/INSTALL.md" <<'EOF'
 # Install and run
