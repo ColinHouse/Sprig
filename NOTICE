@@ -1,0 +1,11 @@
+Sprig
+Copyright 2026 ColinHouse and Sprig contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes the ANTLR 4 tool, Copyright (c) 2012 Terence Parr and
+Sam Harwell, distributed under the BSD license. The complete third-party
+license text and component list are in THIRD_PARTY_NOTICES.md.
+
+Project repository: https://github.com/ColinHouse/Sprig
+Documentation site: https://colinhouse.github.io/Sprig/

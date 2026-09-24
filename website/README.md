@@ -31,17 +31,16 @@ snippets through the real compiler and then builds the site.
 
 ## Base path and deployment
 
-The base path defaults to `/sprig/` (a GitHub Pages project site). Override it
-for a custom domain or user page:
+The base path defaults to `/Sprig/` for the GitHub Pages project site at
+<https://colinhouse.github.io/Sprig/>. Override it for a custom domain:
 
 ```bash
 DOCS_BASE=/ npm run docs:build
 ```
 
-`.github/workflows/docs.yml` is prepared for GitHub Pages and derives the base
-path from `actions/configure-pages`. It has **not** been executed, and no
-deployment is claimed, until the repository destination and Pages settings are
-confirmed by the project owner.
+`.github/workflows/docs.yml` deploys to GitHub Pages and derives the base path
+from `actions/configure-pages`. The repository must have Pages configured with
+**Source: GitHub Actions**.
 
 ## Icon assets
 

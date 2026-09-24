@@ -39,14 +39,13 @@ features:
 Sprig is experimental. The compiler is a Java stage-0 implementation that parses
 `.spr` source, checks it, emits Java source, invokes `javac` and runs the JVM.
 It is **not self-hosted**, has **no package manager, language server or IDE
-plugin**, and its linear runtime is evolving.
+plugin**, and its runtime library is still growing.
 
-::: warning No project license has been selected yet
-The project owner has not chosen a license for Sprig source, runtime,
-documentation or generated artifacts. The repository is being prepared for an
-eventual public release, but it does not grant public redistribution rights
-until a license is recorded. See
-[License status](/project/license-status).
+::: info Project
+Source and issues: [github.com/ColinHouse/Sprig](https://github.com/ColinHouse/Sprig).
+Licensed under **Apache-2.0**. Alpha releases are published on the
+[releases page](https://github.com/ColinHouse/Sprig/releases); see
+[Release status](/project/release-status) for what has actually been verified.
 :::
 
 ## Your first program

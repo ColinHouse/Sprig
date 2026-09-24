@@ -1,9 +1,9 @@
 import { defineConfig } from 'vitepress'
 
-// GitHub Pages project sites are served from /<repo>/. The deployment workflow
-// passes DOCS_BASE from actions/configure-pages, so this default is only a
-// local fallback. A custom domain or a user/org site should use DOCS_BASE=/.
-const base = process.env.DOCS_BASE ?? '/sprig/'
+// GitHub Pages project site: https://colinhouse.github.io/Sprig/.
+// The deployment workflow passes DOCS_BASE from actions/configure-pages, so
+// this default is only a local fallback. A custom domain should use DOCS_BASE=/.
+const base = process.env.DOCS_BASE ?? '/Sprig/'
 
 export default defineConfig({
   base,
@@ -27,6 +27,8 @@ export default defineConfig({
     ['meta', { property: 'og:title', content: 'Sprig language' }],
     ['meta', { property: 'og:site_name', content: 'Sprig' }],
     ['meta', { property: 'og:image', content: `${base}og-image.png` }],
+    ['meta', { property: 'og:url', content: 'https://colinhouse.github.io/Sprig/' }],
+    ['meta', { name: 'twitter:card', content: 'summary' }],
     ['meta', { name: 'theme-color', content: '#4c5165' }]
   ],
   markdown: {
@@ -37,6 +39,7 @@ export default defineConfig({
     siteTitle: 'Sprig',
     outline: { level: [2, 3] },
     search: { provider: 'local' },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/ColinHouse/Sprig' }],
     nav: [
       { text: 'Guide', link: '/guide/getting-started', activeMatch: '^/guide/' },
       { text: 'Examples', link: '/examples', activeMatch: '^/examples' },
@@ -90,7 +93,7 @@ export default defineConfig({
           items: [
             { text: 'Contributing', link: '/project/contributing' },
             { text: 'AI-assisted development', link: '/project/ai-disclosure' },
-            { text: 'License status', link: '/project/license-status' },
+            { text: 'License', link: '/project/license-status' },
             { text: 'Release status', link: '/project/release-status' },
             { text: 'Third-party notices', link: '/project/third-party-notices' }
           ]
@@ -99,8 +102,8 @@ export default defineConfig({
     },
     footer: {
       message:
-        'Sprig is a v0.7 design with a working stage-0 alpha compiler. No project license has been selected yet.',
-      copyright: 'Sprig project contributors'
+        'Sprig is a v0.7 language design with a working stage-0 alpha compiler, licensed under Apache-2.0.',
+      copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
     }
   }
 })

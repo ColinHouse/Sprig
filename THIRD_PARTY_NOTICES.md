@@ -2,8 +2,8 @@
 
 This file records third-party components and material rights that affect the
 Sprig repository, the runtime archives and the documentation site. It is a
-notice list, not the project license. The project license itself is still
-unselected; see `LICENSE_STATUS.md`.
+notice list, not the project license. Sprig itself is licensed under
+Apache-2.0 (see `LICENSE` and `LICENSE_STATUS.md`).
 
 ## ANTLR 4.13.2 (build and runtime archive)
 
@@ -58,21 +58,18 @@ No dependency listed here is modified by this repository.
 
 ## Project icon and mascot (`icon.png`)
 
-The icon at the repository root was supplied by the project owner and is used
-to derive the site logo, favicons and social preview image by **resizing and
-format changes only**. The artwork itself was not redesigned or recolored.
+The icon at the repository root was supplied by the project owner, who
+approved its use for this project. It is used to derive the README image, site
+logo, favicons and social preview image by **resizing and format changes
+only**; the artwork itself was not redesigned or recolored.
 
-Before a public release, the owner must confirm:
-
-- the origin of the artwork and the rights to redistribute it under the
-  eventual project license;
-- whether the cat silhouette on the laptop and mug is intended to reference a
-  third-party mark (it resembles GitHub's Octocat mark), because that may
-  require permission or a design change.
-
-Until those confirmations are recorded, the icon is treated as project-owner
-material with unresolved provenance, and no claim of original or unrestricted
-licensing is made for it.
+Recorded caveat: the artwork's origin is not independently documented in this
+repository, and the cat silhouette on the laptop and mug resembles GitHub's
+Octocat mark. The owner should keep a note of the artwork's source, and if the
+resemblance is intentional, confirm that the reference is acceptable; a
+third-party mark used to identify this project could be confusing. No claim of
+original or unrestricted licensing is made for the artwork beyond the owner's
+approval.
 
 ## Content and fonts in this repository
 

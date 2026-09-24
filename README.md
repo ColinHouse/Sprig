@@ -1,49 +1,65 @@
 # Sprig
 
-Sprig is an indentation-based, statically typed programming language with its
-own syntax, sealed variants, exhaustive `match`, checked numerics and explicit
-JVM interop. This repository contains the **Java stage-0 compiler**, the
-runtime it emits calls to, the language design kit, tests, examples and the
-official documentation site.
+<p align="center">
+  <img src="icon.png" alt="Sprig icon" width="180">
+</p>
 
-> **Status:** `0.1.0-alpha.1` (language design v0.7) — an experimental
-> stage-0 compiler. **Not self-hosted.** There is no package manager, language
-> server, IDE plugin or standard-library distribution yet. The project owner
-> has **not selected a license**, so public redistribution is not cleared.
-> Details: [release status](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md),
-> [known limitations](docs/KNOWN_LIMITATIONS.md),
-> [license status](LICENSE_STATUS.md).
+**An indentation-based, statically typed language for the JVM** with sealed
+variants, exhaustive `match`, checked numerics and explicit interop — designed
+to be readable by people and predictable for coding agents.
 
-## What works today
+[Repository](https://github.com/ColinHouse/Sprig) ·
+[Documentation](https://colinhouse.github.io/Sprig/) ·
+[Examples](https://github.com/ColinHouse/Sprig/tree/main/examples) ·
+[Known limitations](docs/KNOWN_LIMITATIONS.md)
 
-- Typed functions and methods, local type inference, `let`/`var`, classes with
-  named constructors and field defaults.
-- `enum`, sealed `variant` and exhaustive `match` statements, including
-  recursive visitors written in Sprig.
-- Nullable types `T?` with flow narrowing, typed `throws`/`catch`/`finally`,
-  and local modules with import cycles rejected.
-- Distinct immutable/mutable collections: `List`, `MutableList`, `Map`,
-  `MutableMap`, with explicit snapshots.
-- Checked `Int`/`Int32` arithmetic (overflow raises an error instead of
-  wrapping), explicit integer division, `BigInt`, `Decimal`, and IEEE
-  `Float`/`Float32` with documented conversion rules.
-- JVM interop for imported classes: constructors, fields, methods, overloads
-  and checked exceptions, with conservative nullability at the boundary.
-- `sprig check`, `build`, `run`, `explain`, `codes`, `--json`, `--syntax-only`.
+[![CI](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fcolinhouse.github.io%2FSprig%2F&label=docs)](https://colinhouse.github.io/Sprig/)
+[![License](https://img.shields.io/github/license/ColinHouse/Sprig)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/ColinHouse/Sprig?include_prereleases&label=release)](https://github.com/ColinHouse/Sprig/releases)
+[![JDK](https://img.shields.io/badge/JDK-17%2B-blue)](https://adoptium.net/)
 
-The authoritative list is
-[`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md),
-maintained next to the tests that verify it.
+> **Current version `v0.1.0-alpha.1` — an alpha.** The compiler parses,
+> checks, emits Java and runs on the JVM, but it is **not self-hosted** and has
+> no package manager, language server or standard-library distribution yet.
+> It builds with `javac --release 17` and has been run end-to-end on JDK 17
+> and 26. See [release status](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md)
+> and [known limitations](docs/KNOWN_LIMITATIONS.md).
+
+## What Sprig is
+
+Sprig is a small, complete-looking language implemented by a Java stage-0
+compiler in this repository. It keeps one canonical syntax for each
+operation and makes semantically dangerous defaults explicit:
+
+- **Indentation, not braces.** Tabs are rejected; blocks are layout tokens.
+- **Static types without escape hatches.** `let`/`var`, local inference,
+  nullable `T?`, flow narrowing, distinct immutable and mutable collections,
+  no truthiness, no implicit numeric promotion, no `Any`.
+- **Sealed variants and exhaustive `match`.** `variant` declares a closed sum
+  type; `match` must cover every case. Add a case and every visitor that
+  misses it fails to compile.
+- **Checked numbers.** `Int`/`Int32` overflow raises an error instead of
+  wrapping. Integer `/` is rejected in favor of explicit `divTrunc`.
+  `BigInt`/`Decimal` are exact, `Float`/`Float32` stay IEEE 754.
+- **Explicit JVM interop.** Import a Java class with an alias; Java reference
+  results are nullable and must be narrowed before use.
+- **Agent-friendly feedback.** Stable diagnostic codes, a phase per error,
+  and a single JSON result envelope for `check`, `build` and `run`.
+
+The compiler is the current stage; the v0.7 language design kit lives in
+[`spec/`](spec/) and the implementation status lives next to its tests in
+[`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md).
 
 ## Quick start
 
-Requirements: JDK 26 or newer (the only runtime tested so far), Python 3.12+
-for the test scripts, and `curl` for the first build. The compiler is built
-with `javac --release 17`, but JDK 17 runtime execution has not been verified.
+Requirements: **JDK 17 or newer** (tested on 17.0.19 and 26.0.1), Python
+3.12+ for the test scripts, and `curl` for the first build.
 
 ```bash
+git clone https://github.com/ColinHouse/Sprig.git
+cd Sprig
 ./scripts/build.sh
-./bin/sprig version
 ./bin/sprig run examples/hello.spr
 ```
 
@@ -54,45 +70,58 @@ Hello, Ada!
 ```
 
 The first build downloads ANTLR 4.13.2 from Maven Central into
-`tools/antlr-4.13.2-complete.jar` and verifies a pinned SHA-256 digest. To emit
-generated Java and class files:
+`tools/antlr-4.13.2-complete.jar` and verifies a pinned SHA-256 digest. Emit
+generated Java and class files with:
 
 ```bash
 ./bin/sprig build examples/hello.spr -d build/hello
 ```
 
-Run the full project test suite (syntax, semantics, JVM end-to-end, numeric
+Machine-readable results:
+
+```bash
+./bin/sprig check --json examples/hello.spr
+./bin/sprig explain SPR-MATCH-NONEXHAUSTIVE
+```
+
+Run the full test suite (syntax, semantics, JVM end-to-end, numeric
 boundaries, parser recovery, independent acceptance):
 
 ```bash
 ./scripts/test.sh
-```
-
-On the current tree this reports `100 passed, 0 failed`. The grammar smoke
-harness is separate:
-
-```bash
 ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
 ```
 
+## What works today
+
+- Typed functions and methods, local type inference, `let`/`var`, classes with
+  named constructors and field defaults.
+- `enum`, sealed `variant` and exhaustive `match` statements, including
+  recursive visitors written in Sprig.
+- Nullable types with flow narrowing, typed `throws`/`catch`/`finally`, and
+  local modules with import-cycle detection.
+- `List`, `MutableList`, `Map`, `MutableMap` with explicit snapshots.
+- Checked `Int`/`Int32`, explicit integer quotient, `BigInt`, `Decimal`, IEEE
+  `Float`/`Float32` — see [`docs/NUMERIC_SEMANTICS.md`](docs/NUMERIC_SEMANTICS.md).
+- JVM interop for imported classes: constructors, fields, methods, overloads,
+  checked exceptions, conservative nullability.
+- `sprig check`, `build`, `run`, `explain`, `codes`, `--json`,
+  `--syntax-only`.
+
+The authoritative list is
+[`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md).
+
 ## Documentation
 
-- **Website** (`website/`): the official VitePress documentation site, built
-  from the same repository. Run it with Node.js 20+:
-  ```bash
-  cd website
-  npm ci
-  npm run docs:dev      # local development
-  npm run docs:build    # production build
-  ```
-  Reference and project pages are generated from the authoritative root
-  documents during the build; edit the root documents, not the copies.
-- **`docs/`**: implementation-facing documents — numeric semantics, numeric
-  design decisions, diagnostic codes, implemented features, known limitations
-  and the stage-1 roadmap.
-- **`spec/`**: the Sprig v0.7 design kit (language contract and agent-facing
-  design decisions). Its examples describe target semantics and are not
-  automatically executable.
+The official documentation site is built from this repository with VitePress:
+
+- **Site:** <https://colinhouse.github.io/Sprig/>
+- **Source:** [`website/`](website/) — `cd website && npm ci && npm run docs:dev`
+- **Reference documents:** [`docs/`](docs/) for implementation semantics and
+  [`spec/`](spec/) for the v0.7 design kit.
+
+Reference and project pages on the site are generated from the root documents
+during the site build, so there is one authoritative copy of each.
 
 ## Repository layout
 
@@ -101,7 +130,7 @@ compiler/     Java stage-0 compiler (authoritative source)
 runtime/      Java runtime for generated programs
 grammar/      SprigLexer.g4, SprigParser.g4 (authoritative grammar)
 spec/         v0.7 language design kit
-docs/         implementation documentation and release notes
+docs/         numeric contract, diagnostics, status, limits, roadmap, releases
 examples/     runnable example programs
 tests/        syntax, semantics, runtime, numeric, correctness, recovery
 acceptance/   independent acceptance cases and matrices
@@ -113,26 +142,56 @@ bin/, build/  generated locally by scripts/build.sh (not committed)
 
 ## Known limitations
 
-The compiler is a Java seed that emits Java source and invokes `javac`; it does
-not compile itself. User-defined generics, inheritance, `match` expressions,
-arrays, varargs, full Java generic/annotation interop, file IO, a package
-manager, a language server and stage-1 self-hosting are **not implemented**.
-See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
+The compiler is a Java seed that emits Java source and invokes `javac`; it
+does not compile itself. User-defined generics, inheritance, `match`
+expressions, arrays, varargs, full Java generic/annotation interop, file IO, a
+package manager, a language server and stage-1 self-hosting are **not
+implemented**. Runtime numeric errors do not always carry an exact source
+span. Local verification covers macOS Apple Silicon with OpenJDK 17.0.19 and
+26.0.1; hosted CI covers Linux. See
+[`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 
-## Contributing, license and AI disclosure
+## Contributing
 
-- Contribution rules: [`CONTRIBUTING.md`](CONTRIBUTING.md).
-- AI-assisted development disclosure: [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md).
-- License: no license has been selected yet. See
-  [`LICENSE_STATUS.md`](LICENSE_STATUS.md). **Do not publish a release until
-  the owner records one.** Third-party notices (ANTLR, and icon provenance to
-  confirm) are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Contributions are welcome, including AI-assisted ones — this project is built
+that way. The rules are:
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, required commands, pull
+  request expectations.
+- [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) — disclose significant AI assistance,
+  say what you verified, and never weaken a test to make it pass.
+- [`AGENTS.md`](AGENTS.md) — the operating guide coding agents should read
+  first.
+
+Report reproducible problems through
+[Issues](https://github.com/ColinHouse/Sprig/issues) with the Sprig version,
+JDK/platform, minimal source and exact command.
+
+## License
+
+Sprig is licensed under the **Apache License, Version 2.0** — see
+[`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Third-party components and the
+icon provenance note are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md);
+the scope summary is in [`LICENSE_STATUS.md`](LICENSE_STATUS.md).
 
 ## 中文简介
 
-Sprig 是一门缩进式、静态类型的 JVM 语言，目前由 Java stage-0 编译器实现
-（源码解析 → 类型检查 → 生成 Java → `javac` → JVM 运行），尚未自举。已实现
-函数、类、enum、`variant` 与穷尽 `match`、可空类型、`throws`/`catch`、模块、
-不可变/可变集合、受检整数、`BigInt`、`Decimal` 与浮点规则，以及常见的 JVM
-互操作；没有包管理器、LSP、IDE 插件和标准库发行版。构建与运行方式见上方
-Quick start。项目尚未选择许可证，公开再分发与正式发行仍被阻止。
+Sprig 是一门缩进式、静态类型的 JVM 语言，核心特性包括：sealed `variant` 与
+穷尽 `match`、可空类型与流分析收窄、受检整数运算（溢出报错而非静默回绕）、
+精确的 `BigInt`/`Decimal`、以及显式的 JVM 互操作。当前由仓库内的 Java
+stage-0 编译器实现：解析 `.spr` → 类型检查 → 生成 Java → `javac` → JVM
+运行；**尚未自举**，也没有包管理器、LSP、IDE 插件或标准库发行版。
+
+构建与运行（需要 JDK 17 或更新版本）：
+
+```bash
+git clone https://github.com/ColinHouse/Sprig.git
+cd Sprig
+./scripts/build.sh
+./bin/sprig run examples/hello.spr
+```
+
+完整文档见 <https://colinhouse.github.io/Sprig/>；已知限制见
+[`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md)。项目采用
+Apache-2.0 许可证；欢迎 AI 辅助贡献，但必须通过构建、测试与审查，并说明
+你实际验证过的内容。

@@ -7,7 +7,7 @@ program. All commands are executed from the repository root.
 
 | Tool | Version | Why |
 |---|---|---|
-| JDK | 26 or newer | The only runtime exercised so far (OpenJDK 26.0.1 on macOS Apple Silicon). The compiler source compiles with `javac --release 17`, but a Java 17 runtime run has **not** been verified. |
+| JDK | 17 or newer | The compiler builds with `javac --release 17` and has been run end-to-end on OpenJDK 17.0.19 and 26.0.1 (macOS Apple Silicon); hosted CI exercises both on Linux. |
 | Python | 3.12 or newer | Test and acceptance scripts. |
 | `curl` | any | The first build downloads the pinned ANTLR 4.13.2 tool JAR if it is missing. |
 | Node.js | 20 or newer | Only needed to build this documentation site. |
@@ -93,8 +93,8 @@ ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
 
 ## Common first-run problems
 
-- **`JDK required`** — install a JDK and make sure `java` and `javac` are on
-  `PATH`. JDK 26 is what has been tested.
+- **`JDK required`** — install JDK 17 or newer and make sure `java` and
+  `javac` are on `PATH`.
 - **Checksum mismatch for ANTLR** — delete
   `tools/antlr-4.13.2-complete.jar` and rebuild so it is downloaded again.
 - **`SPR-LEX-TAB`** — Sprig indentation uses spaces, never tabs.

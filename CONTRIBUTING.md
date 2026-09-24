@@ -10,8 +10,8 @@ issues instead of guessing.
 
 ## Local setup
 
-Requirements: JDK 26 or newer (the tested runtime), Python 3.12 or newer, and
-`curl` for the first ANTLR download. From the repository root:
+Requirements: JDK 17 or newer (tested on 17.0.19 and 26.0.1), Python 3.12 or
+newer, and `curl` for the first ANTLR download. From the repository root:
 
 ```bash
 ./scripts/build.sh
@@ -52,6 +52,7 @@ full policy is in [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md).
 
 ## License
 
-There is no project license yet. Until the project owner chooses one, do not
-publish source or binary artifacts as an open-source release. See
+Sprig is licensed under Apache-2.0. By contributing, you agree that your
+contribution is licensed under the same terms; keep `LICENSE`, `NOTICE` and
+`THIRD_PARTY_NOTICES.md` current when you add third-party material. See
 [`LICENSE_STATUS.md`](LICENSE_STATUS.md).

@@ -23,10 +23,10 @@ by the Sprig v0.7 design kit.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
-- Build/test evidence currently comes from macOS Apple Silicon with OpenJDK
-  26.0.1. Compiler classes are built with `javac --release 17`; Java 17 runtime
-  execution still needs validation in CI before it is advertised as verified.
-  Until then, the documented runtime requirement is JDK 26 or newer.
+- Build/test evidence comes from macOS Apple Silicon with OpenJDK 17.0.19 and
+  26.0.1, plus hosted CI on Linux for both JDKs. Compiler classes are built
+  with `javac --release 17`, so the supported runtime is JDK 17 or newer; no
+  other platform or architecture has been exercised locally.
 - The project has no selected license. This repository and its candidate
   release package are not cleared for public redistribution until the owner
   selects and records a license.
