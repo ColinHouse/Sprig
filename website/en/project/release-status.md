@@ -1,5 +1,6 @@
 # Release status
 
+**Published release:** `v0.1.0-alpha.1` (prerelease, 2026-09-24)
 **Compiler candidate:** `0.1.0-alpha.1` (language design: Sprig v0.7)
 **Repository:** <https://github.com/ColinHouse/Sprig>
 **License:** Apache-2.0
@@ -19,12 +20,19 @@
 
 ## Releases
 
-**No release has been published yet.** When the first one is ready, prereleases
-are published from version tags by
-`.github/workflows/release.yml`, which rebuilds the compiler, runs the test
-suite, packages the archive with `scripts/package-alpha.sh`, and attaches the
-ZIP and its SHA-256 sidecar. The release notes are in the repository under
-`docs/releases/`.
+The first alpha is published as a **prerelease**:
+
+<https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1>
+
+| Asset | Notes |
+|---|---|
+| `sprig-v0.1.0-alpha.1-jdk.zip` | Compiler and runtime, ANTLR 4.13.2, launcher, Hello World and license notices. **No JDK included.** |
+| `sprig-v0.1.0-alpha.1-jdk.zip.sha256` | SHA-256 checksum of the ZIP. |
+
+The published archive was downloaded again, its checksum verified, and
+extracted to smoke-test `bin/sprig version`, `check` and `run`; its
+`BUILD_INFO.txt` records source revision `6e7b57e`. The notes are in the
+repository under `docs/releases/`.
 
 An alpha is an early build: it is published so the project can be evaluated,
 not because it is production-ready.

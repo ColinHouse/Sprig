@@ -1,7 +1,23 @@
 # Getting Started
 
-This page builds the stage-0 compiler from source and runs a first Sprig
-program. All commands are executed from the repository root.
+This page explains how to get the stage-0 compiler and run a first Sprig
+program.
+
+## Install
+
+**Option A — download the alpha archive** (compiler, runtime, ANTLR and
+launcher; no JDK included):
+
+```bash
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.1.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.1.0-alpha.1-jdk.zip
+cd sprig-v0.1.0-alpha.1-jdk
+./bin/sprig run examples/hello.spr
+```
+
+**Option B — build from source**, described below.
 
 ## Requirements
 

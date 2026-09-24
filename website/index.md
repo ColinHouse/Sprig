@@ -37,9 +37,11 @@ Sprig 仍是实验性项目。编译器是 Java 编写的 stage-0 实现：解�
 **尚未自举**，目前没有包管理器、语言服务器、IDE 插件或标准库发行版。
 
 ::: info 发行状态
-**目前没有可下载的正式发行包**。请按[快速开始](/guide/getting-started)从源码构建。
-打包与发布流程已经准备好，第一个 Alpha 发行包会在实际打包验收后发布；
-当前状态见[发布状态](/project/release-status)。
+**`v0.1.0-alpha.1` 已作为 prerelease 发布**：在
+[Releases](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
+下载 ZIP 与 `.sha256` 校验文件（包含编译器、runtime、ANTLR 与启动脚本，**不含 JDK**），
+也可以按[快速开始](/guide/getting-started)从源码构建。这是 Alpha 版本，不是稳定版；
+当前状态与验证范围见[发布状态](/project/release-status)。
 :::
 
 ## 第一个程序

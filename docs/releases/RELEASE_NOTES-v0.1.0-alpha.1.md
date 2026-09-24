@@ -1,5 +1,8 @@
 # Sprig v0.1.0-alpha.1
 
+**Published 2026-09-24 as a GitHub prerelease:**
+<https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1>
+
 The first public alpha of the Sprig Java stage-0 compiler. Sprig source is
 parsed and checked, lowered to Java source, compiled with `javac`, and run on
 the JVM. The language design remains Sprig v0.7.
@@ -7,6 +10,24 @@ the JVM. The language design remains Sprig v0.7.
 - Repository: <https://github.com/ColinHouse/Sprig>
 - Documentation: <https://colinhouse.github.io/Sprig/>
 - License: Apache-2.0 (`LICENSE`, `NOTICE`)
+
+## Download
+
+| Asset | Notes |
+|---|---|
+| `sprig-v0.1.0-alpha.1-jdk.zip` | Compiler/runtime, ANTLR 4.13.2, launcher, Hello World, license and notices. No JDK included. |
+| `sprig-v0.1.0-alpha.1-jdk.zip.sha256` | SHA-256 checksum of the archive. |
+
+Verified checksum of the published archive:
+
+```text
+fccc87e0d92c864672824d42035cbc9b1486da430166f744325db6b8def436db  sprig-v0.1.0-alpha.1-jdk.zip
+```
+
+The archive was downloaded from the release again and smoke-tested
+(`bin/sprig version`, `check`, `run`); its `BUILD_INFO.txt` records source
+revision `6e7b57e`. Extract it and run `bin/sprig run examples/hello.spr` with
+JDK 17 or newer on `PATH`.
 
 ## Included and exercised
 
