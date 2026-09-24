@@ -1,0 +1,11 @@
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+
+let node = Expr.Literal(value=7)
+
+match node:
+    case Expr.Literal as value:
+        print(value.value)
+    case Expr.Literal as value:
+        print(value.value)

@@ -1,0 +1,2 @@
+func bad(x: Int):
+    return x

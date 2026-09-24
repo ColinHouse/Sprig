@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: JDK ${{ matrix.java }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '26']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build parser, compiler, and runtime
+        run: ./scripts/build.sh
+      - name: Run syntax, semantics, runtime, numeric, recovery, and acceptance tests
+        run: ./scripts/test.sh
+      - name: Run reference grammar harness
+        env:
+          ANTLR_JAR: ${{ github.workspace }}/tools/antlr-4.13.2-complete.jar
+        run: ./tools/test-grammar.sh
+
+  docs:
+    name: Documentation site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '26'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Build compiler for snippet verification
+        run: ./scripts/build.sh
+      - name: Run documented snippets on the real compiler
+        run: python3 tools/verify-doc-snippets.py
+      - name: Install website dependencies
+        run: npm ci
+        working-directory: website
+      - name: Build VitePress site
+        run: npm run docs:build
+        working-directory: website

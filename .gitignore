@@ -1,0 +1,31 @@
+# Build outputs and generated launchers
+/build/
+/bin/
+/sprig-build/
+/dist/
+/tools/*.jar
+
+# Acceptance results may include local paths and environment details. The
+# scripts regenerate them under acceptance/results/ for each local run.
+/acceptance/results/
+
+# VitePress documentation site
+/website/node_modules/
+/website/.vitepress/cache/
+/website/.vitepress/dist/
+/website/generated/
+
+# Local editor and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.tmp
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+!.env.example

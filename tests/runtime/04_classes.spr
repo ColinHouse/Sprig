@@ -1,0 +1,32 @@
+# Classes: automatic named constructors, defaults, methods, implicit fields.
+
+class Hero:
+    let name: String
+    var health: Int = 100
+    let title: String = "hero"
+
+    func heal(amount: Int) -> Unit:
+        health += amount
+
+    func damage(amount: Int) -> Unit:
+        health -= amount
+        if health < 0:
+            health = 0
+
+    func is_alive() -> Bool:
+        return health > 0
+
+    func describe() -> String:
+        return title + " " + name + " (" + health.toString() + ")"
+
+let ada = Hero(name="Ada")
+let bob = Hero(name="Bob", health=30, title="villain")
+print(ada.describe())
+print(bob.describe())
+ada.heal(20)
+bob.damage(40)
+print(ada.health)
+print(bob.is_alive())
+print(ada)
+let default_hero = Hero(name="Eve")
+print(default_hero.health)

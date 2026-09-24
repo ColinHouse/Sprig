@@ -1,0 +1,14 @@
+variant A:
+    First
+    Second
+
+variant B:
+    First
+
+let value: A = A.First
+
+match value:
+    case A.First:
+        print("a")
+    case B.First:
+        print("b")

@@ -1,0 +1,4 @@
+func square(x: Int) -> Int:
+    return x * x
+
+let PI_APPROX: Float = 3.14159

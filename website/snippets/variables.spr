@@ -1,0 +1,9 @@
+# let binds once; var may be reassigned.
+let name = "Ada"
+var visits = 0
+visits += 1
+
+# Local bindings infer their type from the initializer.
+let greeting = "Hello, " + name
+print(greeting)
+print(visits)

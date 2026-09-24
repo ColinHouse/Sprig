@@ -1,0 +1,35 @@
+# Naive and compensated dot products show an algorithmic error beyond static typing.
+func dot(a: List[Float], b: List[Float]) -> Float:
+    var total: Float = 0.0
+    var i: Int = 0
+    while i < a.size():
+        total += a[i] * b[i]
+        i += 1
+    return total
+
+func dot_compensated(a: List[Float], b: List[Float]) -> Float:
+    var total: Float = 0.0
+    var correction: Float = 0.0
+    var i: Int = 0
+    while i < a.size():
+        let term = a[i] * b[i]
+        let next = total + term
+        if Float.abs(total) >= Float.abs(term):
+            correction += (total - next) + term
+        else:
+            correction += (term - next) + total
+        total = next
+        i += 1
+    return total + correction
+
+let a: List[Float] = [1e16, 1.0, -1e16]
+let b: List[Float] = [1.0, 1.0, 1.0]
+print(dot(a, b))
+print(dot_compensated(a, b))
+print(Decimal.parse("10000000000000000") + Decimal.parse("1") - Decimal.parse("10000000000000000"))
+
+# For x^2 - 1e8*x + 1 = 0, the direct small-root formula cancels.
+let coefficient: Float = -1e8
+let discriminant = Float.sqrt(coefficient * coefficient - 4.0)
+print((-coefficient - discriminant) / 2.0)
+print(2.0 / (-coefficient + discriminant))

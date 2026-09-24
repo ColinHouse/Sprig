@@ -1,0 +1,4 @@
+class Bad:
+    let value: Unit = print(1)
+
+let bad = Bad()

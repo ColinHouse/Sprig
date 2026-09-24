@@ -1,0 +1,36 @@
+# Control flow: if/elif/else, while, for over collections, break/continue, range.
+
+var total: Int = 0
+for value in [1, 2, 3, 4, 5]:
+    if value == 3:
+        continue
+    if value == 5:
+        break
+    total += value
+print(total)
+
+for i in range(3):
+    print("i" + i.toString())
+
+var countdown = 3
+while countdown > 0:
+    print("t-minus " + countdown.toString())
+    countdown -= 1
+
+let scores: Map[String, Int] = {"ada": 10, "bob": 7}
+for name in scores:
+    print(name)
+
+for ch in "abc":
+    print(ch)
+
+var acc: Int = 0
+for i in range(0, 10, 2):
+    acc += i
+print(acc)
+
+var nested: Int = 0
+for row in [[1, 2], [3, 4]]:
+    for item in row:
+        nested += item
+print(nested)

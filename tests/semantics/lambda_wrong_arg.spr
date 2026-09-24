@@ -1,0 +1,2 @@
+let f = fn(x: Int) => x + 1
+print(f("a"))

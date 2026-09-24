@@ -1,0 +1,9 @@
+let xs: List[Int] = [1, 2]
+let ys: MutableList[String] = ["a"]
+ys.append("b")
+let table: MutableMap[String, List[Int]] = {"evens": [2, 4]}
+table["odds"] = [1, 3]
+print(xs.size() + ys.size() + table.size())
+print(table.get("odds"))
+let frozen: Map[String, List[Int]] = table.toMap()
+print(frozen.keys())

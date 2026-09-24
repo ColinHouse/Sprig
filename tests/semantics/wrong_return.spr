@@ -1,0 +1,2 @@
+func f() -> Int:
+    return "hello"

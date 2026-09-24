@@ -1,0 +1,8 @@
+import java.lang.Integer as JInteger
+import java.lang.System
+
+let max = JInteger.MAX_VALUE
+print(max > 0)
+print(System.currentTimeMillis() > 0)
+let parsed = JInteger.parseInt("41")
+print(parsed + 1)

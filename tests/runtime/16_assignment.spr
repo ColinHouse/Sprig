@@ -1,0 +1,43 @@
+# Assignment forms: fields through receivers, list/map indexing, compound ops.
+
+class Counter:
+    let label: String
+    var value: Int = 0
+
+    func add(delta: Int) -> Unit:
+        value += delta
+
+    func reset() -> Unit:
+        value = 0
+
+let counter = Counter(label="c")
+counter.add(3)
+counter.value += 2
+counter.value = counter.value * 4
+print(counter.value)
+counter.reset()
+print(counter.value)
+
+let xs: MutableList[Int] = [1, 2, 3]
+xs[0] = 10
+xs[1] += 5
+print(xs)
+
+let table: MutableMap[String, Int] = {}
+table["a"] = 1
+table["a"] += 41
+print(table)
+
+var text = "a"
+text += "b"
+print(text)
+print("b" in "abc")
+print("z" in "abc")
+
+var total: Int = 0
+total += 1
+total -= 1
+total *= 5
+total = total.divTrunc(2)
+total = total % 2
+print(total)

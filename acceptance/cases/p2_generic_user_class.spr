@@ -1,0 +1,4 @@
+class Box:
+    let value: Int
+
+let box: Box[String] = Box(value=1)

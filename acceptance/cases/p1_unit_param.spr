@@ -1,0 +1,4 @@
+func accept(x: Unit) -> Unit:
+    pass
+
+print("defined")

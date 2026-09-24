@@ -1,0 +1,4 @@
+variant E:
+    Lit(value: Int)
+
+let e = E.Lit

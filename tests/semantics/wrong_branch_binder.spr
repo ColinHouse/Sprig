@@ -1,0 +1,9 @@
+enum State:
+    On
+    Off
+func f(s: State) -> Unit:
+    match s:
+        case State.On as x:
+            pass
+        case State.Off:
+            pass

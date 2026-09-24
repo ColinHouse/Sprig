@@ -1,0 +1,13 @@
+# Module imports: values and functions from another Sprig file.
+
+import "./shapes.spr" as shapes
+
+let rect = shapes.Rectangle(width=4, height=5)
+print(rect.area())
+print(rect.describe())
+print(shapes.square_area(6))
+print(shapes.PI)
+
+var counter: Int = shapes.next_id()
+counter = shapes.next_id()
+print(counter)

@@ -1,0 +1,4 @@
+import java.lang.Class as JClass
+
+let load = fn(name: String) => JClass.forName(name)
+print(load("java.lang.String"))

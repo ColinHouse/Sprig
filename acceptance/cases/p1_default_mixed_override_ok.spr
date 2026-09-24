@@ -1,0 +1,12 @@
+func fail() -> Int throws Error:
+    throw Error("unused")
+
+class Pair:
+    let a: Int = fail()
+    let b: Int = fail()
+
+func make() -> Pair:
+    return Pair(a=1, b=2)
+
+let pair = make()
+print(pair.a + pair.b)

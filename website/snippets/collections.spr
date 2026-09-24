@@ -1,0 +1,15 @@
+let immutable: List[Int] = [3, 1, 2]
+let mutable: MutableList[Int] = immutable.toMutableList()
+mutable.append(4)
+mutable.sort()
+
+print(immutable.contains(2))
+print(2 in immutable)
+print(mutable)
+print(mutable[0])
+print(immutable) # toMutableList returns a new outer collection
+
+let ages: Map[String, Int] = {"ada": 36, "bob": 41}
+print(ages.get("ada"))
+print(ages["missing"])
+print("bob" in ages)

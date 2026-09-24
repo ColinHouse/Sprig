@@ -1,0 +1,12 @@
+program:
+  fact = 1
+  while x { fact = (fact * x); x = (x + -1) }
+  print(fact)
+  if 0 { print(111) } else { print(222) }
+before: print(x)
+eval> 120
+eval> 222
+original:  ((2 * 3) + (z + 0))
+simplified: (6 + z)
+nodes=7 variables=1
+error caught: undefined variable 'missing'

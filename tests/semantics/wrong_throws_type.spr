@@ -1,0 +1,2 @@
+func f() -> Int throws Int:
+    return 1

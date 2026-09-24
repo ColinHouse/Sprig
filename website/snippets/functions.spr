@@ -1,0 +1,11 @@
+# Named functions declare parameter and return types, including -> Unit.
+func add(a: Int, b: Int) -> Int:
+    return a + b
+
+func factorial(n: Int) -> Int:
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(add(2, 3))
+print(factorial(5))

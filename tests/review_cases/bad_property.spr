@@ -1,0 +1,5 @@
+class Box:
+    let value: Int
+
+let box = Box(value=1)
+print(box.missing)

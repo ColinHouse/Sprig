@@ -1,0 +1,14 @@
+import java.time.LocalDate as Date
+
+class Counter:
+    let name: String
+    var value: Int = 0
+
+    func increment(delta: Int) -> Unit:
+        value += delta
+
+let counter = Counter(name="example")
+counter.increment(3)
+let history: MutableList[Int] = [1, 2, 3]
+history.append(counter.value)
+print(Date.now().toString())

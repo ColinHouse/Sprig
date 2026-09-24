@@ -1,0 +1,5 @@
+3
+Branch(left=Leaf(label=a), right=Branch(left=Leaf(label=b), right=Leaf(label=c)))
+[Branch(left=Leaf(label=a), right=Branch(left=Leaf(label=b), right=Leaf(label=c))), Leaf(label=x)]
+{depth: 3, leaves: 3}
+{evens: [2, 4], odds: [1, 3]}

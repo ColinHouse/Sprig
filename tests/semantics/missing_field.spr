@@ -1,0 +1,5 @@
+class Hero:
+    let name: String
+    var health: Int
+
+let hero = Hero(name="Ada")

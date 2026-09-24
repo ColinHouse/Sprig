@@ -1,0 +1,20 @@
+# AST-friendly sealed variants: no nullable bag-of-fields, no default match.
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+    Variable(name: String)
+
+func evaluate(expr: Expr) -> Int:
+    match expr:
+        case Expr.Literal as node:
+            return node.value
+        case Expr.Add as node:
+            return evaluate(node.left) + evaluate(node.right)
+        case Expr.Variable as node:
+            return 0
+
+let expr = Expr.Add(
+    left=Expr.Literal(value=2),
+    right=Expr.Literal(value=3)
+)
+print(evaluate(expr))

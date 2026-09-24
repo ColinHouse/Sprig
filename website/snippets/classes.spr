@@ -1,0 +1,14 @@
+class Hero:
+    let name: String
+    var health: Int = 100
+
+    func heal(amount: Int) -> Unit:
+        health += amount
+
+    func describe() -> String:
+        return name + " (" + health.toString() + " hp)"
+
+# Class construction uses named fields only.
+let hero = Hero(name="Ada", health=80)
+hero.heal(15)
+print(hero.describe())

@@ -1,0 +1,12 @@
+import java.time.LocalDate as Date
+
+let today = Date.now()
+let maybe: Date? = today
+if maybe != null:
+    print(maybe.getYear() > 2000)
+else:
+    print("none")
+
+let absent: Date? = null
+if absent == null:
+    print("explicit-absent-ok")

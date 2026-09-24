@@ -1,0 +1,3 @@
+class Hero:
+    let name: String
+let hero = Hero("Ada")

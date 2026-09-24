@@ -1,0 +1,10 @@
+# Lambdas are expressions: fn(params) => expression. Arities 0 through 3.
+let doubled = [1, 2, 3].map(fn(x: Int) => x * 2)
+print(doubled)
+
+let evens = [1, 2, 3, 4].filter(fn(x: Int) => x % 2 == 0)
+print(evens)
+
+let collected: MutableList[Int] = []
+[1, 2, 3].forEach(fn(x: Int) => collected.append(x * 10))
+print(collected)

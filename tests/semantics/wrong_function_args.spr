@@ -1,0 +1,3 @@
+func add(a: Int) -> Int:
+    return a
+let result = add(a=3)

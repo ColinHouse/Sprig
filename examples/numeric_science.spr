@@ -1,0 +1,12 @@
+# Explicit precision policy: values and length use binary64; amount uses Decimal.
+func mean(values: List[Float]) -> Float:
+    var total: Float = 0.0
+    for value in values:
+        total += value
+    return total / values.size().toFloatExact()
+
+print(mean([1.0, 2.0, 3.0]))
+
+let amount = Decimal.parse("0.1") + Decimal.parse("0.2")
+print(amount)
+print((0.1 + 0.2).approxEqual(0.3, 1e-15))

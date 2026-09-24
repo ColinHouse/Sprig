@@ -1,0 +1,4 @@
+import java.lang.System as JSystem
+
+let value: String = JSystem.getProperty("sprig.review.nonexistent.property")
+print(value.length())

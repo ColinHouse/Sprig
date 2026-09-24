@@ -1,0 +1,3 @@
+import java.util.ArrayList as AL
+
+let x: AL[String] = AL()

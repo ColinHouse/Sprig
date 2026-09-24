@@ -1,0 +1,14 @@
+func fail() -> Int throws Error:
+    throw Error("propagated")
+
+class Box:
+    let value: Int = fail()
+
+func make() -> Int throws Error:
+    let box = Box()
+    return box.value
+
+try:
+    print(make())
+catch problem: Error:
+    print("caught: " + problem.message)

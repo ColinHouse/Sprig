@@ -1,0 +1,13 @@
+import java.io.IOException as IOException
+
+func fail() -> Int throws IOException:
+    throw IOException("boom")
+
+class Box:
+    let value: Int = fail()
+
+func make() -> Int:
+    let box = Box()
+    return box.value
+
+print(make())

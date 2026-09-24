@@ -1,0 +1,5 @@
+let small: Int32 = 5
+let big: Int = 7
+let sum = small + big
+print(sum)
+print(small.toInt())

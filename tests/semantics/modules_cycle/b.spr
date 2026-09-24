@@ -1,0 +1,4 @@
+import "./a.spr" as a
+
+func b_value() -> Int:
+    return 2

@@ -1,0 +1,23 @@
+# Lambda capture: let locals by value, params, class fields and module vars.
+
+class Accumulator:
+    var offset: Int = 100
+
+    func scaled(factor: Int) -> Int:
+        let apply_offset = fn(x: Int) => x * factor + offset
+        return apply_offset(2)
+
+func local() -> Int:
+    var base = 1
+    let frozen = base
+    let add = fn(x: Int) => x + frozen
+    base = 50
+    return add(1)
+
+var module_base = 7
+let read_module = fn(x: Int) => x + module_base
+module_base = 8
+
+print(Accumulator().scaled(3))
+print(local())
+print(read_module(1))

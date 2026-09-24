@@ -1,0 +1,7 @@
+import java.util.regex.Pattern as Pattern
+
+func compile(regex: String?) -> Pattern?:
+    return Pattern.compile(regex)
+
+print(compile("a+") != null)
+print(compile(null) != null)

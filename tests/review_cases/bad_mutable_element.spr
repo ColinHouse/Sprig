@@ -1,0 +1,2 @@
+let xs: MutableList[Int] = [1]
+xs.append("wrong")

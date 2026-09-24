@@ -1,0 +1,14 @@
+import java.math.BigInteger as JBigInteger
+
+let a = BigInt.parse("9223372036854775808")
+let b = BigInt.fromInt(2)
+print(a + b)
+print(a * b)
+print(a.divTrunc(b))
+print(a % BigInt.fromInt(3))
+print(-b)
+print(a > b)
+print(BigInt.fromInt(42).toIntExact())
+let j: JBigInteger = a.toJava()
+print(BigInt.fromJava(j) == a)
+print(BigInt.fromInt(3).toDecimal())

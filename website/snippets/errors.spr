@@ -1,0 +1,15 @@
+# Recoverable failures use typed errors: func ... throws T, throw, try/catch.
+func checkout(quantity: Int) -> Int throws Error:
+    if quantity <= 0:
+        throw Error("quantity must be positive")
+    return quantity * 3
+
+try:
+    print(checkout(4))
+catch problem: Error:
+    print("rejected: " + problem.message)
+
+try:
+    print(checkout(0))
+catch problem: Error:
+    print("rejected: " + problem.message)

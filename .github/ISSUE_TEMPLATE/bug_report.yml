@@ -1,0 +1,41 @@
+name: Compiler bug report
+description: Report a reproducible Sprig compiler or runtime problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Sprig version
+      description: Include the output of `sprig version`.
+    validations:
+      required: true
+  - type: input
+    id: java
+    attributes:
+      label: Java version and platform
+      description: Include `java -version`, operating system, and architecture.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Minimal Sprig source
+      description: Paste a small `.spr` program that reproduces the issue.
+      render: sprig
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Command and actual result
+      description: Include the command, exit code, diagnostic code, and output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true

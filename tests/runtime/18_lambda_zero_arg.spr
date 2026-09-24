@@ -1,0 +1,19 @@
+# Lambda arity: zero-argument functions are first-class values too.
+
+let answer = fn() => 42
+print(answer())
+
+let label = fn() => "zero"
+print(label())
+
+let calls: MutableList[Int] = []
+let record = fn() => calls.append(1)
+record()
+record()
+print(calls.size())
+
+let greet = fn() => print("hi from zero-arg lambda")
+greet()
+
+let factory = fn() => fn(x: Int) => x * 3
+print(factory()(7))

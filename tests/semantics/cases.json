@@ -1,0 +1,243 @@
+[
+  {
+    "file": "missing_case.spr",
+    "expected_diagnostic": "SPR-MATCH-NONEXHAUSTIVE",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "duplicate_case.spr",
+    "expected_diagnostic": "SPR-MATCH-DUPLICATE",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "wrong_case_type.spr",
+    "expected_diagnostic": "SPR-MATCH-WRONG-TYPE",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "wrong_constructor_args.spr",
+    "expected_diagnostic": "SPR-CALL-NAMED-REQUIRED",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "wrong_function_args.spr",
+    "expected_diagnostic": "SPR-CALL-POSITIONAL-REQUIRED",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "wrong_variant_args.spr",
+    "expected_diagnostic": "SPR-CALL-NAMED-REQUIRED",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "wrong_branch_binder.spr",
+    "expected_diagnostic": "SPR-MATCH-ENUM-BINDER",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "nonnullable_null.spr",
+    "expected_diagnostic": "SPR-TYPE-NULL",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "immutable_collection.spr",
+    "expected_diagnostic": "SPR-COLLECTION-IMMUTABLE",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "field_shadow.spr",
+    "expected_diagnostic": "SPR-NAME-FIELD-SHADOW",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "wrong_return.spr",
+    "expected_diagnostic": "SPR-TYPE-RETURN",
+    "status": "future semantic checker only",
+    "source": "kit fixture"
+  },
+  {
+    "file": "let_reassign.spr",
+    "expected_diagnostic": "SPR-NAME-LET-ASSIGN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "param_reassign.spr",
+    "expected_diagnostic": "SPR-NAME-LET-ASSIGN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "unit_bind.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "bad_arity.spr",
+    "expected_diagnostic": "SPR-CALL-ARITY",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "unknown_field.spr",
+    "expected_diagnostic": "SPR-CALL-UNKNOWN-FIELD",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "missing_field.spr",
+    "expected_diagnostic": "SPR-CALL-MISSING-FIELD",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "duplicate_field.spr",
+    "expected_diagnostic": "SPR-CALL-DUPLICATE-FIELD",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "empty_list.spr",
+    "expected_diagnostic": "SPR-TYPE-INFER",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "empty_map.spr",
+    "expected_diagnostic": "SPR-TYPE-INFER",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "nullable_receiver.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "no_truthiness.spr",
+    "expected_diagnostic": "SPR-TYPE-CONDITION",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "unreachable.spr",
+    "expected_diagnostic": "SPR-FLOW-UNREACHABLE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "break_outside.spr",
+    "expected_diagnostic": "SPR-FLOW-BREAK",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "throws_unhandled.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "mutate_map.spr",
+    "expected_diagnostic": "SPR-COLLECTION-IMMUTABLE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "payload_assign.spr",
+    "expected_diagnostic": "SPR-NAME-LET-ASSIGN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "wrong_param_type.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "int_float_mix.spr",
+    "expected_diagnostic": "SPR-NUM-MIXED",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "match_nullable.spr",
+    "expected_diagnostic": "SPR-MATCH-SCRUTINEE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "unknown_method.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "duplicate_local.spr",
+    "expected_diagnostic": "SPR-NAME-DUPLICATE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "missing_return.spr",
+    "expected_diagnostic": "SPR-FLOW-MISSING-RETURN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "empty_variant_call.spr",
+    "expected_diagnostic": "SPR-CALL-ARITY",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "unknown_type.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "static_class_member.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "lambda_wrong_arg.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "payload_as_value.spr",
+    "expected_diagnostic": "SPR-TYPE-NOT-CALLABLE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "wrong_throws_type.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "return_outside.spr",
+    "expected_diagnostic": "SPR-TYPE-RETURN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "wrong_arg_count_variant.spr",
+    "expected_diagnostic": "SPR-CALL-MISSING-FIELD",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "let_field_assign.spr",
+    "expected_diagnostic": "SPR-NAME-LET-ASSIGN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "for_var_assign.spr",
+    "expected_diagnostic": "SPR-NAME-LET-ASSIGN",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "modules_cycle/main.spr",
+    "expected_diagnostic": "SPR-NAME-IMPORT-CYCLE",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "jvm_throws_unhandled.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "capture_mutable.spr",
+    "expected_diagnostic": "SPR-TYPE-CAPTURE",
+    "status": "checked by output/scripts/test.sh"
+  }
+]

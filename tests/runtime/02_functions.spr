@@ -1,0 +1,33 @@
+# Functions: recursion, mutual recursion, Unit functions, parameters.
+
+func factorial(n: Int) -> Int:
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+func is_even(n: Int) -> Bool:
+    if n == 0:
+        return true
+    return is_odd(n - 1)
+
+func is_odd(n: Int) -> Bool:
+    if n == 0:
+        return false
+    return is_even(n - 1)
+
+func greet(name: String, greeting: String) -> String:
+    return greeting + ", " + name + "!"
+
+var counter: Int = 0
+
+func bump(amount: Int) -> Unit:
+    counter += amount
+
+print(factorial(6))
+print(is_even(10))
+print(is_odd(7))
+print(greet("Ada", "Hello"))
+print(greet("Bob", "Hi"))
+bump(4)
+bump(1)
+print(counter)

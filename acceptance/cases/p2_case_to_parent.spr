@@ -1,0 +1,14 @@
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+
+let node: Expr = Expr.Literal(value=7)
+
+func eval(e: Expr) -> Int:
+    match e:
+        case Expr.Literal as value:
+            return value.value
+        case Expr.Add as sum:
+            return eval(sum.left) + eval(sum.right)
+
+print(eval(node))

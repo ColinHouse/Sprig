@@ -1,0 +1,151 @@
+# Bootstrap-feasibility slice: a tiny lexer + recursive-descent parser +
+# evaluator for arithmetic, all written in Sprig and run on the JVM.
+# This is the shape a self-hosted Sprig frontend would take; it exercises
+# strings, mutable index state, variants, exhaustive match and typed errors.
+
+variant Token:
+    Number(value: Int)
+    Plus
+    Star
+    LParen
+    RParen
+    End
+
+variant Node:
+    Literal(value: Int)
+    Add(left: Node, right: Node)
+    Multiply(left: Node, right: Node)
+
+class Lexer:
+    let text: String
+    var pos: Int = 0
+
+    func tokenize() -> List[Token] throws Error:
+        let tokens: MutableList[Token] = []
+        while pos < text.length():
+            let ch = text.charAt(pos)
+            if ch == " ":
+                pos += 1
+            elif ch == "+":
+                tokens.append(Token.Plus)
+                pos += 1
+            elif ch == "*":
+                tokens.append(Token.Star)
+                pos += 1
+            elif ch == "(":
+                tokens.append(Token.LParen)
+                pos += 1
+            elif ch == ")":
+                tokens.append(Token.RParen)
+                pos += 1
+            else:
+                tokens.append(Token.Number(value=read_number()))
+        tokens.append(Token.End)
+        return tokens.toList()
+
+    func read_number() -> Int throws Error:
+        var digits = ""
+        while pos < text.length() and is_digit(text.charAt(pos)):
+            digits += text.charAt(pos)
+            pos += 1
+        if digits == "":
+            throw Error("expected a number at position " + pos.toString())
+        return digits.toInt()
+
+func is_digit(ch: String) -> Bool:
+    return ch >= "0" and ch <= "9"
+
+class Parser:
+    let tokens: List[Token]
+    var index: Int = 0
+
+    func parse() -> Node throws Error:
+        let node = parse_sum()
+        if peek() != Token.End:
+            throw Error("unexpected trailing tokens")
+        return node
+
+    func parse_sum() -> Node throws Error:
+        var left = parse_product()
+        while peek() == Token.Plus:
+            advance()
+            left = Node.Add(left=left, right=parse_product())
+        return left
+
+    func parse_product() -> Node throws Error:
+        var left = parse_atom()
+        while peek() == Token.Star:
+            advance()
+            left = Node.Multiply(left=left, right=parse_atom())
+        return left
+
+    func parse_atom() -> Node throws Error:
+        let token = peek()
+        match token:
+            case Token.Number as node:
+                advance()
+                return Node.Literal(value=node.value)
+            case Token.LParen:
+                advance()
+                let inner = parse_sum()
+                expect_close()
+                return inner
+            case Token.End:
+                throw Error("unexpected end of input")
+            case Token.Plus:
+                throw Error("unexpected '+'")
+            case Token.Star:
+                throw Error("unexpected '*'")
+            case Token.RParen:
+                throw Error("unexpected ')'")
+
+    func expect_close() -> Unit throws Error:
+        if peek() != Token.RParen:
+            throw Error("expected ')'")
+        advance()
+
+    func peek() -> Token:
+        return tokens.get(index)
+
+    func advance() -> Unit:
+        index += 1
+
+class Evaluator:
+    func evaluate(node: Node) -> Int:
+        match node:
+            case Node.Literal as leaf:
+                return leaf.value
+            case Node.Add as sum:
+                return evaluate(sum.left) + evaluate(sum.right)
+            case Node.Multiply as product:
+                return evaluate(product.left) * evaluate(product.right)
+
+class Formatter:
+    func format(node: Node) -> String:
+        match node:
+            case Node.Literal as leaf:
+                return leaf.value.toString()
+            case Node.Add as sum:
+                return "(" + format(sum.left) + " + " + format(sum.right) + ")"
+            case Node.Multiply as product:
+                return "(" + format(product.left) + " * " + format(product.right) + ")"
+
+func run(source: String) -> String throws Error:
+    let tokens = Lexer(text=source).tokenize()
+    let tree = Parser(tokens=tokens).parse()
+    let value = Evaluator().evaluate(tree)
+    return Formatter().format(tree) + " = " + value.toString()
+
+print(run("1 + 2 * 3"))
+print(run("(1 + 2) * 3"))
+print(run("10 * (2 + 3) + 7"))
+
+try:
+    print(run("1 + * 2"))
+catch problem: Error:
+    print("parse error: " + problem.message)
+
+try:
+    print(run("(1 + 2"))
+catch problem: Error:
+    print("parse error: " + problem.message)

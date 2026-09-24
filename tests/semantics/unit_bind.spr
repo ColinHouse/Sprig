@@ -1,0 +1,4 @@
+func shout(text: String) -> Unit:
+    print(text)
+
+let result = shout("hi")

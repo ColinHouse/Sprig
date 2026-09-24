@@ -1,0 +1,5 @@
+func compute() -> Int:
+    var base = 1
+    let add = fn(x: Int) => x + base
+    base = 2
+    return add(1)

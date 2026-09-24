@@ -1,0 +1,15 @@
+import java.lang.Integer as JInteger
+import java.lang.Long as JLong
+import java.lang.Float as JFloat
+import java.math.BigDecimal as JDecimal
+
+let small: Int32 = 42
+let f32: Float32 = 0.5
+print(JInteger.valueOf(small))
+print(JInteger.valueOf(7))
+print(JLong.valueOf(small))
+print(JFloat.valueOf(f32))
+let decimal = Decimal.parse("1.20")
+let java_decimal: JDecimal = decimal.toJava()
+print(java_decimal.toPlainString())
+print(Decimal.fromJava(java_decimal) == Decimal.parse("1.2"))

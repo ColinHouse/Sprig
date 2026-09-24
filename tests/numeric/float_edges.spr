@@ -1,0 +1,23 @@
+import java.lang.Double as JDouble
+import java.lang.Float as JFloat
+
+let x: Float = 0.1 + 0.2
+print(x)
+print(x == 0.3)
+print(x.approxEqual(0.3, 1e-15))
+let negative_zero: Float = -0.0
+print(negative_zero == 0.0)
+print((1.0 / negative_zero).isInfinite())
+let nan: Float = "NaN".toFloat()
+print(nan.isNaN())
+print(nan == nan)
+print((1.0 / 0.0).isInfinite())
+print((0.0 / 0.0).isNaN())
+print((1e308 * 1e308).isInfinite())
+print(1e-300 * 1e-300)
+let small: Float32 = 0.1
+print(small.toFloat())
+print((1).toFloat())
+print(JDouble.doubleToRawLongBits(negative_zero))
+let negative_zero32: Float32 = -0.0
+print(JFloat.floatToRawIntBits(negative_zero32))

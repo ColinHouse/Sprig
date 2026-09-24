@@ -1,0 +1,4 @@
+import "./math_module.spr" as math
+
+print(math.square(7))
+print(math.PI_APPROX)

@@ -1,0 +1,14 @@
+func fail() -> Int throws Error:
+    throw Error("caught")
+
+class Box:
+    let value: Int = fail()
+
+func make() -> Int:
+    try:
+        let box = Box()
+        return box.value
+    catch problem: Error:
+        return -1
+
+print(make())

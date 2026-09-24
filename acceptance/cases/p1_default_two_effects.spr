@@ -1,0 +1,14 @@
+import java.io.IOException as IOException
+
+func io_fail() -> Int throws IOException:
+    throw IOException("io")
+
+func sprig_fail() -> Int throws Error:
+    throw Error("sprig")
+
+class Pair:
+    let a: Int = io_fail()
+    let b: Int = sprig_fail()
+
+func make() -> Pair:
+    return Pair()

@@ -1,0 +1,4 @@
+func f() -> Unit:
+    pass
+
+return 3

@@ -1,0 +1,12 @@
+variant Ast:
+    Leaf(value: Int)
+    Pair(left: Ast, right: Ast)
+
+let node = Ast.Pair(
+    left=Ast.Leaf(value=1),
+    right=Ast.Leaf(value=2),
+)
+let data: Map[String, Int] = {
+    "a": 1,
+    "b": 2,
+}

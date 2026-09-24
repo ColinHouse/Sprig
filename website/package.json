@@ -1,0 +1,19 @@
+{
+  "name": "sprig-docs",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "description": "Official documentation site for the Sprig language and stage-0 compiler",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "sync-reference": "node scripts/sync-reference.mjs",
+    "docs:dev": "node scripts/sync-reference.mjs && vitepress dev .",
+    "docs:build": "node scripts/sync-reference.mjs && vitepress build .",
+    "docs:preview": "vitepress preview ."
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

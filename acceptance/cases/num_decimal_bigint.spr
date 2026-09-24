@@ -1,0 +1,13 @@
+let tenth = Decimal.parse("0.1")
+let fifth = Decimal.parse("0.2")
+print(tenth + fifth)
+print((tenth + fifth) == Decimal.parse("0.3"))
+print(Decimal.parse("1").divide(Decimal.parse("3"), 6, "HALF_EVEN"))
+print(Decimal.fromInt(5) * Decimal.fromInt(3))
+print(Decimal.parse("42").toIntExact())
+
+let huge = BigInt.parse("123456789012345678901234567890")
+print(huge * huge)
+print(huge % BigInt.fromInt(97))
+print(BigInt.fromInt(7).toIntExact())
+print(huge > BigInt.fromInt(1))

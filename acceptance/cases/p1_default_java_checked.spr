@@ -1,0 +1,13 @@
+import java.lang.Class as Class
+import java.lang.ClassNotFoundException as CNF
+
+func load() -> Int throws CNF:
+    Class.forName("java.lang.String")
+    return 1
+
+class Box:
+    let value: Int = load()
+
+func make() -> Int:
+    let box = Box()
+    return box.value

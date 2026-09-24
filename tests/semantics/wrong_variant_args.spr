@@ -1,0 +1,3 @@
+variant Expr:
+    Lit(value: Int)
+let expr = Expr.Lit(3)

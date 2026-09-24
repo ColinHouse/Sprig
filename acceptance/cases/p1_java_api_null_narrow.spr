@@ -1,0 +1,13 @@
+import java.lang.System
+
+let missing = System.getProperty("sprig.definitely.absent.property")
+if missing != null:
+    print("length=" + missing.length().toString())
+else:
+    print("absent")
+
+let present = System.lineSeparator()
+if present != null:
+    print("separator-ok")
+else:
+    print("no-separator")

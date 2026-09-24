@@ -1,0 +1,13 @@
+import java.io.IOException as IOException
+
+func fail() -> Int throws IOException:
+    throw IOException("unused default")
+
+class Box:
+    let value: Int = fail()
+
+func make() -> Box:
+    return Box(value=1)
+
+let box = make()
+print(box.value)

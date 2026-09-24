@@ -1,0 +1,5 @@
+import java.time.LocalDate as Date
+
+let nullable_date: Date? = Date.now()
+if nullable_date != null:
+    print(nullable_date.toString())

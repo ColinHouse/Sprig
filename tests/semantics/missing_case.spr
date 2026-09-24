@@ -1,0 +1,8 @@
+variant Expr:
+    Lit(value: Int)
+    Add(left: Expr, right: Expr)
+func evaluate(expr: Expr) -> Int:
+    match expr:
+        case Expr.Lit as node:
+            return node.value
+    return 0

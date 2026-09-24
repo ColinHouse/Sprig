@@ -1,0 +1,4 @@
+variant E:
+    Pair(left: Int, right: Int)
+
+let e = E.Pair(left=1)

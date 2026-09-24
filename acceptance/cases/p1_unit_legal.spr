@@ -1,0 +1,22 @@
+import java.lang.System as System
+
+func log(message: String) -> Unit:
+    print("[log] " + message)
+
+func twice(message: String) -> Unit:
+    log(message)
+    log(message)
+
+class Logger:
+    var count: Int = 0
+
+    func record(message: String) -> Unit:
+        count += 1
+        print(message)
+
+log("hello")
+twice("again")
+let logger = Logger()
+logger.record("from method")
+System.gc()
+print(logger.count)

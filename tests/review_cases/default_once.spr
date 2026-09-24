@@ -1,0 +1,14 @@
+var counter: Int = 0
+
+func next() -> Int:
+    counter += 1
+    return counter
+
+class Box:
+    let value: Int = next()
+
+let a = Box()
+let b = Box()
+print(a.value)
+print(b.value)
+print(counter)

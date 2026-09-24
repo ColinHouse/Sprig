@@ -1,0 +1,2 @@
+func accept(x: Unit) -> Unit:
+    pass

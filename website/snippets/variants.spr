@@ -1,0 +1,29 @@
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+
+enum Mode:
+    Fast
+    Careful
+
+# match must cover every case; there is no default branch.
+func eval(expr: Expr) -> Int:
+    match expr:
+        case Expr.Literal as node:
+            return node.value
+        case Expr.Add as node:
+            return eval(node.left) + eval(node.right)
+
+func label(mode: Mode) -> String:
+    match mode:
+        case Mode.Fast:
+            return "fast"
+        case Mode.Careful:
+            return "careful"
+
+let tree = Expr.Add(
+    left=Expr.Literal(value=20),
+    right=Expr.Literal(value=22)
+)
+print(eval(tree))
+print(label(Mode.Careful))

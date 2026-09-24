@@ -1,0 +1,3 @@
+func bump(value: Int) -> Int:
+    value = value + 1
+    return value

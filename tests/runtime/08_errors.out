@@ -1,0 +1,9 @@
+ok: 42
+failed: empty input
+failed: not positive: -3
+failed: not an integer: "abc"
+caught: boom
+true
+5
+division failed: division by zero
+divide done

@@ -1,0 +1,12 @@
+variant MaybeInt:
+    Present(value: Int)
+    Absent
+
+class Counter:
+    var sum: Int = 0
+    func apply(item: MaybeInt) -> Unit:
+        match item:
+            case MaybeInt.Present as present:
+                sum += present.value
+            case MaybeInt.Absent:
+                pass

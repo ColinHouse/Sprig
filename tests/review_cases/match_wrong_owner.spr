@@ -1,0 +1,16 @@
+variant A:
+    One(value: Int)
+    Two(value: Int)
+
+variant B:
+    One(value: String)
+    Two(value: String)
+
+func inspect(x: A) -> Int:
+    match x:
+        case B.One as node:
+            return node.value
+        case B.Two as node:
+            return node.value
+
+print(inspect(A.One(value=1)))

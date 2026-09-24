@@ -1,0 +1,8 @@
+func fail() -> Int throws Error:
+    throw Error("boom")
+
+class Box:
+    let value: Int = fail()
+
+let box = Box()
+print(box.value)

@@ -1,0 +1,4 @@
+import java.lang.System
+
+let missing = System.getProperty("sprig.definitely.absent.property")
+print(missing.length())

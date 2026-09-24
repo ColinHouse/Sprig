@@ -1,0 +1,5 @@
+func maybe() -> String?:
+    return null
+
+let text = maybe()
+print(text.length())

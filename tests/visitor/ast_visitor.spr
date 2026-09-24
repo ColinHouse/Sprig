@@ -1,0 +1,251 @@
+# AST visitor experiment, written in Sprig and compiled by the stage-0 compiler.
+#
+# It defines a tiny statement/expression language as `variant`s and implements
+# four visitors over it:
+#   1. Printer    - pretty-prints the AST
+#   2. Evaluator  - interprets the AST with a mutable variable environment
+#   3. Simplifier - constant folding / algebraic simplification
+#   4. Size       - counts expression nodes (stateful traversal)
+#
+# Every match over Expr/Stmt lists all cases explicitly, so adding a case to a
+# variant makes the compiler reject this file until every visitor handles it.
+
+variant Expr:
+    Num(value: Int)
+    Var(name: String)
+    Add(left: Expr, right: Expr)
+    Mul(left: Expr, right: Expr)
+    Neg(operand: Expr)
+
+variant Stmt:
+    Assign(name: String, value: Expr)
+    Print(value: Expr)
+    If(cond: Expr, then_body: List[Stmt], else_body: List[Stmt])
+    While(cond: Expr, body: List[Stmt])
+    Block(body: List[Stmt])
+
+# ---------------------------------------------------------------- Printer
+
+class Printer:
+    func format(e: Expr) -> String:
+        match e:
+            case Expr.Num as node:
+                return node.value.toString()
+            case Expr.Var as node:
+                return node.name
+            case Expr.Add as node:
+                return "(" + format(node.left) + " + " + format(node.right) + ")"
+            case Expr.Mul as node:
+                return "(" + format(node.left) + " * " + format(node.right) + ")"
+            case Expr.Neg as node:
+                return "-" + format(node.operand)
+
+    func format_stmt(stmt: Stmt) -> String:
+        match stmt:
+            case Stmt.Assign as node:
+                return node.name + " = " + format(node.value)
+            case Stmt.Print as node:
+                return "print(" + format(node.value) + ")"
+            case Stmt.If as node:
+                return ("if " + format(node.cond) + " { " + format_body(node.then_body)
+                    + " } else { " + format_body(node.else_body) + " }")
+            case Stmt.While as node:
+                return "while " + format(node.cond) + " { " + format_body(node.body) + " }"
+            case Stmt.Block as node:
+                return "{ " + format_body(node.body) + " }"
+
+    func format_body(body: List[Stmt]) -> String:
+        var out = ""
+        for stmt in body:
+            if out != "":
+                out = out + "; "
+            out = out + format_stmt(stmt)
+        return out
+
+# ---------------------------------------------------------------- Evaluator
+
+class Evaluator:
+    var env: MutableMap[String, Int] = {}
+
+    func eval(e: Expr) -> Int throws Error:
+        match e:
+            case Expr.Num as node:
+                return node.value
+            case Expr.Var as node:
+                let found = env.get(node.name)
+                if found == null:
+                    throw Error("undefined variable '" + node.name + "'")
+                return found
+            case Expr.Add as node:
+                return eval(node.left) + eval(node.right)
+            case Expr.Mul as node:
+                return eval(node.left) * eval(node.right)
+            case Expr.Neg as node:
+                return -eval(node.operand)
+
+    func exec(stmt: Stmt) -> Unit throws Error:
+        match stmt:
+            case Stmt.Assign as node:
+                env.set(node.name, eval(node.value))
+            case Stmt.Print as node:
+                print("eval> " + eval(node.value).toString())
+            case Stmt.If as node:
+                if eval(node.cond) != 0:
+                    exec_all(node.then_body)
+                else:
+                    exec_all(node.else_body)
+            case Stmt.While as node:
+                while eval(node.cond) != 0:
+                    exec_all(node.body)
+            case Stmt.Block as node:
+                exec_all(node.body)
+
+    func exec_all(body: List[Stmt]) -> Unit throws Error:
+        for stmt in body:
+            exec(stmt)
+
+# --------------------------------------------------------------- Simplifier
+
+class Simplifier:
+    func is_zero(e: Expr) -> Bool:
+        match e:
+            case Expr.Num as node:
+                return node.value == 0
+            case Expr.Var:
+                return false
+            case Expr.Add:
+                return false
+            case Expr.Mul:
+                return false
+            case Expr.Neg:
+                return false
+
+    func try_num(e: Expr) -> Int?:
+        match e:
+            case Expr.Num as node:
+                return node.value
+            case Expr.Var:
+                return null
+            case Expr.Add:
+                return null
+            case Expr.Mul:
+                return null
+            case Expr.Neg:
+                return null
+
+    func simplify(e: Expr) -> Expr:
+        match e:
+            case Expr.Num as node:
+                return node
+            case Expr.Var as node:
+                return node
+            case Expr.Neg as node:
+                let operand = simplify(node.operand)
+                let folded = try_num(operand)
+                if folded != null:
+                    return Expr.Num(value=-folded)
+                return Expr.Neg(operand=operand)
+            case Expr.Add as node:
+                let left = simplify(node.left)
+                let right = simplify(node.right)
+                if is_zero(left):
+                    return right
+                if is_zero(right):
+                    return left
+                let left_num = try_num(left)
+                let right_num = try_num(right)
+                if left_num != null and right_num != null:
+                    return Expr.Num(value=left_num + right_num)
+                return Expr.Add(left=left, right=right)
+            case Expr.Mul as node:
+                let left = simplify(node.left)
+                let right = simplify(node.right)
+                if is_zero(left) or is_zero(right):
+                    return Expr.Num(value=0)
+                let left_num = try_num(left)
+                let right_num = try_num(right)
+                if left_num != null and right_num != null:
+                    return Expr.Num(value=left_num * right_num)
+                return Expr.Mul(left=left, right=right)
+
+# -------------------------------------------------------------------- Size
+
+class Size:
+    var nodes: Int = 0
+    var variables: Int = 0
+
+    func visit(e: Expr) -> Unit:
+        nodes += 1
+        match e:
+            case Expr.Num:
+                pass
+            case Expr.Var:
+                variables += 1
+            case Expr.Add as node:
+                visit(node.left)
+                visit(node.right)
+            case Expr.Mul as node:
+                visit(node.left)
+                visit(node.right)
+            case Expr.Neg as node:
+                visit(node.operand)
+
+    func report() -> String:
+        return "nodes=" + nodes.toString() + " variables=" + variables.toString()
+
+# ------------------------------------------------------------- experiment
+
+# A small program: fact = 1; while x { fact = fact * x; x = x + -1 }; print(fact)
+
+let program: List[Stmt] = [
+    Stmt.Assign(name="fact", value=Expr.Num(value=1)),
+    Stmt.While(
+        cond=Expr.Var(name="x"),
+        body=[
+            Stmt.Assign(
+                name="fact",
+                value=Expr.Mul(left=Expr.Var(name="fact"), right=Expr.Var(name="x"))
+            ),
+            Stmt.Assign(
+                name="x",
+                value=Expr.Add(left=Expr.Var(name="x"), right=Expr.Num(value=-1))
+            )
+        ]
+    ),
+    Stmt.Print(value=Expr.Var(name="fact")),
+    Stmt.If(
+        cond=Expr.Num(value=0),
+        then_body=[Stmt.Print(value=Expr.Num(value=111))],
+        else_body=[Stmt.Print(value=Expr.Num(value=222))]
+    )
+]
+
+let printer = Printer()
+print("program:")
+for stmt in program:
+    print("  " + printer.format_stmt(stmt))
+
+let evaluator = Evaluator()
+evaluator.env.set("x", 5)
+print("before: " + printer.format_stmt(Stmt.Print(value=Expr.Var(name="x"))))
+evaluator.env.set("x", 5)
+evaluator.exec_all(program)
+
+let value = Expr.Add(
+    left=Expr.Mul(left=Expr.Num(value=2), right=Expr.Num(value=3)),
+    right=Expr.Add(left=Expr.Var(name="z"), right=Expr.Num(value=0))
+)
+print("original:  " + printer.format(value))
+let simplifier = Simplifier()
+let simplified = simplifier.simplify(value)
+print("simplified: " + printer.format(simplified))
+
+let size = Size()
+size.visit(value)
+print(size.report())
+
+let evaluator2 = Evaluator()
+try:
+    print(evaluator2.eval(Expr.Var(name="missing")))
+catch problem: Error:
+    print("error caught: " + problem.message)

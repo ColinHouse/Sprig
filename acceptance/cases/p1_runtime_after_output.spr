@@ -1,0 +1,3 @@
+print("before crash")
+let xs: MutableList[Int] = [1]
+print(xs.get(9))

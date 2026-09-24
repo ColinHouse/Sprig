@@ -1,0 +1,17 @@
+variant Flag:
+    Yes
+    No
+
+var calls: Int = 0
+
+func next() -> Flag:
+    calls += 1
+    return Flag.Yes
+
+match next():
+    case Flag.Yes:
+        print("yes")
+    case Flag.No:
+        print("no")
+
+print(calls)

@@ -1,0 +1,11 @@
+import java.io.IOException as IOException
+
+func fail() -> Int throws IOException:
+    throw IOException("unused")
+
+class Pair:
+    let left: Int = fail()
+    let right: Int = fail()
+
+func make() -> Pair:
+    return Pair()

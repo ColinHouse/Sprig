@@ -1,0 +1,5 @@
+import java.lang.Class as Class
+
+func load(name: String) -> String:
+    let clazz = Class.forName(name)
+    return clazz.getSimpleName()

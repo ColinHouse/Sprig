@@ -1,0 +1,46 @@
+# Typed recoverable errors: throw, throws, try/catch, finally.
+
+func parse_positive(text: String) -> Int throws Error:
+    if text.isEmpty():
+        throw Error("empty input")
+    let value = text.toInt()
+    if value <= 0:
+        throw Error("not positive: " + text)
+    return value
+
+func double_positive(text: String) -> Int throws Error:
+    let value = parse_positive(text)
+    return value * 2
+
+func describe(text: String) -> String:
+    try:
+        return "ok: " + double_positive(text).toString()
+    catch problem: Error:
+        return "failed: " + problem.message
+
+print(describe("21"))
+print(describe(""))
+print(describe("-3"))
+print(describe("abc"))
+
+var cleanup_ran: Bool = false
+try:
+    throw Error("boom")
+catch problem: Error:
+    print("caught: " + problem.message)
+finally:
+    cleanup_ran = true
+print(cleanup_ran)
+
+func safe_divide(a: Int, b: Int) -> Int throws Error:
+    if b == 0:
+        throw Error("division by zero")
+    return a.divTrunc(b)
+
+print(safe_divide(10, 2))
+try:
+    print(safe_divide(1, 0))
+catch problem: Error:
+    print("division failed: " + problem.message)
+finally:
+    print("divide done")

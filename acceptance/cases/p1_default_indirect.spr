@@ -1,0 +1,12 @@
+func inner() -> Int throws Error:
+    throw Error("deep")
+
+func outer() -> Int throws Error:
+    return inner() + 1
+
+class Box:
+    let value: Int = outer()
+
+func make() -> Int:
+    let box = Box()
+    return box.value

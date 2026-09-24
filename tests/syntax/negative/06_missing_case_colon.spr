@@ -1,0 +1,3 @@
+match token:
+    case Expr.Literal as node
+        pass

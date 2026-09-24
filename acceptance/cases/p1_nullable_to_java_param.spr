@@ -1,0 +1,8 @@
+import java.util.regex.Pattern as Pattern
+
+func compile_or_fail(regex: String?) -> String:
+    let pattern = Pattern.compile(regex)
+    return pattern.pattern()
+
+print(compile_or_fail("a+"))
+print(compile_or_fail(null))

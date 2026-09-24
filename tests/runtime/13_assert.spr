@@ -1,0 +1,27 @@
+# assert helper and nested scoping.
+
+func average(values: List[Int]) -> Int:
+    assert(values.size() > 0, "average needs at least one value")
+    var total: Int = 0
+    for value in values:
+        total += value
+    return total.divTrunc(values.size())
+
+print(average([2, 4, 6]))
+assert(average([10]) == 10, "single value")
+print("asserts passed")
+
+let outer = "outer"
+if true:
+    let outer = "inner"
+    print(outer)
+print(outer)
+
+func scoped() -> Int:
+    let x = 1
+    if x == 1:
+        let y = 2
+        return x + y
+    return x
+
+print(scoped())

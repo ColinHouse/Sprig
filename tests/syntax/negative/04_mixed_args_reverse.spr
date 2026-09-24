@@ -1,0 +1,1 @@
+let hero = Hero("Ada", health=10)

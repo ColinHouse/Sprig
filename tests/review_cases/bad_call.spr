@@ -1,0 +1,4 @@
+func twice(x: Int) -> Int:
+    return x * 2
+
+print(twice("wrong"))

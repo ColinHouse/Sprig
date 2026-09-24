@@ -1,0 +1,20 @@
+let min64: Int = -9223372036854775808
+let max64: Int = 9223372036854775807
+let min32: Int32 = -2147483648
+let max32: Int32 = 2147483647
+print(min64)
+print(max64)
+print(min32)
+print(max32)
+print((7).divTrunc(3))
+print((7).toFloat() / 2.0)
+print((3.9).toIntTrunc())
+let narrow: Float32 = 0.1
+print(narrow.toFloat())
+let price = Decimal.parse("0.1")
+let tax = Decimal.parse("0.2")
+print(price + tax)
+print(price * tax)
+print(Decimal.parse("1").divide(Decimal.parse("3"), 4, "HALF_EVEN"))
+print(Decimal.parse("1.0") == Decimal.parse("1.00"))
+print((0.1 + 0.2).approxEqual(0.3, 0.0000000000000001))

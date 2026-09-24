@@ -1,0 +1,9 @@
+import java.lang.StringBuilder as SB
+
+class Holder:
+    let ref: SB
+
+func maybe() -> SB?:
+    return null
+
+let h = Holder(ref=maybe())

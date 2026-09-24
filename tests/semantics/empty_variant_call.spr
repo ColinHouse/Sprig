@@ -1,0 +1,4 @@
+variant E:
+    End
+
+let e = E.End()

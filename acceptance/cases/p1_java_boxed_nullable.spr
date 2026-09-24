@@ -1,0 +1,4 @@
+import java.lang.Integer as JInteger
+
+let boxed = JInteger.valueOf(41)
+print(boxed.toInt())

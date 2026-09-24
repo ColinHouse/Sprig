@@ -1,0 +1,8 @@
+class Box:
+    let value: Int
+
+func identity(x: Int[String]) -> Int[Bool]:
+    return x
+
+let box: Box[String] = Box(value=1)
+print(identity(box.value))

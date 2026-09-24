@@ -1,0 +1,22 @@
+# Imported by 12_modules.spr.
+
+let PI: Float = 3.14159
+
+var id_counter: Int = 0
+
+class Rectangle:
+    let width: Int
+    let height: Int
+
+    func area() -> Int:
+        return width * height
+
+    func describe() -> String:
+        return "rectangle " + width.toString() + "x" + height.toString()
+
+func square_area(side: Int) -> Int:
+    return side * side
+
+func next_id() -> Int:
+    id_counter += 1
+    return id_counter

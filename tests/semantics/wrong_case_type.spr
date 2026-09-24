@@ -1,0 +1,11 @@
+enum A:
+    First
+    Second
+enum B:
+    First
+func f(a: A) -> Unit:
+    match a:
+        case A.First:
+            pass
+        case B.First:
+            pass

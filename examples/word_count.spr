@@ -1,0 +1,25 @@
+# Word counting: mutable maps, split/trim, loops, sorting.
+
+func count_words(text: String) -> Map[String, Int]:
+    let counts: MutableMap[String, Int] = {}
+    for raw_word in text.split(" "):
+        let word = raw_word.trim().toLowerCase()
+        if word.isEmpty():
+            continue
+        let current = counts.get(word)
+        if current == null:
+            counts.set(word, 1)
+        else:
+            counts.set(word, current + 1)
+    return counts.toMap()
+
+let text = "the quick brown fox jumps over the lazy dog the fox"
+let counts = count_words(text)
+for word in counts.keys():
+    let count = counts.get(word)
+    if count != null:
+        print(word + ": " + count.toString())
+
+let words = counts.keys().toMutableList()
+words.sort()
+print("sorted keys: " + words.toString())

@@ -1,0 +1,15 @@
+# Normalize line endings for text sources; keep binary assets untouched.
+* text=auto
+
+*.spr text
+*.g4 text
+*.java text
+*.md text
+*.sh text eol=lf
+*.mts text
+*.json text
+*.yml text
+
+*.png binary
+*.jar binary
+*.zip binary

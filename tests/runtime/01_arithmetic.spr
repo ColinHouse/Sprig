@@ -1,0 +1,30 @@
+# Arithmetic, precedence, comparisons, logic, string concatenation.
+
+func classify(value: Int) -> String:
+    if value < 0:
+        return "negative"
+    elif value == 0:
+        return "zero"
+    else:
+        return "positive"
+
+let a = 7
+let b = 3
+print(a + b)
+print(a - b)
+print(a * b)
+print(a.divTrunc(b))
+print(a % b)
+print(-a)
+print(2 + 3 * 4)
+print((2 + 3) * 4)
+print(1.5 + 2.25)
+print(10.0 / 4.0)
+print(a > b and b > 0)
+print(a < b or a == 7)
+print(not (a == b))
+print("count=" + a + ", ratio=" + 1.5)
+print(classify(-4) + "/" + classify(0) + "/" + classify(9))
+print("abc" < "abd")
+print("same" == "same")
+print([1, 2, 3] == [1, 2, 3])

@@ -1,0 +1,10 @@
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+
+func evaluate(expr: Expr) -> Int:
+    match expr:
+        case Expr.Literal as node:
+            return node.value
+        case Expr.Add:
+            return node.value

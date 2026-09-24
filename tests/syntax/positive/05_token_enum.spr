@@ -1,0 +1,13 @@
+enum TokenKind:
+    Identifier
+    Number
+    End
+
+func describe(kind: TokenKind) -> String:
+    match kind:
+        case TokenKind.Identifier:
+            return "identifier"
+        case TokenKind.Number:
+            return "number"
+        case TokenKind.End:
+            return "end"

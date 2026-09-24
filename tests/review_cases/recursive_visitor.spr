@@ -1,0 +1,16 @@
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+    Multiply(left: Expr, right: Expr)
+
+func evaluate(expr: Expr) -> Int:
+    match expr:
+        case Expr.Literal as node:
+            return node.value
+        case Expr.Add as node:
+            return evaluate(node.left) + evaluate(node.right)
+        case Expr.Multiply as node:
+            return evaluate(node.left) * evaluate(node.right)
+
+let tree = Expr.Add(left=Expr.Literal(value=2), right=Expr.Multiply(left=Expr.Literal(value=3), right=Expr.Literal(value=4)))
+print(evaluate(tree))

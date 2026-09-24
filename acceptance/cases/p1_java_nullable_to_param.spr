@@ -1,0 +1,11 @@
+import java.lang.StringBuilder as SB
+
+func consume(value: SB) -> Int:
+    return value.length()
+
+func maybe() -> SB?:
+    return null
+
+func use() -> Int:
+    let value = maybe()
+    return consume(value)

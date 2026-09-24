@@ -1,0 +1,5 @@
+func risky() -> Int throws Error:
+    throw Error("x")
+
+func caller() -> Int:
+    return risky()

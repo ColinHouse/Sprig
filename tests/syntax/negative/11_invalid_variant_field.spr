@@ -1,0 +1,2 @@
+variant Expr:
+    Literal(value Int)

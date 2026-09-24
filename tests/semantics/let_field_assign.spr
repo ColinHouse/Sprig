@@ -1,0 +1,9 @@
+class Hero:
+    let name: String
+    var mana: Int = 5
+
+    func rename(value: String) -> Unit:
+        name = value
+
+    func spend() -> Unit:
+        mana -= 1

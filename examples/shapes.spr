@@ -1,0 +1,57 @@
+# Shapes: classes with defaults, variants, exhaustive match, nullable.
+
+variant Shape:
+    Circle(radius: Float)
+    Rect(width: Float, height: Float)
+
+enum Measure:
+    Metric
+    Imperial
+
+class Canvas:
+    let label: String
+    var drawn: Int = 0
+
+    func render(shape: Shape, unit: Measure) -> String:
+        drawn += 1
+        let suffix = unit_suffix(unit)
+        match shape:
+            case Shape.Circle as circle:
+                return "circle r=" + circle.radius.toString() + suffix
+            case Shape.Rect as rect:
+                return "rect " + rect.width.toString() + "x" + rect.height.toString() + suffix
+
+    func unit_suffix(unit: Measure) -> String:
+        match unit:
+            case Measure.Metric:
+                return "cm"
+            case Measure.Imperial:
+                return "in"
+
+func area(shape: Shape) -> Float:
+    match shape:
+        case Shape.Circle as circle:
+            return 3.14159 * circle.radius * circle.radius
+        case Shape.Rect as rect:
+            return rect.width * rect.height
+
+func largest_radius(shape: Shape) -> Float?:
+    match shape:
+        case Shape.Circle as circle:
+            return circle.radius
+        case Shape.Rect:
+            return null
+
+let canvas = Canvas(label="demo", drawn=0)
+let shapes: List[Shape] = [
+    Shape.Circle(radius=2.0),
+    Shape.Rect(width=3.0, height=4.0)
+]
+for shape in shapes:
+    print(canvas.render(shape, Measure.Metric))
+    print("area=" + area(shape).toString())
+
+let radius = largest_radius(shapes.get(0))
+if radius != null:
+    print("radius=" + radius.toString())
+print("drawn=" + canvas.drawn.toString())

@@ -1,0 +1,10 @@
+variant Maybe:
+    Yes(value: Int)
+    No
+
+func f(m: Maybe?) -> Int:
+    match m:
+        case Maybe.Yes as node:
+            return node.value
+        case Maybe.No:
+            return 0

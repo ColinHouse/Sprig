@@ -1,0 +1,8 @@
+variant Box:
+    Item(value: Int)
+
+func f(b: Box) -> Int:
+    match b:
+        case Box.Item as item:
+            item.value = 3
+            return item.value

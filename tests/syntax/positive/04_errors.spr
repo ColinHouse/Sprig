@@ -1,0 +1,13 @@
+func find(name: String) -> String?:
+    if name == "Ada":
+        return name
+    return null
+
+func read_file(path: String) -> String throws FileError:
+    return File.read(path)
+
+try:
+    let content = read_file("a.txt")
+    print(content)
+catch error: FileError:
+    print(error.message)

@@ -1,0 +1,11 @@
+enum Kind:
+    First
+    Second
+func f(k: Kind) -> Unit:
+    match k:
+        case Kind.First:
+            pass
+        case Kind.First:
+            pass
+        case Kind.Second:
+            pass

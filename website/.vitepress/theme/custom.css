@@ -1,0 +1,24 @@
+/* Sprig palette sampled from the project icon: rose blossom, slate, cream. */
+:root {
+  --vp-c-brand-1: #a8496a;
+  --vp-c-brand-2: #bd5c7d;
+  --vp-c-brand-3: #d07b96;
+  --vp-c-brand-soft: rgba(168, 73, 106, 0.14);
+
+  --vp-c-bg-alt: #fdfaf6;
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #4c5165 20%, #a8496a);
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(253, 250, 246, 0.9) 30%,
+    rgba(240, 212, 219, 0.8)
+  );
+  --vp-home-hero-image-filter: blur(48px);
+}
+
+.dark {
+  --vp-c-brand-1: #e8a3ba;
+  --vp-c-brand-2: #d98fa8;
+  --vp-c-brand-3: #c77b95;
+  --vp-c-brand-soft: rgba(232, 163, 186, 0.16);
+}

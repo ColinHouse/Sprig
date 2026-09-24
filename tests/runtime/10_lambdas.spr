@@ -1,0 +1,28 @@
+# Lambdas and higher-order methods on collections.
+
+let numbers: List[Int] = [1, 2, 3, 4]
+let doubled: List[Int] = numbers.map(fn(x: Int) => x * 2)
+print(doubled)
+
+let evens: List[Int] = numbers.filter(fn(x: Int) => x % 2 == 0)
+print(evens)
+
+let collected: MutableList[Int] = []
+numbers.forEach(fn(x: Int) => collected.append(x * 10))
+print(collected)
+
+let squares: List[Int] = numbers.map(fn(x: Int) => x * x).filter(fn(x: Int) => x > 5)
+print(squares)
+
+let echoer = fn(text: String) => "[" + text + "]"
+print(echoer("direct"))
+
+let adder = fn(a: Int, b: Int) => a + b
+print(adder(20, 22))
+
+let greeter = fn(name: String) => print("hi " + name)
+greeter("lambda")
+
+let strings: MutableList[String] = ["b", "a", "c"]
+strings.sort()
+print(strings)

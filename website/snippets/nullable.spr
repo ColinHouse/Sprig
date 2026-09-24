@@ -1,0 +1,15 @@
+# T? marks expected absence. A checked value narrows to non-null inside the branch.
+func find(words: List[String], target: String) -> String?:
+    for word in words:
+        if word == target:
+            return word
+    return null
+
+let found = find(["alpha", "beta"], "beta")
+if found != null:
+    print("found " + found)
+else:
+    print("not found")
+
+let missing = find(["alpha"], "gamma")
+print(missing == null)

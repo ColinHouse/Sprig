@@ -1,0 +1,7 @@
+import java.lang.StringBuilder as SB
+
+class Holder:
+    let ref: SB
+    var maybe: SB? = null
+
+let bad = Holder(ref=null)

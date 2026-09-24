@@ -1,0 +1,2 @@
+func answer() -> Int:
+    return "wrong"

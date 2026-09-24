@@ -1,0 +1,54 @@
+# Collections: List/MutableList/Map/MutableMap, snapshots, indexing, in.
+
+let immutable: List[Int] = [3, 1, 2]
+let mutable: MutableList[Int] = [3, 1, 2]
+
+print(immutable.size())
+print(mutable.size())
+mutable.append(4)
+mutable.set(0, 9)
+print(mutable)
+print(mutable.get(0))
+print(immutable.contains(2))
+print(immutable.indexOf(1))
+print(immutable[2])
+print(2 in immutable)
+print(8 in immutable)
+mutable.sort()
+print(mutable)
+
+let snapshot: List[Int] = mutable.toList()
+mutable.append(99)
+print(snapshot)
+print(mutable)
+
+let copy: MutableList[Int] = immutable.toMutableList()
+copy.append(7)
+print(copy)
+
+let ages: Map[String, Int] = {"ada": 36, "bob": 41}
+print(ages.size())
+print(ages.get("ada"))
+print(ages["missing"])
+print(ages.containsKey("bob"))
+print("bob" in ages)
+print(ages.keys())
+print(ages.values())
+
+let scores: MutableMap[String, Int] = {"ada": 1}
+scores.set("bob", 2)
+scores["carol"] = 3
+scores.remove("ada")
+print(scores)
+print(scores.get("carol"))
+
+let frozen: Map[String, Int] = scores.toMap()
+print(frozen.get("bob"))
+
+let words: MutableList[String] = []
+words.append("hello")
+words.append("world")
+print(words)
+
+let empty_map: Map[String, Int] = {}
+print(empty_map.size())

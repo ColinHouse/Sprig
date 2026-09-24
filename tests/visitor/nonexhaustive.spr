@@ -1,0 +1,14 @@
+# Regression fixture: a variant case was added (Modulo) but render() was not
+# updated. The compiler must reject this file with SPR-MATCH-NONEXHAUSTIVE.
+
+variant Expr:
+    Num(value: Int)
+    Add(left: Expr, right: Expr)
+    Modulo(left: Expr, right: Expr)
+
+func render(e: Expr) -> String:
+    match e:
+        case Expr.Num as node:
+            return node.value.toString()
+        case Expr.Add as node:
+            return "(" + render(node.left) + " + " + render(node.right) + ")"

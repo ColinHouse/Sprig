@@ -1,0 +1,4 @@
+import java.lang.StringBuilder
+
+let builder: StringBuilder = null
+print(builder.length())

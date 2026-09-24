@@ -1,0 +1,4 @@
+class Hero:
+    let name: String
+
+let hero = Hero(name="Ada", power=3)

@@ -1,0 +1,17 @@
+import java.lang.Math as Math
+import java.lang.StringBuilder as StringBuilder
+import java.time.LocalDate as LocalDate
+
+print(Math.max(3, 9))
+print(Math.abs(-4))
+
+let builder = StringBuilder()
+builder.append("Sprig")
+builder.append("!")
+print(builder.toString())
+
+# Java reference results are nullable until checked.
+let date = LocalDate.of(2026, 9, 25)
+if date != null:
+    print(date.getYear())
+    print(date.getDayOfMonth())

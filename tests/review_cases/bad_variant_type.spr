@@ -1,0 +1,5 @@
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+
+let node = Expr.Literal(value="wrong")

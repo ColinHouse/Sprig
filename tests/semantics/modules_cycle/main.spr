@@ -1,0 +1,3 @@
+import "./a.spr" as a
+
+print(a.a_value())

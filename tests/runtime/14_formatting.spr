@@ -1,0 +1,27 @@
+# Formatting fidelity: nesting, print of collections, variant toString.
+
+variant Tree:
+    Leaf(label: String)
+    Branch(left: Tree, right: Tree)
+
+func depth(tree: Tree) -> Int:
+    match tree:
+        case Tree.Leaf:
+            return 1
+        case Tree.Branch as node:
+            let left_depth = depth(node.left)
+            let right_depth = depth(node.right)
+            if left_depth > right_depth:
+                return left_depth + 1
+            return right_depth + 1
+
+let tree = Tree.Branch(
+    left=Tree.Leaf(label="a"),
+    right=Tree.Branch(left=Tree.Leaf(label="b"), right=Tree.Leaf(label="c"))
+)
+print(depth(tree))
+print(tree)
+print([tree, Tree.Leaf(label="x")])
+print({"depth": depth(tree), "leaves": 3})
+let lookup: Map[String, List[Int]] = {"evens": [2, 4], "odds": [1, 3]}
+print(lookup)

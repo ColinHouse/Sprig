@@ -1,0 +1,5 @@
+let mutable: MutableList[Int] = [1]
+let frozen = mutable.toList()
+mutable.append(2)
+print(frozen)
+print(mutable)

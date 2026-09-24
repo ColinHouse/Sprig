@@ -1,0 +1,52 @@
+# JDK interop: imports, constructors, static and instance methods, static
+# fields, checked exceptions and message access.
+
+import java.util.ArrayList as ArrayList
+import java.lang.StringBuilder as StringBuilder
+import java.lang.Integer as Integer
+import java.lang.Math as Math
+import java.lang.System as System
+import java.lang.Class as Class
+import java.lang.ClassNotFoundException as ClassNotFound
+
+let names = ArrayList()
+names.add("ada")
+names.add("bob")
+print(names.size())
+print(names.get(0))
+print(names.contains("bob"))
+
+let builder = StringBuilder()
+builder.append("Sprig")
+builder.append("!")
+print(builder.toString())
+
+print(Integer.parseInt("41") + 1)
+print(Integer.MAX_VALUE)
+print(Math.max(3, 9))
+print(Math.abs(-4))
+print(Math.sqrt(2.0))
+
+let version = System.getProperty("java.version")
+if version != null:
+    print(version.length() > 0)
+
+func load_class(name: String) -> String throws ClassNotFound:
+    let loaded = Class.forName(name)
+    if loaded != null:
+        let simple_name = loaded.getSimpleName()
+        if simple_name != null:
+            return simple_name
+    return ""
+
+print(load_class("java.lang.String"))
+
+try:
+    print(load_class("does.not.Exist"))
+catch problem: ClassNotFound:
+    print("class not found: " + problem.message)
+finally:
+    print("lookup done")
+
+let text = "interop"
+print(text.substring(0, 4).toUpperCase())
