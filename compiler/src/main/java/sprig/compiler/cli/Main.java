@@ -73,6 +73,7 @@ public final class Main {
         if (args.length == 0) { usage(System.out); return 2; }
         if (args[0].equals("help") || args[0].equals("--help") || args[0].equals("-h")) return help(args);
         if (args[0].equals("version") || args[0].equals("--version")) {
+            if (args.length != 1) return commandError("version", "Unexpected argument", jsonRequested(args));
             System.out.println(Version.VERSION);
             return 0;
         }
@@ -104,8 +105,8 @@ public final class Main {
         out.println("  help [topic] [--json]                       language reference (topics: "
                 + String.join(", ", Catalog.topics()) + ")");
         out.println("  capabilities [--json]                      implemented feature inventory");
-        out.println("  api <Java.Class> [--classpath PATH] [--json] inspect real JVM signatures");
-        out.println("  doctor [--json]                            inspect compiler environment");
+        out.println("  api <Java.Class> [--member NAME] [--classpath PATH] [--json] inspect JVM signatures");
+        out.println("  doctor [--classpath PATH] [--json]          inspect compiler environment");
         out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
         out.println("  version");
     }
@@ -144,7 +145,8 @@ public final class Main {
 
     private static int capabilities(String[] args) {
         boolean json = jsonRequested(args);
-        if (args.length > (json ? 2 : 1)) return commandError("capabilities", "Unexpected argument", json);
+        if (args.length > 2 || (args.length == 2 && !args[1].equals("--json")))
+            return commandError("capabilities", "Unexpected argument or option", json);
         Map<String, Object> data = Catalog.capabilities();
         if (json) System.out.println(ToolJson.encode(data));
         else {
@@ -162,9 +164,9 @@ public final class Main {
     private static int api(String[] args) {
         Options options = Options.parse(args, 1);
         Diagnostics diagnostics = new Diagnostics();
-        if (!prepare(options, diagnostics, "api")) return 1;
+        int prepared = prepare(options, diagnostics, "api");
+        if (prepared != 0) return prepared;
         if (options.file == null) return commandError("api", "Missing Java class name", options.json);
-        if (!options.programArgs.isEmpty()) return commandError("api", "Unexpected extra argument", options.json);
         Class<?> clazz = Compiler.loadJavaClass(options.file.toString());
         if (clazz == null) {
             diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
@@ -184,6 +186,17 @@ public final class Main {
             return 1;
         }
         data.put("compilerVersion", Catalog.COMPILER_VERSION);
+        if (options.memberFilter != null) {
+            int count = filterApiMembers(data, options.memberFilter);
+            data.put("memberFilter", options.memberFilter);
+            data.put("memberCount", count);
+            if (count == 0) {
+                diagnostics.error(Codes.JVM_MEMBER, Phase.JVM,
+                        "No public JVM member named '" + options.memberFilter + "' on " + clazz.getName(), null, null);
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+        }
         if (options.json) System.out.println(ToolJson.encode(data));
         else {
             System.out.println("Java API: " + clazz.getName());
@@ -201,10 +214,11 @@ public final class Main {
 
     private static int doctor(String[] args) {
         Options options = Options.parse(args, 1);
-        if (options.file != null) return commandError("doctor", "Unexpected argument", options.json);
-        if (!options.programArgs.isEmpty()) return commandError("doctor", "Unexpected extra argument", options.json);
         Diagnostics diagnostics = new Diagnostics();
-        if (!prepare(options, diagnostics, "doctor")) return 1;
+        int prepared = prepare(options, diagnostics, "doctor");
+        if (prepared != 0) return prepared;
+        if (options.file != null || !options.extraPositionals.isEmpty())
+            return commandError("doctor", "Unexpected argument", options.json);
         boolean json = options.json;
         Map<String, Object> data = new java.util.LinkedHashMap<>();
         data.put("schemaVersion", 1);
@@ -236,23 +250,30 @@ public final class Main {
         return 2;
     }
 
-    private static boolean prepare(Options options, Diagnostics diagnostics, String command) {
+    private static int prepare(Options options, Diagnostics diagnostics, String command) {
         if (options.optionError != null) {
-            diagnostics.error(options.optionErrorCode, Phase.CLI, options.optionError, null, null);
-        } else JvmClasspath.configure(options.classpath, diagnostics);
-        if (diagnostics.hasErrors()) report(diagnostics, options.json, command, 1, null);
-        return !diagnostics.hasErrors();
+            diagnostics.error(Codes.CLI_OPTION, Phase.CLI, options.optionError, null, null);
+            report(diagnostics, options.json, command, 2, null);
+            return 2;
+        }
+        String violation = options.violation(command);
+        if (violation != null) return commandError(command, violation, options.json);
+        JvmClasspath.configure(options.classpath, diagnostics);
+        if (diagnostics.hasErrors()) {
+            report(diagnostics, options.json, command, 2, null);
+            return 2;
+        }
+        return 0;
     }
 
     // ------------------------------------------------------------------
 
     private static int check(String[] args) throws IOException {
         Options options = Options.parse(args, 1);
-        if (options.file == null) {
-            return commandError("check", "Missing <file.spr>", options.json);
-        }
         Diagnostics diagnostics = new Diagnostics();
-        if (!prepare(options, diagnostics, "check")) return 1;
+        int prepared = prepare(options, diagnostics, "check");
+        if (prepared != 0) return prepared;
+        if (options.file == null) return commandError("check", "Missing <file.spr>", options.json);
         if (options.syntaxOnly) {
             new Compiler(diagnostics).parseOnly(options.file);
         } else {
@@ -265,11 +286,10 @@ public final class Main {
 
     private static int build(String[] args) throws IOException {
         Options options = Options.parse(args, 1);
-        if (options.file == null) {
-            return commandError("build", "Missing <file.spr>", options.json);
-        }
         Diagnostics diagnostics = new Diagnostics();
-        if (!prepare(options, diagnostics, "build")) return 1;
+        int prepared = prepare(options, diagnostics, "build");
+        if (prepared != 0) return prepared;
+        if (options.file == null) return commandError("build", "Missing <file.spr>", options.json);
         Compilation compilation = new Compiler(diagnostics).compile(options.file);
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
@@ -307,11 +327,10 @@ public final class Main {
 
     private static int run(String[] args) throws IOException, InterruptedException {
         Options options = Options.parse(args, 1);
-        if (options.file == null) {
-            return commandError("run", "Missing <file.spr>", options.json);
-        }
         Diagnostics diagnostics = new Diagnostics();
-        if (!prepare(options, diagnostics, "run")) return 1;
+        int prepared = prepare(options, diagnostics, "run");
+        if (prepared != 0) return prepared;
+        if (options.file == null) return commandError("run", "Missing <file.spr>", options.json);
         Compilation compilation = new Compiler(diagnostics).compile(options.file);
         if (!diagnostics.hasErrors()) {
             JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics).generate();
@@ -344,7 +363,8 @@ public final class Main {
                     System.err.print(result.stderr);
                 }
                 if (result.exitCode != 0) {
-                    diagnostics.add(runtimeDiagnostic(result.stderr, options.file.toAbsolutePath().toUri().toString()));
+                    diagnostics.add(runtimeDiagnostic(result.stderr, result.exitCode,
+                            options.file.toAbsolutePath().toUri().toString()));
                 }
                 report(diagnostics, options.json, "run", result.exitCode, options.json ? result.stdout : null);
                 return result.exitCode;
@@ -360,7 +380,15 @@ public final class Main {
         return 1;
     }
 
-    private static Diagnostic runtimeDiagnostic(String stderr, String uri) {
+    private static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String uri) {
+        boolean jvmFailure = stderr.lines().anyMatch(line -> line.startsWith("Exception in thread ")
+                || line.startsWith("sprig.runtime.SprigError") || line.startsWith("\tat "));
+        if (!jvmFailure) {
+            return Diagnostic.error(Codes.PROGRAM_EXIT, Phase.RUNTIME,
+                    "Program exited with status " + exitCode, uri, null)
+                    .withHint("The run command forwards the Sprig program's process exit status.")
+                    .withData(Map.of("programExitCode", exitCode));
+        }
         String code = stderr.contains("sprig.runtime.SprigError") ? Codes.RUNTIME_ERROR
                 : Codes.RUNTIME_EXCEPTION;
         String message = "Program failed at runtime";
@@ -456,7 +484,10 @@ public final class Main {
     }
 
     private static boolean jsonRequested(String[] args) {
-        for (String arg : args) if (arg.equals("--json")) return true;
+        for (String arg : args) {
+            if (arg.equals("--")) break;
+            if (arg.equals("--json")) return true;
+        }
         return false;
     }
 
@@ -469,10 +500,11 @@ public final class Main {
     private static int codes(String[] args) {
         Map<String, String> all = CodeDocs.all();
         boolean json = false;
-        for (String arg : args) {
+        for (int i = 1; i < args.length; i++) {
+            String arg = args[i];
             if (arg.equals("--json")) {
                 json = true;
-            }
+            } else return commandError("codes", "Unexpected argument or option: " + arg, json || jsonRequested(args));
         }
         if (json) {
             StringBuilder sb = new StringBuilder("{\n  \"schemaVersion\": 1,\n  \"codes\": [");
@@ -494,11 +526,15 @@ public final class Main {
     }
 
     private static int explain(String[] args) {
+        boolean json = jsonRequested(args);
         if (args.length < 2) {
-            return commandError("explain", "Missing diagnostic code", jsonRequested(args));
+            return commandError("explain", "Missing diagnostic code", json);
         }
+        if (args.length != 2 + (json && args[args.length - 1].equals("--json") ? 1 : 0)
+                || args[1].startsWith("--"))
+            return commandError("explain", "Expected one diagnostic code and optional --json", json);
         Map<String, Object> detail = sprig.compiler.diag.Explanations.describe(args[1]);
-        if (jsonRequested(args)) System.out.println(ToolJson.encode(detail));
+        if (json) System.out.println(ToolJson.encode(detail));
         else {
             System.out.println(args[1] + ": " + detail.get("meaning"));
             System.out.println("Common causes: " + detail.get("commonCauses"));
@@ -509,6 +545,20 @@ public final class Main {
         return 0;
     }
 
+    private static int filterApiMembers(Map<String, Object> data, String member) {
+        int count = 0;
+        for (String category : List.of("constructors", "staticMethods", "instanceMethods", "fields")) {
+            List<Map<String, Object>> all = (List<Map<String, Object>>) data.get(category);
+            List<Map<String, Object>> filtered = all.stream()
+                    .filter(item -> member.equals(item.get("name"))
+                            || (category.equals("constructors") && member.equals("<init>")))
+                    .toList();
+            data.put(category, filtered);
+            count += filtered.size();
+        }
+        return count;
+    }
+
     // ------------------------------------------------------------------
 
     private static final class Options {
@@ -517,10 +567,13 @@ public final class Main {
         boolean syntaxOnly;
         boolean keep;
         Path outDir;
+        boolean outDirSpecified;
+        boolean separatorProvided;
+        String memberFilter;
         List<String> classpath = new ArrayList<>();
         String optionError;
-        String optionErrorCode = Codes.CLI_OPTION;
         List<String> programArgs = new ArrayList<>();
+        List<String> extraPositionals = new ArrayList<>();
 
         static Options parse(String[] args, int start) {
             Options options = new Options();
@@ -530,36 +583,54 @@ public final class Main {
                     case "--json" -> options.json = true;
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
+                    case "--member" -> {
+                        if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.memberFilter = args[++i];
+                        else options.optionError = "--member requires a JVM member name";
+                    }
                     case "--classpath" -> {
-                        if (i + 1 < args.length && !args[i + 1].startsWith("--")) options.classpath.add(args[++i]);
-                        else {
-                            options.optionError = "--classpath requires a JAR or directory path";
-                            options.optionErrorCode = Codes.JVM_CLASSPATH;
-                        }
+                        if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.classpath.add(args[++i]);
+                        else options.optionError = "--classpath requires a JAR or directory path";
                     }
                     case "-d", "--out" -> {
-                        if (i + 1 < args.length) {
+                        options.outDirSpecified = true;
+                        if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
                             options.outDir = Path.of(args[++i]);
-                        }
+                        } else options.optionError = arg + " requires an output directory";
                     }
                     case "--" -> {
+                        options.separatorProvided = true;
                         for (int j = i + 1; j < args.length; j++) {
                             options.programArgs.add(args[j]);
                         }
                         return options;
                     }
                     default -> {
-                        if (arg.startsWith("--")) {
+                        if (arg.startsWith("-")) {
                             options.optionError = "Unknown option '" + arg + "'";
                         } else if (options.file == null) {
                             options.file = Path.of(arg);
                         } else {
-                            options.programArgs.add(arg);
+                            options.extraPositionals.add(arg);
                         }
                     }
                 }
             }
             return options;
+        }
+
+        String violation(String command) {
+            if (syntaxOnly && !command.equals("check")) return "--syntax-only is only valid with check";
+            if (keep && !command.equals("run")) return "--keep is only valid with run";
+            if (outDirSpecified && !command.equals("build")) return "-d/--out is only valid with build";
+            if (memberFilter != null && !command.equals("api")) return "--member is only valid with api";
+            if (!classpath.isEmpty() && !List.of("check", "build", "run", "api", "doctor").contains(command))
+                return "--classpath is not valid with " + command;
+            if (separatorProvided && !command.equals("run")) return "-- is only valid with run";
+            if (!extraPositionals.isEmpty()) {
+                if (command.equals("run")) return "Program arguments must follow --";
+                return "Unexpected extra argument: " + extraPositionals.get(0);
+            }
+            return null;
         }
     }
 }

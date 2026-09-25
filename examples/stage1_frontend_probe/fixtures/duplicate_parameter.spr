@@ -1,0 +1,2 @@
+func invalid(value: Int, value: String) -> Int:
+    return value

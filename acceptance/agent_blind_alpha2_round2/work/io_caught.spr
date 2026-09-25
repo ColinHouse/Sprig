@@ -1,0 +1,16 @@
+import java.io.File as File
+import java.nio.file.Files as Files
+import java.io.IOException as IOException
+
+func load(path_text: String) -> String throws IOException:
+    let path = File(path_text).toPath()
+    if path != null:
+        let contents = Files.readString(path)
+        if contents != null:
+            return contents
+    return ""
+
+try:
+    print(load("missing-archive-round2-file.txt"))
+catch problem: IOException:
+    print("read failed")

@@ -28,3 +28,16 @@ let name = <?>
 print(name)
 diagnostics=1
 PROBE-LEX 1:12 [11,15) unterminated string
+CASE examples/stage1_frontend_probe/fixtures/function.spr
+tokens=40
+func identity(value: Int) -> Int:
+    return value
+func combine(left: Int, right: Int) -> Int:
+    return (left + right)
+diagnostics=0
+CASE examples/stage1_frontend_probe/fixtures/duplicate_parameter.spr
+tokens=21
+func invalid(value: Int, value: String) -> Int:
+    return value
+diagnostics=1
+PROBE-NAME 1:26 [25,30) duplicate parameter 'value'

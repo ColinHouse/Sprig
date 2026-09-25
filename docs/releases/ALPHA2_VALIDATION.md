@@ -1,112 +1,129 @@
-# Sprig v0.1.0-alpha.2 development validation
+# Sprig v0.1.0-alpha.2 candidate audit
 
-This report records observed results for the alpha.2 development tree on
-2026-09-26. It is not a claim that an alpha.2 tag, GitHub release, or hosted
-alpha.2 CI run exists. The latest published prerelease remains
-`v0.1.0-alpha.1`.
+Audit date: 2026-09-26. The latest published prerelease is still
+`v0.1.0-alpha.1`. No alpha.2 tag or GitHub release was created. This report
+describes the tested development candidate and does not treat earlier reports
+as test evidence.
 
-## Baseline and scope
+## Candidate and scope
 
-- Work was done on `alpha2-agent-sdk` in an isolated worktree. Its base commit
-  is `45891124cc5c01358e6da466e51a4c61892f298b`; its base tree
-  `3e5264cee7c6321e8a709baf444fcc59dae833df` exactly matches GitHub
-  `main` commit `b32e1d14f5a89e3fc657e4a1e9ffb1865faa0adb`'s tree when
-  checked. The user's original checkout was not edited.
-- Before development, `./scripts/build.sh`, `./scripts/test.sh` (100/100),
-  the 21-case grammar harness, and `./scripts/check-docs.sh` passed locally.
-  The published alpha.1 [GitHub Actions run](https://github.com/ColinHouse/Sprig/actions/runs/36059153985)
-  passed JDK 17, JDK 26, and documentation jobs on Linux.
-- The alpha.2 draft PR [GitHub Actions run](https://github.com/ColinHouse/Sprig/actions/runs/36163453729)
-  passed its JDK 17, JDK 26, and documentation jobs on Linux. That remote
-  commit's tree is identical to local commit `65c2a17`'s tree.
-- No `.g4` file, keyword, or v0.7 language design version was changed.
+- Audited repository: `/Users/wu/Desktop/cashTradeManagement/Sprig-alpha2`,
+  branch `alpha2-rc-audit`, base commit
+  `0171d8d66edb200122bc27b925785c09f903b597`, tree
+  `2def148c2dafb9926323ca420bc1ee81a7219800`.
+- The base tree matches GitHub `main` at
+  `788c9888001c805ddff66ee6dadde8068d9e314e` when checked. That main commit's
+  JDK 17, JDK 26 and documentation workflows passed. Those hosted results are
+  evidence for the base only; the audit changes still require their own hosted
+  CI run.
+- No `.g4` grammar, keyword, or Sprig v0.7 language design file was changed.
+  Work is limited to compiler tooling, metadata, docs, tests, packaging and the
+  stage-1 probe.
 
-## Implemented and observed
+## Findings and repairs
 
-- A packaged, versioned compiler catalog supplies `help TOPIC --json` and
-  `capabilities --json`. Topics cover language, types, functions, classes,
-  variants, match, nullability, errors, collections, numerics, modules, JVM,
-  and Agent workflow. `version` reads the same catalog. A consistency gate
-  checks version, JDK floor, license, commands, topics, diagnostic codes,
-  release state, and linked examples against docs and website content.
-- `api CLASS --json` reads real public JDK or supplied JAR metadata, including
-  overloads, generic signatures, checked exceptions, nullability policy, and
-  unsupported arrays/varargs. The reflection read does not initialize the
-  inspected class: a test JAR with a file-writing static initializer left its
-  marker absent after `api` and `check`, then wrote it when `run` executed.
-  JVM overload diagnostics expose candidate signatures and rejection reasons.
-- `check`, `build`, `run`, and `api` use the same explicit `--classpath` layer.
-  Tests covered JAR lookup, a missing path diagnostic, platform-separated and
-  repeated entries, and first-entry duplicate-class precedence. No Maven
-  resolver or implicit download was added.
-- `doctor --json` and structured `explain CODE --json` are available. Java
-  reference results remain conservatively nullable, and Java `Object`
-  parameters no longer make an unproved nullable exception.
-- A real `check`-versus-`javac` defect was found during this work: Java
-  `char/Character/Short/Byte` results were mapped to Sprig `String/Int32`
-  without adapting generated Java values. The generator/runtime now adapt
-  results (including boxed nulls), arbitrary `String` to Java `char` is
-  rejected before generation, and writes to Java fields requiring adapters
-  are rejected. The custom-JAR regression runs through check, Java generation,
-  javac, and JVM execution for primitive and boxed long, int, short, byte,
-  float, double, char, and boolean results.
-- The archive contains the compiler, ANTLR, runtime, guides, implemented
-  status, numeric contract, diagnostics, examples, and stage-1 probe. The
-  `HostFiles` Java boundary supplies UTF-8 and path services only; lexer,
-  layout, parser, AST, symbol checking, diagnostics, and pretty printing in
-  the probe are written in Sprig.
+### P1 — fixed before alpha.2
 
-## Commands and results
+- CLI parsing silently accepted foreign options and arguments in `version`,
+  `codes`, `explain`, `api`, `doctor`, `capabilities`, `check`, `build`, and
+  `run`. Missing `-d` operands and misplaced arguments could be ignored or
+  misclassified. Command-owned option checks now produce `SPR-CLI-OPTION` and
+  status 2; `run` arguments must follow `--`, and option-looking application
+  arguments after `--` stay application-owned. A table-driven test exercises
+  19 invalid command/option combinations and valid command boundaries.
+- `run` already forwarded JVM process status, including 7, while docs claimed
+  only 0/1/2. The contract is now explicit: CLI syntax/tooling failures use 2,
+  source/runtime failures normally use 1, and `run` forwards the program's
+  status. A nonzero program exit without a JVM exception is `SPR-PROGRAM-EXIT`
+  with `data.programExitCode`; process status may overlap the CLI range. Real
+  `System.exit(0/1/7)` programs are exercised in text and JSON modes.
+- The functions help example implied that `main` is an automatic entry point;
+  the class example also had a dedented field. Help examples now link to real
+  `.spr` files. The tooling suite checks and runs every `.spr` help example.
+- Full `sprig api CLASS` output was unnecessarily large for targeted Agent
+  questions. `--member NAME` filters the existing metadata model while
+  retaining overloads; an empty result has `SPR-JVM-MEMBER`. Metadata now
+  distinguishes `signatureSupported` and `interopLevel` (`direct`,
+  `erased-generic`, `unsupported`). Backward-compatible `usableFromSprig`
+  means the compiler can bind and emit the raw signature; it does not promise
+  generic element safety.
+- The catalog now has a capability-to-fixture mapping checked by the Agent
+  tooling suite. CLI/help/catalog and exit-code docs were reconciled.
 
-The final local commands were run on macOS Apple Silicon with JDK 17.0.19
-and 26.0.1. `scripts/build.sh` regenerates ANTLR code and compiles the
-compiler/runtime with `javac --release 17`.
+### P2 — known limits, not release blockers
 
-| Command | Observed result |
+- Java arrays and varargs remain unsupported. Generic Java APIs can have an
+  erased raw signature but Sprig does not infer exact `List[T]`/`Map[K,V]`
+  safety. `interopLevel` states this distinction; no unsafe adapter was added.
+- There is no Java collection bridge, Maven resolver, package manager, LSP or
+  IDE integration. Stage-1 host file IO remains a narrow Java service.
+- The Sprig-written frontend probe is still only 568 lines and is not a
+  self-hosted compiler. It now parses typed function declarations, parameters
+  and `return`, checks parameter/name scope, and prints those AST nodes. Its
+  test runs through compiler check, javac, JVM output, malformed inputs and
+  exhaustive visitor evolution. This small extension exposed no need to
+  change v0.7 syntax; function calls, return type checking and a full compiler
+  remain future implementation work.
+- Sprig's checked integer arithmetic does not make floating-point algorithms
+  stable. Conditioning, cancellation, accumulation error, physical units and
+  Java library numeric behavior still require algorithm-specific judgment.
+
+## Build and verification evidence
+
+Commands were run locally on macOS Apple Silicon with Microsoft OpenJDK
+17.0.19 and Oracle OpenJDK 26.0.1. The compiler builds with
+`javac --release 17`.
+
+| Command | Result |
 |---|---|
-| `./scripts/build.sh` | Pass on JDK 17 and JDK 26 |
-| `./scripts/test.sh` | 102/102 on each JDK; includes 46 semantic cases, 66 numeric checks, 22 correctness regressions, 467 parser recovery checks (435 truncation prefixes), 52 independent acceptance cases, 13 JSON cases, 10 check/build/run consistency cases, and stage-1 probe. The Agent/JVM tooling sub-suite was 40/40 in those full runs; three added text-output checks then passed separately on both JDKs (43/43). |
-| `ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh` | 21 syntax cases passed; syntax only |
-| `./scripts/check-docs.sh` | 17 executable snippets, metadata consistency, and VitePress build passed |
+| `./scripts/build.sh` | Pass on JDK 17 and JDK 26; regenerates ANTLR and compiles compiler/runtime |
+| `./scripts/test.sh` | 103/103 on JDK 17 and JDK 26. Includes 46 semantic cases, 66 numeric checks, 22 correctness regressions, 467 recovery/fuzz checks (435 truncation prefixes), 52 acceptance cases, 13 JSON cases, 10 check/build/run consistency cases, 77 Agent/JVM tooling checks, CLI rejection/process/API contracts and stage-1 probe |
+| `ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh` | 21 syntax cases passed; syntax-only |
+| `./scripts/check-docs.sh` | 17 executable snippets, catalog/docs consistency and VitePress build passed |
 | `./scripts/package-alpha.sh` | Created `dist/sprig-v0.1.0-alpha.2-jdk.zip` |
-| `python3 tools/check-sdk-archive.py` | Extracted archive and ran offline help, API, doctor, check, run, and probe on JDK 17 and 26 |
-| GitHub Actions, draft PR #4 | JDK 17, JDK 26, and documentation jobs all passed; both JDK jobs include the full suite, grammar harness, and archive smoke |
+| `python3 tools/check-sdk-archive.py` | Unpacked and tested outside checkout on JDK 17 and JDK 26: version, doctor, capabilities, all help example paths, API, check, run and stage-1 probe |
+| `unzip -t dist/sprig-v0.1.0-alpha.2-jdk.zip` | No archive errors; 92 entries, 2.2 MiB; final SHA-256 `d1ced6dc2fad776c0a3035846f868b2bcacdbd1a38ae0f6f0048becb2f4159cd` |
 
-The stage-1 probe's own gate checks `sprig check`, `sprig build`/javac, JVM
-golden output, malformed-input ranges, and an added variant case causing
-`SPR-MATCH-NONEXHAUSTIVE`.
+The package intentionally omits raw maintainer acceptance/blind-test evidence
+and `ALPHA2_VALIDATION.md`; this material remains in the repository. The SDK
+keeps the compiler, runtime, ANTLR, user docs, working examples, and the
+stage-1 probe. The archive is a development build from a dirty tree, not a
+published release artifact.
 
-## Context-free Agent SDK exercise
+## Context-free Agent exercises
 
-A separate Agent received a copy of a pre-final alpha.2 archive, ten neutral
-tasks, and no repository or website access. Frozen sources, JSON responses,
-stdout/stderr, and the full methodology are in
-`acceptance/agent_blind_alpha2/REPORT.md`. I independently parsed the saved
-JSON files and checked the output artifacts. First checks passed for 9/10
-tasks; the intended immutable-list error was reported as
-`SPR-COLLECTION-IMMUTABLE` in the TYPE phase, then repaired in one iteration.
-All ten final programs ran with exit code 0 and empty stderr. The medium
-program was expanded from an initial 34 lines to 128 total lines (115
-nonblank), then checked and ran without a repair. The recorded exercise used
-37 SDK CLI calls: 12 shared discovery and 25 task-specific. No invalid
-syntax or JVM API hallucination was observed in this bounded test. This is
-evidence for the tested tasks, not a general Agent success rate.
+The first frozen exercise remains at `acceptance/agent_blind_alpha2/REPORT.md`;
+its raw files were not overwritten. It completed 10/10 tasks after one repair
+and ran its 128-line program.
 
-## Remaining boundaries
+The second archive-only exercise completed all 10 tasks against the packaged
+SDK using JDK 26. It ran against the archive before the final documentation
+clarification below; that edit did not change compiler code. The final archive
+was separately smoke-tested on JDK 17 and JDK 26. Its authored 160-line program compiled against a locally
+built third-party JAR and ran successfully. It also exercised API discovery,
+nullability, overload selection, lambdas, numeric diagnostics, runtime
+overflow checks, and match exhaustiveness and evolution. The independent
+report and complete command logs are in
+`acceptance/agent_blind_alpha2_round2/REPORT.md` and `commands.log`.
 
-- The Sprig-written frontend probe is 489 lines, covers a meaningful subset,
-  and handles malformed input; it is **below the requested several thousand
-  lines** and is not a stage-1 or self-hosted compiler. The next iteration
-  should expand the subset and stress symbols/types before inferring a need
-  for new language syntax.
-- Java arrays, varargs, exact generic collection mapping, type-use
-  nullability, and Java↔Sprig collection adapters remain unavailable or
-  limited. `api` reports these boundaries; it does not make unsafe mappings.
-- Java library operations do not inherit Sprig's checked numeric rules.
-  Float stability, Java API contracts, and algorithm correctness remain the
-  caller's responsibility.
-- No public alpha.2 tag or prerelease exists yet. `docs/KNOWN_LIMITATIONS.md`
-  records further implementation limits.
+The exercise initially characterized an uncaught checked Java exception in
+top-level code as a compiler gap. Inspection of `TypeChecker.requireHandled`
+and `docs/KNOWN_LIMITATIONS.md` confirms this is the explicitly provisional
+top-level rule: top-level code has no caller to declare an effect, so an
+uncaught exception propagates and aborts at runtime. Function calls still
+require catch or a declared effect. `docs/JVM_INTEROP.md` now states this
+distinction, and a regression confirms top-level `Files.readString` can be
+checked and run. This is a provisional language boundary, not a newly found
+compiler failure.
 
-The hosted correctness gates passed. Publishing a tag or GitHub prerelease
-is a separate action after reviewing the remaining scope gap.
+The agent's copy of the extracted SDK had launcher mode `0644` because its
+Python `zipfile` extraction did not restore ZIP Unix permissions. The archive
+entry itself is `0755`; the archive checker uses standard `unzip` and invokes
+the launcher directly. This did not require a package change.
+
+## Release assessment
+
+No release-blocking defect remains in the locally tested scope after these
+repairs and the second blind exercise. Hosted CI for the exact audit commit is
+still required before the verdict can be `READY FOR v0.1.0-alpha.2`. Do not
+publish a tag or GitHub release from this audit alone.

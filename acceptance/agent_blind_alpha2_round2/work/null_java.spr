@@ -1,0 +1,7 @@
+import java.lang.System as System
+
+let maybe_value = System.getProperty("sprig.archive.round2.missing.property")
+if maybe_value != null:
+    print(maybe_value)
+else:
+    print("missing property")

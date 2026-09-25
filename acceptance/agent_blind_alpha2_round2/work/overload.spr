@@ -1,0 +1,5 @@
+import java.lang.Math as Math
+
+let a: Int = 13
+let b: Int = 29
+print(Math.max(a, b))

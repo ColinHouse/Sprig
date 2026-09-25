@@ -16,7 +16,14 @@ if date != null:
 
 `sprig api java.time.LocalDate --json` reports Java and mapped Sprig parameter
 and return types, static/instance status, overloads, checked exceptions,
-generic signatures, and `usableFromSprig`/`unusableReason`. Java reference and
+generic signatures, and `usableFromSprig`/`unusableReason`. Use
+`--member of` to return only that member's overloads. Metadata also includes
+`signatureSupported` and `interopLevel`: `direct` means the signature has a
+direct core type mapping; `erased-generic` means the raw signature can be
+bound but its generic arguments are not enforced; `unsupported` means the
+current compiler cannot bind/emit it. The legacy `usableFromSprig` field means
+only that binding/emission is possible, not that a generic contract is safe.
+Java reference and
 boxed return values are conservatively nullable. Java reference parameters,
 including `Object`, require a non-null Sprig argument because the compiler
 does not infer a null contract from the Java type. A Java `List<String>` stays
@@ -52,6 +59,10 @@ classes. Missing entries raise `SPR-JVM-CLASSPATH`. This is a deterministic
 local classpath, not a Maven resolver or package manager. Third-party class
 initializers execute only if the user program actually executes the class.
 
-Checked Java exceptions must be caught or declared. `sprig api` includes the
-declared exception types. Java library arithmetic and nullability are not
-magically upgraded to Sprig's checked numeric or non-null contracts.
+`sprig api` includes Java's declared exception types. Inside a named Sprig
+function, checked Java exceptions must be caught or covered by that function's
+`throws` declaration. Top-level module statements currently may leave a
+checked Java exception uncaught; it then aborts the program at runtime. This
+top-level rule is provisional, as described in `KNOWN_LIMITATIONS.md`. Java
+library arithmetic and nullability are not magically upgraded to Sprig's
+checked numeric or non-null contracts.

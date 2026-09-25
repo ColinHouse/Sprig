@@ -149,7 +149,14 @@ else
   fail "agent tooling regressions"
 fi
 
-echo "== 13. Sprig-written stage-1 frontend probe =="
+echo "== 13. strict CLI option ownership and process exit contract =="
+if python3 "$ROOT/tests/cli_contract/check_cli_contract.py"; then
+  PASS=$((PASS + 1))
+else
+  fail "CLI contract regressions"
+fi
+
+echo "== 14. Sprig-written stage-1 frontend probe =="
 if python3 "$ROOT/tests/bootstrap/check_probe.py"; then
   PASS=$((PASS + 1))
 else

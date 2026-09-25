@@ -84,4 +84,5 @@ public final class Codes {
     // RUNTIME
     public static final String RUNTIME_ERROR = "SPR-RUNTIME-ERROR";
     public static final String RUNTIME_EXCEPTION = "SPR-RUNTIME-EXCEPTION";
+    public static final String PROGRAM_EXIT = "SPR-PROGRAM-EXIT";
 }

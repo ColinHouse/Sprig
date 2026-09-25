@@ -11,8 +11,8 @@ run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
 build <file.spr> [-d dir] [--json]          emit Java sources + .class files
 help [topic] [--json]                      带版本的语言参考
 capabilities [--json]                     已实现能力清单
-api <Java.Class> [--classpath JAR] [--json] 查询 JVM 签名，不初始化类
-doctor [--json]                           环境检查
+api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
+doctor [--classpath JAR] [--json]         环境检查
 explain <SPR-CODE> [--json]                 结构化诊断说明
 codes [--json]                              list every diagnostic code
 version
@@ -76,8 +76,10 @@ version
 }
 ```
 
-位置从 0 开始计数。退出码区分结果：`0` 成功，`1` 源码或程序失败，`2` 内部/IO
-失败。退出码 `2` 且带 `SPR-JVM-INTERNAL` 表示工具自身的问题，而不是源码的问题。
+位置从 0 开始计数。CLI 参数与工具错误使用退出码 `2`，源码和运行时失败通常使用
+`1`。`run` 会原样转发程序进程状态，因此程序显式退出也可能返回 `2` 或其他值；
+非零状态且没有 JVM 异常诊断时会报告 `SPR-PROGRAM-EXIT`，并在 JSON 的
+`data.programExitCode` 中记录程序状态。诊断 code 用于区分工具失败与程序退出。
 
 ## 尚未提供的工具
 

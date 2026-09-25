@@ -16,8 +16,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/sprig-package.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 PKG="$WORK/$NAME"
 mkdir -p "$PKG/bin" "$PKG/lib" "$PKG/examples" "$PKG/docs" \
-  "$PKG/runtime/src/main/java" "$PKG/website/snippets" "$PKG/tests/visitor" \
-  "$PKG/acceptance"
+  "$PKG/runtime/src/main/java" "$PKG/website/snippets" "$PKG/tests/visitor"
 
 cp "$ROOT/build/sprig-compiler.jar" "$PKG/lib/"
 cp "$ANTLR" "$PKG/lib/antlr-4.13.2-complete.jar"
@@ -25,9 +24,7 @@ cp -R "$ROOT/runtime/src/main/java/sprig" "$PKG/runtime/src/main/java/"
 cp -R "$ROOT/examples/." "$PKG/examples/"
 cp -R "$ROOT/website/snippets/." "$PKG/website/snippets/"
 cp "$ROOT/tests/visitor/ast_visitor.spr" "$PKG/tests/visitor/"
-cp -R "$ROOT/acceptance/agent_blind_alpha2" "$PKG/acceptance/"
 cp "$ROOT/docs/releases/RELEASE_NOTES-${VERSION}.md" "$PKG/"
-cp "$ROOT/docs/releases/ALPHA2_VALIDATION.md" "$PKG/"
 cp "$ROOT/AGENT_GUIDE.md" "$PKG/"
 cp "$ROOT/LICENSE" "$ROOT/NOTICE" "$ROOT/LICENSE_STATUS.md" "$PKG/"
 cp "$ROOT/THIRD_PARTY_NOTICES.md" "$PKG/"

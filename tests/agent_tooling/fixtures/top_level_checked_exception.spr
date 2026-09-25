@@ -1,0 +1,8 @@
+import java.io.File as File
+import java.nio.file.Files as Files
+
+let maybePath = File("README.md").toPath()
+if maybePath != null:
+    let maybeText = Files.readString(maybePath)
+    if maybeText != null:
+        print(maybeText.length() > 0)
