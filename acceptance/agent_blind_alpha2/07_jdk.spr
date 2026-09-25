@@ -1,0 +1,6 @@
+import java.time.LocalDate as LocalDate
+
+let date = LocalDate.of(2026, 9, 26)
+if date != null:
+    print(date.getYear())
+    print(date.getDayOfMonth())

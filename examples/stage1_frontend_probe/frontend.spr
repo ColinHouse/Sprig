@@ -1,0 +1,489 @@
+# Stage-1 frontend probe. Lexer, layout, parser, AST, diagnostics, symbol checks,
+# and pretty printer are Sprig code. Java host use is limited to UTF-8 file IO.
+import java.io.IOException as IOException
+import sprig.runtime.host.HostFiles as HostFiles
+
+class SourceText:
+    let path: String
+    let text: String
+
+    func length() -> Int:
+        return text.length()
+
+    func char_at(offset: Int) -> String:
+        return text.charAt(offset)
+
+class Span:
+    let start: Int
+    let end: Int
+    let line: Int
+    let column: Int
+
+    func describe() -> String:
+        return line.toString() + ":" + column.toString() + " [" + start.toString() + "," + end.toString() + ")"
+
+class Issue:
+    let code: String
+    let message: String
+    let span: Span
+
+    func describe() -> String:
+        return code + " " + span.describe() + " " + message
+
+class Reporter:
+    var issues: MutableList[Issue] = []
+
+    func add(code: String, message: String, span: Span) -> Unit:
+        issues.append(Issue(code=code, message=message, span=span))
+
+    func count() -> Int:
+        return issues.size()
+
+    func list() -> List[Issue]:
+        return issues.toList()
+
+class Token:
+    let kind: String
+    let text: String
+    let span: Span
+
+    func describe() -> String:
+        return kind + " " + text + " at " + span.describe()
+
+func is_digit(ch: String) -> Bool:
+    return ch >= "0" and ch <= "9"
+
+func is_letter(ch: String) -> Bool:
+    return (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or ch == "_"
+
+func is_name_part(ch: String) -> Bool:
+    return is_letter(ch) or is_digit(ch)
+
+class Lexer:
+    let source: SourceText
+    let reports: Reporter
+    var pos: Int = 0
+    var line: Int = 1
+    var column: Int = 1
+    var line_start: Bool = true
+    var indents: MutableList[Int] = [0]
+    var output: MutableList[Token] = []
+
+    func at_end() -> Bool:
+        return pos >= source.length()
+
+    func current() -> String:
+        if at_end():
+            return ""
+        return source.char_at(pos)
+
+    func advance() -> Unit:
+        if at_end():
+            return
+        let ch = current()
+        pos += 1
+        if ch == "\n":
+            line += 1
+            column = 1
+            line_start = true
+        else:
+            column += 1
+
+    func span_from(start: Int, start_line: Int, start_column: Int) -> Span:
+        return Span(start=start, end=pos, line=start_line, column=start_column)
+
+    func emit(kind: String, value: String, start: Int, start_line: Int, start_column: Int) -> Unit:
+        output.append(Token(kind=kind, text=value, span=span_from(start, start_line, start_column)))
+
+    func error(message: String, start: Int, start_line: Int, start_column: Int) -> Unit:
+        reports.add("PROBE-LEX", message, span_from(start, start_line, start_column))
+
+    func scan_indent() -> Unit:
+        let start = pos
+        let start_line = line
+        let start_column = column
+        var width: Int = 0
+        while not at_end() and (current() == " " or current() == "\t"):
+            if current() == "\t":
+                error("tabs are not allowed", pos, line, column)
+                width += 4
+            else:
+                width += 1
+            advance()
+        if at_end() or current() == "\n" or current() == "#":
+            return
+        let top = indents.get(indents.size() - 1)
+        if width > top:
+            indents.append(width)
+            emit("INDENT", "", start, start_line, start_column)
+        elif width < top:
+            while indents.size() > 1 and width < indents.get(indents.size() - 1):
+                indents.removeAt(indents.size() - 1)
+                emit("DEDENT", "", start, start_line, start_column)
+            if width != indents.get(indents.size() - 1):
+                error("dedent does not match an earlier indentation", start, start_line, start_column)
+        line_start = false
+
+    func scan_number() -> Unit:
+        let start = pos
+        let start_line = line
+        let start_column = column
+        while not at_end() and is_digit(current()):
+            advance()
+        emit("NUMBER", source.text.substring(start, pos), start, start_line, start_column)
+
+    func scan_name() -> Unit:
+        let start = pos
+        let start_line = line
+        let start_column = column
+        while not at_end() and is_name_part(current()):
+            advance()
+        let word = source.text.substring(start, pos)
+        if word == "let":
+            emit("LET", word, start, start_line, start_column)
+        elif word == "var":
+            emit("VAR", word, start, start_line, start_column)
+        elif word == "print":
+            emit("PRINT", word, start, start_line, start_column)
+        elif word == "if":
+            emit("IF", word, start, start_line, start_column)
+        elif word == "true" or word == "false":
+            emit("BOOL", word, start, start_line, start_column)
+        else:
+            emit("NAME", word, start, start_line, start_column)
+
+    func scan_string() -> Unit:
+        let start = pos
+        let start_line = line
+        let start_column = column
+        advance()
+        var closed = false
+        while not at_end() and current() != "\n":
+            if current() == "\\":
+                advance()
+                if not at_end() and current() != "\n":
+                    advance()
+            elif current() == "\"":
+                advance()
+                closed = true
+                break
+            else:
+                advance()
+        if not closed:
+            error("unterminated string", start, start_line, start_column)
+        emit("STRING", source.text.substring(start, pos), start, start_line, start_column)
+
+    func scan_comment() -> Unit:
+        while not at_end() and current() != "\n":
+            advance()
+
+    func scan_symbol() -> Unit:
+        let start = pos
+        let start_line = line
+        let start_column = column
+        let ch = current()
+        advance()
+        if ch == "+" or ch == "*" or ch == "(" or ch == ")" or ch == "=" or ch == ":":
+            emit(ch, ch, start, start_line, start_column)
+        else:
+            error("unsupported character '" + ch + "'", start, start_line, start_column)
+
+    func tokenize() -> List[Token]:
+        while not at_end():
+            if line_start:
+                scan_indent()
+            if at_end():
+                break
+            let ch = current()
+            if ch == "\n":
+                let start = pos
+                let start_line = line
+                let start_column = column
+                advance()
+                emit("NEWLINE", "", start, start_line, start_column)
+            elif ch == " ":
+                advance()
+            elif ch == "#":
+                scan_comment()
+            elif is_digit(ch):
+                scan_number()
+            elif is_letter(ch):
+                scan_name()
+            elif ch == "\"":
+                scan_string()
+            else:
+                scan_symbol()
+        while indents.size() > 1:
+            indents.removeAt(indents.size() - 1)
+            emit("DEDENT", "", pos, line, column)
+        emit("EOF", "", pos, line, column)
+        return output.toList()
+
+variant Expr:
+    Number(value: Int, span: Span)
+    Text(value: String, span: Span)
+    Boolean(value: Bool, span: Span)
+    Name(value: String, span: Span)
+    Add(left: Expr, right: Expr, span: Span)
+    Multiply(left: Expr, right: Expr, span: Span)
+    Invalid(span: Span)
+
+variant Stmt:
+    Bind(name: String, value: Expr, mutable: Bool, span: Span)
+    Print(value: Expr, span: Span)
+    If(condition: Expr, body: List[Stmt], span: Span)
+    Invalid(span: Span)
+
+class Parser:
+    let tokens: List[Token]
+    let reports: Reporter
+    var index: Int = 0
+
+    func peek() -> Token:
+        return tokens.get(index)
+
+    func is_kind(kind: String) -> Bool:
+        return peek().kind == kind
+
+    func next() -> Token:
+        let token = peek()
+        if token.kind != "EOF":
+            index += 1
+        return token
+
+    func expect(kind: String) -> Token:
+        if is_kind(kind):
+            return next()
+        let found = peek()
+        reports.add("PROBE-PARSE", "expected " + kind + ", got " + found.kind, found.span)
+        return Token(kind=kind, text="", span=found.span)
+
+    func recover_line() -> Unit:
+        while not is_kind("NEWLINE") and not is_kind("DEDENT") and not is_kind("EOF"):
+            next()
+        if is_kind("NEWLINE"):
+            next()
+
+    func finish_line() -> Unit:
+        if is_kind("NEWLINE"):
+            next()
+        elif not is_kind("DEDENT") and not is_kind("EOF"):
+            reports.add("PROBE-PARSE", "expected end of line", peek().span)
+            recover_line()
+
+    func parse_program() -> List[Stmt]:
+        let statements: MutableList[Stmt] = []
+        while not is_kind("EOF"):
+            if is_kind("NEWLINE") or is_kind("DEDENT"):
+                next()
+            else:
+                let before = index
+                statements.append(parse_stmt())
+                if index == before:
+                    next()
+        return statements.toList()
+
+    func parse_block() -> List[Stmt]:
+        let body: MutableList[Stmt] = []
+        while not is_kind("DEDENT") and not is_kind("EOF"):
+            if is_kind("NEWLINE"):
+                next()
+            else:
+                let before = index
+                body.append(parse_stmt())
+                if index == before:
+                    next()
+        expect("DEDENT")
+        return body.toList()
+
+    func parse_stmt() -> Stmt:
+        let first = peek()
+        if is_kind("LET") or is_kind("VAR"):
+            let mutable = is_kind("VAR")
+            next()
+            let name = expect("NAME")
+            expect("=")
+            let value = parse_expr()
+            finish_line()
+            if name.text == "":
+                return Stmt.Invalid(span=first.span)
+            return Stmt.Bind(name=name.text, value=value, mutable=mutable, span=first.span)
+        if is_kind("PRINT"):
+            next()
+            expect("(")
+            let value = parse_expr()
+            expect(")")
+            finish_line()
+            return Stmt.Print(value=value, span=first.span)
+        if is_kind("IF"):
+            next()
+            let condition = parse_expr()
+            expect(":")
+            expect("NEWLINE")
+            expect("INDENT")
+            let body = parse_block()
+            return Stmt.If(condition=condition, body=body, span=first.span)
+        reports.add("PROBE-PARSE", "expected let, var, print or if", first.span)
+        recover_line()
+        return Stmt.Invalid(span=first.span)
+
+    func parse_expr() -> Expr:
+        var left = parse_product()
+        while is_kind("+"):
+            let op = next()
+            left = Expr.Add(left=left, right=parse_product(), span=op.span)
+        return left
+
+    func parse_product() -> Expr:
+        var left = parse_atom()
+        while is_kind("*"):
+            let op = next()
+            left = Expr.Multiply(left=left, right=parse_atom(), span=op.span)
+        return left
+
+    func parse_atom() -> Expr:
+        let token = peek()
+        if is_kind("NUMBER"):
+            next()
+            let value = token.text.toIntOrNull()
+            if value == null:
+                reports.add("PROBE-PARSE", "integer literal out of range", token.span)
+                return Expr.Invalid(span=token.span)
+            return Expr.Number(value=value, span=token.span)
+        if is_kind("STRING"):
+            next()
+            if token.text.length() < 2 or not token.text.endsWith("\""):
+                return Expr.Invalid(span=token.span)
+            return Expr.Text(value=token.text.substring(1, token.text.length() - 1), span=token.span)
+        if is_kind("BOOL"):
+            next()
+            return Expr.Boolean(value=token.text == "true", span=token.span)
+        if is_kind("NAME"):
+            next()
+            return Expr.Name(value=token.text, span=token.span)
+        if is_kind("("):
+            next()
+            let inner = parse_expr()
+            expect(")")
+            return inner
+        reports.add("PROBE-PARSE", "expected expression, got " + token.kind, token.span)
+        if not is_kind("NEWLINE") and not is_kind("DEDENT") and not is_kind("EOF"):
+            next()
+        return Expr.Invalid(span=token.span)
+
+class PrettyPrinter:
+    func expression(expr: Expr) -> String:
+        match expr:
+            case Expr.Number as node:
+                return node.value.toString()
+            case Expr.Text as node:
+                return "\"" + node.value + "\""
+            case Expr.Boolean as node:
+                return node.value.toString()
+            case Expr.Name as node:
+                return node.value
+            case Expr.Add as node:
+                return "(" + expression(node.left) + " + " + expression(node.right) + ")"
+            case Expr.Multiply as node:
+                return "(" + expression(node.left) + " * " + expression(node.right) + ")"
+            case Expr.Invalid:
+                return "<?>"
+
+    func statement(stmt: Stmt, depth: Int) -> String:
+        let pad = "    ".repeat(depth)
+        match stmt:
+            case Stmt.Bind as node:
+                var prefix = "let "
+                if node.mutable:
+                    prefix = "var "
+                return pad + prefix + node.name + " = " + expression(node.value)
+            case Stmt.Print as node:
+                return pad + "print(" + expression(node.value) + ")"
+            case Stmt.If as node:
+                var out = pad + "if " + expression(node.condition) + ":"
+                for child in node.body:
+                    out += "\n" + statement(child, depth + 1)
+                return out
+            case Stmt.Invalid:
+                return pad + "<invalid>"
+
+    func program(statements: List[Stmt]) -> String:
+        var out = ""
+        for stmt in statements:
+            if out != "":
+                out += "\n"
+            out += statement(stmt, 0)
+        return out
+
+class SymbolChecker:
+    let reports: Reporter
+    var names: MutableMap[String, Bool] = {}
+
+    func expression(expr: Expr) -> Unit:
+        match expr:
+            case Expr.Number:
+                pass
+            case Expr.Text:
+                pass
+            case Expr.Boolean:
+                pass
+            case Expr.Name as node:
+                if not names.containsKey(node.value):
+                    reports.add("PROBE-NAME", "unknown name '" + node.value + "'", node.span)
+            case Expr.Add as node:
+                expression(node.left)
+                expression(node.right)
+            case Expr.Multiply as node:
+                expression(node.left)
+                expression(node.right)
+            case Expr.Invalid:
+                pass
+
+    func statement(stmt: Stmt) -> Unit:
+        match stmt:
+            case Stmt.Bind as node:
+                expression(node.value)
+                if names.containsKey(node.name):
+                    reports.add("PROBE-NAME", "duplicate name '" + node.name + "'", node.span)
+                else:
+                    names.set(node.name, node.mutable)
+            case Stmt.Print as node:
+                expression(node.value)
+            case Stmt.If as node:
+                expression(node.condition)
+                let before = names.toMap()
+                for child in node.body:
+                    statement(child)
+                names = before.toMutableMap()
+            case Stmt.Invalid:
+                pass
+
+    func program(statements: List[Stmt]) -> Unit:
+        for stmt in statements:
+            statement(stmt)
+
+func run_source(label: String, source: String) -> Unit:
+    let reports = Reporter()
+    let text = SourceText(path=label, text=source)
+    let tokens = Lexer(source=text, reports=reports).tokenize()
+    let statements = Parser(tokens=tokens, reports=reports).parse_program()
+    SymbolChecker(reports=reports).program(statements)
+    print("CASE " + label)
+    print("tokens=" + tokens.size().toString())
+    print(PrettyPrinter().program(statements))
+    print("diagnostics=" + reports.count().toString())
+    for issue in reports.list():
+        print(issue.describe())
+
+func run_file(path: String) -> Unit throws IOException:
+    let maybe = HostFiles.readUtf8(path)
+    if maybe != null:
+        run_source(path, maybe)
+
+try:
+    run_file("examples/stage1_frontend_probe/fixtures/good.spr")
+    run_file("examples/stage1_frontend_probe/fixtures/malformed.spr")
+    run_file("examples/stage1_frontend_probe/fixtures/bad_indent.spr")
+    run_file("examples/stage1_frontend_probe/fixtures/unterminated.spr")
+catch problem: IOException:
+    print("IO error: " + problem.message)

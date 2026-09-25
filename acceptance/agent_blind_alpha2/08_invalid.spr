@@ -1,0 +1,5 @@
+let xs: List[Int] = [1, 2]
+let editable = xs.toMutableList()
+editable.append(3)
+print(xs)
+print(editable)

@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Offline cross-check for compiler catalog, documentation and release metadata."""
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+SPRIG = ROOT / "bin" / "sprig"
+
+
+def invoke(*args):
+    result = subprocess.run([str(SPRIG), *args], cwd=ROOT,
+                            capture_output=True, text=True, check=True)
+    return result.stdout
+
+
+catalog = json.loads(invoke("capabilities", "--json"))
+version = catalog["compilerVersion"]
+assert invoke("version").strip() == "sprig-compiler " + version
+assert json.loads((ROOT / "website" / "package.json").read_text())["version"] == version
+assert catalog["languageVersion"] == "0.7"
+assert catalog["jdk"]["minimum"] == 17
+assert catalog["license"] == "Apache-2.0"
+assert "Apache License" in (ROOT / "LICENSE").read_text()
+assert "v0.1.0-alpha.1" in catalog["releaseStatus"]
+assert "not** evidence" in (ROOT / "docs" / "releases" /
+                            "RELEASE_NOTES-v0.1.0-alpha.2.md").read_text()
+
+help_index = json.loads(invoke("help", "--json"))
+assert set(help_index["commands"]) == set(catalog["commands"])
+for topic in help_index["topics"]:
+    detail = json.loads(invoke("help", topic, "--json"))
+    assert detail["compilerVersion"] == version and detail["languageVersion"] == "0.7"
+    for example in detail["examples"]:
+        if example.startswith(("examples/", "tests/", "website/")):
+            assert (ROOT / example).is_file(), (topic, example)
+
+code_rows = (ROOT / "docs" / "DIAGNOSTIC_CODES.md").read_text()
+for item in json.loads(invoke("codes", "--json"))["codes"]:
+    assert "| " + item["code"] + " |" in code_rows, item["code"]
+
+required = {
+    "README.md": [version, "v0.1.0-alpha.1", "Apache"],
+    "AGENTS.md": ["sprig api", "Apache-2.0"],
+    "docs/FEATURE_STATUS_IMPLEMENTED.md": ["capabilities", "--classpath"],
+    "docs/KNOWN_LIMITATIONS.md": ["Apache-2.0", "v0.1.0-alpha.1"],
+    "website/en/guide/tooling.md": [version, "sprig api"],
+    "website/guide/tooling.md": [version, "sprig api"],
+    "website/en/project/release-status.md": [version, "v0.1.0-alpha.1"],
+    "website/project/release-status.md": [version, "v0.1.0-alpha.1"],
+}
+for name, markers in required.items():
+    text = (ROOT / name).read_text()
+    for marker in markers:
+        assert marker in text, (name, marker)
+assert "no selected license" not in (ROOT / "docs" / "KNOWN_LIMITATIONS.md").read_text()
+assert not list(ROOT.glob("docs/**/REVIEW_REPORT.md"))
+quick = (ROOT / "docs" / "QUICK_REFERENCE.md").read_text().split("```sprig\n", 1)[1].split("\n```", 1)[0]
+with tempfile.TemporaryDirectory(prefix="sprig-doc-reference-") as temp:
+    source = Path(temp) / "quick.spr"
+    source.write_text(quick + "\n")
+    result = subprocess.run([str(SPRIG), "run", str(source), "--json"],
+                            cwd=ROOT, capture_output=True, text=True)
+    assert result.returncode == 0 and json.loads(result.stdout)["programOutput"] == "3\n"
+print("tooling/release consistency: version, language, JDK, license, commands, topics, codes, status passed")

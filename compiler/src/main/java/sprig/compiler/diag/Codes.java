@@ -5,6 +5,9 @@ public final class Codes {
     private Codes() {
     }
 
+    // CLI
+    public static final String CLI_OPTION = "SPR-CLI-OPTION";
+
     // LEX
     public static final String LEX_TAB = "SPR-LEX-TAB";
     public static final String LEX_INDENT_FIRST = "SPR-LEX-INDENT-FIRST";
@@ -72,6 +75,7 @@ public final class Codes {
 
     // JVM
     public static final String JVM_CLASS = "SPR-JVM-CLASS";
+    public static final String JVM_CLASSPATH = "SPR-JVM-CLASSPATH";
     public static final String JVM_MEMBER = "SPR-JVM-MEMBER";
     public static final String JVM_AMBIGUOUS = "SPR-JVM-AMBIGUOUS";
     public static final String JVM_COMPILE = "SPR-JVM-COMPILE";

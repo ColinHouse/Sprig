@@ -1,0 +1,3 @@
+import "math.spr" as math
+
+print(math.sum_squares(3, 4))

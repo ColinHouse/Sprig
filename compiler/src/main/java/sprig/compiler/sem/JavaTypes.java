@@ -57,6 +57,12 @@ public final class JavaTypes {
         return new JavaType(clazz, java.util.List.of(), true);
     }
 
+    /** JVM values whose source representation differs from the mapped Sprig value. */
+    public static boolean needsValueAdapter(Class<?> clazz) {
+        return clazz == char.class || clazz == Character.class
+                || clazz == Short.class || clazz == Byte.class;
+    }
+
     /** Whether a Sprig type can be passed where the JVM expects the given class. */
     public static boolean rawAssignable(Class<?> target, Type source) {
         Class<?> boxed = boxed(target);
@@ -89,7 +95,7 @@ public final class JavaTypes {
                     || boxed == Comparable.class || boxed == java.io.Serializable.class;
         }
         if (source == NativeType.STRING) {
-            return boxed == String.class || target == char.class || boxed == Character.class
+            return boxed == String.class
                     || boxed == Object.class || boxed == CharSequence.class
                     || boxed == Comparable.class || boxed == java.io.Serializable.class;
         }

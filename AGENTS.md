@@ -69,9 +69,11 @@ change touches, as applicable:
   the design kit.
 - Do not commit generated code, class files, the ANTLR JAR, local paths,
   credentials or personal configuration.
-- Do not present proposed tooling (`sprig api`, LSP, `sprig fmt`, package
-  manager) as implemented.
-- Do not create tags, releases or deployment claims before the project owner
-  confirms the license and repository destination.
+- `sprig api`, `capabilities`, `doctor`, and topic help are implemented in the
+  alpha.2 development tree. Do not present an LSP, `sprig fmt`, or package
+  manager as implemented.
+- Apache-2.0 and the public repository are established. Do not create a tag,
+  release, or deployment claim without a verified release build and owner
+  publication decision.
 - AI-assisted changes follow `AI_DISCLOSURE.md`: describe significant AI
   assistance and what you verified yourself.

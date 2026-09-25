@@ -43,6 +43,10 @@ public final class JavacRunner {
             DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
             List<String> options = new ArrayList<>(List.of(
                     "-d", classesDir.toString(), "-encoding", "UTF-8", "-proc:none", "-g"));
+            if (!JvmClasspath.entries().isEmpty()) {
+                options.add("-classpath");
+                options.add(JvmClasspath.forProcess());
+            }
             boolean ok = compiler.getTask(null, fileManager, collector, options, null,
                     fileManager.getJavaFileObjectsFromPaths(sources)).call();
             for (javax.tools.Diagnostic<? extends JavaFileObject> javaDiagnostic : collector.getDiagnostics()) {

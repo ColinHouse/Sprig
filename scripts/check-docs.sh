@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 python3 "$ROOT/tools/verify-doc-snippets.py"
+python3 "$ROOT/tools/check-tooling-consistency.py"
 
 if [[ ! -x "$ROOT/website/node_modules/.bin/vitepress" || -n "${DOCS_FORCE_INSTALL:-}" ]]; then
   echo "Installing website dependencies..."

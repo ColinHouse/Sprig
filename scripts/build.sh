@@ -36,6 +36,9 @@ find "$BUILD/gen" "$ROOT/compiler/src/main/java" "$ROOT/runtime/src/main/java" -
   > "$BUILD/sources.txt"
 javac --release 17 -encoding UTF-8 -Xlint:-options -cp "$ANTLR_JAR" \
   -d "$BUILD/classes" @"$BUILD/sources.txt"
+if [[ -d "$ROOT/compiler/src/main/resources" ]]; then
+  cp -R "$ROOT/compiler/src/main/resources/." "$BUILD/classes/"
+fi
 
 # A single compiler JAR avoids partial/duplicated class trees (e.g. cloud-sync
 # conflict copies inside a synced Desktop folder) breaking the launcher.

@@ -18,6 +18,19 @@ public final class SprigRuntime {
         return format(value);
     }
 
+    /** Preserve nullability while adapting boxed JVM scalar values. */
+    public static String fromJavaCharacter(Character value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    public static Integer fromJavaShort(Short value) {
+        return value == null ? null : Integer.valueOf(value.intValue());
+    }
+
+    public static Integer fromJavaByte(Byte value) {
+        return value == null ? null : Integer.valueOf(value.intValue());
+    }
+
     public static String format(Object value) {
         if (value == null) {
             return "null";

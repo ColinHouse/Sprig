@@ -32,6 +32,10 @@ jobs:
         env:
           ANTLR_JAR: ${{ github.workspace }}/tools/antlr-4.13.2-complete.jar
         run: ./tools/test-grammar.sh
+      - name: Build and smoke-test offline Agent SDK archive
+        run: |
+          ./scripts/package-alpha.sh
+          python3 tools/check-sdk-archive.py
 
   docs:
     name: Documentation site
@@ -52,11 +56,5 @@ jobs:
           cache-dependency-path: website/package-lock.json
       - name: Build compiler for snippet verification
         run: ./scripts/build.sh
-      - name: Run documented snippets on the real compiler
-        run: python3 tools/verify-doc-snippets.py
-      - name: Install website dependencies
-        run: npm ci
-        working-directory: website
-      - name: Build VitePress site
-        run: npm run docs:build
-        working-directory: website
+      - name: Check snippets, release metadata, and VitePress site
+        run: ./scripts/check-docs.sh

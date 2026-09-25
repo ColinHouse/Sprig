@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}

@@ -1,0 +1,13 @@
+variant Tree:
+    Leaf(value: Int)
+    Branch(left: Tree, right: Tree)
+
+func sum(tree: Tree) -> Int:
+    match tree:
+        case Tree.Leaf as leaf:
+            return leaf.value
+        case Tree.Branch as branch:
+            return sum(branch.left) + sum(branch.right)
+
+let tree = Tree.Branch(left=Tree.Leaf(value=2), right=Tree.Branch(left=Tree.Leaf(value=3), right=Tree.Leaf(value=4)))
+print(sum(tree))

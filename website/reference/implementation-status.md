@@ -2,7 +2,7 @@
 
 > 本页是中文摘要；权威英文文档为
 > [Implemented features](/en/reference/FEATURE_STATUS_IMPLEMENTED)，它随验证用的测试
-> 一起维护。两者不一致时以英文文档和实际测试结果为准。基准版本：`0.1.0-alpha.1`。
+> 一起维护。两者不一致时以英文文档和实际测试结果为准。仓库开发版本：`0.1.0-alpha.2`；已发布版本：`0.1.0-alpha.1`。
 
 下表描述仓库内 Java stage-0 编译器**实际做到**的事情。
 
@@ -26,7 +26,8 @@
 | JDK 互操作：导入、构造器、静态/实例方法与字段、重载 | 引用结果可空、参数保守非空。 |
 | 受检 `Int`/`Int32`、显式整数除法、字面量范围 | `NumericOps` 运行时检查。 |
 | `BigInt`、`Decimal`、IEEE `Float`/`Float32` 与显式转换 | 见[数值语义（英文）](/en/reference/NUMERIC_SEMANTICS)。 |
-| `check`/`build`/`run`/`explain`/`codes`、`--json`、`--syntax-only` | 单一 `bin/sprig` 可执行文件。 |
+| `check`/`build`/`run`/`explain`/`codes`/`help`/`capabilities`/`api`/`doctor`、`--json`、`--syntax-only` | 单一 `bin/sprig` 可执行文件；新命令属于 alpha.2 开发版本。 |
+| 显式本地 `--classpath` | `api`/`check`/`build`/`run` 使用同一 JAR 或目录路径；没有自动下载。 |
 
 ## 尚未实现
 

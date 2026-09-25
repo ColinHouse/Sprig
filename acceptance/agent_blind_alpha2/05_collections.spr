@@ -1,0 +1,15 @@
+let original: List[Int] = [1, 2]
+let editable = original.toMutableList()
+editable.append(3)
+let snapshot = editable.toList()
+editable.append(4)
+print(original.toString())
+print(snapshot.toString())
+print(editable.toString())
+
+let frequencies: MutableMap[String, Int] = {}
+frequencies.set("a", 2)
+let frozen = frequencies.toMap()
+frequencies.set("a", 3)
+print(frozen.get("a"))
+print(frequencies.get("a"))

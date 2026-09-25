@@ -29,6 +29,11 @@ to be readable by people and predictable for coding agents.
 > [release notes](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
 > [known limitations](docs/KNOWN_LIMITATIONS.md).
 
+The repository's `0.1.0-alpha.2` development tree adds offline agent-facing commands
+(`help <topic>`, `capabilities`, `api`, `doctor`, structured `explain`) and
+explicit local `--classpath`. The **latest published archive remains
+v0.1.0-alpha.1** until a separate alpha.2 release is validated and published.
+
 ## What Sprig is
 
 Sprig is a small, complete-looking language implemented by a Java stage-0
@@ -122,7 +127,8 @@ ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
 - JVM interop for imported classes: constructors, fields, methods, overloads,
   checked exceptions, conservative nullability.
 - `sprig check`, `build`, `run`, `explain`, `codes`, `--json`,
-  `--syntax-only`.
+  `--syntax-only`; alpha.2 development adds topic `help`, `capabilities`,
+  `api`, `doctor` and explicit local `--classpath`.
 
 The authoritative list is
 [`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md).

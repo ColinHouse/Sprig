@@ -6,6 +6,7 @@ import java.util.Map;
 /** Short explanations for every stable diagnostic code ({@code sprig explain}). */
 public final class CodeDocs {
     private static final Map<String, String> DOCS = Map.ofEntries(
+            Map.entry(Codes.CLI_OPTION, "A CLI command is missing a required argument or has an unknown option."),
             Map.entry(Codes.LEX_TAB, "Tabs are forbidden; Sprig indentation uses spaces only."),
             Map.entry(Codes.LEX_INDENT_FIRST, "The first code line of a file must start at column 1."),
             Map.entry(Codes.LEX_INDENT_INCONSISTENT, "A dedent must return to a previous indentation level."),
@@ -58,6 +59,7 @@ public final class CodeDocs {
             Map.entry(Codes.FLOW_CONTINUE, "continue is only valid inside a loop."),
             Map.entry(Codes.FLOW_THROWS, "A recoverable error must be declared with throws or caught."),
             Map.entry(Codes.JVM_CLASS, "The imported Java class could not be loaded."),
+            Map.entry(Codes.JVM_CLASSPATH, "A --classpath entry is missing, empty, or not a JAR/directory."),
             Map.entry(Codes.JVM_MEMBER, "No Java method/constructor/field matches this call."),
             Map.entry(Codes.JVM_AMBIGUOUS, "The Java overload is ambiguous for these argument types."),
             Map.entry(Codes.JVM_COMPILE, "The generated Java source did not compile; may be a compiler bug."),

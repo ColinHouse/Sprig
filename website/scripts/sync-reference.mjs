@@ -15,10 +15,12 @@ const pages = [
   ['docs/DIAGNOSTIC_CODES.md', 'generated/en/reference/DIAGNOSTIC_CODES.md'],
   ['docs/FEATURE_STATUS_IMPLEMENTED.md', 'generated/en/reference/FEATURE_STATUS_IMPLEMENTED.md'],
   ['docs/KNOWN_LIMITATIONS.md', 'generated/en/reference/KNOWN_LIMITATIONS.md'],
+  ['docs/QUICK_REFERENCE.md', 'generated/en/reference/QUICK_REFERENCE.md'],
+  ['docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP.md'],
   ['docs/STAGE1_ROADMAP.md', 'generated/en/reference/STAGE1_ROADMAP.md'],
   ['spec/docs/LANGUAGE_SPEC.md', 'generated/en/reference/LANGUAGE_SPEC.md'],
-  ['spec/docs/QUICK_REFERENCE.md', 'generated/en/reference/QUICK_REFERENCE.md'],
-  ['spec/docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP.md'],
+  ['spec/docs/QUICK_REFERENCE.md', 'generated/en/reference/QUICK_REFERENCE_DESIGN.md'],
+  ['spec/docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP_DESIGN.md'],
   ['spec/docs/AGENT_TOOL_PROTOCOL.md', 'generated/en/reference/AGENT_TOOL_PROTOCOL.md'],
   ['spec/docs/AGENT_FRIENDLY_DECISIONS.md', 'generated/en/reference/AGENT_FRIENDLY_DECISIONS.md'],
   ['grammar/README.md', 'generated/en/reference/grammar.md'],
@@ -47,9 +49,11 @@ const linkMap = new Map([
   ['docs/NUMERIC_DESIGN_DECISIONS.md', '/en/reference/NUMERIC_DESIGN_DECISIONS'],
   ['docs/DIAGNOSTIC_CODES.md', '/en/reference/DIAGNOSTIC_CODES'],
   ['docs/KNOWN_LIMITATIONS.md', '/en/reference/KNOWN_LIMITATIONS'],
+  ['docs/QUICK_REFERENCE.md', '/en/reference/QUICK_REFERENCE'],
+  ['docs/JVM_INTEROP.md', '/en/reference/JVM_INTEROP'],
   ['docs/STAGE1_ROADMAP.md', '/en/reference/STAGE1_ROADMAP'],
   ['spec/docs/LANGUAGE_SPEC.md', '/en/reference/LANGUAGE_SPEC'],
-  ['spec/docs/JVM_INTEROP.md', '/en/reference/JVM_INTEROP']
+  ['spec/docs/JVM_INTEROP.md', '/en/reference/JVM_INTEROP_DESIGN']
 ])
 
 const rewriteLinks = (content) =>

@@ -1,4 +1,4 @@
-# Known limitations (Stage-0 alpha candidate)
+# Known limitations (Stage-0 alpha.2 development)
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the Sprig v0.7 design kit.
@@ -7,6 +7,8 @@ by the Sprig v0.7 design kit.
   It does not compile itself and is not self-hosted.
 - There is no package manager, Maven dependency resolver, standard-library
   distribution, language server, IDE plugin, debugger, or editor integration.
+  Explicit local JAR/directory `--classpath` is available for `check`, `build`,
+  `run`, and `api`; no dependencies are downloaded automatically.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java generic signatures, type-use
   nullability annotations, arrays, varargs, and collection adapters are limited
@@ -23,10 +25,12 @@ by the Sprig v0.7 design kit.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
-- Build/test evidence comes from macOS Apple Silicon with OpenJDK 17.0.19 and
-  26.0.1, plus hosted CI on Linux for both JDKs. Compiler classes are built
+- Local alpha.2 build/test evidence comes from macOS Apple Silicon with OpenJDK
+  17.0.19 and 26.0.1. Hosted CI on Linux passed for the published alpha.1
+  baseline; alpha.2 hosted CI remains unverified until this branch runs there.
+  Compiler classes are built
   with `javac --release 17`, so the supported runtime is JDK 17 or newer; no
   other platform or architecture has been exercised locally.
-- The project has no selected license. This repository and its candidate
-  release package are not cleared for public redistribution until the owner
-  selects and records a license.
+- The project is licensed under Apache-2.0 (`LICENSE` and `NOTICE`). The
+  latest published prerelease is `v0.1.0-alpha.1`; alpha.2 is a development
+  tree until its own release is published.

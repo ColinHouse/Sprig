@@ -26,6 +26,10 @@ public final class JsonWriter {
         if (programOutput != null) {
             sb.append("  \"programOutput\": \"").append(escape(programOutput)).append("\",\n");
         }
+        sb.append("  \"environment\": {\"classpath\": ")
+          .append(sprig.compiler.tooling.ToolJson.encode(
+                  sprig.compiler.jvm.JvmClasspath.entries().stream().map(java.nio.file.Path::toString).toList()))
+          .append("},\n");
         sb.append("  \"diagnostics\": [");
         for (int i = 0; i < diagnostics.size(); i++) {
             Diagnostic d = diagnostics.get(i);
@@ -68,6 +72,10 @@ public final class JsonWriter {
         }
         if (d.hint != null) {
             sb.append(",\n").append(indent).append("  \"hint\": \"").append(escape(d.hint)).append("\"");
+        }
+        if (d.data != null) {
+            sb.append(",\n").append(indent).append("  \"data\": ")
+              .append(sprig.compiler.tooling.ToolJson.encode(d.data));
         }
         sb.append(",\n").append(indent).append("  \"related\": [");
         for (int i = 0; i < d.related.size(); i++) {
