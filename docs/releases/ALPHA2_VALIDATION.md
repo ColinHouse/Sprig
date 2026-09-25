@@ -16,6 +16,9 @@ alpha.2 CI run exists. The latest published prerelease remains
   the 21-case grammar harness, and `./scripts/check-docs.sh` passed locally.
   The published alpha.1 [GitHub Actions run](https://github.com/ColinHouse/Sprig/actions/runs/36059153985)
   passed JDK 17, JDK 26, and documentation jobs on Linux.
+- The alpha.2 draft PR [GitHub Actions run](https://github.com/ColinHouse/Sprig/actions/runs/36163453729)
+  passed its JDK 17, JDK 26, and documentation jobs on Linux. That remote
+  commit's tree is identical to local commit `65c2a17`'s tree.
 - No `.g4` file, keyword, or v0.7 language design version was changed.
 
 ## Implemented and observed
@@ -67,6 +70,7 @@ compiler/runtime with `javac --release 17`.
 | `./scripts/check-docs.sh` | 17 executable snippets, metadata consistency, and VitePress build passed |
 | `./scripts/package-alpha.sh` | Created `dist/sprig-v0.1.0-alpha.2-jdk.zip` |
 | `python3 tools/check-sdk-archive.py` | Extracted archive and ran offline help, API, doctor, check, run, and probe on JDK 17 and 26 |
+| GitHub Actions, draft PR #4 | JDK 17, JDK 26, and documentation jobs all passed; both JDK jobs include the full suite, grammar harness, and archive smoke |
 
 The stage-1 probe's own gate checks `sprig check`, `sprig build`/javac, JVM
 golden output, malformed-input ranges, and an added variant case causing
@@ -101,9 +105,8 @@ evidence for the tested tasks, not a general Agent success rate.
 - Java library operations do not inherit Sprig's checked numeric rules.
   Float stability, Java API contracts, and algorithm correctness remain the
   caller's responsibility.
-- No alpha.2 hosted Linux CI result or public alpha.2 prerelease exists yet.
-  The archive smoke is local and offline. `docs/KNOWN_LIMITATIONS.md` records
-  further implementation limits.
+- No public alpha.2 tag or prerelease exists yet. `docs/KNOWN_LIMITATIONS.md`
+  records further implementation limits.
 
-The next release gate is hosted JDK 17/26 CI and documentation CI on the
-alpha.2 commit. Publishing a tag or GitHub prerelease is a separate action.
+The hosted correctness gates passed. Publishing a tag or GitHub prerelease
+is a separate action after reviewing the remaining scope gap.

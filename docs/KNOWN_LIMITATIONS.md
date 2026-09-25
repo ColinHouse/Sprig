@@ -26,9 +26,8 @@ by the Sprig v0.7 design kit.
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
 - Local alpha.2 build/test evidence comes from macOS Apple Silicon with OpenJDK
-  17.0.19 and 26.0.1. Hosted CI on Linux passed for the published alpha.1
-  baseline; alpha.2 hosted CI remains unverified until this branch runs there.
-  Compiler classes are built
+  17.0.19 and 26.0.1. Alpha.2 draft PR #4 also passed hosted Linux CI on both
+  JDKs and the documentation job. Compiler classes are built
   with `javac --release 17`, so the supported runtime is JDK 17 or newer; no
   other platform or architecture has been exercised locally.
 - The project is licensed under Apache-2.0 (`LICENSE` and `NOTICE`). The
