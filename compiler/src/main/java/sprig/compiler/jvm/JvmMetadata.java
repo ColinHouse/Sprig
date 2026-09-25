@@ -70,6 +70,9 @@ public final class JvmMetadata {
                 .map(Class::getTypeName).toList());
         String unusable = unsupportedReason(executable);
         out.put("usableFromSprig", unusable == null);
+        out.put("signatureSupported", unusable == null);
+        out.put("interopLevel", unusable != null ? "unsupported"
+                : genericBoundary(executable) ? "erased-generic" : "direct");
         out.put("unusableReason", unusable);
         out.put("genericBoundary", genericBoundary(executable));
         List<String> interopNotes = new ArrayList<>();
@@ -84,6 +87,8 @@ public final class JvmMetadata {
 
     public static Map<String, Object> describe(Field field) {
         Map<String, Object> out = new LinkedHashMap<>();
+        boolean array = field.getType().isArray();
+        boolean generic = !field.getGenericType().equals(field.getType());
         out.put("name", field.getName());
         out.put("javaSignature", field.toGenericString());
         out.put("javaType", field.getType().getTypeName());
@@ -91,7 +96,10 @@ public final class JvmMetadata {
         out.put("genericType", field.getGenericType().getTypeName());
         out.put("static", Modifier.isStatic(field.getModifiers()));
         out.put("nullableResult", !field.getType().isPrimitive());
-        out.put("usableFromSprig", !field.getType().isArray());
+        out.put("usableFromSprig", !array);
+        out.put("signatureSupported", !array);
+        out.put("genericBoundary", generic);
+        out.put("interopLevel", array ? "unsupported" : generic ? "erased-generic" : "direct");
         out.put("unusableReason", field.getType().isArray() ? "Java arrays have no Sprig source type or adapter" : null);
         if (JavaTypes.needsValueAdapter(field.getType())) out.put("writePolicy",
                 "Direct assignment is unsupported; use an explicit Java setter or adapter.");

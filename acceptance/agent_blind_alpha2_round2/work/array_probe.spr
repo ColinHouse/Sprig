@@ -1,0 +1,5 @@
+import java.lang.String as JavaString
+
+let value = JavaString("abc")
+let chars = value.toCharArray()
+print(chars)

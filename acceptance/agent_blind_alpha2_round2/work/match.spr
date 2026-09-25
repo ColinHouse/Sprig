@@ -1,0 +1,13 @@
+variant Signal:
+    Stop
+    Go
+    Pause
+
+func label(signal: Signal) -> String:
+    match signal:
+        case Signal.Stop:
+            return "stop"
+        case Signal.Go:
+            return "go"
+
+print(label(Signal.Stop))

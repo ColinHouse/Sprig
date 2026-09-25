@@ -71,8 +71,8 @@ Usage: sprig <command> [options]
   build <file.spr> [-d dir] [--json]          emit Java sources + .class files
   help [topic] [--json]                       带版本的语言参考
   capabilities [--json]                      已实现能力清单
-  api <Java.Class> [--classpath JAR] [--json] 查询 JVM 签名
-  doctor [--json]                            检查编译环境
+  api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
+  doctor [--classpath JAR] [--json]          检查编译环境
   explain <SPR-CODE> [--json]                 解释诊断码
   codes [--json]                              list every diagnostic code
   version

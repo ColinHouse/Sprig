@@ -147,6 +147,10 @@ class Lexer:
             emit("PRINT", word, start, start_line, start_column)
         elif word == "if":
             emit("IF", word, start, start_line, start_column)
+        elif word == "func":
+            emit("FUNC", word, start, start_line, start_column)
+        elif word == "return":
+            emit("RETURN", word, start, start_line, start_column)
         elif word == "true" or word == "false":
             emit("BOOL", word, start, start_line, start_column)
         else:
@@ -183,7 +187,10 @@ class Lexer:
         let start_column = column
         let ch = current()
         advance()
-        if ch == "+" or ch == "*" or ch == "(" or ch == ")" or ch == "=" or ch == ":":
+        if ch == "-" and current() == ">":
+            advance()
+            emit("ARROW", "->", start, start_line, start_column)
+        elif ch == "+" or ch == "*" or ch == "(" or ch == ")" or ch == "=" or ch == ":" or ch == ",":
             emit(ch, ch, start, start_line, start_column)
         else:
             error("unsupported character '" + ch + "'", start, start_line, start_column)
@@ -232,7 +239,14 @@ variant Stmt:
     Bind(name: String, value: Expr, mutable: Bool, span: Span)
     Print(value: Expr, span: Span)
     If(condition: Expr, body: List[Stmt], span: Span)
+    Function(name: String, params: List[Parameter], resultType: String, body: List[Stmt], span: Span)
+    Return(value: Expr, span: Span)
     Invalid(span: Span)
+
+class Parameter:
+    let name: String
+    let typeName: String
+    let span: Span
 
 class Parser:
     let tokens: List[Token]
@@ -298,6 +312,13 @@ class Parser:
 
     func parse_stmt() -> Stmt:
         let first = peek()
+        if is_kind("FUNC"):
+            return parse_function()
+        if is_kind("RETURN"):
+            next()
+            let value = parse_expr()
+            finish_line()
+            return Stmt.Return(value=value, span=first.span)
         if is_kind("LET") or is_kind("VAR"):
             let mutable = is_kind("VAR")
             next()
@@ -326,6 +347,31 @@ class Parser:
         reports.add("PROBE-PARSE", "expected let, var, print or if", first.span)
         recover_line()
         return Stmt.Invalid(span=first.span)
+
+    func parse_function() -> Stmt:
+        let first = expect("FUNC")
+        let name = expect("NAME")
+        expect("(")
+        let params: MutableList[Parameter] = []
+        if not is_kind(")"):
+            while true:
+                let param_name = expect("NAME")
+                expect(":")
+                let type_name = expect("NAME")
+                params.append(Parameter(name=param_name.text, typeName=type_name.text,
+                    span=param_name.span))
+                if not is_kind(","):
+                    break
+                next()
+        expect(")")
+        expect("ARROW")
+        let result_type = expect("NAME")
+        expect(":")
+        expect("NEWLINE")
+        expect("INDENT")
+        let body = parse_block()
+        return Stmt.Function(name=name.text, params=params.toList(),
+            resultType=result_type.text, body=body, span=first.span)
 
     func parse_expr() -> Expr:
         var left = parse_product()
@@ -404,6 +450,21 @@ class PrettyPrinter:
                 for child in node.body:
                     out += "\n" + statement(child, depth + 1)
                 return out
+            case Stmt.Function as node:
+                var signature = pad + "func " + node.name + "("
+                var i: Int = 0
+                while i < node.params.size():
+                    if i > 0:
+                        signature += ", "
+                    let param = node.params.get(i)
+                    signature += param.name + ": " + param.typeName
+                    i += 1
+                signature += ") -> " + node.resultType + ":"
+                for child in node.body:
+                    signature += "\n" + statement(child, depth + 1)
+                return signature
+            case Stmt.Return as node:
+                return pad + "return " + expression(node.value)
             case Stmt.Invalid:
                 return pad + "<invalid>"
 
@@ -455,6 +516,22 @@ class SymbolChecker:
                 for child in node.body:
                     statement(child)
                 names = before.toMutableMap()
+            case Stmt.Function as node:
+                if names.containsKey(node.name):
+                    reports.add("PROBE-NAME", "duplicate function '" + node.name + "'", node.span)
+                else:
+                    names.set(node.name, false)
+                let before = names.toMap()
+                for param in node.params:
+                    if names.containsKey(param.name):
+                        reports.add("PROBE-NAME", "duplicate parameter '" + param.name + "'", param.span)
+                    else:
+                        names.set(param.name, false)
+                for child in node.body:
+                    statement(child)
+                names = before.toMutableMap()
+            case Stmt.Return as node:
+                expression(node.value)
             case Stmt.Invalid:
                 pass
 
@@ -485,5 +562,7 @@ try:
     run_file("examples/stage1_frontend_probe/fixtures/malformed.spr")
     run_file("examples/stage1_frontend_probe/fixtures/bad_indent.spr")
     run_file("examples/stage1_frontend_probe/fixtures/unterminated.spr")
+    run_file("examples/stage1_frontend_probe/fixtures/function.spr")
+    run_file("examples/stage1_frontend_probe/fixtures/duplicate_parameter.spr")
 catch problem: IOException:
     print("IO error: " + problem.message)

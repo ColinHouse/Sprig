@@ -73,8 +73,8 @@ Usage: sprig <command> [options]
   build <file.spr> [-d dir] [--json]          emit Java sources + .class files
   help [topic] [--json]                       versioned language reference
   capabilities [--json]                      implemented feature inventory
-  api <Java.Class> [--classpath JAR] [--json] inspect JVM signatures
-  doctor [--json]                            inspect compiler environment
+  api <Java.Class> [--member NAME] [--classpath JAR] [--json] inspect signatures
+  doctor [--classpath JAR] [--json]          inspect compiler environment
   explain <SPR-CODE> [--json]                 explain a diagnostic code
   codes [--json]                              list every diagnostic code
   version

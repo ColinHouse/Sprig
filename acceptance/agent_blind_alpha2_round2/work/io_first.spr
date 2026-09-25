@@ -1,0 +1,9 @@
+import java.io.File as File
+import java.nio.file.Files as Files
+
+let file = File("README.md")
+let path = file.toPath()
+if path != null:
+    let contents = Files.readString(path)
+    if contents != null:
+        print(contents)

@@ -1,0 +1,160 @@
+import fixture.Stamp as Stamp
+
+enum Stage:
+    Draft
+    Ready
+    Sent
+
+variant Outcome:
+    Accepted(total: Int)
+    Refused(reason: String)
+
+class Invoice:
+    let name: String
+    let subtotal: Int
+    var paid: Bool = false
+
+    func total() -> Int:
+        return subtotal + subtotal.divTrunc(10)
+
+    func markPaid() -> Unit:
+        paid = true
+
+func add(left: Int, right: Int) -> Int:
+    return left + right
+
+func subtract(left: Int, right: Int) -> Int:
+    return left - right
+
+func multiply(left: Int, right: Int) -> Int:
+    return left * right
+
+func half(value: Int) -> Int:
+    return value.divTrunc(2)
+
+func valid(amount: Int) -> Bool:
+    return amount > 0
+
+func stageName(stage: Stage) -> String:
+    match stage:
+        case Stage.Draft:
+            return "draft"
+        case Stage.Ready:
+            return "ready"
+        case Stage.Sent:
+            return "sent"
+
+func outcomeName(outcome: Outcome) -> String:
+    match outcome:
+        case Outcome.Accepted as item:
+            return "accepted " + item.total.toString()
+        case Outcome.Refused as item:
+            return "refused " + item.reason
+
+func decide(amount: Int) -> Outcome:
+    if valid(amount):
+        return Outcome.Accepted(total=amount)
+    return Outcome.Refused(reason="amount must be positive")
+
+func coupon(amount: Int, rate: Int) -> Int:
+    return amount - amount * rate.divTrunc(100)
+
+func fee(amount: Int) -> Int:
+    return amount.divTrunc(20)
+
+func grandTotal(amount: Int) -> Int:
+    return add(amount, fee(amount))
+
+func capped(amount: Int, ceiling: Int) -> Int:
+    if amount > ceiling:
+        return ceiling
+    return amount
+
+func describe(name: String, amount: Int) -> String:
+    return name + ":" + amount.toString()
+
+func twice(amount: Int) -> Int:
+    return multiply(amount, 2)
+
+func threeTimes(amount: Int) -> Int:
+    return multiply(amount, 3)
+
+func positiveOrZero(amount: Int) -> Int:
+    if valid(amount):
+        return amount
+    return 0
+
+func adjusted(amount: Int) -> Int:
+    return grandTotal(coupon(amount, 10))
+
+func labelAmount(amount: Int) -> String:
+    if amount > 100:
+        return "large"
+    return "small"
+
+func extra(amount: Int) -> Int:
+    return subtract(add(amount, 8), 3)
+
+func fifth(amount: Int) -> Int:
+    return amount.divTrunc(5)
+
+func isReady(stage: Stage) -> Bool:
+    return stage == Stage.Ready
+
+func invoiceLine(invoice: Invoice) -> String:
+    return describe(invoice.name, invoice.total())
+
+func jarTag(value: String) -> String:
+    let tagged = Stamp.tag(value)
+    if tagged != null:
+        return tagged
+    return "no tag"
+
+func jarBump(value: Int32) -> Int32:
+    let instance = Stamp()
+    return instance.bump(value)
+
+func summarize(values: List[Int]) -> String:
+    return "items=" + values.size().toString()
+
+func countLarge(values: List[Int]) -> Int:
+    return values.filter(fn(value: Int) => value > 10).size()
+
+func balance(amount: Int, spent: Int) -> Int:
+    return subtract(amount, spent)
+
+func ordinaryTax(amount: Int) -> Int:
+    return amount.divTrunc(10)
+
+func net(amount: Int, spent: Int) -> Int:
+    return balance(amount, spent)
+
+func twiceHalf(amount: Int) -> Int:
+    return twice(half(amount))
+
+let invoice = Invoice(name="alpha", subtotal=120)
+let original: List[Int] = [4, 8, 12, 16]
+let tripled = original.map(fn(value: Int) => threeTimes(value))
+let selected = tripled.filter(fn(value: Int) => value > 20)
+let mutable: MutableList[Int] = selected.toMutableList()
+mutable.append(30)
+mutable.sort()
+let prices: Map[String, Int] = {"book": 120, "pen": 25}
+
+print(invoiceLine(invoice))
+print(stageName(Stage.Ready))
+print(outcomeName(decide(invoice.total())))
+print(summarize(original))
+print(countLarge(original))
+print(mutable)
+print(prices["book"])
+print(isReady(Stage.Ready))
+print(jarTag("invoice"))
+print(jarBump(5))
+print(Stamp.code())
+print(adjusted(100))
+print(labelAmount(120))
+print(extra(20))
+print(fifth(100))
+invoice.markPaid()
+print(invoice.paid)

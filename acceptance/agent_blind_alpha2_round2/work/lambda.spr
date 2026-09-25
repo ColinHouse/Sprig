@@ -1,0 +1,4 @@
+let source: List[Int] = [1, 2, 3, 4]
+let mapped = source.map(fn(value: Int) => value * 3)
+let filtered = mapped.filter(fn(value: Int) => value > 6)
+print(filtered)

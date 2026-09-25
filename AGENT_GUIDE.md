@@ -28,16 +28,23 @@ intended. No implicit mixed numeric promotion is performed.
 For a third-party JAR, pass the same `--classpath path/to/library.jar` to
 `api`, `check`, `build`, and `run`. Paths resolve against the current working
 directory. Repeat the flag for multiple entries. No download occurs. Inspect
-`api`'s `usableFromSprig`, `unusableReason`, `genericBoundary`, and
-`checkedExceptions` before writing a call. `api` does not initialize classes.
+`api`'s `usableFromSprig`, `signatureSupported`, `interopLevel`,
+`unusableReason`, `genericBoundary`, and `checkedExceptions` before writing a
+call. `usableFromSprig` means the compiler can bind and emit the erased JVM
+signature; it does not promise generic element safety. `interopLevel` is
+`direct`, `erased-generic`, or `unsupported`. Use `--member NAME` to limit the
+metadata result while preserving overloads. `api` does not initialize classes.
 
 `check/build/run --json` return one JSON object on stdout with
 `schemaVersion`, `toolVersion`, `command`, `exitCode`, `environment.classpath`,
 and `diagnostics`. Each diagnostic has a stable code, phase, severity, URI,
 zero-based range, message, and optional types/hint/data. `CLI` is the phase for
 option errors. JVM overload failures
-include candidate signatures in `data.candidates`. Exit status 0 means
-success, 1 means a program or source failure, and 2 means a tooling/IO failure.
+include candidate signatures in `data.candidates`. CLI tooling errors use 2;
+source and runtime failures normally use 1. `run` forwards the Sprig process
+status, so an explicit program exit can use any status, including 2; non-zero
+exits without a JVM exception are reported as `SPR-PROGRAM-EXIT` with
+`data.programExitCode`.
 Use the code with `explain --json`, repair the source, and rerun `check` before
 `run`. Never invent syntax or accept a lossy conversion without deciding the
 numerical meaning.

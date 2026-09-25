@@ -1,13 +1,16 @@
 # Stage-1 frontend probe: observed language gaps
 
 This is an evidence log, not a syntax proposal. Alpha.2 leaves the v0.7
-grammar unchanged. `examples/stage1_frontend_probe/frontend.spr` (about 490
+grammar unchanged. `examples/stage1_frontend_probe/frontend.spr` (568
 Sprig lines) reads UTF-8 input through the Java host, lexes identifiers,
 numbers, strings and punctuation, emits layout tokens, parses bindings,
-printing, `if` blocks and arithmetic precedence, builds variant ASTs,
-records source ranges, checks a basic symbol table, and pretty-prints via
-exhaustive visitors. Four fixtures include malformed source; `tests/bootstrap`
-checks its golden output, javac/JVM execution, and added-case exhaustiveness.
+printing, `if` blocks, typed function declarations with typed parameters and
+return statements, and arithmetic precedence. It builds variant ASTs, records
+source ranges, checks function parameter/name scopes, and pretty-prints via
+exhaustive visitors. Six fixtures include malformed source and duplicate
+parameters; `tests/bootstrap` checks its golden output, javac/JVM execution,
+and added-case exhaustiveness. This remains a **subset probe**, far smaller
+than a full stage-1 compiler.
 This is still a **subset probe**, far smaller than a full stage-1 compiler.
 
 | Need | Current workaround | Cost / evidence | Syntax proposal |
@@ -17,6 +20,7 @@ This is still a **subset probe**, far smaller than a full stage-1 compiler.
 | Generic token/symbol utilities | Use concrete `List[Token]`, `Map[String, Symbol]` | User-defined generic abstractions remain unavailable; a frontend probe must measure repetition | Defer until measured |
 | Multiline visitors | Named recursive functions with exhaustive match | Expression lambdas cannot contain statements | Defer until measured |
 | Conditional expression | `var` followed by an `if` assignment | One attempted `let prefix = if ... then ... else ...` was rejected; a three-line `if` worked in the printer | No proposal: workaround cost is small |
+| Function declaration parsing | A dedicated token, typed parameter records, function/return statement nodes, scoped symbol entries, and a pretty-printer case | The small parser extension compiled and ran; typed declarations and duplicate parameters are covered. Calls, return-type checking, nested declarations, and diagnostics recovery inside signatures remain outside the probe | None; the current syntax parses naturally |
 | Lexer recovery | `Expr.Invalid` and `Stmt.Invalid` variants plus a Reporter | The probe stays alive on missing names, bad indentation, and strings, but recovery logic is manual | No proposal: compiler library helpers may be enough |
 
 Every future syntax proposal must include real Sprig code, workaround size,

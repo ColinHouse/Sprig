@@ -15,4 +15,6 @@ prerelease is v0.1.0-alpha.1.
 - Java `Object` parameters no longer receive a special nullable exception.
 - The grammar and language design version remain unchanged (Sprig v0.7).
 
-See `ALPHA2_VALIDATION.md` for actual gate results and remaining limitations.
+Maintainer gate results and blind-test raw evidence remain in the repository at
+`docs/releases/ALPHA2_VALIDATION.md` and `acceptance/`; they are intentionally
+excluded from the user SDK archive.

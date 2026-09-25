@@ -11,8 +11,8 @@ run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
 build <file.spr> [-d dir] [--json]          emit Java sources + .class files
 help [topic] [--json]                      versioned language reference
 capabilities [--json]                     implemented feature inventory
-api <Java.Class> [--classpath JAR] [--json] JVM signatures without initialization
-doctor [--json]                           environment report
+api <Java.Class> [--member NAME] [--classpath JAR] [--json] JVM signatures
+doctor [--classpath JAR] [--json]         environment report
 explain <SPR-CODE> [--json]                 structured diagnostic explanation
 codes [--json]                              list every diagnostic code
 version
@@ -81,9 +81,11 @@ A failed check (path shortened here; the real `uri` is a `file:` URI):
 }
 ```
 
-Positions are zero-based. Exit codes distinguish outcomes: `0` success, `1`
-source or program failure, `2` internal/IO failure. Exit code `2` with
-`SPR-JVM-INTERNAL` means a tooling problem, not a problem in your source file.
+Positions are zero-based. CLI option and tooling errors use exit code `2`;
+source and runtime failures normally use `1`. `run` forwards the program's
+process status, so an explicit exit may also return `2` or another value. A
+nonzero exit without a JVM exception is reported as `SPR-PROGRAM-EXIT`, with
+the child status in JSON `data.programExitCode`.
 
 ## What the tooling does not do yet
 

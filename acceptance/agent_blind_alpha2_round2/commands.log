@@ -1,0 +1,295 @@
+$ sh bin/sprig check examples/hello.spr --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig run examples/hello.spr
+Hello, Ada!
+exit=0
+$ sh bin/sprig check .../work/start.spr --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig run .../work/start.spr
+81
+exit=0
+$ sh bin/sprig run .../work/module_main.spr
+42
+exit=0
+$ sh bin/sprig check .../work/io_first.spr --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig run /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/io_first.spr --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "run",
+  "exitCode": 0,
+  "programOutput": "# Sprig alpha.2 Agent SDK\n\nThis package contains the Java stage-0 compiler/runtime and ANTLR 4.13.2. It\ncompiles Sprig source to Java, invokes `javac`, then runs on the JVM. It is\nnot self-hosted. Sprig is licensed under Apache-2.0 (`LICENSE`, `NOTICE`);\nANTLR keeps its own BSD license (`THIRD_PARTY_NOTICES.md`).\n\nStart with `AGENT_GUIDE.md` or run `bin/sprig help --json` and\n`bin/sprig capabilities --json`. `INSTALL.md` gives the quick start;\n`docs/` records numeric rules, JVM boundaries, and limitations.\n\n",
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig run /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/io_caught.spr --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "run",
+  "exitCode": 0,
+  "programOutput": "# Sprig alpha.2 Agent SDK\n\nThis package contains the Java stage-0 compiler/runtime and ANTLR 4.13.2. It\ncompiles Sprig source to Java, invokes `javac`, then runs on the JVM. It is\nnot self-hosted. Sprig is licensed under Apache-2.0 (`LICENSE`, `NOTICE`);\nANTLR keeps its own BSD license (`THIRD_PARTY_NOTICES.md`).\n\nStart with `AGENT_GUIDE.md` or run `bin/sprig help --json` and\n`bin/sprig capabilities --json`. `INSTALL.md` gives the quick start;\n`docs/` records numeric rules, JVM boundaries, and limitations.\n\n",
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig run null_java
+missing property
+exit=0
+$ sh bin/sprig check array_probe --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 1,
+  "environment": {"classpath": []},
+  "diagnostics": [
+    {
+      "code": "SPR-JVM-MEMBER",
+      "phase": "JVM",
+      "severity": "error",
+      "uri": "file:///var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/array_probe.spr",
+      "range": {"start": {"line": 3, "character": 12}, "end": {"line": 3, "character": 31}},
+      "message": "Java class String has no method 'toCharArray' matching 0 argument(s)",
+      "data": {"member":"toCharArray","receiverType":"java.lang.String","argumentTypes":[],"candidates":[{"name":"toCharArray","javaSignature":"public char[] java.lang.String.toCharArray()","sprigSignature":"toCharArray() -> char[]","static":false,"varargs":false,"javaParameterTypes":[],"sprigParameterTypes":[],"genericParameterTypes":[],"javaReturnType":"char[]","sprigReturnType":"char[]","genericReturnType":"char[]","nullableResult":true,"checkedExceptions":[],"usableFromSprig":false,"signatureSupported":false,"interopLevel":"unsupported","unusableReason":"Java array result has no Sprig source type or adapter","genericBoundary":false,"interopNotes":[],"rejectedBecause":null}]},
+      "related": [],
+      "suggestedEdits": []
+    }
+  ]
+}
+exit=1
+$ sh bin/sprig check overload --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig run overload
+29
+exit=0
+$ sh bin/sprig run lambda
+[9, 12]
+exit=0
+$ sh bin/sprig check match --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 1,
+  "environment": {"classpath": []},
+  "diagnostics": [
+    {
+      "code": "SPR-MATCH-NONEXHAUSTIVE",
+      "phase": "FLOW",
+      "severity": "error",
+      "uri": "file:///var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/match.spr",
+      "range": {"start": {"line": 6, "character": 4}, "end": {"line": 10, "character": 23}},
+      "message": "Missing case: Signal.Pause",
+      "hint": "Add 'case Signal.Pause:' (there is no default case)",
+      "related": [],
+      "suggestedEdits": []
+    }
+  ]
+}
+exit=1
+$ sh bin/sprig run match_fixed
+pause
+exit=0
+$ sh bin/sprig run io_caught --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "run",
+  "exitCode": 0,
+  "programOutput": "read failed\n",
+  "environment": {"classpath": []},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig check numeric_bad --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 1,
+  "environment": {"classpath": []},
+  "diagnostics": [
+    {
+      "code": "SPR-NUM-DIVISION",
+      "phase": "TYPE",
+      "severity": "error",
+      "uri": "file:///var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/numeric_bad.spr",
+      "range": {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 29}},
+      "message": "Integer / would truncate; use a.divTrunc(b), or convert both operands explicitly",
+      "expectedType": "explicit division",
+      "actualType": "Int / Int",
+      "hint": "Use divTrunc for deliberate truncation; use checked toFloat() for exact Float conversion.",
+      "related": [],
+      "suggestedEdits": []
+    }
+  ]
+}
+exit=1
+$ sh bin/sprig explain SPR-NUMERIC-DIVISION --json
+{"schemaVersion":1,"compilerVersion":"0.1.0-alpha.2","code":"SPR-NUMERIC-DIVISION","known":false,"meaning":"Unknown diagnostic code.","documentationTopic":"language","commonCauses":["The source violates the language rule described by this code."],"safeFixes":["Inspect the source range and expected/actual types, then change the program explicitly."],"badExample":null,"goodExample":null,"relatedCodes":[]}
+exit=0
+$ sh bin/sprig run numeric_fixed
+4
+exit=0
+$ sh bin/sprig check numeric_type_bad --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 1,
+  "environment": {"classpath": []},
+  "diagnostics": [
+    {
+      "code": "SPR-NUM-CONVERSION",
+      "phase": "TYPE",
+      "severity": "error",
+      "uri": "file:///var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/numeric_type_bad.spr",
+      "range": {"start": {"line": 0, "character": 17}, "end": {"line": 0, "character": 20}},
+      "message": "Cannot implicitly convert Float to Int in initializer; precision or range may change",
+      "expectedType": "Int",
+      "actualType": "Float",
+      "hint": "Use an explicit exact conversion, or a method named Lossy/Trunc when intended.",
+      "related": [],
+      "suggestedEdits": []
+    }
+  ]
+}
+exit=1
+$ sh bin/sprig run numeric_overflow
+sprig.runtime.SprigNumericError: Int addition overflow
+	at sprig.runtime.NumericOps.add(NumericOps.java:11)
+	at sprig.user.$M_numeric_overflow.$init($M_numeric_overflow.java:18)
+	at sprig.user.$M_numeric_overflow.sprigMain($M_numeric_overflow.java:23)
+	at sprig.user.$M_numeric_overflow.main($M_numeric_overflow.java:28)
+SPR-RUNTIME-EXCEPTION [RUNTIME] numeric_overflow.spr: sprig.runtime.SprigNumericError: Int addition overflow
+  hint: See the JVM stack trace above; use --keep to inspect generated Java.
+1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
+exit=1
+$ sh bin/sprig run numeric_overflow_fixed
+9223372036854775807
+exit=0
+$ sh bin/sprig explain SPR-NUM-DIVISION --json
+{"schemaVersion":1,"compilerVersion":"0.1.0-alpha.2","code":"SPR-NUM-DIVISION","known":true,"meaning":"Integer / is rejected; use divTrunc for deliberate truncation or explicit Float/Decimal arithmetic.","documentationTopic":"numerics","commonCauses":["The source violates the numerics rule described by this code."],"safeFixes":["Inspect the source range and expected/actual types, then change the program explicitly."],"badExample":null,"goodExample":null,"relatedCodes":[]}
+exit=0
+$ sh bin/sprig check jar_program --classpath stamp.jar --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": ["/var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/thirdparty/stamp.jar"]},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig help build --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "help",
+  "exitCode": 2,
+  "environment": {"classpath": []},
+  "diagnostics": [
+    {
+      "code": "SPR-CLI-OPTION",
+      "phase": "CLI",
+      "severity": "error",
+      "uri": null,
+      "range": null,
+      "message": "Unknown help topic: build",
+      "related": [],
+      "suggestedEdits": []
+    }
+  ]
+}
+exit=2
+$ sh bin/sprig check jar_program --classpath stamp.jar --json
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 0,
+  "environment": {"classpath": ["/var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/thirdparty/stamp.jar"]},
+  "diagnostics": [  ]
+}
+exit=0
+$ sh bin/sprig build jar_program --classpath stamp.jar -d build/jar_program
+Built /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/jar_program.spr -> /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/jar_program
+  Java sources: /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/jar_program/java
+  Classes:      /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/jar_program/classes
+  Main class:   sprig.user.$M_jar_program
+exit=0
+$ sh bin/sprig run jar_program --classpath stamp.jar
+alpha:132
+ready
+accepted 132
+items=4
+2
+[24, 30, 36, 48]
+120
+true
+jar:invoice
+12
+7
+105
+large
+25
+20
+true
+exit=0
+$ sh bin/sprig build module_main -d build/module_project
+Built /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/module_main.spr -> /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/module_project
+  Java sources: /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/module_project/java
+  Classes:      /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/module_project/classes
+  Main class:   sprig.user.$M_module_main
+exit=0
+$ sh bin/sprig build overload -d build/overload
+Built /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/overload.spr -> /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/overload
+  Java sources: /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/overload/java
+  Classes:      /var/folders/t8/dh0tl0mx7dv83llh82ck8n9w0000gn/T/sprig-alpha2-blind-round2-p0cpcdgz/results/agent-round2/work/build/overload/classes
+  Main class:   sprig.user.$M_overload
+exit=0
+$ sh bin/sprig api java.nio.file.Files --member readString --json
+{"schemaVersion":1,"className":"java.nio.file.Files","classKind":"class","constructors":[],"staticMethods":[{"name":"readString","javaSignature":"public static java.lang.String java.nio.file.Files.readString(java.nio.file.Path) throws java.io.IOException","sprigSignature":"readString(Path) -> String?","static":true,"varargs":false,"javaParameterTypes":["java.nio.file.Path"],"sprigParameterTypes":["Path"],"genericParameterTypes":["java.nio.file.Path"],"javaReturnType":"java.lang.String","sprigReturnType":"String?","genericReturnType":"java.lang.String","nullableResult":true,"checkedExceptions":["java.io.IOException"],"usableFromSprig":true,"signatureSupported":true,"interopLevel":"direct","unusableReason":null,"genericBoundary":false,"interopNotes":[]},{"name":"readString","javaSignature":"public static java.lang.String java.nio.file.Files.readString(java.nio.file.Path,java.nio.charset.Charset) throws java.io.IOException","sprigSignature":"readString(Path, Charset) -> String?","static":true,"varargs":false,"javaParameterTypes":["java.nio.file.Path","java.nio.charset.Charset"],"sprigParameterTypes":["Path","Charset"],"genericParameterTypes":["java.nio.file.Path","java.nio.charset.Charset"],"javaReturnType":"java.lang.String","sprigReturnType":"String?","genericReturnType":"java.lang.String","nullableResult":true,"checkedExceptions":["java.io.IOException"],"usableFromSprig":true,"signatureSupported":true,"interopLevel":"direct","unusableReason":null,"genericBoundary":false,"interopNotes":[]}],"instanceMethods":[],"fields":[],"nullabilityPolicy":"Java reference results are nullable; parameters require non-null values unless future metadata proves otherwise","classpath":[],"compilerVersion":"0.1.0-alpha.2","memberFilter":"readString","memberCount":2}
+exit=0
+$ sh bin/sprig api java.lang.String --member toCharArray --json
+{"schemaVersion":1,"className":"java.lang.String","classKind":"class","constructors":[],"staticMethods":[],"instanceMethods":[{"name":"toCharArray","javaSignature":"public char[] java.lang.String.toCharArray()","sprigSignature":"toCharArray() -> char[]","static":false,"varargs":false,"javaParameterTypes":[],"sprigParameterTypes":[],"genericParameterTypes":[],"javaReturnType":"char[]","sprigReturnType":"char[]","genericReturnType":"char[]","nullableResult":true,"checkedExceptions":[],"usableFromSprig":false,"signatureSupported":false,"interopLevel":"unsupported","unusableReason":"Java array result has no Sprig source type or adapter","genericBoundary":false,"interopNotes":[]}],"fields":[],"nullabilityPolicy":"Java reference results are nullable; parameters require non-null values unless future metadata proves otherwise","classpath":[],"compilerVersion":"0.1.0-alpha.2","memberFilter":"toCharArray","memberCount":1}
+exit=0
+$ sh bin/sprig capabilities --json
+{"schemaVersion":1,"compilerVersion":"0.1.0-alpha.2","languageVersion":"0.7","jdk":{"minimum":17},"license":"Apache-2.0","releaseStatus":"development; v0.1.0-alpha.1 is the latest published prerelease","commands":["help","version","check","build","run","codes","explain","capabilities","api","doctor"],"nativeTypes":["Int","Int32","BigInt","Float","Float32","Decimal","Bool","String","Unit"],"collectionTypes":["List[T]","MutableList[T]","Map[K,V]","MutableMap[K,V]"],"supportedSyntax":["typed functions","classes","enums","variants","match statements","nullable types","typed catch","local modules","lambdas up to three parameters"],"unsupportedSyntax":["user generics","inheritance","match expressions","wildcard match","pipeline","macros","operator overloading","arrays","varargs"],"features":{"inheritance":false,"jsonDiagnostics":true,"matchExpression":false,"matchStatement":true,"nullableTypes":true,"sourceModules":true,"thirdPartyClasspath":true,"userGenerics":false,"variants":true},"lambdaMaxArity":3,"matchBehavior":"statement; exhaustive; no wildcard","numericSemanticsProfile":"checked-fixed-integers; explicit divTrunc; no implicit mixed numeric promotion; IEEE binary floating point","jvmInterop":"public reflection metadata; conservative nullable reference results; no Java array or varargs arguments","classpath":"Repeat --classpath; each value uses the platform path separator. Paths resolve against the current working directory. Parent loader wins, then entries in supplied order.","sourceModules":true,"diagnosticSchemaVersion":1}
+exit=0
+Observed after documented direct-invocation failure: launcher mode=-rw-r--r-- (644)

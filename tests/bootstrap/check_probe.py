@@ -41,4 +41,6 @@ assert "diagnostics=0" in GOLDEN
 assert "PROBE-LEX 3:1 [22,24)" in GOLDEN
 assert "PROBE-PARSE 1:5 [4,5)" in GOLDEN
 assert "PROBE-NAME 3:9 [25,32)" in GOLDEN
+assert "func combine(left: Int, right: Int) -> Int:" in GOLDEN
+assert "duplicate parameter 'value'" in GOLDEN
 print("stage-1 frontend probe: check, javac build, JVM golden, malformed ranges, exhaustive evolution passed")

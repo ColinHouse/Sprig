@@ -38,6 +38,12 @@ def main():
           ["List[T]", "MutableList[T]", "Map[K,V]", "MutableMap[K,V]"])
     check("catalog-commands", all(command in catalog["commands"] for command in
           ("help", "capabilities", "api", "doctor", "check", "build", "run")))
+    capability_tests = json.loads((ROOT / "tests/agent_tooling/capability-test-map.json").read_text())
+    for capability, fixtures in capability_tests.items():
+        value = catalog["features"].get(capability.removeprefix("feature.")) \
+            if capability.startswith("feature.") else catalog.get(capability)
+        check("capability-test-map-" + capability,
+              value is not None and all((ROOT / item.split("#", 1)[0]).is_file() for item in fixtures))
     check("capabilities-text", "Implemented:" in run("capabilities").stdout)
     topics = obj(run("help", "--json"))["topics"]
     for topic in topics:
@@ -46,6 +52,15 @@ def main():
         check("help-" + topic, result.returncode == 0 and data["topic"] == topic
               and data["compilerVersion"] == catalog["compilerVersion"]
               and data["syntax"] and data["rules"])
+        for example in data["examples"]:
+            example_path = ROOT / example
+            if example_path.suffix == ".spr":
+                parsed = run("check", example_path, "--json")
+                check("help-example-check-" + topic,
+                      parsed.returncode == 0 and not obj(parsed)["diagnostics"])
+                executed = run("run", example_path, "--json")
+                check("help-example-run-" + topic,
+                      executed.returncode == 0 and not obj(executed)["diagnostics"])
     check("help-text", "Syntax:" in run("help", "match").stdout)
     check("help-unknown-json", obj(run("help", "invalid", "--json"))["exitCode"] == 2)
     doctor = obj(run("doctor", "--json"))
@@ -137,7 +152,7 @@ Widget.plus("bad")
             and d["data"]["candidates"][0]["rejectedBecause"] == "wrong arity"
             for d in errors))
         absent = run("check", program, "--classpath", directory / "missing.jar", "--json")
-        check("missing-classpath", absent.returncode == 1
+        check("missing-classpath", absent.returncode == 2 and obj(absent)["exitCode"] == 2
               and obj(absent)["diagnostics"][0]["code"] == "SPR-JVM-CLASSPATH")
         nullable = directory / "nullable.spr"
         nullable.write_text('''import java.util.Objects as Objects
@@ -258,6 +273,13 @@ NumericEdges.shortValue = 2
         rejected_write = run("check", writable, "--classpath", edge_jar, "--json")
         check("jvm-adapted-field-write-rejected", rejected_write.returncode == 1 and any(
             d["code"] == "SPR-JVM-MEMBER" for d in obj(rejected_write)["diagnostics"]))
+
+    top_level_checked = ROOT / "tests/agent_tooling/fixtures/top_level_checked_exception.spr"
+    checked = run("check", top_level_checked, "--json")
+    executed = run("run", top_level_checked, "--json")
+    check("top-level-checked-java-is-runtime-propagation", checked.returncode == 0
+          and obj(checked)["diagnostics"] == [] and executed.returncode == 0
+          and obj(executed)["programOutput"] == "true\n")
     print(f"agent tooling: {COUNT} passed, 0 failed")
 
 
