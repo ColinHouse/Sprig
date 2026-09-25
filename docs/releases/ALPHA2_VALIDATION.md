@@ -14,8 +14,11 @@ as test evidence.
 - The base tree matches GitHub `main` at
   `788c9888001c805ddff66ee6dadde8068d9e314e` when checked. That main commit's
   JDK 17, JDK 26 and documentation workflows passed. Those hosted results are
-  evidence for the base only; the audit changes still require their own hosted
-  CI run.
+  evidence for the base only.
+- Audit changes were reviewed in [PR #5](https://github.com/ColinHouse/Sprig/pull/5),
+  head `06eb57c757282dd7aaf3bbff877b4f07b30d2620`, and merged as
+  `d1ca3f5ba17dbfe031470e3a0aa69255279fa49b` after all three hosted checks
+  passed on the PR head.
 - No `.g4` grammar, keyword, or Sprig v0.7 language design file was changed.
   Work is limited to compiler tooling, metadata, docs, tests, packaging and the
   stage-1 probe.
@@ -121,9 +124,10 @@ Python `zipfile` extraction did not restore ZIP Unix permissions. The archive
 entry itself is `0755`; the archive checker uses standard `unzip` and invokes
 the launcher directly. This did not require a package change.
 
-## Release assessment
+## Final verdict
 
-No release-blocking defect remains in the locally tested scope after these
-repairs and the second blind exercise. Hosted CI for the exact audit commit is
-still required before the verdict can be `READY FOR v0.1.0-alpha.2`. Do not
-publish a tag or GitHub release from this audit alone.
+**READY FOR v0.1.0-alpha.2.** No release-blocking defect remains in the
+audited scope after the repairs and the second blind exercise. The PR head's
+JDK 17, JDK 26, and documentation site checks all passed, and that commit was
+merged. This audit did not create a tag or GitHub release; publishing remains
+a separate release action.
