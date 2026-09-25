@@ -194,6 +194,7 @@ export default defineConfig({
                   link: '/en/reference/FEATURE_STATUS_IMPLEMENTED'
                 },
                 { text: 'Known limitations', link: '/en/reference/KNOWN_LIMITATIONS' },
+                { text: 'JVM interop', link: '/en/reference/JVM_INTEROP' },
                 { text: 'Diagnostic codes', link: '/en/reference/DIAGNOSTIC_CODES' },
                 { text: 'Stage-1 roadmap', link: '/en/reference/STAGE1_ROADMAP' },
                 {

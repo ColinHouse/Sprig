@@ -1,0 +1,8 @@
+let total: Int = 7
+let count: Int = 2
+let quotient = total.toFloatExact() / count.toFloatExact()
+let truncated = total.divTrunc(count)
+let narrow: Int32 = total.toInt32Exact()
+print(quotient)
+print(truncated)
+print(narrow)

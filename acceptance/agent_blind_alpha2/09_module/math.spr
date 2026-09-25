@@ -1,0 +1,5 @@
+func square(value: Int) -> Int:
+    return value * value
+
+func sum_squares(first: Int, second: Int) -> Int:
+    return square(first) + square(second)

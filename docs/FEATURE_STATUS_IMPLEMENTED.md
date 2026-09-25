@@ -25,7 +25,8 @@ design kit's `docs/FEATURE_STATUS.md`.
 | IEEE `Float`/`Float32`, explicit exact/lossy conversion | yes | mixed-type and narrowing checks | Java `double`/`float` | numeric acceptance suite |
 | `BigInt` and `Decimal` | yes | distinct native types | BigInteger/BigDecimal wrappers | numeric acceptance suite |
 | Java checked exceptions + typed catch + `error.message` | yes | yes | Java try/catch | runtime 15 |
-| `sprig check/run/build/explain/codes`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh` |
+| `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
+| Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | no automatic dependency resolution | agent tooling suite |
 | javac error → Sprig span translation | — | — | line map | by design |
 | Checked effects from omitted class defaults | — | checked at each constructor call; explicit field values skip unused defaults | defaults still evaluate per instance, in declaration order | correctness regressions |
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
@@ -35,7 +36,10 @@ design kit's `docs/FEATURE_STATUS.md`.
 Not implemented (honest status): user-defined generics, inheritance or
 interfaces, `match` expressions, nested/positional patterns, function types in
 source, `%=`, tuples/destructuring, varargs/arrays/annotations in interop,
-file IO library, package manifests, LSP, incremental checking, self-hosting.
+general-purpose file IO library, package manifests, LSP, incremental checking,
+self-hosting. Java generic arguments are displayed by `sprig api` but not
+enforced as Sprig generics. Array and varargs members are reported as
+unavailable rather than silently mapped.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries. Earlier
 implementation reports from the former `output/` development tree were moved
 out of the public repository into the maintainer's local archive during the

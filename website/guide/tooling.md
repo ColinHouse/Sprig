@@ -9,14 +9,23 @@ stage-0 编译器只提供一个可执行文件 `bin/sprig`，由 `scripts/build
 check <file.spr> [--json] [--syntax-only]   parse and type-check
 run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
 build <file.spr> [-d dir] [--json]          emit Java sources + .class files
-explain <SPR-CODE>                          explain a diagnostic code
+help [topic] [--json]                      带版本的语言参考
+capabilities [--json]                     已实现能力清单
+api <Java.Class> [--classpath JAR] [--json] 查询 JVM 签名，不初始化类
+doctor [--json]                           环境检查
+explain <SPR-CODE> [--json]                 结构化诊断说明
 codes [--json]                              list every diagnostic code
 version
 ```
 
+`check`、`build`、`run`、`api` 可重复使用 `--classpath` 指定本地 JAR 或目录；
+四个命令采用同一解析路径，不自动下载依赖。这些新增命令属于 alpha.2 开发版本；
+目前公开发行包仍是 alpha.1。
+例如用 `sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
+
 - `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。
 - `run` 支持在 `--` 之后传递程序参数，`--keep` 用于保留生成的中间文件。
-- `build` 把生成的 Java 与 `.class` 写入 `-d`（默认 `build/out`）；检查失败时不会
+- `build` 把生成的 Java 与 `.class` 写入 `-d`（默认 `sprig-build`）；检查失败时不会
   留下 class 文件。
 - `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/DIAGNOSTIC_CODES)。
 
@@ -30,10 +39,11 @@ version
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.1.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
+  "environment": {"classpath": []},
   "diagnostics": []
 }
 ```
@@ -43,9 +53,10 @@ version
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.1.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
   "command": "check",
   "exitCode": 1,
+  "environment": {"classpath": []},
   "diagnostics": [
     {
       "code": "SPR-MATCH-NONEXHAUSTIVE",
@@ -72,15 +83,14 @@ version
 
 以下能力都是**提案，尚未实现**：
 
-- `sprig api`（供 agent 查询 JDK/JVM 签名）、
 - LSP / IDE 语言服务器、
 - `sprig fmt`、`sprig test`、
 - 包清单、Maven 依赖解析或模块仓库、
 - 增量检查。
 
-这些接口的草案保存在
-[Agent 工具协议（英文，提案）](/en/reference/AGENT_TOOL_PROTOCOL)，请把它当作设计文档，
-而不是可用命令。
+历史[Agent 工具协议（英文，提案）](/en/reference/AGENT_TOOL_PROTOCOL)
+还包含未来接口。当前能力以 `sprig capabilities --json` 为准；`api` 边界见
+[JVM 互操作（英文）](/en/reference/JVM_INTEROP)。
 
 ## 面向 agent 的工作流
 

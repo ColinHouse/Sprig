@@ -71,7 +71,11 @@ Usage: sprig <command> [options]
   check <file.spr> [--json] [--syntax-only]   parse and type-check
   run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
   build <file.spr> [-d dir] [--json]          emit Java sources + .class files
-  explain <SPR-CODE>                          explain a diagnostic code
+  help [topic] [--json]                       versioned language reference
+  capabilities [--json]                      implemented feature inventory
+  api <Java.Class> [--classpath JAR] [--json] inspect JVM signatures
+  doctor [--json]                            inspect compiler environment
+  explain <SPR-CODE> [--json]                 explain a diagnostic code
   codes [--json]                              list every diagnostic code
   version
 ```
@@ -80,7 +84,8 @@ Usage: sprig <command> [options]
 |---|---|
 | `check` | Runs the lexer, layout adapter, parser, name resolution and type checking. Writes nothing. |
 | `run` | Does everything `check` does, then emits Java, invokes `javac` and runs the program. |
-| `build` | Emits generated Java sources and `.class` files under `-d <dir>` (default `build/out`). |
+| `build` | Emits generated Java sources and `.class` files under `-d <dir>` (default `sprig-build`). |
+| `help` / `capabilities` / `api` / `doctor` | Alpha.2 development tools for offline language, JVM and environment discovery; the published alpha.1 archive does not contain them. |
 | `explain` | Prints the meaning of a stable diagnostic code such as `SPR-MATCH-NONEXHAUSTIVE`. |
 | `codes` | Lists every diagnostic code. |
 | `--json` | Wraps the result in a single machine-readable JSON document. |

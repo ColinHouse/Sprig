@@ -1,6 +1,7 @@
 package sprig.compiler.sem;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import sprig.compiler.ast.Decl;
@@ -22,6 +24,7 @@ import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
+import sprig.compiler.jvm.JvmMetadata;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.FunctionType;
@@ -313,6 +316,12 @@ public final class TypeChecker {
                 if (java.lang.reflect.Modifier.isFinal(field.jvm.field.getModifiers())) {
                     diagnostics.add(Diagnostic.error(Codes.NAME_LET_ASSIGN, Phase.TYPE,
                             "Cannot assign to final Java field '" + access.name + "'",
+                            module.uri, target.span));
+                } else if (JavaTypes.needsValueAdapter(field.jvm.field.getType())) {
+                    diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+                            "Cannot assign to Java field '" + access.name + "' of type "
+                                    + field.jvm.field.getType().getTypeName()
+                                    + "; this boundary requires an explicit Java setter or adapter",
                             module.uri, target.span));
                 }
             } else if (field.kind == ResolvedField.Kind.VARIANT_PAYLOAD
@@ -1953,6 +1962,12 @@ public final class TypeChecker {
         try {
             java.lang.reflect.Field javaField = clazz.getField(access.name);
             if (staticContext == java.lang.reflect.Modifier.isStatic(javaField.getModifiers())) {
+                if (javaField.getType().isArray()) {
+                    diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+                            "Java array field '" + access.name + "' has no Sprig adapter",
+                            module.uri, access.span));
+                    return errorField(access);
+                }
                 ResolvedField field = new ResolvedField();
                 field.kind = ResolvedField.Kind.JAVA_FIELD;
                 JvmMember member = new JvmMember();
@@ -2578,6 +2593,7 @@ public final class TypeChecker {
         int bestScore = -1;
         boolean ambiguous = false;
         for (Constructor<?> constructor : javaType.clazz.getConstructors()) {
+            if (JvmMetadata.unsupportedReason(constructor) != null) continue;
             int score = scoreCandidate(constructor.getParameterTypes(), argTypes, call.args);
             if (score < 0) {
                 continue;
@@ -2591,22 +2607,22 @@ public final class TypeChecker {
             }
         }
         if (best == null) {
-            List<Class<?>[]> candidates = new ArrayList<>();
-            for (Constructor<?> constructor : javaType.clazz.getConstructors()) {
-                candidates.add(constructor.getParameterTypes());
-            }
+            List<Constructor<?>> candidates = List.of(javaType.clazz.getConstructors());
             if (reportNullableJavaArgument(javaType.clazz.getSimpleName(), candidates, argTypes, call)) {
                 return NativeType.ERROR;
             }
             diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
                     "No constructor of " + javaType.clazz.getSimpleName() + " matches "
-                            + argTypes.size() + " argument(s)", module.uri, call.span));
+                            + argTypes.size() + " argument(s)", module.uri, call.span)
+                    .withData(jvmDiagnosticData(javaType.clazz, "<init>", argTypes, call, candidates)));
             return NativeType.ERROR;
         }
         if (ambiguous) {
             diagnostics.add(Diagnostic.error(Codes.JVM_AMBIGUOUS, Phase.JVM,
                     "Ambiguous constructor overload for " + javaType.clazz.getSimpleName(),
-                    module.uri, call.span));
+                    module.uri, call.span)
+                    .withData(jvmDiagnosticData(javaType.clazz, "<init>", argTypes, call,
+                            List.of(javaType.clazz.getConstructors()))));
         }
         ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.JVM_CTOR, javaType);
         JvmMember member = new JvmMember();
@@ -2648,6 +2664,7 @@ public final class TypeChecker {
             if (receiverIsClass != isStatic) {
                 continue;
             }
+            if (JvmMetadata.unsupportedReason(method) != null) continue;
             int score = scoreCandidate(method.getParameterTypes(), argTypes, call.args);
             if (score < 0) {
                 continue;
@@ -2661,7 +2678,7 @@ public final class TypeChecker {
             }
         }
         if (best == null) {
-            List<Class<?>[]> candidates = new ArrayList<>();
+            List<Method> candidates = new ArrayList<>();
             boolean receiverIsClass = call.callee instanceof Expr.FieldAccess access
                     && access.receiver instanceof Expr.Name name
                     && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
@@ -2670,7 +2687,7 @@ public final class TypeChecker {
                         || java.lang.reflect.Modifier.isStatic(method.getModifiers()) != receiverIsClass) {
                     continue;
                 }
-                candidates.add(method.getParameterTypes());
+                candidates.add(method);
             }
             if (reportNullableJavaArgument(clazz.getSimpleName() + "." + field.jvm.name,
                     candidates, argTypes, call)) {
@@ -2679,13 +2696,17 @@ public final class TypeChecker {
             diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
                     "Java class " + clazz.getSimpleName() + " has no method '" + field.jvm.name
                             + "' matching " + argTypes.size() + " argument(s)",
-                    module.uri, call.span));
+                    module.uri, call.span)
+                    .withData(jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates)));
             return NativeType.ERROR;
         }
         if (ambiguous) {
             diagnostics.add(Diagnostic.error(Codes.JVM_AMBIGUOUS, Phase.JVM,
                     "Ambiguous overload for " + clazz.getSimpleName() + "." + best.getName(),
-                    module.uri, call.span));
+                    module.uri, call.span)
+                    .withData(jvmDiagnosticData(clazz, best.getName(), argTypes, call,
+                            java.util.Arrays.stream(clazz.getMethods())
+                                    .filter(m -> m.getName().equals(field.jvm.name)).toList())));
         }
         JvmMember member = new JvmMember();
         member.owner = clazz;
@@ -2736,10 +2757,8 @@ public final class TypeChecker {
      * {@code double} the only primitive floating target for Float.
      */
     private static int scoreArgument(Class<?> param, Type arg, Expr expr) {
-        // Java formals carry no nullability contract. A Sprig nullable value may
-        // only cross into a formal that accepts null by contract
-        // (java.lang.Object); everything else requires an explicit null check.
-        if (arg.isNullable() && JavaTypes.boxed(param) != Object.class) {
+        // Java formals carry no nullability contract, including Object.
+        if (arg.isNullable()) {
             return -1;
         }
         Type base = arg.nonNull();
@@ -2800,8 +2819,8 @@ public final class TypeChecker {
             if (param == String.class) {
                 return 3;
             }
-            if (param == char.class) {
-                return 1;
+            if (param == char.class || param == Character.class) {
+                return expr instanceof Expr.StringLit literal && literal.value.length() == 1 ? 2 : -1;
             }
             return JavaTypes.rawAssignable(param, arg) ? 1 : -1;
         }
@@ -2818,7 +2837,7 @@ public final class TypeChecker {
      * When overload resolution fails only because a nullable argument is passed
      * to a Java formal, report that precisely instead of "no matching method".
      */
-    private boolean reportNullableJavaArgument(String memberLabel, List<Class<?>[]> candidates,
+    private boolean reportNullableJavaArgument(String memberLabel, List<? extends Executable> candidates,
                                                List<Type> argTypes, Expr.Call call) {
         int nullableIndex = -1;
         for (int i = 0; i < argTypes.size(); i++) {
@@ -2832,7 +2851,8 @@ public final class TypeChecker {
         }
         List<Type> projected = new ArrayList<>(argTypes);
         projected.set(nullableIndex, argTypes.get(nullableIndex).nonNull());
-        for (Class<?>[] params : candidates) {
+        for (Executable candidate : candidates) {
+            Class<?>[] params = candidate.getParameterTypes();
             if (params.length == argTypes.size()
                     && scoreCandidate(params, projected, call.args) >= 0) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
@@ -2841,11 +2861,43 @@ public final class TypeChecker {
                         module.uri, call.args.get(nullableIndex).value.span)
                         .withTypes(JavaTypes.map(params[nullableIndex]).display(),
                                 argTypes.get(nullableIndex).display())
-                        .withHint("Check for null first (if x != null), or handle the absent case in Sprig."));
+                        .withHint("Check for null first (if x != null), or handle the absent case in Sprig.")
+                        .withData(jvmDiagnosticData(candidate.getDeclaringClass(), memberLabel,
+                                argTypes, call, candidates)));
                 return true;
             }
         }
         return false;
+    }
+
+    private static Map<String, Object> jvmDiagnosticData(Class<?> owner, String member,
+            List<Type> argumentTypes, Expr.Call call, List<? extends Executable> candidates) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("member", member);
+        data.put("receiverType", owner.getName());
+        data.put("argumentTypes", argumentTypes.stream().map(Type::display).toList());
+        List<Map<String, Object>> details = new ArrayList<>();
+        candidates.stream().sorted(java.util.Comparator.comparing(Executable::toGenericString))
+                .forEach(candidate -> {
+                    Map<String, Object> item = new LinkedHashMap<>(JvmMetadata.describe(candidate));
+                    Class<?>[] params = candidate.getParameterTypes();
+                    String reason = null;
+                    if (candidate.isVarArgs()) reason = "unsupported varargs";
+                    else if (java.util.Arrays.stream(params).anyMatch(Class::isArray)) reason = "unsupported array parameter";
+                    else if (params.length != argumentTypes.size()) reason = "wrong arity";
+                    else {
+                        for (int i = 0; i < params.length; i++) {
+                            if (argumentTypes.get(i).isNullable()) { reason = "nullable argument " + (i + 1); break; }
+                            if (scoreArgument(params[i], argumentTypes.get(i), call.args.get(i).value) < 0) {
+                                reason = "incompatible or narrowing argument " + (i + 1); break;
+                            }
+                        }
+                    }
+                    item.put("rejectedBecause", reason);
+                    details.add(item);
+                });
+        data.put("candidates", details);
+        return data;
     }
 
     private static List<Type> jvmExceptions(Class<?>[] exceptionTypes) {

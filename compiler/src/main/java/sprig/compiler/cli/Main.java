@@ -23,6 +23,10 @@ import sprig.compiler.diag.Version;
 import sprig.compiler.gen.JavaGenerator;
 import sprig.compiler.jvm.JavaRunner;
 import sprig.compiler.jvm.JavacRunner;
+import sprig.compiler.jvm.JvmClasspath;
+import sprig.compiler.jvm.JvmMetadata;
+import sprig.compiler.tooling.Catalog;
+import sprig.compiler.tooling.ToolJson;
 
 /**
  * {@code sprig} command line: check, run, build, explain, version.
@@ -56,15 +60,18 @@ public final class Main {
                 e.printStackTrace();
             }
             exit = 2;
+        } catch (LinkageError e) {
+            if (jsonRequested(args)) {
+                printFatalJson(args, Codes.JVM_CLASS, "JVM class metadata cannot be linked: " + e);
+            } else System.err.println("sprig: JVM class metadata cannot be linked: " + e);
+            exit = 1;
         }
         System.exit(exit);
     }
 
     private static int dispatch(String[] args) throws IOException, InterruptedException {
-        if (args.length == 0 || args[0].equals("help") || args[0].equals("--help") || args[0].equals("-h")) {
-            usage(System.out);
-            return args.length == 0 ? 2 : 0;
-        }
+        if (args.length == 0) { usage(System.out); return 2; }
+        if (args[0].equals("help") || args[0].equals("--help") || args[0].equals("-h")) return help(args);
         if (args[0].equals("version") || args[0].equals("--version")) {
             System.out.println(Version.VERSION);
             return 0;
@@ -75,6 +82,9 @@ public final class Main {
             case "build" -> build(args);
             case "explain" -> explain(args);
             case "codes" -> codes(args);
+            case "capabilities" -> capabilities(args);
+            case "api" -> api(args);
+            case "doctor" -> doctor(args);
             default -> {
                 System.err.println("sprig: unknown command '" + args[0] + "'");
                 usage(System.err);
@@ -91,7 +101,147 @@ public final class Main {
         out.println("  build <file.spr> [-d dir] [--json]          emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
+        out.println("  help [topic] [--json]                       language reference (topics: "
+                + String.join(", ", Catalog.topics()) + ")");
+        out.println("  capabilities [--json]                      implemented feature inventory");
+        out.println("  api <Java.Class> [--classpath PATH] [--json] inspect real JVM signatures");
+        out.println("  doctor [--json]                            inspect compiler environment");
+        out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
         out.println("  version");
+    }
+
+    private static int help(String[] args) {
+        String topic = null;
+        boolean json = jsonRequested(args);
+        for (int i = 1; i < args.length; i++) {
+            if (args[i].equals("--json")) continue;
+            if (topic != null || !Catalog.topics().contains(args[i])) {
+                return commandError("help", "Unknown help topic: " + args[i], json);
+            }
+            topic = args[i];
+        }
+        if (topic == null) {
+            if (json) System.out.println(ToolJson.encode(Map.of(
+                    "schemaVersion", Catalog.SCHEMA_VERSION,
+                    "compilerVersion", Catalog.COMPILER_VERSION,
+                    "languageVersion", Catalog.LANGUAGE_VERSION,
+                    "topics", Catalog.topics(), "commands", Catalog.list("commands"))));
+            else usage(System.out);
+            return 0;
+        }
+        Map<String, Object> data = Catalog.help(topic);
+        if (json) System.out.println(ToolJson.encode(data));
+        else {
+            System.out.println("Sprig " + topic + " (language " + Catalog.LANGUAGE_VERSION + ")");
+            System.out.println("Syntax:");
+            for (String line : (List<String>) data.get("syntax")) System.out.println("  " + line);
+            System.out.println("Rules:");
+            for (String line : (List<String>) data.get("rules")) System.out.println("  - " + line);
+            System.out.println("Example: " + String.join(", ", (List<String>) data.get("examples")));
+        }
+        return 0;
+    }
+
+    private static int capabilities(String[] args) {
+        boolean json = jsonRequested(args);
+        if (args.length > (json ? 2 : 1)) return commandError("capabilities", "Unexpected argument", json);
+        Map<String, Object> data = Catalog.capabilities();
+        if (json) System.out.println(ToolJson.encode(data));
+        else {
+            System.out.println("Sprig compiler " + Catalog.COMPILER_VERSION + " / language " + Catalog.LANGUAGE_VERSION);
+            System.out.println("JDK minimum: " + Catalog.MINIMUM_JDK);
+            System.out.println("Commands: " + String.join(", ", Catalog.list("commands")));
+            System.out.println("Types: " + String.join(", ", Catalog.list("nativeTypes")));
+            System.out.println("Implemented: " + String.join(", ", Catalog.list("supportedSyntax")));
+            System.out.println("Unsupported: " + String.join(", ", Catalog.list("unsupportedSyntax")));
+            System.out.println("Use 'sprig help <topic>' for syntax and rules.");
+        }
+        return 0;
+    }
+
+    private static int api(String[] args) {
+        Options options = Options.parse(args, 1);
+        Diagnostics diagnostics = new Diagnostics();
+        if (!prepare(options, diagnostics, "api")) return 1;
+        if (options.file == null) return commandError("api", "Missing Java class name", options.json);
+        if (!options.programArgs.isEmpty()) return commandError("api", "Unexpected extra argument", options.json);
+        Class<?> clazz = Compiler.loadJavaClass(options.file.toString());
+        if (clazz == null) {
+            diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
+                    "Cannot load Java class '" + options.file + "'", null, null)
+                    .withHint("Check the fully qualified name and --classpath entries."));
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        Map<String, Object> data;
+        try {
+            data = JvmMetadata.inspect(clazz);
+        } catch (LinkageError | TypeNotPresentException e) {
+            diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
+                    "Cannot inspect JVM class metadata: " + e, null, null)
+                    .withHint("Supply all required JAR dependencies with --classpath."));
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        data.put("compilerVersion", Catalog.COMPILER_VERSION);
+        if (options.json) System.out.println(ToolJson.encode(data));
+        else {
+            System.out.println("Java API: " + clazz.getName());
+            for (String category : List.of("constructors", "staticMethods", "instanceMethods", "fields")) {
+                System.out.println(category + ":");
+                for (Map<String, Object> item : (List<Map<String, Object>>) data.get(category)) {
+                    System.out.println("  " + item.get("javaSignature") + " => "
+                            + item.getOrDefault("sprigSignature", item.getOrDefault("sprigType", "")));
+                    if (item.get("unusableReason") != null) System.out.println("    unavailable: " + item.get("unusableReason"));
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static int doctor(String[] args) {
+        Options options = Options.parse(args, 1);
+        if (options.file != null) return commandError("doctor", "Unexpected argument", options.json);
+        if (!options.programArgs.isEmpty()) return commandError("doctor", "Unexpected extra argument", options.json);
+        Diagnostics diagnostics = new Diagnostics();
+        if (!prepare(options, diagnostics, "doctor")) return 1;
+        boolean json = options.json;
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("schemaVersion", 1);
+        data.put("compilerVersion", Catalog.COMPILER_VERSION);
+        data.put("languageVersion", Catalog.LANGUAGE_VERSION);
+        data.put("jdkMinimum", Catalog.MINIMUM_JDK);
+        data.put("javaVersion", System.getProperty("java.version"));
+        data.put("javaVendor", System.getProperty("java.vendor"));
+        data.put("javacAvailable", javax.tools.ToolProvider.getSystemJavaCompiler() != null);
+        data.put("compilerHome", System.getProperty("sprig.home", "unknown"));
+        data.put("runtimeSource", runtimeSourceDir() == null ? null : runtimeSourceDir().toString());
+        data.put("antlrAvailable", Main.class.getClassLoader().getResource("org/antlr/v4/runtime/Parser.class") != null);
+        data.put("classpath", JvmClasspath.entries().stream().map(Path::toString).toList());
+        data.put("compilerClasspath", System.getProperty("java.class.path"));
+        data.put("platform", System.getProperty("os.name") + " " + System.getProperty("os.arch"));
+        data.put("locale", java.util.Locale.getDefault().toLanguageTag());
+        data.put("encoding", System.getProperty("file.encoding"));
+        data.put("cwd", Path.of("").toAbsolutePath().toString());
+        if (json) System.out.println(ToolJson.encode(data));
+        else for (Map.Entry<String, Object> entry : data.entrySet())
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        return 0;
+    }
+
+    private static int commandError(String command, String message, boolean json) {
+        if (json) System.out.print(JsonWriter.result(List.of(Diagnostic.error(Codes.CLI_OPTION,
+                Phase.CLI, message, null, null)), null, command, 2, null));
+        else System.err.println("sprig " + command + ": " + message);
+        return 2;
+    }
+
+    private static boolean prepare(Options options, Diagnostics diagnostics, String command) {
+        if (options.optionError != null) {
+            diagnostics.error(options.optionErrorCode, Phase.CLI, options.optionError, null, null);
+        } else JvmClasspath.configure(options.classpath, diagnostics);
+        if (diagnostics.hasErrors()) report(diagnostics, options.json, command, 1, null);
+        return !diagnostics.hasErrors();
     }
 
     // ------------------------------------------------------------------
@@ -99,10 +249,10 @@ public final class Main {
     private static int check(String[] args) throws IOException {
         Options options = Options.parse(args, 1);
         if (options.file == null) {
-            System.err.println("sprig check: missing <file.spr>");
-            return 2;
+            return commandError("check", "Missing <file.spr>", options.json);
         }
         Diagnostics diagnostics = new Diagnostics();
+        if (!prepare(options, diagnostics, "check")) return 1;
         if (options.syntaxOnly) {
             new Compiler(diagnostics).parseOnly(options.file);
         } else {
@@ -116,10 +266,10 @@ public final class Main {
     private static int build(String[] args) throws IOException {
         Options options = Options.parse(args, 1);
         if (options.file == null) {
-            System.err.println("sprig build: missing <file.spr>");
-            return 2;
+            return commandError("build", "Missing <file.spr>", options.json);
         }
         Diagnostics diagnostics = new Diagnostics();
+        if (!prepare(options, diagnostics, "build")) return 1;
         Compilation compilation = new Compiler(diagnostics).compile(options.file);
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
@@ -158,10 +308,10 @@ public final class Main {
     private static int run(String[] args) throws IOException, InterruptedException {
         Options options = Options.parse(args, 1);
         if (options.file == null) {
-            System.err.println("sprig run: missing <file.spr>");
-            return 2;
+            return commandError("run", "Missing <file.spr>", options.json);
         }
         Diagnostics diagnostics = new Diagnostics();
+        if (!prepare(options, diagnostics, "run")) return 1;
         Compilation compilation = new Compiler(diagnostics).compile(options.file);
         if (!diagnostics.hasErrors()) {
             JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics).generate();
@@ -345,10 +495,17 @@ public final class Main {
 
     private static int explain(String[] args) {
         if (args.length < 2) {
-            System.err.println("sprig explain: missing diagnostic code");
-            return 2;
+            return commandError("explain", "Missing diagnostic code", jsonRequested(args));
         }
-        System.out.println(args[1] + ": " + CodeDocs.describe(args[1]));
+        Map<String, Object> detail = sprig.compiler.diag.Explanations.describe(args[1]);
+        if (jsonRequested(args)) System.out.println(ToolJson.encode(detail));
+        else {
+            System.out.println(args[1] + ": " + detail.get("meaning"));
+            System.out.println("Common causes: " + detail.get("commonCauses"));
+            System.out.println("Safe fixes: " + detail.get("safeFixes"));
+            if (detail.get("goodExample") != null) System.out.println("Good: " + detail.get("goodExample"));
+            if (detail.get("badExample") != null) System.out.println("Bad: " + detail.get("badExample"));
+        }
         return 0;
     }
 
@@ -360,6 +517,9 @@ public final class Main {
         boolean syntaxOnly;
         boolean keep;
         Path outDir;
+        List<String> classpath = new ArrayList<>();
+        String optionError;
+        String optionErrorCode = Codes.CLI_OPTION;
         List<String> programArgs = new ArrayList<>();
 
         static Options parse(String[] args, int start) {
@@ -370,6 +530,13 @@ public final class Main {
                     case "--json" -> options.json = true;
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
+                    case "--classpath" -> {
+                        if (i + 1 < args.length && !args[i + 1].startsWith("--")) options.classpath.add(args[++i]);
+                        else {
+                            options.optionError = "--classpath requires a JAR or directory path";
+                            options.optionErrorCode = Codes.JVM_CLASSPATH;
+                        }
+                    }
                     case "-d", "--out" -> {
                         if (i + 1 < args.length) {
                             options.outDir = Path.of(args[++i]);
@@ -383,7 +550,7 @@ public final class Main {
                     }
                     default -> {
                         if (arg.startsWith("--")) {
-                            System.err.println("sprig: unknown option '" + arg + "'");
+                            options.optionError = "Unknown option '" + arg + "'";
                         } else if (options.file == null) {
                             options.file = Path.of(arg);
                         } else {

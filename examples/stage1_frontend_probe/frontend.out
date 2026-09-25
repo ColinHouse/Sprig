@@ -1,0 +1,30 @@
+CASE examples/stage1_frontend_probe/fixtures/good.spr
+tokens=26
+let total = (1 + (2 * 3))
+if true:
+    print(total)
+print("done")
+diagnostics=0
+CASE examples/stage1_frontend_probe/fixtures/malformed.spr
+tokens=23
+<invalid>
+if true:
+    print(missing)
+print((4 + <?>))
+diagnostics=3
+PROBE-PARSE 1:5 [4,5) expected NAME, got =
+PROBE-PARSE 4:11 [44,45) expected expression, got *
+PROBE-NAME 3:9 [25,32) unknown name 'missing'
+CASE examples/stage1_frontend_probe/fixtures/bad_indent.spr
+tokens=17
+if true:
+    print(1)
+print(2)
+diagnostics=1
+PROBE-LEX 3:1 [22,24) dedent does not match an earlier indentation
+CASE examples/stage1_frontend_probe/fixtures/unterminated.spr
+tokens=11
+let name = <?>
+print(name)
+diagnostics=1
+PROBE-LEX 1:12 [11,15) unterminated string

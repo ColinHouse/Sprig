@@ -1,0 +1,9 @@
+func display(value: String?) -> String:
+    if value != null:
+        return value.toUpperCase()
+    return "<missing>"
+
+let absent: String? = null
+let present: String? = "sprig"
+print(display(absent))
+print(display(present))

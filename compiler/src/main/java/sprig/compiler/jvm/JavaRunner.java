@@ -25,7 +25,8 @@ public final class JavaRunner {
         List<String> command = new ArrayList<>();
         command.add(javaBinary());
         command.add("-cp");
-        command.add(classesDir.toString());
+        command.add(classesDir + (JvmClasspath.entries().isEmpty() ? ""
+                : java.io.File.pathSeparator + JvmClasspath.forProcess()));
         command.add(mainClass);
         command.addAll(args);
         ProcessBuilder builder = new ProcessBuilder(command);

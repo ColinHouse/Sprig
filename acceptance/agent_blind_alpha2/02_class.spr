@@ -1,0 +1,14 @@
+class Counter:
+    let label: String
+    var value: Int = 0
+
+    func increment() -> Unit:
+        value += 1
+
+    func describe() -> String:
+        return label + ": " + value.toString()
+
+let counter = Counter(label="visits")
+counter.increment()
+counter.increment()
+print(counter.describe())

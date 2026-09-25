@@ -1,0 +1,34 @@
+variant Adjustment:
+    Add(amount: Int)
+    Subtract(amount: Int)
+
+class Ledger:
+    let owner: String
+    var balance: Int = 0
+    var history: MutableList[Int] = []
+
+    func apply(change: Adjustment) -> Unit:
+        match change:
+            case Adjustment.Add as addition:
+                balance += addition.amount
+            case Adjustment.Subtract as subtraction:
+                balance -= subtraction.amount
+        history.append(balance)
+
+    func average_balance() -> Float?:
+        if history.size() == 0:
+            return null
+        var total: Int = 0
+        for value in history:
+            total += value
+        return total.toFloatExact() / history.size().toFloatExact()
+
+let ledger = Ledger(owner="Ada")
+let changes: List[Adjustment] = [Adjustment.Add(amount=10), Adjustment.Subtract(amount=3), Adjustment.Add(amount=5)]
+for change in changes:
+    ledger.apply(change)
+print(ledger.owner + " balance=" + ledger.balance.toString())
+print(ledger.history.toList())
+let average = ledger.average_balance()
+if average != null:
+    print("average=" + average.toString())

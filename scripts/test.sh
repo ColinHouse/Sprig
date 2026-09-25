@@ -142,6 +142,20 @@ else
   fail "independent check/build/run consistency matrix"
 fi
 
+echo "== 12. agent tooling and third-party classpath =="
+if python3 "$ROOT/tests/agent_tooling/check_tooling.py"; then
+  PASS=$((PASS + 1))
+else
+  fail "agent tooling regressions"
+fi
+
+echo "== 13. Sprig-written stage-1 frontend probe =="
+if python3 "$ROOT/tests/bootstrap/check_probe.py"; then
+  PASS=$((PASS + 1))
+else
+  fail "stage-1 frontend probe"
+fi
+
 echo
 echo "== summary: $PASS passed, $FAIL failed =="
 if [[ $FAIL -gt 0 ]]; then

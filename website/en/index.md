@@ -30,7 +30,10 @@ features:
     details: Int/Int32 overflow raises an error instead of wrapping and integer division is explicit; BigInt/Decimal are exact. Java reference results are nullable and must be narrowed before use.
 ---
 
-## Current stage: `0.1.0-alpha.1`
+## Latest published release: `0.1.0-alpha.1`
+
+The repository is developing the self-describing alpha.2 agent tooling;
+`0.1.0-alpha.2` has not been published.
 
 Sprig is experimental. The compiler is a Java stage-0 implementation that parses
 `.spr` source, checks it, emits Java source, invokes `javac` and runs the JVM.

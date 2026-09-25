@@ -139,7 +139,7 @@ public final class Compiler {
         String candidate = name;
         while (true) {
             try {
-                return Class.forName(candidate, false, Compiler.class.getClassLoader());
+                return Class.forName(candidate, false, sprig.compiler.jvm.JvmClasspath.loader());
             } catch (ClassNotFoundException | LinkageError e) {
                 int dot = candidate.lastIndexOf('.');
                 if (dot < 0) {

@@ -915,10 +915,10 @@ public final class JavaGenerator {
             case MODULE_FUNCTION:
                 return moduleClassName(field.module) + "." + fnName(field.methodDecl);
             case JAVA_FIELD:
-                if (field.jvm.isStatic()) {
-                    return sourceName(field.jvm.owner) + "." + field.jvm.name;
-                }
-                return emitExpr(access.receiver) + "." + field.jvm.name;
+                String javaField = field.jvm.isStatic()
+                        ? sourceName(field.jvm.owner) + "." + field.jvm.name
+                        : emitExpr(access.receiver) + "." + field.jvm.name;
+                return convertJvmResult(field.jvm.field.getType(), javaField);
             case ERROR_MESSAGE:
                 return emitExpr(access.receiver) + ".getMessage()";
             case BUILTIN_METHOD:
@@ -1396,7 +1396,16 @@ public final class JavaGenerator {
             Class<?> param = i < params.length ? params[i] : Object.class;
             sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm, param));
         }
-        return sb.append(')').toString();
+        return convertJvmResult(((java.lang.reflect.Method) resolved.jvm.executable).getReturnType(),
+                sb.append(')').toString());
+    }
+
+    private static String convertJvmResult(Class<?> javaType, String code) {
+        if (javaType == char.class) return "java.lang.String.valueOf(" + code + ")";
+        if (javaType == Character.class) return "sprig.runtime.SprigRuntime.fromJavaCharacter(" + code + ")";
+        if (javaType == Short.class) return "sprig.runtime.SprigRuntime.fromJavaShort(" + code + ")";
+        if (javaType == Byte.class) return "sprig.runtime.SprigRuntime.fromJavaByte(" + code + ")";
+        return code;
     }
 
     private String convertJvmArg(Expr arg, sprig.compiler.sem.JvmMember member, Class<?> param) {
@@ -1409,7 +1418,7 @@ public final class JavaGenerator {
         if (arg instanceof Expr.FloatLit && (param == float.class || param == Float.class)) return "((float) " + code + ")";
         if (param == Long.class && base == NativeType.INT32) return "((long) " + code + ")";
         if (param == Double.class && base == NativeType.FLOAT32) return "((double) " + code + ")";
-        if (param == char.class && base == NativeType.STRING) {
+        if ((param == char.class || param == Character.class) && base == NativeType.STRING) {
             return code + ".charAt(0)";
         }
         if ((param == long.class || param == Long.class) && base == NativeType.INT) {

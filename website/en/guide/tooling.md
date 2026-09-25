@@ -9,17 +9,27 @@ The stage-0 compiler ships one executable, `bin/sprig`, built by
 check <file.spr> [--json] [--syntax-only]   parse and type-check
 run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
 build <file.spr> [-d dir] [--json]          emit Java sources + .class files
-explain <SPR-CODE>                          explain a diagnostic code
+help [topic] [--json]                      versioned language reference
+capabilities [--json]                     implemented feature inventory
+api <Java.Class> [--classpath JAR] [--json] JVM signatures without initialization
+doctor [--json]                           environment report
+explain <SPR-CODE> [--json]                 structured diagnostic explanation
 codes [--json]                              list every diagnostic code
 version
 ```
+
+`check`, `build`, `run`, and `api` accept repeated `--classpath` values for
+local JARs/directories. They use the same resolved path. No dependency is
+downloaded. The latest published archive is alpha.1; these additional
+commands are in the alpha.2 development tree.
+Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
 
 - `check` stops before code generation. `--syntax-only` stops even earlier,
   after lexing, layout and parsing.
 - `run` accepts program arguments after `--` and `--keep` for inspecting
   generated files.
 - `build` writes generated Java and `.class` files to `-d` (default
-  `build/out`). A failed check produces no class files.
+  `sprig-build`). A failed check produces no class files.
 - `explain` and `codes` document the stable diagnostic vocabulary in
   [Diagnostic codes](/en/reference/DIAGNOSTIC_CODES).
 
@@ -34,10 +44,11 @@ A successful run:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.1.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
+  "environment": {"classpath": []},
   "diagnostics": []
 }
 ```
@@ -47,9 +58,10 @@ A failed check (path shortened here; the real `uri` is a `file:` URI):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.1.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
   "command": "check",
   "exitCode": 1,
+  "environment": {"classpath": []},
   "diagnostics": [
     {
       "code": "SPR-MATCH-NONEXHAUSTIVE",
@@ -77,15 +89,14 @@ source or program failure, `2` internal/IO failure. Exit code `2` with
 
 The following are **proposed, not implemented**:
 
-- `sprig api` (querying JDK/JVM signatures for agents),
 - an LSP / IDE language server,
 - `sprig fmt`, `sprig test`,
 - package manifests, Maven dependency resolution or a module registry,
 - incremental checking.
 
-The proposal for these interfaces is kept as
-[Agent tool protocol](/en/reference/AGENT_TOOL_PROTOCOL); treat it as a design
-document, not as a description of available commands.
+The historical [Agent tool protocol](/en/reference/AGENT_TOOL_PROTOCOL)
+contains further proposals. Check `sprig capabilities --json` for current
+behavior, and [JVM interop](/en/reference/JVM_INTEROP) for `api` boundaries.
 
 ## For agent-assisted workflows
 

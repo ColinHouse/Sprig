@@ -1,0 +1,24 @@
+opening average: none
+credit 100 pay: true
+debit 25 food groceries: true
+debit 60 rent rent: true
+debit 30 travel train: false
+credit 20 refund: true
+debit 10 travel bus: true
+credit 0 invalid: false
+Ada balance=30 accepted=6 rejected=2
+food=25
+rent=60
+travel=10
+snapshot=[100, 75, 15, 35, 25]
+current=[100, 75, 15, 35, 25, 30]
+high=100
+average=46.666666666666664
+pay -> 100
+groceries -> 75
+rent -> 15
+rejected insufficient funds
+refund -> 35
+bus -> 25
+rejected credit amount
+bonus -> 30

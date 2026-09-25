@@ -5,6 +5,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 
 | Code | Meaning |
 |---|---|
+| SPR-CLI-OPTION | A CLI command is missing a required argument or has an unknown option. |
 | SPR-CALL-ARITY | Wrong number of arguments. |
 | SPR-CALL-DUPLICATE-FIELD | The same named field was provided twice. |
 | SPR-CALL-MISSING-FIELD | A required field was not provided. |
@@ -19,6 +20,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-JVM-AMBIGUOUS | The Java overload is ambiguous for these argument types. |
 | SPR-JVM-CLASS | The imported Java class could not be loaded. |
+| SPR-JVM-CLASSPATH | A `--classpath` entry is empty, missing, or not a JAR/directory. |
 | SPR-JVM-COMPILE | The generated Java source did not compile; may be a compiler bug. |
 | SPR-JVM-INTERNAL | Internal compiler or tooling failure. |
 | SPR-JVM-MEMBER | No Java method/constructor/field matches this call. |

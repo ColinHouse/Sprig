@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "command": "check",
+  "exitCode": 1,
+  "environment": {"classpath": []},
+  "diagnostics": [
+    {
+      "code": "SPR-COLLECTION-IMMUTABLE",
+      "phase": "TYPE",
+      "severity": "error",
+      "uri": "file:///private/tmp/sprig-alpha2-blind.g4F69O/work/08_invalid.spr",
+      "range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 12}},
+      "message": "Cannot call mutating method 'append' on an immutable collection; take an explicit snapshot with toMutableList()",
+      "related": [],
+      "suggestedEdits": []
+    }
+  ]
+}

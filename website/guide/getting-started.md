@@ -69,7 +69,11 @@ Usage: sprig <command> [options]
   check <file.spr> [--json] [--syntax-only]   parse and type-check
   run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
   build <file.spr> [-d dir] [--json]          emit Java sources + .class files
-  explain <SPR-CODE>                          explain a diagnostic code
+  help [topic] [--json]                       带版本的语言参考
+  capabilities [--json]                      已实现能力清单
+  api <Java.Class> [--classpath JAR] [--json] 查询 JVM 签名
+  doctor [--json]                            检查编译环境
+  explain <SPR-CODE> [--json]                 解释诊断码
   codes [--json]                              list every diagnostic code
   version
 ```
@@ -78,7 +82,8 @@ Usage: sprig <command> [options]
 |---|---|
 | `check` | 运行词法、缩进、解析、名称解析与类型检查，不写任何文件。 |
 | `run` | 在 `check` 之后生成 Java、调用 `javac` 并运行程序。 |
-| `build` | 把生成的 Java 源码与 `.class` 文件写入 `-d <dir>`（默认 `build/out`）。 |
+| `build` | 把生成的 Java 源码与 `.class` 文件写入 `-d <dir>`（默认 `sprig-build`）。 |
+| `help` / `capabilities` / `api` / `doctor` | alpha.2 开发版本的离线语言、JVM 与环境查询；已发布的 alpha.1 包尚无这些命令。 |
 | `explain` | 解释一个稳定的诊断码，例如 `SPR-MATCH-NONEXHAUSTIVE`。 |
 | `codes` | 列出全部诊断码。 |
 | `--json` | 把结果封装为单个机器可读的 JSON 文档。 |

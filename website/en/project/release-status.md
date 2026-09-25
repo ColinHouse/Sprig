@@ -1,7 +1,7 @@
 # Release status
 
 **Published release:** `v0.1.0-alpha.1` (prerelease, 2026-09-24)
-**Compiler candidate:** `0.1.0-alpha.1` (language design: Sprig v0.7)
+**Repository development version:** `0.1.0-alpha.2` (Sprig v0.7 design; not yet published)
 **Repository:** <https://github.com/ColinHouse/Sprig>
 **License:** Apache-2.0
 

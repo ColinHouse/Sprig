@@ -1,0 +1,128 @@
+enum Category:
+    Food
+    Rent
+    Travel
+
+variant Entry:
+    Credit(amount: Int, note: String)
+    Debit(amount: Int, category: Category, note: String)
+
+func category_name(category: Category) -> String:
+    match category:
+        case Category.Food:
+            return "food"
+        case Category.Rent:
+            return "rent"
+        case Category.Travel:
+            return "travel"
+
+func entry_description(entry: Entry) -> String:
+    match entry:
+        case Entry.Credit as credit:
+            return "credit " + credit.amount.toString() + " " + credit.note
+        case Entry.Debit as debit:
+            return "debit " + debit.amount.toString() + " " + category_name(debit.category) + " " + debit.note
+
+class Ledger:
+    let owner: String
+    var balance: Int = 0
+    var accepted: Int = 0
+    var rejected: Int = 0
+    var history: MutableList[Int] = []
+    var audit: MutableList[String] = []
+    var spending: MutableMap[String, Int] = {}
+
+    func record(message: String) -> Unit:
+        accepted += 1
+        history.append(balance)
+        audit.append(message + " -> " + balance.toString())
+
+    func reject(message: String) -> Bool:
+        rejected += 1
+        audit.append("rejected " + message)
+        return false
+
+    func add_spending(category: Category, amount: Int) -> Unit:
+        let key = category_name(category)
+        let prior = spending.get(key)
+        if prior == null:
+            spending.set(key, amount)
+        else:
+            spending.set(key, prior + amount)
+
+    func apply(entry: Entry) -> Bool:
+        match entry:
+            case Entry.Credit as credit:
+                if credit.amount <= 0:
+                    return reject("credit amount")
+                balance += credit.amount
+                record(credit.note)
+                return true
+            case Entry.Debit as debit:
+                if debit.amount <= 0:
+                    return reject("debit amount")
+                if debit.amount > balance:
+                    return reject("insufficient funds")
+                balance -= debit.amount
+                add_spending(debit.category, debit.amount)
+                record(debit.note)
+                return true
+
+    func spent(category: Category) -> Int:
+        let found = spending.get(category_name(category))
+        if found == null:
+            return 0
+        return found
+
+    func high_watermark() -> Int?:
+        if history.size() == 0:
+            return null
+        var best: Int = history.get(0)
+        for value in history:
+            if value > best:
+                best = value
+        return best
+
+    func average_balance() -> Float?:
+        if history.size() == 0:
+            return null
+        var total: Int = 0
+        for value in history:
+            total += value
+        return total.toFloatExact() / history.size().toFloatExact()
+
+    func summary() -> String:
+        return owner + " balance=" + balance.toString() + " accepted=" + accepted.toString() + " rejected=" + rejected.toString()
+
+let ledger = Ledger(owner="Ada")
+let opening_average = ledger.average_balance()
+if opening_average == null:
+    print("opening average: none")
+let entries: List[Entry] = [
+    Entry.Credit(amount=100, note="pay"),
+    Entry.Debit(amount=25, category=Category.Food, note="groceries"),
+    Entry.Debit(amount=60, category=Category.Rent, note="rent"),
+    Entry.Debit(amount=30, category=Category.Travel, note="train"),
+    Entry.Credit(amount=20, note="refund"),
+    Entry.Debit(amount=10, category=Category.Travel, note="bus"),
+    Entry.Credit(amount=0, note="invalid")
+]
+for entry in entries:
+    let accepted = ledger.apply(entry)
+    print(entry_description(entry) + ": " + accepted.toString())
+let snapshot = ledger.history.toList()
+ledger.apply(Entry.Credit(amount=5, note="bonus"))
+print(ledger.summary())
+print("food=" + ledger.spent(Category.Food).toString())
+print("rent=" + ledger.spent(Category.Rent).toString())
+print("travel=" + ledger.spent(Category.Travel).toString())
+print("snapshot=" + snapshot.toString())
+print("current=" + ledger.history.toString())
+let high = ledger.high_watermark()
+if high != null:
+    print("high=" + high.toString())
+let average = ledger.average_balance()
+if average != null:
+    print("average=" + average.toString())
+for message in ledger.audit:
+    print(message)

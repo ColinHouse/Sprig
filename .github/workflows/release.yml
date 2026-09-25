@@ -33,7 +33,11 @@ jobs:
           ./scripts/build.sh
           ./scripts/test.sh
       - name: Build candidate archive
+        env:
+          SPRIG_PACKAGE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: ./scripts/package-alpha.sh
+      - name: Smoke-test archive outside the checkout
+        run: python3 tools/check-sdk-archive.py
       - name: Determine tag
         id: tag
         run: |

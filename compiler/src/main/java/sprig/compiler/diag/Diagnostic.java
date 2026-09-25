@@ -2,6 +2,7 @@ package sprig.compiler.diag;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /** One compiler diagnostic with a stable code, phase, span and optional type info. */
 public final class Diagnostic {
@@ -17,6 +18,7 @@ public final class Diagnostic {
     public String expectedType;
     public String actualType;
     public String hint;
+    public Map<String, Object> data;
 
     public Diagnostic(String code, Phase phase, Severity severity, String message, String uri, Span span) {
         this.code = code;
@@ -39,6 +41,11 @@ public final class Diagnostic {
 
     public Diagnostic withHint(String hint) {
         this.hint = hint;
+        return this;
+    }
+
+    public Diagnostic withData(Map<String, Object> data) {
+        this.data = data;
         return this;
     }
 

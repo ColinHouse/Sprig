@@ -30,7 +30,9 @@ features:
     details: Int/Int32 溢出会报错而不是回绕，整数除法必须显式；BigInt/Decimal 精确，Float 保持 IEEE 754。Java 引用结果视为可空，使用前必须判空。
 ---
 
-## 当前阶段：`0.1.0-alpha.1`
+## 最新公开发行版：`0.1.0-alpha.1`
+
+仓库正在开发 `0.1.0-alpha.2` 的自描述 Agent 工具链；它尚未发布。
 
 Sprig 仍是实验性项目。编译器是 Java 编写的 stage-0 实现：解析 `.spr`
 源码、做类型检查、生成 Java 源码、调用 `javac` 并在 JVM 上运行。它
