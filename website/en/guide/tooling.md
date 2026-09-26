@@ -20,8 +20,7 @@ version
 
 `check`, `build`, `run`, and `api` accept repeated `--classpath` values for
 local JARs/directories. They use the same resolved path. No dependency is
-downloaded. The latest published archive is alpha.1; these additional
-commands are in the alpha.2 development tree.
+downloaded. These commands are included in the v0.2.0-alpha.1 SDK.
 Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
 
 - `check` stops before code generation. `--syntax-only` stops even earlier,

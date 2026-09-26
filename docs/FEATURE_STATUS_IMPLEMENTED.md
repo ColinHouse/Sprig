@@ -1,8 +1,9 @@
 # Sprig v0.8-dev stage-0 — implemented feature status
 
 This table reflects what the compiler in this directory **actually does**, as
-verified by `scripts/test.sh` (see `docs/post-v0.7/V08_VALIDATION_REPORT.md` for exact counts). It is the implementation-side companion to the
-design kit's `docs/FEATURE_STATUS.md`.
+verified by `scripts/test.sh`. The release validation record is
+[on GitHub](https://github.com/ColinHouse/Sprig/blob/main/docs/post-v0.7/V08_VALIDATION_REPORT.md).
+The historical v0.7 design kit describes target semantics rather than current capabilities.
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
 |---|---|---|---|---|
@@ -47,7 +48,4 @@ expressions, nested/positional patterns, function types in source, `%=`,
 tuples/destructuring, varargs/arrays/annotations in interop, file IO library,
 Maven/JVM dependency resolution, LSP, incremental checking,
 self-hosting.
-See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries. Earlier
-implementation reports from the former `output/` development tree were moved
-out of the public repository into the maintainer's local archive during the
-publication cleanup; they are not required to build or test the compiler.
+See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries.

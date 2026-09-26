@@ -1,4 +1,4 @@
-# Stage-1 host services (alpha.2 development)
+# Stage-1 host services (v0.2.0-alpha.1)
 
 `sprig.runtime.host.HostFiles` is a small Java platform boundary for a future
 Sprig-written frontend. It contains no compiler language semantics. Methods:

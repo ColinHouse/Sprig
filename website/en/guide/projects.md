@@ -1,7 +1,8 @@
 # Projects
 
 A project is a directory with a `sprig.toml` manifest. Single-file mode is
-unchanged and permanent: `sprig run hello.spr` never needs a manifest.
+available: explicit files outside a project source root bypass the manifest;
+files inside that root retain its dependency graph and require a current lock.
 
 ## Layout and defaults
 

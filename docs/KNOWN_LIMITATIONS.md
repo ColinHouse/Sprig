@@ -1,4 +1,4 @@
-# Known limitations (Stage-0 v0.2.0-alpha.1 development)
+# Known limitations — v0.2.0-alpha.1
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the Sprig v0.7 design kit.
@@ -23,8 +23,9 @@ by the Sprig v0.7 design kit.
   with SPR-DEP-GIT; no Maven artifacts are fetched.
   `sprig.lock` covers Sprig dependencies; JVM coordinates are recorded only
   when resolution exists.
-- There is no package manager, Maven dependency resolver, standard-library
-  distribution, language server, IDE plugin, debugger, or editor integration.
+- The early dependency system covers local/Git Sprig packages. Maven resolution,
+  publishing/registry workflows, a standard-library distribution, language server,
+  IDE plugin, debugger and editor integration are not implemented.
   Explicit local JAR/directory `--classpath` is available for `check`, `build`,
   `run`, and `api`; only explicitly resolved Git Sprig packages are downloaded.
 - JVM interop covers common imported classes, constructors, fields, method
@@ -43,13 +44,14 @@ by the Sprig v0.7 design kit.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
-- Local v0.8-dev build/test evidence comes from macOS Apple Silicon with
-  OpenJDK 17.0.19 and 26.0.1; earlier alpha.2 work also passed hosted Linux CI
-  on both JDKs and the documentation job. Compiler classes are built with
-  `javac --release 17`, so the supported runtime is JDK 17 or newer; no other
-  platform or architecture has been exercised locally.
-- The project is licensed under Apache-2.0 (`LICENSE` and `NOTICE`). The
-  latest published prerelease is `v0.1.0-alpha.1`; the `0.2.0-alpha.1`
-  development tree is not released. Manifest commands, local/Git dependency
-  resolution, lockfiles and offline builds exist; Maven resolution and the
-  integrated multi-module stage-1 project are still absent.
+- Local tests cover macOS Apple Silicon with JDK 17.0.19 and 26.0.1; hosted CI
+  covers Linux with JDK 17 and 26. Compiler classes use `javac --release 17`.
+  Other platforms/architectures have not been validated.
+- Local dependency locks contain canonical absolute paths and are not portable.
+  Manifest semantic errors can point to line 1. Cache tree verification adds IO;
+  OS locks have no timeout. Git submodules are unsupported. Offline Git builds
+  require Git and a complete verified cache. Concurrent hostile mutation after
+  validation is outside the cooperative cache model.
+- The stage-1 frontend is a subset probe, not a self-hosted compiler.
+- Sprig v0.2.0-alpha.1 is a prerelease under Apache-2.0 (`LICENSE`, `NOTICE`),
+  not a production stability or numerical correctness guarantee.

@@ -13,4 +13,5 @@ if [[ ! -x "$ROOT/website/node_modules/.bin/vitepress" || -n "${DOCS_FORCE_INSTA
 fi
 
 npm --prefix "$ROOT/website" run docs:build
+python3 "$ROOT/tools/check-doc-links.py"
 echo "Documentation checks passed."

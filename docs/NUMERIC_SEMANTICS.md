@@ -91,7 +91,7 @@ runtime error. Decimal addition, subtraction and multiplication are exact.
 nearest, ties to even; signed zero; NaN; positive/negative Infinity; gradual
 underflow where supported. Floating `%` follows Java's truncating-quotient
 remainder operation, not the IEEE `remainder` library function. Runtime overflow may
-yield zero, and floating division by zero yields Infinity or NaN. They are not
+yield Infinity, underflow may yield zero, and floating division by zero yields Infinity or NaN. They are not
 traps. `NaN == anything` is false, including itself; ordering with NaN is
 false; `-0.0 == +0.0` is true. Equality never uses a hidden tolerance.
 `a.approxEqual(b, absoluteTolerance)` is an explicit **absolute** tolerance

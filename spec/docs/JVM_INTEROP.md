@@ -1,8 +1,10 @@
 # JVM bridge constraints (design only)
 
+> Historical Sprig v0.7 design kit. Current implementation: [feature status](../../docs/FEATURE_STATUS_IMPLEMENTED.md).
+
 - Sprig targets **Java source then javac** initially. Sprig is not a Java syntax superset.
 - Bind external calls against real, pinned JDK/JAR metadata; resolve exact method and overload at compile time, not by a guessed name or unbounded reflection at runtime.
-- For editor/agent queries, inspect JVM metadata without class initialization or executing third-party code. The alpha.2 development compiler implements `sprig api ... --json`; current behavior is documented in `docs/JVM_INTEROP.md` and may cover less than this design target.
+- For editor/agent queries, inspect JVM metadata without class initialization or executing third-party code. The v0.2.0-alpha.1 compiler implements `sprig api ... --json`; current behavior is documented in `docs/JVM_INTEROP.md` and may cover less than this design target.
 - Maintain original Sprig source spans through lowering and translate Java compiler errors where possible. Java compiler output does not prove Sprig-specific semantics were checked.
 - Distinguish native `List[T]` immutability from Java `java.util.List`; explicit adapters define copy/view behavior. JNI/FFI support is out of scope.
 - Handle primitive boxing, overflow/narrowing, nullability, Java method overloads, checked exceptions, generic erasure, varargs, resource ownership, and Kotlin-generated JVM signatures deliberately. Unknown or ambiguous conversions produce diagnostics rather than `Any` fallback.

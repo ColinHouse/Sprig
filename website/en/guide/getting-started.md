@@ -9,11 +9,11 @@ program.
 launcher; no JDK included):
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.1.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.1.0-alpha.1-jdk.zip
-cd sprig-v0.1.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.2.0-alpha.1-jdk.zip
+cd sprig-v0.2.0-alpha.1-jdk
 ./bin/sprig run examples/hello.spr
 ```
 
@@ -85,7 +85,7 @@ Usage: sprig <command> [options]
 | `check` | Runs the lexer, layout adapter, parser, name resolution and type checking. Writes nothing. |
 | `run` | Does everything `check` does, then emits Java, invokes `javac` and runs the program. |
 | `build` | Emits generated Java sources and `.class` files under `-d <dir>` (default `sprig-build`). |
-| `help` / `capabilities` / `api` / `doctor` | Alpha.2 development tools for offline language, JVM and environment discovery; the published alpha.1 archive does not contain them. |
+| `help` / `capabilities` / `api` / `doctor` | Offline language, JVM and environment discovery included in this release. |
 | `explain` | Prints the meaning of a stable diagnostic code such as `SPR-MATCH-NONEXHAUSTIVE`. |
 | `codes` | Lists every diagnostic code. |
 | `--json` | Wraps the result in a single machine-readable JSON document. |

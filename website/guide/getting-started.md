@@ -7,11 +7,11 @@
 **方式 A：下载 Alpha 发行包**（包含编译器、runtime、ANTLR 与启动脚本，不含 JDK）：
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.1.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.1.0-alpha.1-jdk.zip
-cd sprig-v0.1.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.2.0-alpha.1-jdk.zip
+cd sprig-v0.2.0-alpha.1-jdk
 ./bin/sprig run examples/hello.spr
 ```
 
@@ -83,7 +83,7 @@ Usage: sprig <command> [options]
 | `check` | 运行词法、缩进、解析、名称解析与类型检查，不写任何文件。 |
 | `run` | 在 `check` 之后生成 Java、调用 `javac` 并运行程序。 |
 | `build` | 把生成的 Java 源码与 `.class` 文件写入 `-d <dir>`（默认 `sprig-build`）。 |
-| `help` / `capabilities` / `api` / `doctor` | alpha.2 开发版本的离线语言、JVM 与环境查询；已发布的 alpha.1 包尚无这些命令。 |
+| `help` / `capabilities` / `api` / `doctor` | 发行包内的离线语言、JVM 与环境查询。 |
 | `explain` | 解释一个稳定的诊断码，例如 `SPR-MATCH-NONEXHAUSTIVE`。 |
 | `codes` | 列出全部诊断码。 |
 | `--json` | 把结果封装为单个机器可读的 JSON 文档。 |
