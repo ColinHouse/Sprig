@@ -22,6 +22,8 @@ Check/build/run load exact dependency edges such as `root/@a/@util` and
 `root/@b/@util`. Each entry records `id`, `owner`, local alias `name`, kind,
 manifest digest and local path or exact Git commit. Diamond graphs retain
 separate edge records; project names and aliases are not global identities.
+Alias components use UTF-8 form percent encoding in IDs, preserving existing
+string aliases such as dotted or Unicode names without ambiguity.
 Schema 1 is rejected with instructions to resolve again; no silent migration.
 Local canonical absolute paths are nonportable development dependencies.
 Local source edits require no resolve; manifest edits stale the lock.

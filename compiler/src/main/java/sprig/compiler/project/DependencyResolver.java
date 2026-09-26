@@ -249,7 +249,7 @@ public final class DependencyResolver {
         pkg.id = id;
         pkg.owner = id.equals("root") ? "" : id.substring(0, id.lastIndexOf("/@"));
         for (Project.Dependency dependency : project.dependencies) {
-            String edgeId = id + "/@" + dependency.name;
+            String edgeId = Lockfile.edgeId(id, dependency.name);
             if (pkg.aliases.containsKey(dependency.name)) {
                 throw new DepError(Codes.PROJECT_MANIFEST,
                         "Duplicate dependency alias '" + dependency.name + "' in "

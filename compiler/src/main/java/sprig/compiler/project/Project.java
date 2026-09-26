@@ -122,8 +122,6 @@ public final class Project {
             if (depName == null || depName.isBlank()) {
                 throw new Toml.TomlException("[[dependency]] requires name", 1);
             }
-            if (!depName.matches("[A-Za-z_][A-Za-z0-9_-]*"))
-                throw new Toml.TomlException("Dependency alias must be a package identifier: " + depName, 1);
             if (!depNames.add(depName)) throw new Toml.TomlException("Duplicate dependency name '" + depName + "'", 1);
             if ((dep.get("path") != null) == (dep.get("git") != null)) {
                 throw new Toml.TomlException(

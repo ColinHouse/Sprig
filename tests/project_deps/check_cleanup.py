@@ -71,6 +71,11 @@ def main():
         lines[indices[-1]]='manifest-sha256 = "'+'0'*64+'"'
         write(app/'sprig.lock','\n'.join(lines)+'\n'); expect(app,['check'],'SPR-PROJECT-LOCK-STALE')
         write(app/'sprig.lock',original)
+        # Edge encoding preserves existing string aliases, including Unicode.
+        project(app,[('a.b','../ua'),('数値','../ub')])
+        write(app/'src/main.spr','import "@a.b/lib.spr" as a\nimport "@数値/lib.spr" as b\nprint(a.v())\nprint(b.v())\n')
+        expect(app,['resolve']); expect(app,['check','--offline'])
+        expect(app,['run','--offline'],output='33\n22\n')
         # Logical exports, real path confinement; internal symlinks allowed.
         dep=b/'dep'; project(dep,exports=('lib.spr','escape.spr','link/x.spr','internal.spr'))
         write(dep/'src/lib.spr','func v() -> Int:\n    return 7\n'); write(b/'outside/x.spr','print(999)\n')

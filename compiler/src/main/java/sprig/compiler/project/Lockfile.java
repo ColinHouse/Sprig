@@ -18,6 +18,10 @@ import sprig.compiler.diag.Codes;
 public final class Lockfile {
     public static final int VERSION = 2;
 
+    public static String edgeId(String owner, String alias) {
+        return owner + "/@" + java.net.URLEncoder.encode(alias, StandardCharsets.UTF_8);
+    }
+
     public static final class SprigEntry {
         public String id;
         public String owner;
@@ -113,9 +117,9 @@ public final class Lockfile {
             sprig.source = entry.get("source");
             sprig.portable = "true".equals(entry.get("portable"));
             if (sprig.id == null || sprig.owner == null || sprig.name == null
-                    || !sprig.name.matches("[A-Za-z_][A-Za-z0-9_-]*")
-                    || !sprig.owner.matches("root(?:/@[A-Za-z_][A-Za-z0-9_-]*)*")
-                    || !sprig.id.equals(sprig.owner + "/@" + sprig.name) || !ids.add(sprig.id))
+                    || sprig.name.isBlank()
+                    || !(sprig.owner.equals("root") || sprig.owner.startsWith("root/@"))
+                    || !sprig.id.equals(edgeId(sprig.owner, sprig.name)) || !ids.add(sprig.id))
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Missing, duplicate or inconsistent dependency edge identity", null);
             if (sprig.kind == null || !java.util.List.of("local", "git").contains(sprig.kind)
                     || sprig.manifestSha == null || !sprig.manifestSha.matches("[0-9a-f]{64}"))

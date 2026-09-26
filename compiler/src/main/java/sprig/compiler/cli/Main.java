@@ -917,7 +917,7 @@ public final class Main {
             for (Project.Dependency dependency : project.dependencies) {
                 boolean found = false;
                 for (Lockfile.SprigEntry entry : lock.sprig) {
-                    if (entry.id.equals("root/@" + dependency.name)) {
+                    if (entry.id.equals(Lockfile.edgeId("root", dependency.name))) {
                         found = true;
                     }
                 }
