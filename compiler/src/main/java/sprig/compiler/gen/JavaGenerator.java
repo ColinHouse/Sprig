@@ -1046,6 +1046,9 @@ public final class JavaGenerator {
         }
         if (op.equals("in")) {
             Type rightType = binary.right.type == null ? null : binary.right.type.nonNull();
+            Type expected = rightType instanceof MapType map ? map.key
+                    : rightType instanceof ListType list ? list.element : NativeType.STRING;
+            left = convertedExpression(binary.left, expected);
             String method = rightType instanceof MapType ? ".containsKey(" : ".contains(";
             return "(" + right + method + left + "))";
         }

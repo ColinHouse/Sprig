@@ -234,5 +234,9 @@
   {
     "name": "generic_compound_overflow",
     "runtimeMessage": "Int addition overflow"
+  },
+  {
+    "name": "widen_membership",
+    "output": "true\ntrue\n2\ntrue\ntrue\ntrue\n"
   }
 ]

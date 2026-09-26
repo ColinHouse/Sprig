@@ -1,0 +1,17 @@
+var calls: Int = 0
+func key() -> Int32:
+    calls += 1
+    return 7
+let xs: List[Int] = [7]
+print(key() in xs)
+let table: Map[Int, Int] = {7: 8}
+print(key() in table)
+print(calls)
+let f: Float32 = 1.5
+let fs: List[Float] = [1.5]
+print(f in fs)
+let n: Int32? = 7
+let absent: Int32? = null
+let ns: List[Int?] = [7, null]
+print(n in ns)
+print(absent in ns)
