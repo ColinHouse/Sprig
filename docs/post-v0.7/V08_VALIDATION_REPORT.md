@@ -1,5 +1,9 @@
 # Sprig v0.8 — implementation and validation report
 
+> Historical implementation report for the pre-audit candidate. The current
+> independent acceptance decision is [REVIEW_REPORT.md](../../REVIEW_REPORT.md);
+> this report is not release evidence.
+
 **Tree:** branch `v0.8-multiparam-projects` from `96cad8a` (merged v0.8
 generics core, PR #7). **Compiler metadata:** `0.2.0-alpha.1`, language
 `0.8-dev`. **No tag, release or published archive was created by this round.**
