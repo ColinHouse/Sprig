@@ -54,6 +54,11 @@ hosted evidence remains pending; no unrun gate is treated as passed.
   They were corrected and rebuilt; final portable full verification passed.
   No numeric or golden assertion was weakened.
 
+- First public candidate CI failed in every clean build with an ANTLR download
+  HTTP404: the Maven artifact filename differs from the local SDK filename.
+  Corrected the upstream URL; downloaded bytes match the pinned SHA256, and
+  an actual build using a fresh external ANTLR path passed. Hosted rerun pending.
+
 ## Scope and limits
 
 Maven uses pinned Apache Resolver/model-provider libraries, no POM parser,

@@ -38,7 +38,7 @@ def main():
         antlr.parent.mkdir(parents=True, exist_ok=True)
         temporary = antlr.with_suffix('.download')
         try:
-            urllib.request.urlretrieve('https://repo.maven.apache.org/maven2/org/antlr/antlr4/4.13.2/' + ANTLR_NAME, temporary)
+            urllib.request.urlretrieve('https://repo.maven.apache.org/maven2/org/antlr/antlr4/4.13.2/antlr4-4.13.2-complete.jar', temporary)
             if hashlib.sha256(temporary.read_bytes()).hexdigest() != ANTLR_SHA256:
                 raise RuntimeError('Downloaded ANTLR JAR checksum mismatch')
             temporary.replace(antlr)
