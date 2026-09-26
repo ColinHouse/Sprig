@@ -66,10 +66,15 @@ rules = []
 features = catalog["features"]
 if features.get("multipleGenericParameters"):
     rules += [r"single-parameter (?:user )?generics", r"multiple (?:type )?parameters.{0,20}unsupported"]
+    rules += [r"single.parameter only", r"multiple type parameters and inference are rejected",
+              r"仅支持单(?:个)?(?:类型)?参数", r"多类型参数.{0,12}(?:未实现|不支持)"]
 if all(features.get(x) for x in ("localDependencies", "gitDependencies", "lockfile")):
     rules += [r"there is no [`']?resolve", r"no (?:[`']?sprig.lock|lockfile)",
               r"dependency resolution/lockfiles.{0,60}incomplete",
               r"there is no dependency export boundary"]
+    rules += [r"local/Git(?:/Maven)? dependency\s+resolution (?:is|are) not implemented",
+              r"(?:lockfile|lockfiles) (?:is|are) not implemented",
+              r"本地(?:/|和)Git.{0,12}(?:尚未实现|不支持)"]
 if not features.get("mavenDependencies"):
     rules += [r"Maven (?:dependency )?resolution (?:is )?(?:implemented|complete)",
               r"Maven.{0,30}管理已完成"]

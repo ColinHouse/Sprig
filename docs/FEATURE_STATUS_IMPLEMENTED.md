@@ -20,7 +20,7 @@ design kit's `docs/FEATURE_STATUS.md`.
 | Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |
 | `requires X: Equatable` equality capability | yes | equality on the parameter allowed only with the clause; value equality in codegen | boxed `Objects`-style equality | visitor generic_stack, runtime 19 |
 | `requires X: Comparable` | parsed | rejected as not implemented (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
-| Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model 14 checks |
+| Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model suite |
 | Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver suite |
 | Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` verified detached checkouts | dependency resolver |
 | Maven/JVM dependency resolution | manifest only | rejected loudly with `SPR-DEP-MAVEN` (see validation report) | explicit `--classpath` remains | project model |

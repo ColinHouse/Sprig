@@ -36,6 +36,8 @@ existing language contract and are not a general filesystem sandbox.
 Git branch intent is read only by resolve. Builds use the locked SHA, bare
 object cache and detached checkout in `~/.sprig/git`. Reuse verifies exact
 HEAD, clean tracked/untracked/ignored contents and marker consistency.
+Tracked file bytes and executable/symlink modes are compared to the locked
+commit tree, including files hidden by Git index flags such as assume-unchanged.
 Tampering raises `SPR-DEP-GIT`; remove the corrupted checkout and resolve
 again. A marker alone is never trusted. Per-repository OS file locks serialize
 cache installation; unique temporary directories are verified before atomic

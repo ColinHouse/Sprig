@@ -33,7 +33,9 @@ Relative imports keep the language's existing behavior and are not a filesystem
 sandbox.
 
 Git reuse checks exact HEAD, marker and clean tracked, untracked and ignored
-contents. Tampering fails with SPR-DEP-GIT, including offline mode. Bare clone
+contents. File bytes and modes are also checked against locked Git blob hashes,
+so assume-unchanged cannot hide tampering. Tampering fails with SPR-DEP-GIT,
+including offline mode. Bare clone
 and detached checkout use unique temporary directories, verify before install,
 and rename atomically where supported. A per-repository FileChannel lock
 serializes cross-process cache mutation; safe same-filesystem rename is the
@@ -58,6 +60,7 @@ suite covers duplicate scoped aliases, different targets, diamond, deterministic
 edge IDs, old/corrupt locks, local source edits, ordinary exports, file/directory
 symlink escapes, internal symlink, tracked/marker/untracked tampering, HEAD
 mismatch and two processes materializing the same SHA from an empty cache.
+Targeted cleanup suite: 33 checks passed, including index-flag bypass rejection.
 Final JDK17/JDK26, docs, grammar, SDK and exact-SHA hosted results are pending.
 
 ## Documentation gate and remaining limits
@@ -71,5 +74,7 @@ other current documents describe passing gates without duplicating counts.
 Known P2: local locks are nonportable, metadata errors can point to line 1,
 Git availability is required to validate a Git checkout even offline, locking
 has no timeout, and concurrent hostile mutation after validation is outside
-the cooperative local cache model. No new silent miscompile or nondeterminism
+the cooperative local cache model. Full Git content verification costs I/O;
+Git submodules are unsupported and are rejected rather than silently ignored.
+No new silent miscompile or nondeterminism
 has been observed in the tested cases; this is not a proof of all programs.

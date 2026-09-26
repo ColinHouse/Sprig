@@ -100,8 +100,39 @@ public final class GitCache {
                     "--untracked-files=all", "--ignored"), null);
             return head != null && head.trim().equals(revision) && status != null
                     && status.lines().allMatch(line -> line.equals("?? .sprig-revision")
-                            || line.equals("!! .sprig-revision"));
+                            || line.equals("!! .sprig-revision"))
+                    && matchesTree(checkout, revision);
         } catch (IOException e) { return false; }
+    }
+
+    /** Compare bytes to the commit tree even if Git index flags hide changes. */
+    private boolean matchesTree(Path checkout, String revision) throws IOException {
+        String tree = capture(List.of("-C", checkout.toString(), "ls-tree", "-r", "-z", revision), null);
+        if (tree == null) return false;
+        for (String entry : tree.split("\0")) {
+            if (entry.isEmpty()) continue;
+            int tab = entry.indexOf('\t');
+            if (tab < 0) return false;
+            String[] metadata = entry.substring(0, tab).split(" ");
+            if (metadata.length != 3 || !metadata[1].equals("blob")) return false;
+            Path file = checkout.resolve(entry.substring(tab + 1));
+            byte[] bytes;
+            if (metadata[0].equals("120000")) {
+                if (!Files.isSymbolicLink(file)) return false;
+                bytes = Files.readSymbolicLink(file).toString().getBytes(StandardCharsets.UTF_8);
+            } else {
+                if (Files.isSymbolicLink(file) || !Files.isRegularFile(file)) return false;
+                if (Files.isExecutable(file) != metadata[0].equals("100755")) return false;
+                bytes = Files.readAllBytes(file);
+            }
+            try {
+                MessageDigest digest = MessageDigest.getInstance("SHA-1");
+                digest.update(("blob " + bytes.length + "\0").getBytes(StandardCharsets.UTF_8));
+                String actual = java.util.HexFormat.of().formatHex(digest.digest(bytes));
+                if (!actual.equals(metadata[2])) return false;
+            } catch (NoSuchAlgorithmException e) { throw new AssertionError(e); }
+        }
+        return true;
     }
 
     private Path materializeLocked(String url, String revision) throws DepError {
