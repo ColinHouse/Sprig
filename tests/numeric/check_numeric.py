@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Independent numeric acceptance cases; each snippet is compiled from source."""
 from __future__ import annotations
+import os
 
 import decimal
 import pathlib
@@ -10,7 +11,7 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin/sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 HERE = pathlib.Path(__file__).resolve().parent
 passed = 0
 failed = []

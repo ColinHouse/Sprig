@@ -1,0 +1,58 @@
+# Exhaustive recursive AST traversal over the stage-1 probe's explicit subset.
+import "./frontend.spr" as frontend
+
+class Summary:
+    var statements: Int = 0
+    var expressions: Int = 0
+    var functions: Int = 0
+    var bindings: Int = 0
+    var references: MutableList[String] = []
+    var outline: MutableList[String] = []
+
+    func expression(value: frontend.Expr) -> Unit:
+        expressions += 1
+        match value:
+            case frontend.Expr.Number:
+                pass
+            case frontend.Expr.Text:
+                pass
+            case frontend.Expr.Boolean:
+                pass
+            case frontend.Expr.Name as node:
+                if not references.contains(node.value):
+                    references.append(node.value)
+            case frontend.Expr.Add as node:
+                expression(node.left)
+                expression(node.right)
+            case frontend.Expr.Multiply as node:
+                expression(node.left)
+                expression(node.right)
+            case frontend.Expr.Invalid:
+                pass
+
+    func statement(value: frontend.Stmt, prefix: String) -> Unit:
+        statements += 1
+        match value:
+            case frontend.Stmt.Bind as node:
+                bindings += 1
+                outline.append(prefix + "binding " + node.name + " @ " + node.span.describe())
+                expression(node.value)
+            case frontend.Stmt.Print as node:
+                expression(node.value)
+            case frontend.Stmt.If as node:
+                expression(node.condition)
+                for child in node.body:
+                    statement(child, prefix + "  ")
+            case frontend.Stmt.Function as node:
+                functions += 1
+                outline.append(prefix + "function " + node.name + "(" + node.params.size().toString() + " params) -> " + node.resultType)
+                for child in node.body:
+                    statement(child, prefix + "  ")
+            case frontend.Stmt.Return as node:
+                expression(node.value)
+            case frontend.Stmt.Invalid:
+                pass
+
+    func program(values: List[frontend.Stmt]) -> Unit:
+        for value in values:
+            statement(value, "")

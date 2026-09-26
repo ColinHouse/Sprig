@@ -1,89 +1,70 @@
 ---
 layout: home
-
 hero:
   name: Sprig
-  text: A statically typed language for the JVM
-  tagline: Sealed variants, exhaustive match, checked numerics and explicit JVM interop — implemented today by a Java stage-0 compiler.
+  text: Predictable JVM tools, written together
+  tagline: A small, explicit language for tooling, automation and reliable application code. Query the compiler, edit, check and repair. Experimental Alpha; JDK 17+.
   image:
     src: /logo-round.png
-    alt: Sprig mascot
+    alt: Sprig
   actions:
     - theme: brand
-      text: Get started
+      text: Five-minute start
       link: /en/guide/getting-started
     - theme: alt
-      text: Language tour
-      link: /en/guide/language-tour
+      text: Contribute with your agent
+      link: /en/project/contributing
     - theme: alt
       text: GitHub
       link: https://github.com/ColinHouse/Sprig
-
 features:
-  - title: One canonical syntax
-    details: Indentation for blocks, func for named functions, named constructors for classes and variant cases, positional calls for functions and JVM methods. No aliases, no pipeline operator.
-  - title: Static, honest types
-    details: Nullable T? with flow narrowing, distinct immutable and mutable collections, no implicit precision-losing numeric conversion, no truthiness, and no Any escape hatch.
-  - title: Sealed variants and exhaustive match
-    details: variant declares a closed sum type with immutable named fields. match is checked for missing, duplicate and wrong cases, so growing an AST breaks every visitor that misses it.
-  - title: Checked numerics and explicit interop
-    details: Int/Int32 overflow raises an error instead of wrapping and integer division is explicit; BigInt/Decimal are exact. Java reference results are nullable and must be narrowed before use.
+  - title: Readable tools and ASTs
+    details: Indentation, explicit generics, sealed variants and exhaustive match for CLI utilities, configuration tools and source analyzers.
+  - title: Compiler feedback you can query
+    details: Capabilities, topic help, JVM signatures and stable JSON diagnostics give humans and coding agents a shared source of truth.
+  - title: Explicit runtime boundaries
+    details: Checked integers, exact Decimal/BigInt, conservative Java nullability and reproducible dependency locks make failures visible.
 ---
 
-## Latest published release: `0.2.0-alpha.1`
+## What can I build?
 
-Sprig language `v0.8-dev`; JDK 17+. This is the second public prerelease.
+Repository automation, data transforms, small JVM applications and compiler
+utilities. The source milestone's [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)
+include a repository auditor, a real Maven-library application and a source
+analyzer. Their READMEs include inputs, commands and explicit boundaries.
 
-Sprig is experimental. The compiler is a Java stage-0 implementation that parses
-`.spr` source, checks it, emits Java source, invokes `javac` and runs the JVM.
-It is **not self-hosted**. Local/Git packages are supported; Maven resolution,
-publishing/registry, LSP/IDE and a standard-library distribution are not implemented.
+## Start with a project
 
-::: info Release status
-**`v0.2.0-alpha.1` is published as a prerelease.** Download the ZIP and
-`.sha256` checksum from the
-[releases page](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)
-(compiler, runtime, ANTLR and launcher; **no JDK included**), or build from
-source with [Getting Started](/en/guide/getting-started). This is an alpha,
-not a stable release; see [Release status](/en/project/release-status) for
-what was verified.
-:::
-
-## Your first program
-
-<<< @/../examples/hello.spr
+[Install the SDK or build from source](/en/guide/getting-started), then:
 
 ```bash
-git clone https://github.com/ColinHouse/Sprig.git
-cd Sprig
-./scripts/build.sh
-./bin/sprig run examples/hello.spr
+sprig version
+sprig init my-tool
+cd my-tool
+sprig resolve
+sprig run
 ```
 
-```text
-Hello, Ada!
-```
+Output: `Hello, Sprig!`. Then query `sprig capabilities --json`, edit
+`src/main.spr`, and use `sprig check --json` to guide repairs.
 
-JDK 17 or newer is required; the first build downloads ANTLR 4.13.2 from Maven
-Central and verifies a pinned SHA-256 digest. More commands are in
-[Getting Started](/en/guide/getting-started) and
-[Tooling and JSON](/en/guide/tooling).
+## Release and limitations
 
-## Where to go next
+The published SDK is [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
+The source milestone targets v0.3.0-alpha.1; language remains `0.8-dev`.
+Source functionality and published SDK functionality are distinct; check
+[release status](/en/project/release-status), the release assets and the
+checkout's capability output. Sprig is not self-hosted or production ready.
+Publishing/registry, LSP, interfaces and generic inference remain future work.
+See [known limitations](/en/reference/KNOWN_LIMITATIONS).
 
-- [Getting Started](/en/guide/getting-started): requirements, build, Hello World and the CLI.
-- [Language Tour](/en/guide/language-tour): bindings, functions, classes, variants, collections, nullability and errors.
-- [Examples](/en/examples): programs actually executed by the current compiler.
-- [Implemented features](/en/reference/FEATURE_STATUS_IMPLEMENTED) and [Known limitations](/en/reference/KNOWN_LIMITATIONS).
-- [Language spec (v0.7 design)](/en/reference/LANGUAGE_SPEC) and [Numerical semantics](/en/reference/NUMERIC_SEMANTICS).
-- [Release status](/en/project/release-status): what has and has not been verified.
+## Help build Sprig
 
-## Project
+Want to contribute with Codex / Claude / ChatGPT? Pick an
+[agent-friendly issue](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-friendly),
+read AGENTS.md, run the contributor gate, review the patch and open a PR.
+[Contributing](/en/project/contributing) explains the short path; AI assistance
+is welcome and submitters own review, tests and correctness.
 
-Source and issues: <https://github.com/ColinHouse/Sprig>. Licensed under
-Apache-2.0. AI-assisted contributions are welcome but must pass the build,
-tests and review, and state what the contributor verified — see
-[Contributing](/en/project/contributing) and
-[AI-assisted development](/en/project/ai-disclosure).
-
-A Chinese version of this documentation is available: [简体中文](/).
+Apache-2.0 · [中文](/) · [Language tour](/en/guide/language-tour) ·
+[Tooling and JSON](/en/guide/tooling)

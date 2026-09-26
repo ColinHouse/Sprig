@@ -91,7 +91,6 @@ boxing/casts. See the [contract](/en/reference/GENERICS) for the exact rules.
 
 ## Not in v0.8
 
-Inference, variance, `Comparable`, user-defined capabilities and Maven/JVM dependency
-resolution. Multiple parameters, `Equatable` and the project manifest model
+Inference, variance, `Comparable`, user-defined capabilities and publishing/registry. Multiple parameters, `Equatable` and the project manifest model
 are implemented. See
 [Known limitations](/en/reference/KNOWN_LIMITATIONS).

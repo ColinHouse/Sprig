@@ -1,58 +1,85 @@
-# Contributing
+# Contributing to Sprig
 
-Sprig has two related parts: the v0.7 language design kit in `spec/` and the
-working Java stage-0 compiler in `compiler/`. Read the root
-[`README.md`](README.md), [`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md),
-[`docs/NUMERIC_SEMANTICS.md`](docs/NUMERIC_SEMANTICS.md), and the closest
-runnable example before changing compiler behavior. The design kit describes
-some semantics that are still provisional; preserve disagreements as explicit
-issues instead of guessing.
+**Want to contribute with Codex / Claude / ChatGPT?** You can help build a
+programming language without being a compiler expert. Pick an
+[agent-friendly issue](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-friendly),
+give your coding agent the issue and [`AGENTS.md`](AGENTS.md), then review its patch.
+AI-assisted contributions are welcome. The submitter remains responsible for
+understanding the change, tests, licensing and correctness.
 
-## Local setup
+## First contribution
 
-Requirements: JDK 17 or newer (tested on 17.0.19 and 26.0.1), Python 3.12 or
-newer, and `curl` for the first ANTLR download. From the repository root:
+1. Install **JDK 17+**, **Python 3.12+**, **Node.js 20+ / npm**, and Git.
+2. Fork and clone the repository; create a focused branch.
+3. Pick a scoped issue. `good first issue` means small and reviewed;
+   `agent-friendly` means it has a mechanically testable contract.
+4. Read the issue, `AGENTS.md`, and the nearest passing fixture. Ask the
+   compiler about capabilities and APIs before guessing language behavior.
+5. Make the patch and run the canonical contributor gate from the repository root:
+
+   ```bash
+   ./scripts/verify.sh
+   ```
+
+   On Windows (PowerShell or Command Prompt; no Bash required):
+
+   ```powershell
+   py -3 scripts/verify.py
+   ```
+
+   `python3 scripts/verify.py` is equivalent on Linux/macOS. This builds the
+   compiler, runs all compiler/JVM regressions and the independent grammar
+   harness, executes documentation snippets, and builds/checks the website.
+   First use downloads pinned build libraries and npm dependencies.
+6. Review the diff yourself. Keep regression evidence, remove unrelated
+   edits, and explain which commands actually passed.
+7. Open a PR using the template and disclose material AI assistance.
+
+## Query → check → repair
+
+After the build, use `bin/sprig` (`bin\sprig.cmd` on Windows):
 
 ```bash
-./scripts/build.sh
-./scripts/test.sh
-ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
-./scripts/check-docs.sh   # documented snippets + VitePress build
+./bin/sprig capabilities --json
+./bin/sprig help generics --json
+./bin/sprig api java.time.LocalDate --json
+./bin/sprig check --json path/to/example.spr
+./bin/sprig explain SPR-TYPE-NULLABLE --json
 ```
 
-The full test script includes grammar positives/negatives, semantic
-diagnostics, Java/JVM end-to-end programs, numeric boundaries,
-compiler-correctness cases, parser recovery fuzzing, and independent acceptance
-matrices. Do not update a golden result just to make a failing test pass: first
-establish whether the source, expectation, or implementation is wrong.
+Grammar and compiler implementation are authoritative for current behavior.
+[`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md)
+records implementation status; `spec/` describes target semantics and may differ.
+Report disagreements with a reproducer. Do not improvise a language feature.
 
-## Changes and pull requests
+## Focused checks and release checks
 
-- Keep changes focused and include a regression case for correctness fixes.
-- For language features, update the grammar only when syntax needs to change;
-  also update checking, Java generation/runtime behavior, diagnostics, tests,
-  and documentation as applicable.
-- Keep `spec/` source documents intact unless a change explicitly concerns the
-  design kit. Record compiler-specific semantics under `docs/`.
-- User-visible documentation lives in `website/`; its reference and project
-  pages are generated from the root documents during the build. Edit the root
-  document, never the generated copy.
-- Report the exact commands run and distinguish parser-only checks from static
-  checking and JVM execution.
-- Do not commit generated `build/`, `bin/`, downloaded tool JARs,
-  `website/node_modules/`, `website/.vitepress/dist/`, local paths,
-  credentials, or private logs.
+During an edit, use the subsystem commands in `AGENTS.md`; before opening a
+PR, run `verify`. State separately whether evidence is parser acceptance,
+static checking, generated Java compilation, or JVM runtime behavior.
+Never change a golden output or weaken an assertion merely to remove a failure.
 
-## AI-assisted contributions
+Release validation additionally packages the SDK, verifies checksums/legal
+notices, extracts and exercises each showcase from the archive, and runs the
+Linux/macOS/Windows × supported-JDK hosted matrix. Maintainers record those
+results in the milestone validation record. A local contributor gate does
+not establish release or platform validation.
 
-AI-assisted work is welcome and must pass the same gates as any other change.
-Disclose significant AI assistance (tool and scope), state what you verified
-yourself, and never let an agent weaken a test or bypass a failing gate. The
-full policy is in [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md).
+## Scope and review
 
-## License
+- `docs`, `tests-only`, `tooling`, `stdlib`, and `compiler` describe the area.
+- `design-required` means syntax, type/effect/numeric/nullability/generic
+  semantics need an explicit design decision before implementation. A motivating
+  program belongs in a design issue; an unrelated PR must not add syntax.
+- Fix correctness with a regression test and preserve existing oracles.
+- Keep `spec/` intact unless the issue explicitly concerns the design kit.
+- Edit root reference docs; `website/generated/` contains generated copies.
+- Do not commit `build/`, `bin/`, downloaded JARs, `node_modules/`, caches,
+  generated site output, personal paths, credentials or private trial logs.
+- Justify new dependencies and update `LICENSE`, `NOTICE` and
+  `THIRD_PARTY_NOTICES.md` for third-party material. Contributions use Apache-2.0.
 
-Sprig is licensed under Apache-2.0. By contributing, you agree that your
-contribution is licensed under the same terms; keep `LICENSE`, `NOTICE` and
-`THIRD_PARTY_NOTICES.md` current when you add third-party material. See
-[`LICENSE_STATUS.md`](LICENSE_STATUS.md).
+See [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) for review responsibilities and
+[`docs/contributing/TRIAL.md`](docs/contributing/TRIAL.md) for the concise
+contributor evaluation protocol. Neither a model's confidence nor passing
+compilation replaces review of user-visible behavior.

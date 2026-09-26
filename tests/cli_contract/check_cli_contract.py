@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Adversarial command ownership, arity, and child exit contract checks."""
+import os
 import json
 from pathlib import Path
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 
 
 def invoke(*args, cwd=ROOT):

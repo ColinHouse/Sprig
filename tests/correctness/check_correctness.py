@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Regression checks for correctness defects found in the independent audit."""
+import os
 import json
 import subprocess
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 CASES = ROOT / "tests" / "review_cases"
 passed = failed = 0
 

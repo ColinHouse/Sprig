@@ -4,6 +4,7 @@
 /sprig-build/
 /dist/
 /tools/*.jar
+/tools/resolver/
 
 # Acceptance results may include local paths and environment details. The
 # scripts regenerate them under acceptance/results/ for each local run.

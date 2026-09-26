@@ -19,6 +19,7 @@ import sprig.compiler.project.DepError;
 import sprig.compiler.project.GitCache;
 import sprig.compiler.project.DependencyResolver;
 import sprig.compiler.project.Lockfile;
+import sprig.compiler.project.MavenResolver;
 import sprig.compiler.project.Project;
 import sprig.compiler.project.Toml;
 import sprig.compiler.diag.Diagnostic;
@@ -241,6 +242,7 @@ public final class Main {
         data.put("languageVersion", Catalog.LANGUAGE_VERSION);
         data.put("jdkMinimum", Catalog.MINIMUM_JDK);
         data.put("javaVersion", System.getProperty("java.version"));
+        data.put("javaHome", System.getProperty("java.home"));
         data.put("javaVendor", System.getProperty("java.vendor"));
         data.put("javacAvailable", javax.tools.ToolProvider.getSystemJavaCompiler() != null);
         data.put("compilerHome", System.getProperty("sprig.home", "unknown"));
@@ -299,6 +301,22 @@ public final class Main {
         String violation = options.violation(command);
         if (violation != null) return commandError(command, violation, options.json);
         JvmClasspath.configure(options.classpath, diagnostics);
+        if (!diagnostics.hasErrors() && List.of("api", "doctor").contains(command)) {
+            try {
+                Project project = Project.discover(Path.of(""));
+                if (project != null && (Files.isRegularFile(project.lockPath())
+                        || !project.jvmDependencies.isEmpty() || !project.dependencies.isEmpty()))
+                    configureProjectClasspath(loadProjectGraph(project, options), options, diagnostics);
+            } catch (Toml.TomlException e) {
+                diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI, e.getMessage(), manifestUri(),
+                        Span.point(Math.max(0, e.line - 1), 0));
+            } catch (DepError e) { diagnostics.add(depDiagnostic(e)); }
+            catch (IOException e) { diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI, e.getMessage(), null, null); }
+            if (diagnostics.hasErrors()) {
+                report(diagnostics, options.json, command, 1, null);
+                return 1;
+            }
+        }
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, command, 2, null);
             return 2;
@@ -502,6 +520,7 @@ public final class Main {
                 return prepared;
             }
             prepared.graph = loadProjectGraph(project, options);
+            configureProjectClasspath(prepared.graph, options, diagnostics);
             return prepared;
         } catch (Toml.TomlException e) {
             diagnostics.add(Diagnostic.error(Codes.PROJECT_MANIFEST, Phase.CLI,
@@ -518,29 +537,16 @@ public final class Main {
         }
     }
 
-    /**
-     * Maven resolution is not implemented in this alpha. Declaring [[jvm]]
-     * dependencies fails loudly with a precise blocker instead of silently
-     * dropping them; single-file builds and --classpath keep working.
-     */
-    private static void requireNoJvmDependencies(Project project) {
-        if (project.jvmDependencies.isEmpty()) {
-            return;
-        }
-        Project.JvmDependency first = project.jvmDependencies.get(0);
-        throw new DepError(Codes.DEP_MAVEN,
-                "Maven dependency resolution is not implemented in this alpha: "
-                        + first.group + ":" + first.artifact + ":" + first.version,
-                project.manifest.toString())
-                .with("group", first.group)
-                .with("artifact", first.artifact)
-                .with("version", first.version)
-                .with("hint", "Remove [[jvm]] or pass the jar with --classpath.");
+    private static void configureProjectClasspath(DependencyResolver.Result graph, Options options,
+                                                    Diagnostics diagnostics) {
+        List<String> entries = new ArrayList<>();
+        for (Path p : MavenResolver.load(graph.lock)) entries.add(p.toString());
+        entries.addAll(options.classpath); // Locked entries win duplicate names consistently in every consumer.
+        JvmClasspath.configure(entries, diagnostics);
     }
 
     private static DependencyResolver.Result loadProjectGraph(Project project, Options options)
             throws IOException {
-        requireNoJvmDependencies(project);
         Path lockPath = project.lockPath();
         if (!Files.isRegularFile(lockPath)) {
             throw new DepError(Codes.PROJECT_LOCK_MISSING,
@@ -586,8 +592,7 @@ public final class Main {
                     options.json);
         }
         try {
-            requireNoJvmDependencies(project);
-            if (options.offline && lockCurrent(project)) {
+                if (options.offline && lockCurrent(project)) {
                 DependencyResolver.load(project, Lockfile.parse(Files.readString(project.lockPath())), true);
                 if (!options.json) {
                     System.out.println("already resolved: sprig.lock matches sprig.toml");
@@ -599,12 +604,7 @@ public final class Main {
             lock.manifestSha = Lockfile.digest(project.manifest);
             lock.language = project.language;
             lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
-            lock.jvm.clear();
-            for (Project.JvmDependency ignored : project.jvmDependencies) {
-                // Maven artifact resolution is not implemented in this alpha;
-                // declared JVM coordinates are recorded as unresolved and the
-                // build keeps using explicit --classpath.
-            }
+            MavenResolver.resolve(result, options.offline);
             Path temp = Files.createTempFile(project.root, ".sprig-lock-", ".tmp");
             Files.writeString(temp, lock.render());
             try {
@@ -667,12 +667,17 @@ public final class Main {
                     entries.add(item);
                 }
                 data.put("sprig", entries);
-                data.put("jvm", List.of());
+                data.put("jvm", result.lock.jvm.stream().map(e -> Map.of(
+                        "coordinate", e.coordinate(), "sha256", e.sha256,
+                        "classpathOrder", e.classpathOrder, "direct", e.direct)).toList());
+                data.put("jvmEdges", result.lock.jvmEdges.stream()
+                        .map(e -> Map.of("parent", e.parent(), "child", e.child())).toList());
             }
             printJson(data);
         } else if (!already) {
             System.out.println("Resolved " + (result == null ? 0 : result.entries().size())
-                    + " Sprig dependency entries into " + project.lockPath());
+                    + " Sprig dependency entries and " + (result == null ? 0 : result.lock.jvm.size())
+                    + " Maven artifacts/models into " + project.lockPath());
         }
         return 0;
     }
@@ -859,7 +864,11 @@ public final class Main {
                     item.put("version", entry.version);
                     item.put("direct", entry.direct);
                     item.put("sha256", entry.sha256);
-                    item.put("resolved", entry.sha256 != null);
+                    item.put("extension", entry.extension);
+                    item.put("classifier", entry.classifier);
+                    item.put("classpathOrder", entry.classpathOrder);
+                    item.put("repository", entry.repository);
+                    item.put("resolved", true);
                     jvm.add(item);
                 }
             }
@@ -870,6 +879,8 @@ public final class Main {
             data.put("lockStatus", state);
             data.put("sprigDependencies", sprig);
             data.put("jvmDependencies", jvm);
+            data.put("jvmEdges", lock == null ? List.of() : lock.jvmEdges.stream()
+                    .map(e -> Map.of("parent", e.parent(), "child", e.child())).toList());
             printJson(data);
         } else {
             if (lock == null || lock.sprig.isEmpty()) {
@@ -887,7 +898,7 @@ public final class Main {
             if (lock != null && !lock.jvm.isEmpty()) {
                 for (Lockfile.JvmEntry entry : lock.jvm) {
                     System.out.println("jvm " + entry.group + ":" + entry.artifact + ":"
-                            + entry.version + " (not resolved)");
+                            + entry.version + " sha256=" + entry.sha256);
                 }
             }
         }

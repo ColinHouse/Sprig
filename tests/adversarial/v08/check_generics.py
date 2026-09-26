@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Independent v0.8 adversarial corpus: frontend, javac, JVM and truncation."""
+import os
 import json
 from pathlib import Path
 import subprocess
@@ -8,7 +9,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
-CLI = ROOT / 'bin/sprig'
+CLI = ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')
 
 
 def command(*args):

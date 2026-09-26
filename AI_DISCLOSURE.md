@@ -32,9 +32,8 @@ A change is not accepted because a model produced it or because it looks
 plausible. At minimum:
 
 ```bash
-./scripts/build.sh
-./scripts/test.sh
-ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
+./scripts/verify.sh
+# Windows: py -3 scripts/verify.py
 ```
 
 must pass, and behavior claims must distinguish parser acceptance, static
@@ -44,7 +43,8 @@ snippets.
 
 ## Contributing with AI assistance
 
-AI-assisted contributions are welcome when they meet the same gates:
+AI-assisted contributions are welcome. The submitter remains responsible for
+understanding the change, tests, licensing and correctness. Meet the same gates:
 
 - Describe significant AI assistance in the pull request (which tool, what it
   generated, and what you changed).

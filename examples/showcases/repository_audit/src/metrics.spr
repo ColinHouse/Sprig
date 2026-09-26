@@ -1,0 +1,52 @@
+import "../../../../std/text.spr" as text
+import "./model.spr" as model
+
+func extension(name: String) -> String:
+    var dot: Int = -1
+    var index: Int = 0
+    while index < name.length():
+        if name.charAt(index) == ".":
+            dot = index
+        index += 1
+    if dot < 0:
+        return "(none)"
+    return name.substring(dot, name.length())
+
+func supported(name: String) -> Bool:
+    let suffix = extension(name)
+    return suffix == ".spr" or suffix == ".java" or suffix == ".md" or suffix == ".txt" or suffix == ".toml" or suffix == ".json" or suffix == ".py" or suffix == ".sh"
+
+func comment(line: String, suffix: String) -> Bool:
+    let clean = text.trim(line)
+    if suffix == ".java":
+        return text.starts_with(clean, "//") or text.starts_with(clean, "/*") or text.starts_with(clean, "*")
+    if suffix == ".spr" or suffix == ".py" or suffix == ".sh" or suffix == ".toml":
+        return text.starts_with(clean, "#")
+    return false
+
+func measure(path: String, name: String, source: String) -> model.FileStats:
+    var lines: Int = 0
+    var blank: Int = 0
+    var comments: Int = 0
+    var trailing: Int = 0
+    var tabs: Int = 0
+    let suffix = extension(name)
+    let pieces = text.lines(source)
+    var index: Int = 0
+    for line in pieces:
+        # A final newline does not create an extra physical source line.
+        if index < pieces.size() - 1 or line.length() > 0:
+            lines += 1
+            if text.trim(line) == "":
+                blank += 1
+            elif comment(line, suffix):
+                comments += 1
+            if text.ends_with(line, " ") or text.ends_with(line, "\t"):
+                trailing += 1
+            if text.starts_with(line, "\t"):
+                tabs += 1
+        index += 1
+    return model.FileStats(path=path, extension=suffix, characters=source.length(), lines=lines, blank=blank, comments=comments, trailing=trailing, tabs=tabs)
+
+func ignored_directory(name: String) -> Bool:
+    return name == ".git" or name == "build" or name == "bin" or name == "node_modules" or name == "dist" or name == ".venv" or name == "__pycache__"

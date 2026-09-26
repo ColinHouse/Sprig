@@ -1,0 +1,42 @@
+import "../../std/files.spr" as files
+import "../../std/process.spr" as process
+import "../../std/text.spr" as text
+import "../../std/time.spr" as time
+import java.io.IOException as IOException
+
+try:
+    let root = process.argument(0)
+    files.make_directory(root)
+    let path = files.join(root, "héllo.txt")
+    files.write_utf8(path, "你好\nSprig")
+    print(files.read_utf8(path))
+    print(files.exists(path))
+    print(files.is_directory(root))
+    print(files.list(root).size())
+    print(text.lines("a\r\nb\n").size())
+    print(text.split("a,,b", ",").size())
+    print(text.starts_with("sprig", "spr"))
+    print(text.ends_with("sprig", "rig"))
+    print(time.epoch_millis() > 0)
+    print(process.environment("SPRIG_HOST_TEST"))
+    print(process.arguments().size())
+    print(files.is_file(path))
+    print(files.normalize(files.join(root, "child/../héllo.txt")) == path)
+    files.write_utf8(files.join(root, "z.txt"), "second")
+    print(files.file_name(files.list(root).get(0)) == "héllo.txt")
+    print(not files.exists(files.join(root, "missing.txt")))
+    print(process.environment("SPRIG_HOST_UNSET_TEST") == null)
+    var bounds_error = false
+    try:
+        process.argument(-1)
+    catch problem: Error:
+        bounds_error = true
+    print(bounds_error)
+    var io_error = false
+    try:
+        files.read_utf8(files.join(root, "missing.txt"))
+    catch problem: IOException:
+        io_error = true
+    print(io_error)
+catch problem: IOException:
+    print("unexpected IO failure: " + problem.message)

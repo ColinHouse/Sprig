@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """v0.8 dependency resolver: local packages, exports, lockfile, Git SHA lock, offline."""
+import os
 import json
 from pathlib import Path
 import shutil
@@ -8,7 +9,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 CHECKS = 0
 GIT = shutil.which("git")
 
@@ -169,7 +170,7 @@ def main():
             write(base / "git-app/sprig.toml",
                   '[project]\nname = "git-app"\nversion = "0.1.0"\nlanguage = "0.8"\n\n'
                   '[[dependency]]\nname = "remote"\n'
-                  f'git = "file://{remote}"\nbranch = "main"\n')
+                  f'git = "{remote.as_uri()}"\nbranch = "main"\n')
             write(base / "git-app/src/main.spr",
                   'import "@remote/lib.spr" as lib\nprint(lib.value())\n')
             git_app = base / "git-app"
@@ -203,10 +204,12 @@ def main():
 
             empty_cache_home = base / "empty-home"
             empty_cache_home.mkdir()
-            env = dict(PATH=subprocess.os.environ.get("PATH", ""),
-                       HOME=str(empty_cache_home))
-            current = subprocess.run([str(SPRIG), "resolve", "--offline", "--json"],
-                                     cwd=git_app, text=True, capture_output=True, env=env)
+            env = dict(os.environ, HOME=str(empty_cache_home),
+                       JAVA_TOOL_OPTIONS=f'-Duser.home="{empty_cache_home}"')
+            # Keep Git available for integrity verification, but make the origin
+            # unavailable. Cached offline reuse must not query or fetch it.
+            remote.rename(base / "remote-unavailable")
+            current = run(git_app, "resolve", "--offline", "--json")
             check("git-offline-current-lock-no-network", current.returncode == 0
                   and json.loads(current.stdout)["alreadyResolved"],
                   current.stdout + current.stderr)

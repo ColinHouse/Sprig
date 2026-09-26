@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Exercise the Sprig-written frontend probe through check, javac and JVM."""
+import os
 import json
 from pathlib import Path
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 PROGRAM = ROOT / "examples" / "stage1_frontend_probe" / "frontend.spr"
 GOLDEN = PROGRAM.with_suffix(".out").read_text(encoding="utf-8")
 

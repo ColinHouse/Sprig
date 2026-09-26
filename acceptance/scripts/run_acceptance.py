@@ -8,13 +8,14 @@ they are reported, not asserted to be correct.
 
 Written by the acceptance reviewer; does not modify compiler sources.
 """
+import os
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 CASES = ROOT / "acceptance" / "cases"
 RESULTS = ROOT / "acceptance" / "results"
 

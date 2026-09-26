@@ -81,9 +81,12 @@ branch = "main"
 - `--offline` 只使用 Git 缓存（`~/.sprig/git`），缓存缺 revision 时以
   `SPR-DEP-OFFLINE` 明确失败。
 - 依赖环与同一包内重复别名会被拒绝；不同包可使用相同别名。
-- lock schema 2 使用 `root/@a/@util` 标识依赖边；旧 schema 要求重新 resolve。
+- lock schema 3 使用 `root/@a/@util` 标识依赖边；旧 schema 要求重新 resolve。
 - symlink 通过 real path 检查；根内且逻辑路径被 export 的 symlink 允许。
 - Git 缓存验证 HEAD、marker 与 tracked/untracked 内容；修改会明确失败。
 
-**Maven/JVM 依赖尚未实现**：声明 `[[jvm]]` 会以 `SPR-DEP-MAVEN` 失败，第三方
-jar 目前仍需显式 `--classpath`。见[已知限制](/reference/known-limitations)。
+**v0.3 源码候选版本已实现 Maven/JVM 依赖。**
+`[[jvm]]` 声明精确 release 坐标，resolve 后 check/build/run/api/doctor 自动使用锁定 JAR。
+Apache Resolver 处理父 POM、BOM 和传递依赖。Schema-3 记录 JAR/POM SHA-256、图和顺序。
+离线需要完整缓存；消费命令不会重新解析。见
+[依赖契约](https://github.com/ColinHouse/Sprig/blob/main/docs/DEPENDENCIES.md)。

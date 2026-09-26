@@ -1,0 +1,4 @@
+# A tiny useful program
+let answer: Int = 42
+
+print(answer)

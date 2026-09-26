@@ -122,7 +122,12 @@ public final class GitCache {
                 bytes = Files.readSymbolicLink(file).toString().getBytes(StandardCharsets.UTF_8);
             } else {
                 if (Files.isSymbolicLink(file) || !Files.isRegularFile(file)) return false;
-                if (Files.isExecutable(file) != metadata[0].equals("100755")) return false;
+                // Git tracks the POSIX owner execute bit; Windows ACL execution
+                // permission is a different property and cannot represent that mode.
+                if (Files.getFileStore(file).supportsFileAttributeView("posix")
+                        && Files.getPosixFilePermissions(file).contains(
+                            java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE)
+                            != metadata[0].equals("100755")) return false;
                 bytes = Files.readAllBytes(file);
             }
             try {
@@ -175,6 +180,8 @@ public final class GitCache {
             Path tempCheckout = Files.createTempDirectory(checkout.getParent(), revision + ".tmp-");
             try {
             if (run(List.of("clone", "--quiet", "--no-checkout", "--shared",
+                    "--config", "core.autocrlf=false", "--config", "core.eol=lf",
+                    "--config", "core.symlinks=true",
                     bare.toString(), tempCheckout.toString()), null) != 0) {
                 throw new DepError(Codes.DEP_GIT, "git checkout failed for " + redact(url), null);
             }

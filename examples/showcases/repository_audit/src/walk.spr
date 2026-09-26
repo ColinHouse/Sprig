@@ -1,0 +1,34 @@
+import "../../../../std/files.spr" as files
+import "./model.spr" as model
+import "./metrics.spr" as metrics
+import java.io.IOException as IOException
+
+func scan(directory: String, relative: String, inventory: model.Inventory, depth: Int) -> Unit throws IOException, Error:
+    if depth > 64:
+        inventory.skipped(relative, "directory depth exceeds 64")
+        return
+    inventory.directories += 1
+    for path in files.list(directory):
+        let name = files.file_name(path)
+        var label = name
+        if relative != "":
+            label = relative + "/" + name
+        if files.is_directory(path):
+            if metrics.ignored_directory(name):
+                inventory.skipped(label, "generated or dependency directory")
+            else:
+                scan(path, label, inventory, depth + 1)
+        elif files.is_file(path):
+            if metrics.supported(name):
+                inventory.add_file(metrics.measure(label, name, files.read_utf8(path)))
+            else:
+                inventory.skipped(label, "unsupported extension")
+        else:
+            inventory.skipped(label, "symlink or special file")
+
+func collect(root: String) -> model.Inventory throws IOException, Error:
+    if not files.is_directory(root):
+        throw Error("audit root must be an existing directory: " + root)
+    let inventory = model.Inventory()
+    scan(root, "", inventory, 0)
+    return inventory

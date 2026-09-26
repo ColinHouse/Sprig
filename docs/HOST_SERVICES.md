@@ -1,4 +1,10 @@
-# Stage-1 host services (v0.2.0-alpha.1)
+# Explicit host services
+
+The ordinary [standard modules](STANDARD_LIBRARY.md) now wrap files, paths,
+process arguments/environment, text/time and recursive JSON. See that page
+for the current public Sprig contract and `docs/SHOWCASES.md` for applications.
+
+The following legacy frontend methods remain compatible.
 
 `sprig.runtime.host.HostFiles` is a small Java platform boundary for a future
 Sprig-written frontend. It contains no compiler language semantics. Methods:
@@ -13,7 +19,7 @@ Sprig-written frontend. It contains no compiler language semantics. Methods:
 
 These methods are queried with `sprig api sprig.runtime.host.HostFiles --json`.
 They are not auto-imported or intrinsic. Source paths supplied by the caller
-are explicit. The host is limited to IO/path services; the stage-1 lexer,
+are explicit. This frontend boundary is limited to IO/path services; the stage-1 lexer,
 layout, parser, AST, symbols, diagnostics and pretty printer belong in Sprig.
 The `listFiles` generic boundary requires an explicit copy adapter before it
 can become a typed Sprig collection. No new grammar was added for this API.

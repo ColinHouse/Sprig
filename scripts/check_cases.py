@@ -14,7 +14,7 @@ def main():
     cases_path = os.path.join(root, "tests", "semantics", "cases.json")
     with open(cases_path, encoding="utf-8") as handle:
         cases = json.load(handle)
-    sprig = os.path.join(root, "bin", "sprig")
+    sprig = os.path.join(root, "bin", "sprig.cmd" if os.name == "nt" else "sprig")
     passed = failed = 0
     for case in cases:
         path = os.path.join(root, "tests", "semantics", case["file"])

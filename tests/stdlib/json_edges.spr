@@ -1,0 +1,44 @@
+import "../../std/json.spr" as json
+
+func rejected(source: String) -> Bool:
+    try:
+        json.parse(source)
+    catch problem: Error:
+        return true
+    return false
+
+let invalid: List[String] = ["", "-", "+1", "1.", "1e", "1e+", "[", "[1,]", "{\"x\":}", "{\"x\":1,}", "{\"x\":1,\"x\":2}", "\"\\q\"", "\"\\u0x00\"", "\"unterminated", "\"raw\nnewline\"", "true false", "01", "NaN", "nullx"]
+var failures: Int = 0
+for source in invalid:
+    if rejected(source):
+        failures += 1
+    else:
+        throw Error("accepted invalid JSON: " + source)
+print("invalid JSON rejected=" + failures.toString())
+
+print(json.stringify(json.parse("[-0,0.0,1E+2,-9223372036854775809]")))
+print(json.stringify(json.parse("\"\\b\\f\\t\\r\\n\\u0000\\/\\\\\\\"\"")))
+var deep = "null"
+var level: Int = 0
+while level < 129:
+    deep = "[" + deep + "]"
+    level += 1
+print(rejected(deep))
+
+var number_rejected = false
+try:
+    json.stringify(json.Value.Number(text="01"))
+catch problem: Error:
+    number_rejected = true
+if not number_rejected:
+    throw Error("serializer accepted invalid number")
+print("serializer rejected invalid number")
+let members: List[json.Member] = [json.Member(key="x", value=json.Value.Null), json.Member(key="x", value=json.Value.Null)]
+var object_rejected = false
+try:
+    json.stringify(json.Value.Object(members=members))
+catch problem: Error:
+    object_rejected = true
+if not object_rejected:
+    throw Error("serializer accepted duplicate keys")
+print("serializer rejected duplicate keys")

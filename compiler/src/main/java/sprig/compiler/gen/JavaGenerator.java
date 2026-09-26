@@ -566,6 +566,7 @@ public final class JavaGenerator {
         w.blank();
         w.open("public static void main(java.lang.String[] args)");
         w.open("try");
+        w.line("sprig.runtime.host.HostSystem.setArguments(args);");
         w.line("sprigMain();");
         w.close();
         w.open("catch (java.lang.Throwable failure)");

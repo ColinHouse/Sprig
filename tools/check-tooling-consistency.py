@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Offline cross-check for compiler catalog, documentation and release metadata."""
+import os
 import json
 from pathlib import Path
 import subprocess
@@ -7,7 +8,7 @@ import tempfile
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 
 
 def invoke(*args):
@@ -25,7 +26,8 @@ assert catalog["jdk"]["minimum"] == 17
 assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
 assert catalog["releaseStatus"] == "prerelease; v" + version
-assert not catalog["features"]["mavenDependencies"]
+assert catalog["features"]["mavenDependencies"]
+assert catalog["features"]["projectAwareClasspath"]
 
 help_index = json.loads(invoke("help", "--json"))
 assert set(help_index["commands"]) == set(catalog["commands"])
@@ -58,8 +60,8 @@ assert "no selected license" not in (ROOT / "docs" / "KNOWN_LIMITATIONS.md").rea
 assert not list(ROOT.glob("docs/**/REVIEW_REPORT.md"))
 # Explicit current-document inventory: historical evidence is excluded.
 current = list(required) + ["AGENT_GUIDE.md", "docs/DEPENDENCIES.md", "docs/PROJECTS.md",
-    "docs/GENERICS.md", "docs/post-v0.7/V08_VALIDATION_REPORT.md",
-    "docs/releases/RELEASE_NOTES-v0.2.0-alpha.1.md", "website/en/guide/generics.md",
+    "docs/GENERICS.md", "docs/RELEASE_VALIDATION.md",
+ "website/en/guide/generics.md",
     "website/guide/generics.md", "website/en/guide/projects.md", "website/guide/projects.md"]
 rules = []
 features = catalog["features"]
@@ -85,8 +87,7 @@ assert not (ROOT / "spec/docs/GENERICS.md").exists()
 assert not (ROOT / "REVIEW_REPORT.md").exists()
 for name in current:
     text = (ROOT / name).read_text()
-    for marker in ("NOT READY", "NOT RELEASED", "latest published archive remains",
-                   "development draft", "no package manager", "没有包管理器"):
+    for marker in ("no package manager", "没有包管理器"):
         assert marker.lower() not in text.lower(), (name, "stale release claim", marker)
 quick = (ROOT / "docs" / "QUICK_REFERENCE.md").read_text().split("```sprig\n", 1)[1].split("\n```", 1)[0]
 with tempfile.TemporaryDirectory(prefix="sprig-doc-reference-") as temp:

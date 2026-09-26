@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.LinkOption;
 import java.util.List;
 
 /** Explicit platform services for a future Sprig-written compiler frontend.
@@ -25,6 +26,23 @@ public final class HostFiles {
 
     public static String canonicalPath(String path) throws IOException {
         return Path.of(path).toRealPath().toString();
+    }
+
+    public static boolean exists(String path) { return Files.exists(Path.of(path), LinkOption.NOFOLLOW_LINKS); }
+    public static boolean isDirectory(String path) { return Files.isDirectory(Path.of(path), LinkOption.NOFOLLOW_LINKS); }
+    public static boolean isRegularFile(String path) { return Files.isRegularFile(Path.of(path), LinkOption.NOFOLLOW_LINKS); }
+    public static void makeDirectory(String path) throws IOException { Files.createDirectories(Path.of(path)); }
+    public static String join(String base, String child) { return Path.of(base).resolve(child).normalize().toString(); }
+    public static String normalize(String path) { return Path.of(path).normalize().toString(); }
+    public static String fileName(String path) { return Path.of(path).getFileName().toString(); }
+
+    /** Typed indexed snapshot for an explicit Sprig List[String] copy adapter. */
+    public static Directory directory(String path) throws IOException { return new Directory(listFiles(path)); }
+    public static final class Directory {
+        private final List<String> paths;
+        private Directory(List<String> paths) { this.paths = paths; }
+        public long size() { return paths.size(); }
+        public String entry(long index) { return paths.get(Math.toIntExact(index)); }
     }
 
     /** Sorted snapshot; exposed as an opaque Java list until explicit adapters exist. */

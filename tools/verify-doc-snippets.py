@@ -7,12 +7,13 @@ treated as import-only modules and are checked with `sprig check`. The
 repository examples are executed as well, so the Examples page cannot drift
 from what the compiler accepts.
 """
+import os
 from pathlib import Path
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 
 
 def run_sprig(*args: str) -> subprocess.CompletedProcess:

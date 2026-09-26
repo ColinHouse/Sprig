@@ -1,0 +1,38 @@
+name: Scoped contribution
+description: Propose a mechanically testable implementation or regression task.
+title: "[Contribution]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and why it matters
+      description: Link the affected code/docs and a reproducible gap.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected behavior and non-goals
+      description: Keep a single small outcome. Syntax or semantic changes require a design issue.
+    validations:
+      required: true
+  - type: textarea
+    id: areas
+    attributes:
+      label: Likely files or areas
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance tests and commands
+      description: Specify observable outcomes and focused commands; finish with scripts/verify.sh or py -3 scripts/verify.py.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Design constraints
+      description: Preserve static semantics, diagnostics and regression oracles; identify third-party/license constraints.
+    validations:
+      required: true

@@ -3,7 +3,7 @@
 import hashlib, json, os, subprocess, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
-CLI = ROOT / 'bin/sprig'
+CLI = ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')
 count = 0
 
 def cmd(cwd, *args, env=None):
@@ -57,7 +57,7 @@ def main():
         assert sum(x['direct'] for x in d['sprigDependencies'])==2
         assert len({x['id'] for x in d['sprigDependencies']})==4
         original=(app/'sprig.lock').read_text()
-        mutations=[original.replace('lock-version = 2','lock-version = 1'),
+        mutations=[original.replace('lock-version = 3','lock-version = 1'),
                    original.replace('id = "root/@a"\n','',1),
                    original.replace('id = "root/@b"','id = "root/@a"'),
                    original.replace('owner = "root"','owner = "root/@missing"',1),
@@ -92,7 +92,10 @@ def main():
         sha=git(remote,'rev-parse','HEAD'); url=remote.as_uri()
         write(app/'sprig.toml',f'[project]\nname="gitapp"\n[[dependency]]\nname="g"\ngit="{url}"\nbranch="main"\n')
         write(app/'src/main.spr','import "@g/lib.spr" as d\nprint(d.v())\n')
-        env=os.environ.copy(); env['JAVA_TOOL_OPTIONS']=f'-Duser.home={b}/home'
+        env=os.environ.copy(); env['JAVA_TOOL_OPTIONS']=f'-Duser.home="{b}/home"'
+        # A user global newline policy must not change locked checkout bytes.
+        global_config=b/'global.gitconfig'; write(global_config,'[core]\n    autocrlf = true\n')
+        env['GIT_CONFIG_GLOBAL']=str(global_config)
         # Concurrent resolve against the same empty object/checkout cache.
         ps=[subprocess.Popen([str(CLI),'resolve','--json'],cwd=app,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True) for _ in range(2)]
         for p in ps:
@@ -100,6 +103,14 @@ def main():
         expect(app,['run','--offline'],output='5\n',env=env)
         cache=b/'home/.sprig/git'; checkout=cache/'checkouts'/hashlib.sha256(url.encode()).hexdigest()[:24]/sha
         assert not list(cache.rglob('*.tmp-*')); count+=1
+        if os.name != 'nt':
+            # POSIX owner-execute mode must be checked even if Git status hides it.
+            source=checkout/'src/lib.spr'; mode=source.stat().st_mode
+            git(checkout,'config','core.filemode','false')
+            source.chmod(mode | 0o100)
+            expect(app,['check','--offline'],'SPR-DEP-GIT',env=env)
+            source.chmod(mode)
+            git(checkout,'config','core.filemode','true')
         # Every mutation must be rejected, including ignored/untracked content.
         tests=[('src/lib.spr','func v() -> Int:\n    return 999\n'),('.sprig-revision','0'*40+'\n'),('evil.spr','print(999)\n')]
         for name,s in tests:
@@ -119,7 +130,7 @@ def main():
         write(app/'sprig.lock',original.replace(f'revision = "{sha}"','revision = "bad"'))
         expect(app,['check'],'SPR-PROJECT-LOCK-SCHEMA',env=env)
         write(app/'sprig.lock',original)
-        env_empty=env.copy(); env_empty['JAVA_TOOL_OPTIONS']=f'-Duser.home={b}/emptyhome'
+        env_empty=env.copy(); env_empty['JAVA_TOOL_OPTIONS']=f'-Duser.home="{b}/emptyhome"'
         expect(app,['check','--offline'],'SPR-DEP-OFFLINE',env=env_empty)
         # Project inspection must never reveal credentials from declarations.
         write(app/'sprig.toml','[project]\nname="credential-test"\n[[dependency]]\nname="g"\ngit="https://user:secret@example.invalid/repo.git"\n')

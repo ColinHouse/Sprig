@@ -22,18 +22,38 @@ If the design kit and the compiler disagree, do not guess: preserve the
 disagreement as an explicit issue or document the implemented behavior under
 `docs/`.
 
-## Commands that must pass
+## Query before guessing
+
+After building, use `bin/sprig` (`bin\sprig.cmd` on Windows):
+`capabilities --json`, `help <topic> --json`, `api <Java.Class> --json`,
+`doctor --json`, and `explain <SPR-CODE> --json`. Query project/dependency
+state with `project --json` and `deps --json` inside a project.
+
+## Canonical contributor gate
 
 ```bash
-./scripts/build.sh
-./scripts/test.sh
-ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
-./scripts/check-docs.sh          # snippet execution + VitePress production build
+./scripts/verify.sh
+# Windows: py -3 scripts/verify.py
 ```
 
-`scripts/build.sh` downloads the pinned ANTLR 4.13.2 JAR when it is missing and
-verifies its SHA-256. Generated `build/`, `bin/`, `website/.vitepress/dist/`
-and `website/generated/` are not committed.
+Requires JDK 17+, Python 3.12+, Node.js 20+/npm and Git. It runs portable
+build, full compiler/JVM tests, independent grammar tests, executed docs and
+the VitePress production build. First use downloads pinned tools/libraries.
+Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work.
+
+| Focus | Fast command after build | Evidence |
+|---|---|---|
+| Lexer/layout/parser | `python3 tools/test-grammar.py` | parser only |
+| Types/flow/diagnostics | `python3 scripts/check_cases.py .` | static checking |
+| Generation/runtime | `python3 tests/correctness/check_correctness.py` | Java/JVM |
+| CLI/JVM query tools | `python3 tests/agent_tooling/check_tooling.py` | subprocess/API fixtures |
+| Projects/dependencies | `python3 tests/project_deps/check_deps.py` | lock/cache/project behavior |
+| Maven graph/cache | `python3 tests/maven/check_resolver.py` | offline effective-model fixtures |
+| Standard modules/showcases | `python3 scripts/test-stdlib.py` / `python3 scripts/test-showcases.py` | real programs on JVM |
+| Docs | `python3 scripts/check-docs.py` | snippet JVM + website |
+
+Generated `build/`, `bin/`, `website/.vitepress/dist/` and
+`website/generated/` are not committed. See `CONTRIBUTING.md` for scope and PR rules.
 
 ## Rules for language changes
 
@@ -69,9 +89,12 @@ change touches, as applicable:
   the design kit.
 - Do not commit generated code, class files, the ANTLR JAR, local paths,
   credentials or personal configuration.
-- `sprig api`, `capabilities`, `doctor`, and topic help are implemented in the
-  v0.2.0-alpha.1 release. Local/Git package resolution is implemented;
-  Maven resolution, publishing/registry, LSP and `sprig fmt` are not.
+- `sprig api`, `capabilities`, `doctor`, and topic help are available; query
+  `capabilities --json` for the checkout's dependency and feature support.
+  Publishing/registry, LSP and `sprig fmt` remain future work.
+- This milestone does not authorize grammar, type, numeric, nullability,
+  generic or effect redesign. Open a `design-required` issue with a motivating
+  program before changing those contracts.
 - Apache-2.0 and the public repository are established. Do not create a tag,
   release, or deployment claim without a verified release build and owner
   publication decision.

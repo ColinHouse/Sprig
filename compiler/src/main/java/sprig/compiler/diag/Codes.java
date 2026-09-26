@@ -68,6 +68,7 @@ public final class Codes {
     public static final String DEP_NOT_FOUND = "SPR-DEP-NOT-FOUND";
     public static final String DEP_GIT = "SPR-DEP-GIT";
     public static final String DEP_OFFLINE = "SPR-DEP-OFFLINE";
+    public static final String DEP_CHECKSUM = "SPR-DEP-CHECKSUM";
     public static final String DEP_MAVEN = "SPR-DEP-MAVEN";
 
     // CALL

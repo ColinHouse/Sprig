@@ -1,0 +1,10 @@
+import sprig.runtime.host.HostSystem as HostSystem
+
+func epoch_millis() -> Int:
+    return HostSystem.epochMillis()
+
+func utc_now() -> String throws Error:
+    let value = HostSystem.utcNow()
+    if value != null:
+        return value
+    throw Error("host utc_now returned null")

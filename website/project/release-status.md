@@ -1,21 +1,16 @@
 # 发布状态
 
-**当前 prerelease：** [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)
-**语言：** `v0.8-dev` · **JDK：** 17+ · **许可证：** Apache-2.0
+**源码候选版本：** 编译器 `v0.3.0-alpha.1`，语言 `v0.8-dev`，JDK 17+，Apache-2.0。
+**当前公开 SDK：** [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)。
 
-第二个公开 prerelease 包含多参数显式泛型、Equatable、本地/Git 依赖、schema-2 锁文件、
-离线构建、Agent 查询工具与显式 JVM `--classpath`。
+v0.3 源码增加 Apache Maven Resolver、统一锁定的项目 JVM classpath、Unix/Windows
+启动器、小型类型安全 IO/JSON 层、三个工具应用和贡献流程。源码能力与已发布包分别记录；
+这是实验性 Alpha，不是生产迁移承诺。
 
-发行物为 `sprig-v0.2.0-alpha.1-jdk.zip` 及同名 `.sha256`，不含 JDK。
-先校验 SHA-256，再解压运行 version/capabilities/check/run。
-发布 workflow 在 tag 上重建、运行完整测试、核对版本并执行发行包 smoke。
-托管 CI 覆盖 Linux 的 JDK 17、26；本地验证覆盖 macOS Apple Silicon。
-编译器 class 使用 `javac --release 17`。
+CI 定义 Linux/macOS/Windows × JDK17/26。发布 workflow 从干净 tag 构建一个 ZIP，
+六个任务验证同一发行包后才允许发布。配置不等于实际通过；确切 SHA、已运行门禁和
+剩余问题见[唯一验证记录](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md)。
+SDK 不附带 JDK。
 
-[发行说明](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/RELEASE_NOTES-v0.2.0-alpha.1.md)
-与[唯一验证记录](https://github.com/ColinHouse/Sprig/blob/main/docs/post-v0.7/V08_VALIDATION_REPORT.md)
-记录范围和测试。已发布 alpha.1 的发行说明仍保留在 docs/releases。
-
-这是实验性 Alpha。Maven 解析、项目级 Maven classpath、发布/registry、Comparable、
-推断、variance、interfaces/traits、LSP/IDE 尚未实现。Stage-1 仍是 probe，不能自举；
-类型安全也不保证算法数值稳定性。完整边界见[已知限制](/reference/known-limitations)。
+发布/registry、推断、型变、interfaces/traits、LSP/IDE、自举仍未实现。
+Stage-1 仍是 probe；类型安全不保证数值稳定性。见[已知限制](/reference/known-limitations)。

@@ -1,0 +1,10 @@
+[
+  {"name":"good first issue","color":"7057ff","description":"Small reviewed task suitable for a first contribution"},
+  {"name":"agent-friendly","color":"1d76db","description":"Scoped contract with mechanically testable acceptance criteria"},
+  {"name":"tests-only","color":"bfd4f2","description":"Regression evidence without implementation or semantic changes"},
+  {"name":"docs","color":"0075ca","description":"Documentation, runnable recipes and examples"},
+  {"name":"tooling","color":"0e8a16","description":"CLI, dependency, build, packaging and contributor tools"},
+  {"name":"stdlib","color":"5319e7","description":"Small Sprig-facing practical library APIs"},
+  {"name":"compiler","color":"fbca04","description":"Parser, static checking, JVM interop or Java generation"},
+  {"name":"design-required","color":"b60205","description":"Explicit design decision required before semantic implementation"}
+]
