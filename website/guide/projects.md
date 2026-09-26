@@ -53,21 +53,33 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-## 依赖（尚未实现）
+## 依赖
 
-manifest 接受依赖声明，`sprig deps --json` 会如实列出：
+本地路径与 Git 的 Sprig 依赖已经可以真正解析：编辑 `sprig.toml` 后运行
+`sprig resolve`。
 
 ```toml
 [[dependency]]
 name = "math"
 path = "../math"
-
-[[jvm]]
-group = "com.fasterxml.jackson.core"
-artifact = "jackson-databind"
-version = "2.18.4"
 ```
 
-依赖解析、`sprig.lock`、离线缓存和 `@name/...` 导入都**尚未实现**。
-`sprig deps` 会以 `resolved: false` 报 `SPR-PROJECT-UNSUPPORTED`；目前 JVM
-jar 仍需 `--classpath`。见[已知限制](/reference/known-limitations)。
+```toml
+[[dependency]]
+name = "math"
+git = "https://example.com/math.git"
+branch = "main"
+```
+
+- `name` 是包内导入别名；依赖自己的 `[project] name` 是独立的身份元数据。
+- `sprig resolve` 生成确定性的 `sprig.lock`（建议提交）。`check`/`build`/`run`
+  拒绝缺失或过期的 lock，并且绝不会自己移动 Git 分支——只有 `resolve` 会。
+- Git 依赖锁定到精确 commit SHA；分支后续移动不会改变已锁定的构建。
+- 用 `import "@math/vector.spr" as vector` 导入被 export 的模块；只有
+  `exports` 列出的模块可被外部导入，路径会 canonicalize，无法逃出依赖源码根。
+- `--offline` 只使用 Git 缓存（`~/.sprig/git`），缓存缺 revision 时以
+  `SPR-DEP-OFFLINE` 明确失败。
+- 依赖环与重复别名都会被结构化诊断拒绝。
+
+**Maven/JVM 依赖尚未实现**：声明 `[[jvm]]` 会以 `SPR-DEP-MAVEN` 失败，第三方
+jar 目前仍需显式 `--classpath`。见[已知限制](/reference/known-limitations)。

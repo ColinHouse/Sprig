@@ -11,12 +11,17 @@ or downloadable archive exists.** The latest published prerelease is
   scope, Practical Strict nullable arguments, and erased/boxed JVM lowering.
 - `sprig help generics` and capabilities flags reporting the generics,
   constraints, inference, variance and project-system status.
+- Project dependency system: deterministic `sprig resolve`/`sprig.lock`,
+  local path and Git dependencies locked to exact revisions, package-local
+  `@alias/module.spr` imports with `exports` enforcement, cycle and traversal
+  protection, `--offline` builds for cached dependencies.
 - Compiler metadata `0.2.0-alpha.1`, language `0.8-dev`.
 
 ## Known gaps that must close before a release
 
-- The `sprig.toml` project system, `sprig.lock` reproducibility and
-  local/Git/Maven dependency resolution are **not implemented**.
+- Maven/JVM dependency resolution is **not implemented**: declaring `[[jvm]]`
+  fails with `SPR-DEP-MAVEN`, and third-party jars need explicit
+  `--classpath`. There is no project-aware JVM classpath yet.
 - Capability implications for `requires T: Comparable|Equatable` are parsed
   but not enforced.
 - Multiple type parameters and inference are rejected by design.

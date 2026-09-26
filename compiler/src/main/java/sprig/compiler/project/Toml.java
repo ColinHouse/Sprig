@@ -24,16 +24,24 @@ public final class Toml {
 
     private final Map<String, String> scalars = new LinkedHashMap<>();
     private final Map<String, List<String>> arrays = new LinkedHashMap<>();
+    private final Map<String, List<String>> scopedArrays = new LinkedHashMap<>();
     private final Map<String, List<Map<String, String>>> tables = new LinkedHashMap<>();
     private final Map<String, List<Map<String, String>>> tableArrays = new LinkedHashMap<>();
     private String currentTable = "";
     private Map<String, String> currentEntry;
+    private boolean allowBareValues;
 
     private Toml() {
     }
 
     public static Toml parse(List<String> lines) {
+        return parse(lines, false);
+    }
+
+    /** Generated files such as sprig.lock may use bare numbers/booleans. */
+    public static Toml parse(List<String> lines, boolean allowBareValues) {
         Toml toml = new Toml();
+        toml.allowBareValues = allowBareValues;
         for (int i = 0; i < lines.size(); i++) {
             toml.line(lines.get(i), i + 1);
         }
@@ -70,13 +78,24 @@ public final class Toml {
         if (key.isEmpty()) {
             throw new TomlException("Missing key before '='", lineNumber);
         }
+        boolean topLevel = currentEntry == null && currentTable.isEmpty();
         if (value.startsWith("[")) {
-            arrays.put(scoped(key), parseArray(value, lineNumber));
+            List<String> parsedArray = parseArray(value, lineNumber);
+            if (currentEntry == null) {
+                if (topLevel) {
+                    arrays.put(key, parsedArray);
+                } else {
+                    scopedArrays.put(currentTable + "." + key, parsedArray);
+                }
+            }
             record(key, null, lineNumber);
             return;
         }
-        scalars.put(scoped(key), parseString(value, lineNumber));
-        record(key, scalars.get(scoped(key)), lineNumber);
+        String parsedValue = parseString(value, lineNumber);
+        if (topLevel) {
+            scalars.put(key, parsedValue);
+        }
+        record(key, parsedValue, lineNumber);
     }
 
     private void record(String key, String value, int lineNumber) {
@@ -92,13 +111,6 @@ public final class Toml {
             }
             table.put(key, value == null ? "" : value);
         }
-    }
-
-    private String scoped(String key) {
-        if (currentEntry != null || currentTable.isEmpty()) {
-            return key;
-        }
-        return currentTable + "." + key;
     }
 
     private static void requireName(String name, int lineNumber) {
@@ -143,11 +155,14 @@ public final class Toml {
         return items;
     }
 
-    private static String parseString(String value, int lineNumber) {
-        if (value.length() < 2 || value.charAt(0) != '"' || value.charAt(value.length() - 1) != '"') {
-            throw new TomlException("Values must be quoted strings in sprig.toml", lineNumber);
+    private String parseString(String value, int lineNumber) {
+        if (value.length() >= 2 && value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"') {
+            return value.substring(1, value.length() - 1);
         }
-        return value.substring(1, value.length() - 1);
+        if (allowBareValues && value.matches("[A-Za-z0-9_.+-]+")) {
+            return value;
+        }
+        throw new TomlException("Values must be quoted strings in sprig.toml", lineNumber);
     }
 
     private static String stripComment(String line) {
@@ -182,6 +197,12 @@ public final class Toml {
 
     public List<String> array(String key) {
         List<String> value = arrays.get(key);
+        return value == null ? List.of() : value;
+    }
+
+    /** Array value declared inside {@code [table]}. */
+    public List<String> array(String table, String key) {
+        List<String> value = scopedArrays.get(table + "." + key);
         return value == null ? List.of() : value;
     }
 

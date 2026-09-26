@@ -89,7 +89,11 @@ public final class Project {
         this.language = project.getOrDefault("language", "0.8");
         this.source = project.getOrDefault("source", "src");
         this.defaultEntry = project.getOrDefault("entry", source + "/main.spr");
-        this.exports = List.copyOf(toml.array("exports"));
+        List<String> exported = toml.array("project", "exports");
+        if (exported.isEmpty()) {
+            exported = toml.array("exports");
+        }
+        this.exports = List.copyOf(exported);
 
         List<Bin> parsedBins = new ArrayList<>();
         for (Map<String, String> bin : toml.entries("bin")) {
@@ -103,10 +107,14 @@ public final class Project {
         this.bins = List.copyOf(parsedBins);
 
         List<Dependency> deps = new ArrayList<>();
+        java.util.Set<String> depNames = new java.util.LinkedHashSet<>();
         for (Map<String, String> dep : toml.entries("dependency")) {
             String depName = dep.get("name");
             if (depName == null || depName.isBlank()) {
                 throw new Toml.TomlException("[[dependency]] requires name", 1);
+            }
+            if (!depNames.add(depName)) {
+                throw new Toml.TomlException("Duplicate dependency name '" + depName + "'", 1);
             }
             if (dep.get("path") != null && dep.get("git") != null) {
                 throw new Toml.TomlException(

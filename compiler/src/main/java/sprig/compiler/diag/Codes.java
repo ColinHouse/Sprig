@@ -60,6 +60,15 @@ public final class Codes {
     public static final String PROJECT_MANIFEST = "SPR-PROJECT-MANIFEST";
     public static final String PROJECT_ENTRY = "SPR-PROJECT-ENTRY";
     public static final String PROJECT_UNSUPPORTED = "SPR-PROJECT-UNSUPPORTED";
+    public static final String PROJECT_LOCK_MISSING = "SPR-PROJECT-LOCK-MISSING";
+    public static final String PROJECT_LOCK_STALE = "SPR-PROJECT-LOCK-STALE";
+    public static final String PROJECT_LOCK_SCHEMA = "SPR-PROJECT-LOCK-SCHEMA";
+    public static final String PROJECT_NOT_EXPORTED = "SPR-PROJECT-NOT-EXPORTED";
+    public static final String DEP_CYCLE = "SPR-DEP-CYCLE";
+    public static final String DEP_NOT_FOUND = "SPR-DEP-NOT-FOUND";
+    public static final String DEP_GIT = "SPR-DEP-GIT";
+    public static final String DEP_OFFLINE = "SPR-DEP-OFFLINE";
+    public static final String DEP_MAVEN = "SPR-DEP-MAVEN";
 
     // CALL
     public static final String CALL_NAMED_REQUIRED = "SPR-CALL-NAMED-REQUIRED";
