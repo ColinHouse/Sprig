@@ -25,7 +25,9 @@ cp -R "$ROOT/examples/." "$PKG/examples/"
 cp -R "$ROOT/website/snippets/." "$PKG/website/snippets/"
 cp "$ROOT/tests/visitor/ast_visitor.spr" "$PKG/tests/visitor/"
 NOTES="$ROOT/docs/releases/RELEASE_NOTES-${VERSION}.md"
-if [[ -f "$NOTES" ]]; then cp "$NOTES" "$PKG/"; fi
+if [[ -f "$NOTES" ]]; then
+  sed -E 's@\]\(\.\./([^)]*\.md)\)@](docs/\1)@g' "$NOTES" > "$PKG/$(basename "$NOTES")"
+fi
 cp "$ROOT/AGENT_GUIDE.md" "$PKG/"
 cp "$ROOT/LICENSE" "$ROOT/NOTICE" "$ROOT/LICENSE_STATUS.md" "$PKG/"
 cp "$ROOT/THIRD_PARTY_NOTICES.md" "$PKG/"
@@ -33,10 +35,10 @@ cp "$ROOT/docs/QUICK_REFERENCE.md" "$ROOT/docs/FEATURE_STATUS_IMPLEMENTED.md" \
   "$ROOT/docs/JVM_INTEROP.md" "$ROOT/docs/NUMERIC_SEMANTICS.md" \
   "$ROOT/docs/DIAGNOSTIC_CODES.md" "$ROOT/docs/KNOWN_LIMITATIONS.md" \
   "$ROOT/docs/HOST_SERVICES.md" "$PKG/docs/"
-cp "$ROOT/spec/docs/GENERICS.md" "$PKG/docs/"
+cp "$ROOT/docs/GENERICS.md" "$PKG/docs/"
 cp "$ROOT/docs/PROJECTS.md" "$ROOT/docs/DEPENDENCIES.md" "$PKG/docs/"
 cat > "$PKG/README.md" <<'EOF'
-# Sprig v0.2.0-alpha.1 development Agent SDK
+# Sprig v0.2.0-alpha.1 Agent SDK
 
 This package contains the Java stage-0 compiler/runtime and ANTLR 4.13.2. It
 compiles Sprig source to Java, invokes `javac`, then runs on the JVM. It is
@@ -49,7 +51,7 @@ Start with `AGENT_GUIDE.md` or run `bin/sprig help --json` and
 EOF
 {
   echo "Package version: $VERSION"
-  echo "Source revision: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo 'no Git metadata')"
+  echo "Source revision: $(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo 'no Git metadata')"
   if [[ -z "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]]; then
     echo "Working tree clean: yes"
   else

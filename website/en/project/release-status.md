@@ -1,56 +1,23 @@
 # Release status
 
-**Published release:** `v0.1.0-alpha.1` (prerelease, 2026-09-24)
-**Repository development version:** `0.2.0-alpha.1` (Sprig v0.8-dev; generics core, no published package)
-**Repository:** <https://github.com/ColinHouse/Sprig>
-**License:** Apache-2.0
+**Current prerelease:** [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)
+**Language:** `v0.8-dev` · **JDK:** 17+ · **License:** Apache-2.0
 
-## What is verified
+The second public prerelease includes multi-parameter explicit generics,
+Equatable, local/Git dependency resolution with schema-2 locks and offline
+builds, Agent tooling and explicit JVM `--classpath`.
 
-- Built and tested from source on macOS Apple Silicon with OpenJDK 26.0.1,
-  OpenJDK 17.0.19 and Python 3.14.6; hosted CI runs the same suite on Linux
-  for JDK 17 and 26.
-- `scripts/build.sh`, `scripts/test.sh` and the grammar smoke harness pass on
-  those environments, and the documented snippets are executed by
-  `tools/verify-doc-snippets.py`.
-- The compiler source is compiled with `javac --release 17` (classfile version
-  61) and runs on JDK 17 or newer.
-- Tests, diagnostics and documentation examples are run from the working tree;
-  the numbers quoted in the README and this site come from those runs.
+Assets: `sprig-v0.2.0-alpha.1-jdk.zip` and its `.sha256`. No JDK is bundled.
+Verify the checksum before extracting; run version/capabilities/check/run.
+The release workflow rebuilds, runs the full suite, checks tag/version equality
+and smoke-tests the archive before publishing. CI covers JDK 17 and 26 on Linux;
+local verification covers macOS Apple Silicon. Classes use `javac --release 17`.
 
-## Releases
+The [release notes](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/RELEASE_NOTES-v0.2.0-alpha.1.md)
+and [sole validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/post-v0.7/V08_VALIDATION_REPORT.md)
+record scope and evidence. Published alpha.1 notes remain in Git history and docs/releases.
 
-The first alpha is published as a **prerelease**:
-
-<https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1>
-
-| Asset | Notes |
-|---|---|
-| `sprig-v0.1.0-alpha.1-jdk.zip` | Compiler and runtime, ANTLR 4.13.2, launcher, Hello World and license notices. **No JDK included.** |
-| `sprig-v0.1.0-alpha.1-jdk.zip.sha256` | SHA-256 checksum of the ZIP. |
-
-The published archive was downloaded again, its checksum verified, and
-extracted to smoke-test `bin/sprig version`, `check` and `run`; its
-`BUILD_INFO.txt` records source revision `6e7b57e`. The notes are in the
-repository under `docs/releases/`.
-
-An alpha is an early build: it is published so the project can be evaluated,
-not because it is production-ready.
-
-## What is not claimed
-
-- Stage-1 self-hosting, a package manager, a language server, a standard
-  library distribution and full Java generics/array interop are **not**
-  implemented.
-- Numerical results are not certified for algorithmic stability or physical
-  units.
-- No platform other than macOS Apple Silicon (local) and Linux (CI) has been
-  exercised.
-
-See [Known limitations](/en/reference/KNOWN_LIMITATIONS) and the
-[stage-1 roadmap](/en/reference/STAGE1_ROADMAP).
-
-Current development supports multi-parameter generics and local/Git lockfile
-resolution with offline builds. Maven/JVM resolution and stage-1 project
-migration remain unsupported. Current evidence is recorded in
-`docs/post-v0.7/V08_VALIDATION_REPORT.md`; historical reports retain their own SHAs.
+This is experimental. Maven/project-aware Maven classpaths, publishing/registry,
+Comparable, inference, variance, interfaces/traits and LSP/IDE are unsupported.
+The stage-1 frontend is a probe, not a self-hosted compiler. Type safety does
+not certify numerical stability. See [limitations](/en/reference/KNOWN_LIMITATIONS).

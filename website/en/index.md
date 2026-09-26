@@ -23,27 +23,26 @@ features:
   - title: One canonical syntax
     details: Indentation for blocks, func for named functions, named constructors for classes and variant cases, positional calls for functions and JVM methods. No aliases, no pipeline operator.
   - title: Static, honest types
-    details: Nullable T? with flow narrowing, distinct immutable and mutable collections, no implicit numeric promotion, no truthiness, and no Any escape hatch.
+    details: Nullable T? with flow narrowing, distinct immutable and mutable collections, no implicit precision-losing numeric conversion, no truthiness, and no Any escape hatch.
   - title: Sealed variants and exhaustive match
     details: variant declares a closed sum type with immutable named fields. match is checked for missing, duplicate and wrong cases, so growing an AST breaks every visitor that misses it.
   - title: Checked numerics and explicit interop
     details: Int/Int32 overflow raises an error instead of wrapping and integer division is explicit; BigInt/Decimal are exact. Java reference results are nullable and must be narrowed before use.
 ---
 
-## Latest published release: `0.1.0-alpha.1`
+## Latest published release: `0.2.0-alpha.1`
 
-The repository is developing the self-describing alpha.2 agent tooling;
-`0.1.0-alpha.2` has not been published.
+Sprig language `v0.8-dev`; JDK 17+. This is the second public prerelease.
 
 Sprig is experimental. The compiler is a Java stage-0 implementation that parses
 `.spr` source, checks it, emits Java source, invokes `javac` and runs the JVM.
-It is **not self-hosted**, and has no package manager, language server, IDE
-plugin or standard-library distribution yet.
+It is **not self-hosted**. Local/Git packages are supported; Maven resolution,
+publishing/registry, LSP/IDE and a standard-library distribution are not implemented.
 
 ::: info Release status
-**`v0.1.0-alpha.1` is published as a prerelease.** Download the ZIP and
+**`v0.2.0-alpha.1` is published as a prerelease.** Download the ZIP and
 `.sha256` checksum from the
-[releases page](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
+[releases page](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)
 (compiler, runtime, ANTLR and launcher; **no JDK included**), or build from
 source with [Getting Started](/en/guide/getting-started). This is an alpha,
 not a stable release; see [Release status](/en/project/release-status) for

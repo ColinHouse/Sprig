@@ -21,6 +21,13 @@ with tempfile.TemporaryDirectory(prefix="sprig-sdk-smoke-") as temp:
                  "docs/NUMERIC_SEMANTICS.md", "docs/DIAGNOSTIC_CODES.md",
                  "docs/KNOWN_LIMITATIONS.md", "LICENSE", "NOTICE"):
         assert (sdk / name).is_file(), name
+    for file in sdk.rglob("*.md"):
+        assert not any(x in file.name for x in ("VALIDATION", "REVIEW_REPORT", "REPORT")), file
+    for name in ("README.md", f"RELEASE_NOTES-v{version}.md", "docs/KNOWN_LIMITATIONS.md"):
+        text = (sdk / name).read_text()
+        assert version in text
+        assert not any(marker in text for marker in ("NOT RELEASED", "development draft", "development Agent SDK")), name
+    subprocess.run(["python3", str(ROOT / "tools/check-doc-links.py"), "--root", str(sdk)], check=True)
     assert not (sdk / "acceptance").exists(), "maintainer blind-test evidence must stay in the repository"
 
     def command(*args):
@@ -32,6 +39,8 @@ with tempfile.TemporaryDirectory(prefix="sprig-sdk-smoke-") as temp:
     assert command("version").strip().endswith(version)
     capabilities = json.loads(command("capabilities", "--json"))
     assert capabilities["compilerVersion"] == version
+    assert capabilities["releaseStatus"] == "prerelease; v" + version
+    assert not capabilities["features"]["mavenDependencies"]
     assert json.loads(command("doctor", "--json"))["antlrAvailable"]
     assert json.loads(command("api", "java.time.LocalDate", "--json"))["className"] == "java.time.LocalDate"
     for topic in json.loads(command("help", "--json"))["topics"]:

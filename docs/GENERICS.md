@@ -1,6 +1,6 @@
 # Sprig v0.8 generics (implemented contract)
 
-> Current implemented contract; mirrored in docs/GENERICS.md.
+> Sole current generics reference. The website and SDK use this source.
 
 This document describes the generic type system the stage-0 compiler
 implements. It is narrower than a general generics design and deliberately so.

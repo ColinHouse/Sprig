@@ -19,7 +19,7 @@ const pages = [
   ['docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP.md'],
   ['docs/STAGE1_ROADMAP.md', 'generated/en/reference/STAGE1_ROADMAP.md'],
   ['spec/docs/LANGUAGE_SPEC.md', 'generated/en/reference/LANGUAGE_SPEC.md'],
-  ['spec/docs/GENERICS.md', 'generated/en/reference/GENERICS.md'],
+  ['docs/GENERICS.md', 'generated/en/reference/GENERICS.md'],
   ['spec/docs/QUICK_REFERENCE.md', 'generated/en/reference/QUICK_REFERENCE_DESIGN.md'],
   ['spec/docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP_DESIGN.md'],
   ['spec/docs/AGENT_TOOL_PROTOCOL.md', 'generated/en/reference/AGENT_TOOL_PROTOCOL.md'],
@@ -57,13 +57,18 @@ const linkMap = new Map([
   ['spec/docs/JVM_INTEROP.md', '/en/reference/JVM_INTEROP_DESIGN']
 ])
 
-const rewriteLinks = (content) =>
+for (const [source, target] of pages) {
+  linkMap.set(source, '/' + target.replace(/^generated\//, '').replace(/\.md$/, ''))
+}
+
+const rewriteLinks = (content, source) =>
   content.replace(/\]\(([^)\s]+)\)/g, (match, href) => {
     const [target, anchor = ''] = href.split('#')
-    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return match
-    const normalized = target.replace(/^(\.\.?\/)+/, '')
-    const route = linkMap.get(normalized)
-    if (!route) return match
+    if (!target || /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('/')) return match
+    const local = resolve(repo, dirname(source), target)
+    const normalized = local.slice(repo.length + 1).replaceAll('\\', '/')
+    const route = linkMap.get(normalized) ||
+      `https://github.com/ColinHouse/Sprig/blob/main/${normalized}`
     return `](${route}${anchor ? `#${anchor}` : ''})`
   })
 
@@ -74,7 +79,7 @@ for (const [source, target] of pages) {
   const from = join(repo, source)
   const to = join(website, target)
   mkdirSync(dirname(to), { recursive: true })
-  const content = rewriteLinks(readFileSync(from, 'utf8'))
+  const content = rewriteLinks(readFileSync(from, 'utf8'), source)
   writeFileSync(to, banner(source) + content, 'utf8')
   console.log(`synced ${source} -> website/${target}`)
 }

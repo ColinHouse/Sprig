@@ -1,4 +1,4 @@
-# Implemented JVM interop (alpha.2 development)
+# Implemented JVM interop (v0.2.0-alpha.1)
 
 Import a public class with an alias, then call public constructors, static
 methods, instance methods, or fields. Java calls use positional arguments.
@@ -56,7 +56,8 @@ Repeat `--classpath` or use the platform path separator. Relative paths are
 resolved against the command's current working directory. The compiler/JDK
 parent loader wins over user entries; then the first user entry wins duplicate
 classes. Missing entries raise `SPR-JVM-CLASSPATH`. This is a deterministic
-local classpath, not a Maven resolver or package manager. Third-party class
+local JVM classpath, not a Maven resolver. Local/Git Sprig packages use the separate
+project dependency system. Third-party class
 initializers execute only if the user program actually executes the class.
 
 `sprig api` includes Java's declared exception types. Inside a named Sprig

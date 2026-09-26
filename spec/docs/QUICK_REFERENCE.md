@@ -1,5 +1,7 @@
 # Sprig v0.7 quick reference (target behavior)
 
+> Historical Sprig v0.7 design kit. Current implementation: [feature status](../../docs/FEATURE_STATUS_IMPLEMENTED.md).
+
 > This is a design-kit sample of **target** v0.7 semantics. The stage-0
 > compiler implements a subset; see `docs/FEATURE_STATUS_IMPLEMENTED.md` for
 > what is actually runnable and `docs/KNOWN_LIMITATIONS.md` for the gaps.

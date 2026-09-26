@@ -24,9 +24,8 @@ assert catalog["languageVersion"] == "0.8-dev"
 assert catalog["jdk"]["minimum"] == 17
 assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
-assert "v0.1.0-alpha.1" in catalog["releaseStatus"]
-assert "not** evidence" in (ROOT / "docs" / "releases" /
-                            "RELEASE_NOTES-v0.1.0-alpha.2.md").read_text()
+assert catalog["releaseStatus"] == "prerelease; v" + version
+assert not catalog["features"]["mavenDependencies"]
 
 help_index = json.loads(invoke("help", "--json"))
 assert set(help_index["commands"]) == set(catalog["commands"])
@@ -42,14 +41,14 @@ for item in json.loads(invoke("codes", "--json"))["codes"]:
     assert "| " + item["code"] + " |" in code_rows, item["code"]
 
 required = {
-    "README.md": [version, "v0.1.0-alpha.1", "Apache"],
+    "README.md": [version, "v" + version, "Apache"],
     "AGENTS.md": ["sprig api", "Apache-2.0"],
     "docs/FEATURE_STATUS_IMPLEMENTED.md": ["capabilities", "--classpath"],
-    "docs/KNOWN_LIMITATIONS.md": ["Apache-2.0", "v0.1.0-alpha.1"],
+    "docs/KNOWN_LIMITATIONS.md": ["Apache-2.0", "v" + version],
     "website/en/guide/tooling.md": [version, "sprig api"],
     "website/guide/tooling.md": [version, "sprig api"],
-    "website/en/project/release-status.md": [version, "v0.1.0-alpha.1"],
-    "website/project/release-status.md": [version, "v0.1.0-alpha.1"],
+    "website/en/project/release-status.md": [version, "v" + version],
+    "website/project/release-status.md": [version, "v" + version],
 }
 for name, markers in required.items():
     text = (ROOT / name).read_text()
@@ -59,7 +58,7 @@ assert "no selected license" not in (ROOT / "docs" / "KNOWN_LIMITATIONS.md").rea
 assert not list(ROOT.glob("docs/**/REVIEW_REPORT.md"))
 # Explicit current-document inventory: historical evidence is excluded.
 current = list(required) + ["AGENT_GUIDE.md", "docs/DEPENDENCIES.md", "docs/PROJECTS.md",
-    "docs/GENERICS.md", "spec/docs/GENERICS.md", "docs/post-v0.7/V08_VALIDATION_REPORT.md",
+    "docs/GENERICS.md", "docs/post-v0.7/V08_VALIDATION_REPORT.md",
     "docs/releases/RELEASE_NOTES-v0.2.0-alpha.1.md", "website/en/guide/generics.md",
     "website/guide/generics.md", "website/en/guide/projects.md", "website/guide/projects.md"]
 rules = []
@@ -82,8 +81,13 @@ for name in current:
     text = (ROOT / name).read_text()
     for pattern in rules:
         assert not re.search(pattern, text, re.I | re.S), (name, "capability drift", pattern)
-assert (ROOT / "docs/GENERICS.md").read_text() == (ROOT / "spec/docs/GENERICS.md").read_text()
-assert "Historical audit" in (ROOT / "REVIEW_REPORT.md").read_text().splitlines()[0]
+assert not (ROOT / "spec/docs/GENERICS.md").exists()
+assert not (ROOT / "REVIEW_REPORT.md").exists()
+for name in current:
+    text = (ROOT / name).read_text()
+    for marker in ("NOT READY", "NOT RELEASED", "latest published archive remains",
+                   "development draft", "no package manager", "没有包管理器"):
+        assert marker.lower() not in text.lower(), (name, "stale release claim", marker)
 quick = (ROOT / "docs" / "QUICK_REFERENCE.md").read_text().split("```sprig\n", 1)[1].split("\n```", 1)[0]
 with tempfile.TemporaryDirectory(prefix="sprig-doc-reference-") as temp:
     source = Path(temp) / "quick.spr"

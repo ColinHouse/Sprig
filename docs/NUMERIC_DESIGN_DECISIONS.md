@@ -1,6 +1,6 @@
 # Numeric design decisions and open work
 
-The original `docs/LANGUAGE_SPEC.md` fixed `Int` at 64 bits and `Float` at
+The historical `spec/docs/LANGUAGE_SPEC.md` fixed `Int` at 64 bits and `Float` at
 binary64 but explicitly left overflow and integer division unspecified. This
 stage-0 implementation supplies those missing rules. See
 `NUMERIC_SEMANTICS.md` for the binding contract and runnable examples under

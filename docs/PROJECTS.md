@@ -1,4 +1,4 @@
-# Project manifests (implemented development contract)
+# Project manifests (implemented contract)
 
 `sprig init` creates a manifest and `src/main.spr` without overwriting files.
 `project --json` searches upward for the nearest `sprig.toml`. `check/build/run`

@@ -1,7 +1,8 @@
 # 项目
 
 项目就是一个包含 `sprig.toml` 的目录。单文件模式永久保留：
-`sprig run hello.spr` 不需要任何 manifest。
+显式文件在项目 source root 之外时不使用 manifest；在 root 内时仍使用该项目依赖图，
+需要当前 lockfile。
 
 ## 目录与默认值
 

@@ -1,6 +1,8 @@
 # Agent tool protocol (v0.7 design proposal)
 
-The alpha.2 development compiler implements a subset of this proposal:
+> Historical Sprig v0.7 design kit. Current implementation: [feature status](../../docs/FEATURE_STATUS_IMPLEMENTED.md).
+
+The v0.2.0-alpha.1 compiler implements a subset of this proposal:
 `help`, `capabilities`, `api`, `doctor`, and structured `explain`. This file is
 the historical design target; current command behavior is described by
 `sprig help --json` and `docs/FEATURE_STATUS_IMPLEMENTED.md`. LSP and package

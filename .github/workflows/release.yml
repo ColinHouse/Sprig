@@ -1,6 +1,6 @@
 name: Release
 
-# Builds the candidate archive and publishes it as a GitHub prerelease when a
+# Builds the SDK archive and publishes it as a GitHub prerelease when a
 # v* tag is pushed. Run scripts/test.sh locally or wait for CI on the same
 # commit before tagging.
 on:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to publish (for example v0.1.0-alpha.1)'
+        description: 'Existing tag to publish (for example v0.2.0-alpha.1)'
         required: true
 
 permissions:
@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -32,7 +34,7 @@ jobs:
         run: |
           ./scripts/build.sh
           ./scripts/test.sh
-      - name: Build candidate archive
+      - name: Build release archive
         env:
           SPRIG_PACKAGE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: ./scripts/package-alpha.sh

@@ -19,8 +19,7 @@ version
 ```
 
 `check`、`build`、`run`、`api` 可重复使用 `--classpath` 指定本地 JAR 或目录；
-四个命令采用同一解析路径，不自动下载依赖。这些新增命令属于 alpha.2 开发版本；
-目前公开发行包仍是 alpha.1。
+四个命令采用同一解析路径，不自动下载依赖。这些命令已包含在 v0.2.0-alpha.1 SDK 中。
 例如用 `sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
 
 - `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。

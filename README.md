@@ -20,35 +20,28 @@ to be readable by people and predictable for coding agents.
 [![Release](https://img.shields.io/github/v/release/ColinHouse/Sprig?include_prereleases&label=release)](https://github.com/ColinHouse/Sprig/releases)
 [![JDK](https://img.shields.io/badge/JDK-17%2B-blue)](https://adoptium.net/)
 
-> **Current version `v0.1.0-alpha.1` — published as a prerelease.** Download
-> the archive from the [releases page](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
-> or build from source. The compiler parses, checks, emits Java and runs on
-> the JVM, but it is **not self-hosted** and has no package manager, language
-> server or standard-library distribution. It builds with `javac --release 17`
-> and has been run end-to-end on JDK 17 and 26. See the
-> [release notes](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
-> [known limitations](docs/KNOWN_LIMITATIONS.md).
+> **Current prerelease: `v0.2.0-alpha.1` · Sprig language: `v0.8-dev` · JDK: 17+**
+> Download the [Agent SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)
+> or build from source. The Java stage-0 compiler parses, checks, emits Java
+> and runs on the JVM; it is **not self-hosted**.
 
-The repository's `0.2.0-alpha.1` development tree adds v0.8 multi-parameter generics, an `Equatable` capability, and a `sprig.toml` project model with local/Git dependency resolution, a deterministic `sprig.lock` and offline builds
-(`help <topic>`, `capabilities`, `api`, `doctor`, structured `explain`) and
-explicit local `--classpath`. The **latest published archive remains
-v0.1.0-alpha.1** until the next candidate passes its independent release gates.
-
-The current validation report is [V08_VALIDATION_REPORT.md](docs/post-v0.7/V08_VALIDATION_REPORT.md).
-[REVIEW_REPORT.md](REVIEW_REPORT.md) preserves the earlier audit evidence.
-The current v0.8 candidate is **NOT READY — RELEASE BLOCKERS REMAIN**: Maven/JVM
-resolution and the integrated stage-1 project remain incomplete.
+This second public prerelease includes explicit multi-parameter generics,
+`Equatable`, project manifests, local/Git Sprig dependencies, schema-2 lockfiles,
+exports and offline cached builds. Agent discovery tools and explicit JVM
+`--classpath` are included. See the [release notes](docs/releases/RELEASE_NOTES-v0.2.0-alpha.1.md),
+[known limitations](docs/KNOWN_LIMITATIONS.md) and
+[current validation record](docs/post-v0.7/V08_VALIDATION_REPORT.md).
 
 ## What Sprig is
 
-Sprig is a small, complete-looking language implemented by a Java stage-0
+Sprig is a small experimental language implemented by a Java stage-0
 compiler in this repository. It keeps one canonical syntax for each
 operation and makes semantically dangerous defaults explicit:
 
 - **Indentation, not braces.** Tabs are rejected; blocks are layout tokens.
 - **Static types without escape hatches.** `let`/`var`, local inference,
   nullable `T?`, flow narrowing, distinct immutable and mutable collections,
-  no truthiness, no implicit numeric promotion, no `Any`.
+  no truthiness, no implicit precision-losing numeric conversion, no `Any`.
 - **Sealed variants and exhaustive `match`.** `variant` declares a closed sum
   type; `match` must cover every case. Add a case and every visitor that
   misses it fails to compile.
@@ -72,11 +65,11 @@ and `curl` are only needed for the test suite and source build.
 **Option A — download the alpha archive** (compiler/runtime + ANTLR, no JDK):
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.1.0-alpha.1/sprig-v0.1.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.1.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.1.0-alpha.1-jdk.zip
-cd sprig-v0.1.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.2.0-alpha.1-jdk.zip
+cd sprig-v0.2.0-alpha.1-jdk
 ./bin/sprig run examples/hello.spr
 ```
 
@@ -132,8 +125,13 @@ ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
 - JVM interop for imported classes: constructors, fields, methods, overloads,
   checked exceptions, conservative nullability.
 - `sprig check`, `build`, `run`, `explain`, `codes`, `--json`,
-  `--syntax-only`; current development adds topic `help`, `capabilities`,
+  `--syntax-only`, topic `help`, `capabilities`,
   `api`, `doctor` and explicit local `--classpath`.
+
+- One or more explicit generic parameters for classes, variants and functions;
+  invariant application and `requires T: Equatable`.
+- `sprig.toml`, `sprig resolve`, schema-2 `sprig.lock`, local/Git dependencies
+  locked to exact SHA, package-local `@alias/module.spr`, exports and offline builds.
 
 The authoritative list is
 [`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md).
@@ -175,7 +173,8 @@ The compiler is a Java seed that emits Java source and invokes `javac`; it
 does not compile itself. v0.8 multi-parameter generics are implemented, but
 inference, capability implications, inheritance,
 `match` expressions, arrays, varargs, full Java generic/annotation interop,
-file IO, Maven/JVM dependency resolution, a project-aware JVM classpath, a package manager, a language server and
+a complete file IO library, Maven/JVM dependency resolution, a project-aware Maven classpath,
+Comparable, variance, interfaces/traits, a registry, a language server and
 stage-1 self-hosting are **not implemented**. Runtime numeric errors do not always carry an exact source
 span. Local verification covers macOS Apple Silicon with OpenJDK 17.0.19 and
 26.0.1; hosted CI covers Linux. See
@@ -210,11 +209,12 @@ Sprig 是一门缩进式、静态类型的 JVM 语言，核心特性包括：sea
 穷尽 `match`、可空类型与流分析收窄、受检整数运算（溢出报错而非静默回绕）、
 精确的 `BigInt`/`Decimal`、以及显式的 JVM 互操作。当前由仓库内的 Java
 stage-0 编译器实现：解析 `.spr` → 类型检查 → 生成 Java → `javac` → JVM
-运行；**尚未自举**，也没有包管理器、LSP、IDE 插件或标准库发行版。
+运行；**尚未自举**。多参数显式泛型、Equatable、本地/Git 依赖、schema-2 锁文件与
+离线构建已实现；Maven 解析、发布/registry、LSP、IDE 插件和标准库发行版尚未实现。
 
 安装（需要 JDK 17 或更新版本）：从
-[Releases](https://github.com/ColinHouse/Sprig/releases/tag/v0.1.0-alpha.1)
-下载 `sprig-v0.1.0-alpha.1-jdk.zip`，用同名 `.sha256` 文件校验后解压即可；
+[Releases](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)
+下载 `sprig-v0.2.0-alpha.1-jdk.zip`，用同名 `.sha256` 文件校验后解压即可；
 也可以从源码构建：
 
 ```bash

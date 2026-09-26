@@ -1,4 +1,4 @@
-# Sprig v0.7 — language design kit
+# Historical Sprig v0.7 — language design kit
 
 This directory is the **design kit** for the Sprig v0.7 language: the proposed
 language contract, agent-facing design decisions, the planned JVM interop
@@ -12,13 +12,12 @@ in `grammar/`, and the implementation status in
 `docs/FEATURE_STATUS_IMPLEMENTED.md`. The grammar smoke harness is
 `tools/test-grammar.sh` with sources in `tools/grammar-harness/`.
 
-## v0.8 generics
+## Current implementation
 
-The v0.8 generics contract implemented by the stage-0 compiler is in
-`docs/GENERICS.md`. It covers the `generic T:` block syntax, explicit type
-application, the nullable-argument rule, erasure/boxing and the indexing
-boundary. Multiple parameters, inference, variance and capability semantics
-are explicitly out of scope.
+Current implemented behavior is documented in the root [implementation status](../docs/FEATURE_STATUS_IMPLEMENTED.md)
+and [quick reference](../docs/QUICK_REFERENCE.md). The sole v0.8 generic contract is
+[docs/GENERICS.md](../docs/GENERICS.md): multiple explicit parameters and Equatable
+are implemented; inference, variance and Comparable are not.
 
 ## What is new in v0.7
 

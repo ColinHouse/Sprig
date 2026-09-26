@@ -1,5 +1,7 @@
 # Agent-friendly revisions: rationale and trade-offs
 
+> Historical Sprig v0.7 design kit. Current implementation: [feature status](../../docs/FEATURE_STATUS_IMPLEMENTED.md).
+
 | v0.7 decision | Agent / human benefit | Cost / deliberate limit |
 |---|---|---|
 | `variant` sealed payload cases | Express AST/token-like data with exact fields instead of nullable bags and casts; compiler can type-check branches | New semantic construct, Java lowering and type metadata required; not claimed novel versus ADTs elsewhere |
