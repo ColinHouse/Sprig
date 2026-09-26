@@ -43,7 +43,14 @@ def main():
         (root/'src').mkdir()
         source = root/'src/main.spr'
         source.write_text('print("hello")\n')
-        manifest = root/'sprig.toml'
+        unusual = root/'app\nprint("injected")\n#'
+        unusual.mkdir()
+        status, data = invoke(unusual, 'init')
+        assert status == 0, data
+        status, data = invoke(unusual, 'run')
+        assert status == 0 and data['programOutput'] == 'Hello, Sprig!\n', data
+        print('pass init directory name remains data, never source code')
+        manifest = root/'sprig.toml' 
         for name, text in cases.items():
             manifest.write_text(text)
             try:
@@ -76,7 +83,7 @@ def main():
                 except AssertionError as error:
                     failures.append(kind+'-'+mode)
                     print('FAIL', kind, mode, error)
-    print(f'adversarial projects: {len(cases)+12} cases, {len(failures)} failures')
+    print(f'adversarial projects: {len(cases)+13} cases, {len(failures)} failures')
     return bool(failures)
 
 if __name__ == '__main__':

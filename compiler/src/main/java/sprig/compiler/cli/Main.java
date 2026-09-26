@@ -478,7 +478,7 @@ public final class Main {
         String name = dir.getFileName() == null ? "sprig-app" : dir.getFileName().toString();
         Files.writeString(manifest, "[project]\nname = \"" + name.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
                 + "\"\nversion = \"0.1.0\"\nlanguage = \"0.8\"\n");
-        Files.writeString(entry, "# " + name + " entry point.\n\nfunc main() -> Unit:\n"
+        Files.writeString(entry, "# " + name.replace("\n", " ").replace("\r", " ") + " entry point.\n\nfunc main() -> Unit:\n"
                 + "    print(\"Hello, Sprig!\")\n\nmain()\n");
         if (options.json) {
             Map<String, Object> data = new LinkedHashMap<>();
