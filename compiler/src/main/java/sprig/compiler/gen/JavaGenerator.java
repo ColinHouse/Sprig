@@ -716,7 +716,12 @@ public final class JavaGenerator {
                 receiver = temp;
             }
             String lhs = receiver + "." + mangle(access.name);
-            w.line(lhs + " = " + assignmentValue(field.type, lhs, assign) + ";");
+            String oldValue = lhs;
+            if (!assign.op.equals("=") && field.fieldDecl != null
+                    && !field.substitution.isEmpty() && containsTypeParameter(field.fieldDecl.type)) {
+                oldValue = unboxGeneric(oldValue, field.type);
+            }
+            w.line(lhs + " = " + assignmentValue(field.type, oldValue, assign) + ";");
             return;
         }
         Expr.Index index = (Expr.Index) target;

@@ -40,6 +40,12 @@ def main():
                 if 'output' in case:
                     status, data = command('run', source)
                     assert status == 0 and data.get('programOutput') == case['output'], data
+                elif 'runtimeMessage' in case:
+                    status, data = command('run', source)
+                    assert status == 1 and any(d['code'] == 'SPR-RUNTIME-EXCEPTION'
+                            and d['phase'] == 'RUNTIME' and case['runtimeMessage'] in d['message']
+                            for d in data['diagnostics']), data
+                    assert data.get('programOutput') == '', data
                 print('pass', case['name'])
             except (AssertionError, ValueError, subprocess.TimeoutExpired) as error:
                 failures.append(case['name'])

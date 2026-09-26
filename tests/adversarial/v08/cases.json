@@ -226,5 +226,13 @@
   {
     "name": "widen_boundaries",
     "output": "2147483647\n-2147483648\n-Infinity\ntrue\ntrue\n"
+  },
+  {
+    "name": "generic_compound_assignment",
+    "output": "8\n1\n56\n49\n3.5\n"
+  },
+  {
+    "name": "generic_compound_overflow",
+    "runtimeMessage": "Int addition overflow"
   }
 ]
