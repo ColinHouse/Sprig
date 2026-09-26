@@ -1,0 +1,57 @@
+# Stage-1 slice: a single generic Stack replaces concrete per-type stacks.
+#
+# The Sprig-written frontend probe needs a symbol table whose entries change
+# type (scopes of names, scopes of token positions). Before v0.8 each case
+# needed its own class; with one generic declaration the push/pop logic exists
+# once and the element type is written at the use site.
+
+generic T:
+    class Stack:
+        let items: MutableList[T] = []
+
+        func push(value: T) -> Unit:
+            items.append(value)
+
+        func pop() -> T?:
+            if items.size() == 0:
+                return null
+            let top = items.get(items.size() - 1)
+            items.removeAt(items.size() - 1)
+            return top
+
+        func size() -> Int:
+            return items.size()
+
+let scopes: Stack[String] = Stack[String]()
+scopes.push("module")
+scopes.push("function")
+print(scopes.size())
+
+let function_scope = scopes.pop()
+if function_scope != null:
+    print(function_scope)
+print(scopes.size())
+
+let positions: Stack[Int] = Stack[Int]()
+positions.push(12)
+positions.push(34)
+let last = positions.pop()
+if last != null:
+    print(last)
+
+generic T:
+    func drain(stack: Stack[T]) -> MutableList[T]:
+        let out: MutableList[T] = []
+        let count = stack.size()
+        for i in range(count):
+            let next = stack.pop()
+            if next != null:
+                out.append(next)
+        return out
+
+let words: Stack[String] = Stack[String]()
+words.push("a")
+words.push("b")
+words.push("c")
+print(drain[String](words))
+print(words.size())

@@ -27,4 +27,8 @@ public final class ResolvedField {
     public Type receiverType;
     public boolean constructorRef;
     public boolean payloadless;
+    /** v0.8 substitution used to instantiate a generic member or payload. */
+    public java.util.Map<sprig.compiler.types.TypeParameterType, Type> substitution = java.util.Map.of();
+    /** v0.8 explicit generic type arguments at this use site, when present. */
+    public java.util.List<Type> typeArgs = java.util.List.of();
 }

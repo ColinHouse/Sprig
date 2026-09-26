@@ -19,7 +19,7 @@ catalog = json.loads(invoke("capabilities", "--json"))
 version = catalog["compilerVersion"]
 assert invoke("version").strip() == "sprig-compiler " + version
 assert json.loads((ROOT / "website" / "package.json").read_text())["version"] == version
-assert catalog["languageVersion"] == "0.7"
+assert catalog["languageVersion"] == "0.8-dev"
 assert catalog["jdk"]["minimum"] == 17
 assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
@@ -31,7 +31,7 @@ help_index = json.loads(invoke("help", "--json"))
 assert set(help_index["commands"]) == set(catalog["commands"])
 for topic in help_index["topics"]:
     detail = json.loads(invoke("help", topic, "--json"))
-    assert detail["compilerVersion"] == version and detail["languageVersion"] == "0.7"
+    assert detail["compilerVersion"] == version and detail["languageVersion"] == "0.8-dev"
     for example in detail["examples"]:
         if example.startswith(("examples/", "tests/", "website/")):
             assert (ROOT / example).is_file(), (topic, example)

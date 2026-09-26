@@ -1,7 +1,7 @@
 # 发布状态
 
 **已发布版本：** `v0.1.0-alpha.1`（prerelease，2026-09-24）
-**仓库开发版本：** `0.1.0-alpha.2`（语言设计：Sprig v0.7；尚未发布）
+**仓库开发版本：** `0.2.0-alpha.1`（Sprig v0.8-dev：泛型核心已实现，尚未发布）
 **仓库：** <https://github.com/ColinHouse/Sprig>
 **许可证：** Apache-2.0
 

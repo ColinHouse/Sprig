@@ -94,6 +94,7 @@ export default defineConfig({
               items: [
                 { text: '快速开始', link: '/guide/getting-started' },
                 { text: '语言导览', link: '/guide/language-tour' },
+                { text: '泛型（v0.8）', link: '/guide/generics' },
                 { text: 'JVM 互操作', link: '/guide/jvm-interop' },
                 { text: '工具与 JSON', link: '/guide/tooling' }
               ]
@@ -164,6 +165,7 @@ export default defineConfig({
               items: [
                 { text: 'Getting Started', link: '/en/guide/getting-started' },
                 { text: 'Language Tour', link: '/en/guide/language-tour' },
+                { text: 'Generics (v0.8)', link: '/en/guide/generics' },
                 { text: 'JVM Interoperability', link: '/en/guide/jvm-interop' },
                 { text: 'Tooling and JSON', link: '/en/guide/tooling' }
               ]
@@ -177,6 +179,7 @@ export default defineConfig({
               text: 'Language contract',
               items: [
                 { text: 'Language spec (v0.7 design)', link: '/en/reference/LANGUAGE_SPEC' },
+                { text: 'Generics contract (v0.8)', link: '/en/reference/GENERICS' },
                 { text: 'Quick reference', link: '/en/reference/QUICK_REFERENCE' },
                 { text: 'Numerical semantics', link: '/en/reference/NUMERIC_SEMANTICS' },
                 {

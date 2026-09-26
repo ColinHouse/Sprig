@@ -1,0 +1,11 @@
+# v0.8 generics: one parameter per block, explicit [Type] at every use.
+generic T:
+    class Box:
+        let value: T
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+let box = Box[Int](value=41)
+print(identity[Int](box.value) + 1)

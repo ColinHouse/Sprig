@@ -14,7 +14,7 @@ with tempfile.TemporaryDirectory(prefix="sprig-sdk-smoke-") as temp:
     subprocess.run(["unzip", "-q", str(archive), "-d", temp], check=True)
     sdk = Path(temp) / f"sprig-v{version}-jdk"
     cli = sdk / "bin" / "sprig"
-    for name in ("README.md", "INSTALL.md", "AGENT_GUIDE.md", "RELEASE_NOTES-v0.1.0-alpha.2.md",
+    for name in ("README.md", "INSTALL.md", "AGENT_GUIDE.md", f"RELEASE_NOTES-v{version}.md",
                  "docs/QUICK_REFERENCE.md",
                  "docs/FEATURE_STATUS_IMPLEMENTED.md", "docs/JVM_INTEROP.md",
                  "docs/NUMERIC_SEMANTICS.md", "docs/DIAGNOSTIC_CODES.md",

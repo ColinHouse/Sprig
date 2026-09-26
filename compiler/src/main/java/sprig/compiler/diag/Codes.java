@@ -50,6 +50,12 @@ public final class Codes {
     public static final String NUM_MIXED = "SPR-NUM-MIXED";
     public static final String COLLECTION_IMMUTABLE = "SPR-COLLECTION-IMMUTABLE";
 
+    // GENERICS (v0.8)
+    public static final String GENERIC_ARITY = "SPR-TYPE-GENERIC-ARITY";
+    public static final String GENERIC_ARGS_REQUIRED = "SPR-TYPE-GENERIC-ARGS-REQUIRED";
+    public static final String GENERIC_NULLABLE = "SPR-TYPE-GENERIC-NULLABLE";
+    public static final String GENERIC_CONSTRAINT = "SPR-GENERIC-CONSTRAINT";
+
     // CALL
     public static final String CALL_NAMED_REQUIRED = "SPR-CALL-NAMED-REQUIRED";
     public static final String CALL_POSITIONAL_REQUIRED = "SPR-CALL-POSITIONAL-REQUIRED";

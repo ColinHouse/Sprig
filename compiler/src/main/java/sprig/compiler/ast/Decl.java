@@ -8,9 +8,20 @@ import sprig.compiler.types.Type;
 public abstract class Decl extends Node {
     public final String name;
     public Symbol symbol;
+    /**
+     * v0.8 generic parameter names declared by an enclosing
+     * {@code generic T:} block. Empty for ordinary declarations. The list is
+     * deliberately a list, not a single field, so multi-parameter generics can
+     * be added later without reshaping the type system.
+     */
+    public final List<String> typeParams = new java.util.ArrayList<>();
 
     protected Decl(String name) {
         this.name = name;
+    }
+
+    public boolean isGeneric() {
+        return !typeParams.isEmpty();
     }
 
     public static final class Param {
@@ -33,6 +44,12 @@ public abstract class Decl extends Node {
         public Type returnType;
         public final List<Type> throwsTypes = new java.util.ArrayList<>();
         public ClassDecl owner; // non-null for methods
+        /**
+         * Lexical generic parameters visible while checking this function:
+         * its own {@code generic T:} parameters, or its class's parameters for
+         * a method. Filled by the name resolver.
+         */
+        public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
 
         public Func(String name, List<Param> params, TypeRef returnTypeRef,
                     List<TypeRef> throwsRefs, List<Stmt> body) {
@@ -68,6 +85,7 @@ public abstract class Decl extends Node {
     public static final class ClassDecl extends Decl {
         public final List<Field> fields;
         public final List<Func> methods;
+        public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
 
         public ClassDecl(String name, List<Field> fields, List<Func> methods) {
             super(name);
@@ -93,6 +111,7 @@ public abstract class Decl extends Node {
 
     public static final class VariantDecl extends Decl {
         public final List<VariantCase> cases;
+        public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
 
         public VariantDecl(String name, List<VariantCase> cases) {
             super(name);

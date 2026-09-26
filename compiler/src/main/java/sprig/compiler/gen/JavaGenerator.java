@@ -27,6 +27,7 @@ import sprig.compiler.types.MapType;
 import sprig.compiler.types.NativeType;
 import sprig.compiler.types.NullableType;
 import sprig.compiler.types.Type;
+import sprig.compiler.types.TypeParameterType;
 import sprig.compiler.types.VariantCaseType;
 import sprig.compiler.types.VariantType;
 
@@ -183,6 +184,11 @@ public final class JavaGenerator {
         if (type == null || type == NativeType.ERROR || type == NativeType.NULL) {
             return "java.lang.Object";
         }
+        // v0.8 generics are erased and boxed: a type parameter is Object in
+        // generated Java, and casts/unboxing are inserted at use sites.
+        if (type instanceof TypeParameterType) {
+            return "java.lang.Object";
+        }
         if (type == NativeType.INT) {
             return "long";
         }
@@ -212,6 +218,21 @@ public final class JavaGenerator {
         }
         if (type instanceof NullableType nullable) {
             return boxedJavaType(nullable.inner);
+        }
+        // A type whose arguments still contain a type parameter cannot be
+        // emitted as a parameterized Java type: T erases to Object, and
+        // SprigList<Object> is not SprigList<String>. Erase the whole shape to
+        // its raw runtime class and cast at the substituted boundary.
+        if (containsTypeParameter(type)) {
+            if (type instanceof ListType list) {
+                return list.mutable ? "sprig.runtime.SprigMutableList" : "sprig.runtime.SprigList";
+            }
+            if (type instanceof MapType map) {
+                return map.mutable ? "sprig.runtime.SprigMutableMap" : "sprig.runtime.SprigMap";
+            }
+            if (type instanceof FunctionType function) {
+                return "sprig.runtime.Fn" + function.params.size();
+            }
         }
         if (type instanceof ListType list) {
             String raw = list.mutable ? "sprig.runtime.SprigMutableList" : "sprig.runtime.SprigList";
@@ -864,6 +885,9 @@ public final class JavaGenerator {
         if (expr instanceof Expr.Index index) {
             return emitIndex(index);
         }
+        if (expr instanceof Expr.Subscript subscript) {
+            return emitSubscript(subscript);
+        }
         if (expr instanceof Expr.Unary unary) {
             return emitUnary(unary);
         }
@@ -901,8 +925,14 @@ public final class JavaGenerator {
             return "null";
         }
         switch (field.kind) {
-            case CLASS_FIELD, VARIANT_PAYLOAD:
-                return emitExpr(access.receiver) + "." + mangle(access.name);
+            case CLASS_FIELD, VARIANT_PAYLOAD: {
+                String code = emitExpr(access.receiver) + "." + mangle(access.name);
+                if (field.fieldDecl != null && !field.substitution.isEmpty()
+                        && containsTypeParameter(field.fieldDecl.type)) {
+                    return unboxGeneric(code, field.type);
+                }
+                return code;
+            }
             case ENUM_CASE:
                 return typeNames.get(field.enumDecl) + "." + field.enumCaseName;
             case VARIANT_CASE_VALUE:
@@ -932,12 +962,26 @@ public final class JavaGenerator {
     }
 
     private String emitIndex(Expr.Index index) {
-        Type receiver = index.receiver.type == null ? null : index.receiver.type.nonNull();
-        if (receiver == NativeType.STRING) {
-            return "java.lang.String.valueOf(" + emitExpr(index.receiver)
-                    + ".charAt(sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(index.index) + ")))";
+        return emitIndexOn(index.receiver, index.index);
+    }
+
+    private String emitSubscript(Expr.Subscript subscript) {
+        Expr index = subscript.index != null ? subscript.index : subscript.resolvedIndex;
+        if (index == null) {
+            // A generic application has no standalone Java value; calls and
+            // case accesses are emitted by their parents.
+            return "null";
         }
-        return emitExpr(index.receiver) + ".get(" + emitExpr(index.index) + ")";
+        return emitIndexOn(subscript.base, index);
+    }
+
+    private String emitIndexOn(Expr receiverExpr, Expr indexExpr) {
+        Type receiver = receiverExpr.type == null ? null : receiverExpr.type.nonNull();
+        if (receiver == NativeType.STRING) {
+            return "java.lang.String.valueOf(" + emitExpr(receiverExpr)
+                    + ".charAt(sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(indexExpr) + ")))";
+        }
+        return emitExpr(receiverExpr) + ".get(" + emitExpr(indexExpr) + ")";
     }
 
     private String emitUnary(Expr.Unary unary) {
@@ -1135,14 +1179,19 @@ public final class JavaGenerator {
         switch (resolved.kind) {
             case FUNCTION:
             case MODULE_FUNCTION:
-                return fnCall(resolved.symbol.module, fnName(resolved.methodDecl), call);
+                return finishGenericCall(resolved,
+                        fnCall(resolved.symbol.module, fnName(resolved.methodDecl), call));
             case METHOD: {
                 Decl.Func func = resolved.methodDecl;
                 String receiver = thisRef();
                 if (call.callee instanceof Expr.FieldAccess access) {
                     receiver = emitExpr(access.receiver);
                 }
-                return receiver + "." + mangle(func.name) + "(" + positionalArgs(call) + ")";
+                String args = resolved.substitution.isEmpty()
+                        ? positionalArgs(call)
+                        : positionalArgsFor(call, func.params);
+                return finishGenericCall(resolved,
+                        receiver + "." + mangle(func.name) + "(" + args + ")");
             }
             case CLASS_CTOR:
                 return "new " + typeNames.get(resolved.classDecl) + "(" + ctorArgs(resolved, call) + ")";
@@ -1153,7 +1202,12 @@ public final class JavaGenerator {
                         sb.append(", ");
                     }
                     Decl.Field field = resolved.variantCase.fields.get(i);
-                    sb.append(namedArg(call, field.name, null));
+                    Expr value = findNamedArg(call, field.name);
+                    if (value == null) {
+                        sb.append(field.name).append("$missing");
+                    } else {
+                        sb.append(genericArgument(value, field.type));
+                    }
                 }
                 return sb.append(')').toString();
             }
@@ -1196,6 +1250,145 @@ public final class JavaGenerator {
         return moduleClassName(module) + "." + name + "(" + positionalArgs(call) + ")";
     }
 
+    // ------------------------------------------------------------------
+    // v0.8 generics: erased and boxed
+    // ------------------------------------------------------------------
+
+    /** Unboxes a generic (Object-typed) call result back to the Sprig type. */
+    private String finishGenericCall(ResolvedCall resolved, String code) {
+        Decl.Func func = resolved.methodDecl;
+        if (func != null && !resolved.substitution.isEmpty()
+                && containsTypeParameter(func.returnType)) {
+            return unboxGeneric(code, resolved.returnType);
+        }
+        return code;
+    }
+
+    private String positionalArgsFor(Expr.Call call, List<Decl.Param> params) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < call.args.size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            Expr value = call.args.get(i).value;
+            Type declared = i < params.size() ? params.get(i).type : null;
+            sb.append(genericArgument(value, declared));
+        }
+        return sb.toString();
+    }
+
+    /** Boxes when the declared (generic) parameter slot is erased to Object. */
+    private String genericArgument(Expr value, Type declared) {
+        if (declared != null && containsTypeParameter(declared)) {
+            return boxedExpression(value);
+        }
+        return emitExpr(value);
+    }
+
+    private String boxedExpression(Expr value) {
+        String code = emitExpr(value);
+        Type type = value.type;
+        if (type == null || type.isNullable()) {
+            return code;
+        }
+        Type base = type.nonNull();
+        if (base == NativeType.INT) {
+            return "java.lang.Long.valueOf(" + code + ")";
+        }
+        if (base == NativeType.INT32) {
+            return "java.lang.Integer.valueOf(" + code + ")";
+        }
+        if (base == NativeType.FLOAT) {
+            return "java.lang.Double.valueOf(" + code + ")";
+        }
+        if (base == NativeType.FLOAT32) {
+            return "java.lang.Float.valueOf(" + code + ")";
+        }
+        if (base == NativeType.BOOL) {
+            return "java.lang.Boolean.valueOf(" + code + ")";
+        }
+        return code;
+    }
+
+    private String unboxGeneric(String code, Type concrete) {
+        if (concrete == null || concrete == NativeType.ERROR || concrete == NativeType.NULL) {
+            return code;
+        }
+        Type base = concrete.nonNull();
+        boolean nullable = concrete.isNullable();
+        if (base == NativeType.INT) {
+            return nullable ? "((java.lang.Long) " + code + ")"
+                    : "((java.lang.Long) " + code + ").longValue()";
+        }
+        if (base == NativeType.INT32) {
+            return nullable ? "((java.lang.Integer) " + code + ")"
+                    : "((java.lang.Integer) " + code + ").intValue()";
+        }
+        if (base == NativeType.FLOAT) {
+            return nullable ? "((java.lang.Double) " + code + ")"
+                    : "((java.lang.Double) " + code + ").doubleValue()";
+        }
+        if (base == NativeType.FLOAT32) {
+            return nullable ? "((java.lang.Float) " + code + ")"
+                    : "((java.lang.Float) " + code + ").floatValue()";
+        }
+        if (base == NativeType.BOOL) {
+            return nullable ? "((java.lang.Boolean) " + code + ")"
+                    : "((java.lang.Boolean) " + code + ").booleanValue()";
+        }
+        if (base == NativeType.STRING) {
+            return "((java.lang.String) " + code + ")";
+        }
+        if (base == NativeType.BIGINT) {
+            return "((sprig.runtime.SprigBigInt) " + code + ")";
+        }
+        if (base == NativeType.DECIMAL) {
+            return "((sprig.runtime.SprigDecimal) " + code + ")";
+        }
+        return "(" + javaType(concrete) + ") (" + code + ")";
+    }
+
+    private static boolean containsTypeParameter(Type type) {
+        if (type == null) {
+            return false;
+        }
+        if (type instanceof TypeParameterType) {
+            return true;
+        }
+        if (type instanceof NullableType nullable) {
+            return containsTypeParameter(nullable.inner);
+        }
+        if (type instanceof ListType list) {
+            return containsTypeParameter(list.element);
+        }
+        if (type instanceof MapType map) {
+            return containsTypeParameter(map.key) || containsTypeParameter(map.value);
+        }
+        if (type instanceof ClassType classType) {
+            return classType.args.stream().anyMatch(JavaGenerator::containsTypeParameter);
+        }
+        if (type instanceof VariantType variantType) {
+            return variantType.args.stream().anyMatch(JavaGenerator::containsTypeParameter);
+        }
+        if (type instanceof VariantCaseType caseType) {
+            return caseType.variantArgs.stream().anyMatch(JavaGenerator::containsTypeParameter);
+        }
+        if (type instanceof FunctionType function) {
+            return function.params.stream().anyMatch(JavaGenerator::containsTypeParameter)
+                    || containsTypeParameter(function.result);
+        }
+        return false;
+    }
+
+    private static Expr findNamedArg(Expr.Call call, String fieldName) {
+        for (Expr.Arg arg : call.args) {
+            if (arg.name != null && arg.name.equals(fieldName)) {
+                return arg.value;
+            }
+        }
+        return null;
+    }
+
     private String positionalArgs(Expr.Call call) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < call.args.size(); i++) {
@@ -1215,7 +1408,14 @@ public final class JavaGenerator {
                 sb.append(", ");
             }
             first = false;
-            sb.append(namedArg(call, field.name, field.defaultExpr));
+            Expr value = findNamedArg(call, field.name);
+            if (value != null) {
+                sb.append(genericArgument(value, field.type));
+            } else if (field.defaultExpr != null) {
+                sb.append(genericArgument(field.defaultExpr, field.type));
+            } else {
+                sb.append(field.name).append("$missing");
+            }
         }
         return sb.toString();
     }

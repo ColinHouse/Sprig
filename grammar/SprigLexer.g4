@@ -4,6 +4,7 @@ lexer grammar SprigLexer;
 
 tokens { INDENT, DEDENT }
 
+GENERIC: 'generic';
 CLASS: 'class';
 ENUM: 'enum';
 VARIANT: 'variant';
@@ -30,6 +31,7 @@ CATCH: 'catch';
 FINALLY: 'finally';
 THROW: 'throw';
 THROWS: 'throws';
+REQUIRES: 'requires';
 AND: 'and';
 OR: 'or';
 NOT: 'not';

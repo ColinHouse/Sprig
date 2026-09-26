@@ -1,11 +1,40 @@
 {
-  "feature.variants": ["tests/runtime/05_variants.spr", "tests/visitor/ast_visitor.spr"],
-  "feature.matchStatement": ["tests/visitor/ast_visitor.spr", "tests/visitor/nonexhaustive.spr"],
-  "feature.matchExpression": ["tests/syntax/negative/05_invalid_match_default.spr"],
-  "feature.userGenerics": ["tests/review_cases/fake_generic.spr"],
-  "feature.nullableTypes": ["tests/runtime/07_nullable.spr", "tests/semantics/nullable_receiver.spr"],
-  "feature.thirdPartyClasspath": ["tests/agent_tooling/check_tooling.py#classpath-check"],
-  "feature.sourceModules": ["tests/runtime/12_modules.spr"],
-  "feature.jsonDiagnostics": ["tests/semantics/missing_case.spr"],
-  "lambdaMaxArity": ["tests/runtime/10_lambdas.spr", "tests/runtime/18_lambda_zero_arg.spr"]
+  "feature.variants": [
+    "tests/runtime/05_variants.spr",
+    "tests/visitor/ast_visitor.spr"
+  ],
+  "feature.matchStatement": [
+    "tests/visitor/ast_visitor.spr",
+    "tests/visitor/nonexhaustive.spr"
+  ],
+  "feature.matchExpression": [
+    "tests/syntax/negative/05_invalid_match_default.spr"
+  ],
+  "feature.userGenerics": [
+    "tests/runtime/19_generics.spr",
+    "tests/semantics/generic_inference.spr"
+  ],
+  "feature.nullableTypes": [
+    "tests/runtime/07_nullable.spr",
+    "tests/semantics/nullable_receiver.spr"
+  ],
+  "feature.thirdPartyClasspath": [
+    "tests/agent_tooling/check_tooling.py#classpath-check"
+  ],
+  "feature.sourceModules": [
+    "tests/runtime/12_modules.spr"
+  ],
+  "feature.jsonDiagnostics": [
+    "tests/semantics/missing_case.spr"
+  ],
+  "lambdaMaxArity": [
+    "tests/runtime/10_lambdas.spr",
+    "tests/runtime/18_lambda_zero_arg.spr"
+  ],
+  "feature.genericConstraints": [
+    "tests/semantics/generic_constraint.spr"
+  ],
+  "feature.genericTypeInference": [
+    "tests/semantics/generic_inference.spr"
+  ]
 }
