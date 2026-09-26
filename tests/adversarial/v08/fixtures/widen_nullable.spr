@@ -1,0 +1,28 @@
+var calls: Int = 0
+func next() -> Int32?:
+    calls += 1
+    let n: Int32 = 7
+    return n
+func wide(n: Int32?) -> Int?:
+    return n
+func consume(n: Int?) -> Unit:
+    print(n)
+let n: Int32? = next()
+let wideN: Int? = n
+print(wideN)
+var again: Int? = null
+again = n
+print(again)
+print(wide(n))
+consume(n)
+let absent: Int32? = null
+consume(absent)
+let once: Int? = next()
+print(once)
+print(calls)
+let f: Float32? = 1.5
+let wideF: Float? = f
+print(wideF)
+let absentF: Float32? = null
+let nullF: Float? = absentF
+print(nullF)

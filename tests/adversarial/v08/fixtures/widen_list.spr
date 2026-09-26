@@ -1,0 +1,14 @@
+let n: Int32 = 7
+let xs: MutableList[Int] = [n]
+xs.append(n)
+xs.insert(0,n)
+xs.set(1,n)
+xs[2] = n
+print(xs)
+print(xs.contains(n))
+print(xs.indexOf(n))
+print(xs.remove(n))
+print(xs)
+let f: Float32 = 1.5
+let fs: List[Float] = [f]
+print(fs.get(0))

@@ -182,5 +182,49 @@
   {
     "name": "generic_discard",
     "output": "once\n0\n"
+  },
+  {
+    "name": "widen_generic",
+    "output": "7\n7\n7\n7\n1.5\n1.5\n"
+  },
+  {
+    "name": "widen_variant",
+    "output": "7\n"
+  },
+  {
+    "name": "widen_nullable",
+    "output": "7\n7\n7\n7\nnull\n7\n2\n1.5\nnull\n"
+  },
+  {
+    "name": "widen_nullable_generic",
+    "output": "7\nnull\n7\n1.5\n"
+  },
+  {
+    "name": "widen_list",
+    "output": "[7, 7, 7]\ntrue\n0\ntrue\n[7, 7]\n1.5\n"
+  },
+  {
+    "name": "widen_map",
+    "output": "7\ntrue\n1\n1\n7\n7\n7\n0\n1.5\n"
+  },
+  {
+    "name": "widen_calls",
+    "output": "7\n7\n7\n7\n7\n"
+  },
+  {
+    "name": "widen_map_literal",
+    "output": "8\n"
+  },
+  {
+    "name": "widen_list_lookup",
+    "output": "true\n0\ntrue\n0\n"
+  },
+  {
+    "name": "widen_nullable_collections",
+    "output": "[7, 7, 7]\n1.5\n[1.5, null]\n"
+  },
+  {
+    "name": "widen_boundaries",
+    "output": "2147483647\n-2147483648\n-Infinity\ntrue\ntrue\n"
   }
 ]

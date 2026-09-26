@@ -1,0 +1,6 @@
+let n: Int32 = 7
+let data: MutableList[Int] = [7]
+print(data.contains(n))
+print(data.indexOf(n))
+print(data.remove(n))
+print(data.size())

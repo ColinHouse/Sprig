@@ -1,0 +1,15 @@
+generic T:
+    class Box:
+        var value: T
+generic T:
+    func identity(x: T) -> T:
+        return x
+let n: Int32? = 7
+let absent: Int32? = null
+let b = Box[Int?](value=n)
+print(b.value)
+b.value = absent
+print(b.value)
+print(identity[Int?](n))
+let f: Float32? = 1.5
+print(Box[Float?](value=f).value)
