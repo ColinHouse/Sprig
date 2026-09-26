@@ -170,6 +170,13 @@ else
   fail "project model regressions"
 fi
 
+echo "== 16. dependency resolver (local, exports, lockfile, Git SHA lock, offline) =="
+if python3 "$ROOT/tests/project_deps/check_deps.py"; then
+  PASS=$((PASS + 1))
+else
+  fail "dependency resolver regressions"
+fi
+
 echo
 echo "== summary: $PASS passed, $FAIL failed =="
 if [[ $FAIL -gt 0 ]]; then

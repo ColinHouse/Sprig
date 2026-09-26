@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""v0.8 project discovery, sprig.toml and default-entry behavior."""
+"""v0.8 project model: discovery, sprig.toml, default entry, lock requirement."""
 import json
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -31,8 +30,8 @@ def main():
 
         init = run(work, "init")
         check("init-creates", init.returncode == 0
-              and (work / "sprig.toml").is_file() and (work / "src/main.spr").is_file(),
-              init.stderr)
+              and (work / "sprig.toml").is_file() and (work / "src/main.spr").is_file()
+              and "sprig resolve" in init.stdout, init.stdout + init.stderr)
         manifest_text = (work / "sprig.toml").read_text()
         check("init-manifest", 'name = "app"' in manifest_text
               and 'language = "0.8"' in manifest_text)
@@ -41,12 +40,23 @@ def main():
         check("init-refuses-overwrite", again.returncode == 2
               and "Refusing to overwrite" in again.stderr)
 
+        locked = run(work, "run")
+        check("lock-required-before-resolve", locked.returncode == 1
+              and "SPR-PROJECT-LOCK-MISSING" in locked.stdout + locked.stderr,
+              locked.stdout + locked.stderr)
+
+        resolve = run(work, "resolve")
+        check("resolve-creates-lock", resolve.returncode == 0
+              and (work / "sprig.lock").is_file(), resolve.stdout + resolve.stderr)
+        first = (work / "sprig.lock").read_text()
+        run(work, "resolve")
+        check("lock-deterministic", first == (work / "sprig.lock").read_text())
+
         project = run(work, "project", "--json")
         data = json.loads(project.stdout)["project"]
         check("project-json", project.returncode == 0 and data["name"] == "app"
               and data["source"] == "src" and data["entry"] == "src/main.spr"
-              and data["lockStatus"] == "absent"
-              and data["dependencyResolution"] == "not-needed", project.stdout + project.stderr)
+              and data["lockStatus"] == "current", project.stdout + project.stderr)
 
         default_run = run(work, "run")
         check("project-run-default-entry", default_run.returncode == 0
@@ -66,7 +76,12 @@ def main():
         (work / "sprig.toml").write_text(
             '[project]\nname = "app"\nversion = "0.1.0"\nlanguage = "0.8"\n\n'
             '[[bin]]\nname = "server"\nentry = "src/server.spr"\n')
+        stale = run(work, "run")
+        check("stale-lock-rejected", stale.returncode == 1
+              and "SPR-PROJECT-LOCK-STALE" in stale.stdout + stale.stderr,
+              stale.stdout + stale.stderr)
         (work / "src" / "server.spr").write_text('print("server bin")\n')
+        run(work, "resolve")
         server = run(work, "run", "--bin", "server")
         check("bin-selection", server.returncode == 0
               and server.stdout == "server bin\n", server.stdout + server.stderr)
@@ -74,23 +89,16 @@ def main():
         check("unknown-bin", unknown.returncode == 1
               and "SPR-PROJECT-ENTRY" in unknown.stdout + unknown.stderr)
 
-        (work / "sprig.toml").write_text('[project]\nname = "app"\n\n[[dependency]]\n'
-                                         'name = "math"\npath = "../math"\n')
         deps = run(work, "deps", "--json")
         deps_data = json.loads(deps.stdout)
-        check("deps-unresolved-honest", deps.returncode == 2
-              and deps_data["sprigDependencies"][0]["resolved"] is False
-              and any(d["code"] == "SPR-PROJECT-UNSUPPORTED"
-                      for d in deps_data["diagnostics"]), deps.stdout + deps.stderr)
-        deps_text = run(work, "deps")
-        check("deps-text", deps_text.returncode == 2 and "unresolved" in deps_text.stdout)
+        check("deps-empty-resolved", deps.returncode == 0
+              and deps_data["sprigDependencies"] == [], deps.stdout + deps.stderr)
 
-        empty = Path(temp) / "empty"
-        empty.mkdir()
-        (empty / "sprig.toml").write_text('[project]\nname = "empty"\n')
-        empty_deps = run(empty, "deps", "--json")
-        check("deps-empty", empty_deps.returncode == 0
-              and json.loads(empty_deps.stdout)["sprigDependencies"] == [])
+        (work / "sprig.toml").write_text('[project]\nname = "app"\n\n[[jvm]]\n'
+                                         'group = "g"\nartifact = "a"\nversion = "1.0"\n')
+        jvm = run(work, "resolve")
+        check("jvm-dependency-blocked-clearly", jvm.returncode == 1
+              and "SPR-DEP-MAVEN" in jvm.stdout + jvm.stderr, jvm.stdout + jvm.stderr)
 
         (work / "sprig.toml").write_text('[project]\nname = \n')
         broken = run(work, "project")
@@ -103,6 +111,12 @@ def main():
         missing = run(outside, "project")
         check("project-outside", missing.returncode == 2
               and "No sprig.toml" in missing.stderr, missing.stdout + missing.stderr)
+
+        single = outside / "single.spr"
+        single.write_text('print("single")\n')
+        single_run = run(outside, "run", str(single))
+        check("single-file-no-lock", single_run.returncode == 0
+              and single_run.stdout == "single\n", single_run.stdout + single_run.stderr)
 
     print(f"project model: {CHECKS} checks passed")
     return 0

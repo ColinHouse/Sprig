@@ -55,23 +55,38 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-## Dependencies (not implemented yet)
+## Dependencies
 
-The manifest accepts dependency declarations, and `sprig deps --json` lists
-them honestly:
+Local and Git Sprig dependencies resolve for real. Edit `sprig.toml`, then run
+`sprig resolve`:
 
 ```toml
 [[dependency]]
 name = "math"
 path = "../math"
-
-[[jvm]]
-group = "com.fasterxml.jackson.core"
-artifact = "jackson-databind"
-version = "2.18.4"
 ```
 
-Dependency resolution, `sprig.lock`, offline caches and `@name/...` imports
-are **not implemented**. `sprig deps` reports
-`SPR-PROJECT-UNSUPPORTED` with `resolved: false`; use `--classpath` for JVM
-jars today. See [Known limitations](/en/reference/KNOWN_LIMITATIONS).
+```toml
+[[dependency]]
+name = "math"
+git = "https://example.com/math.git"
+branch = "main"
+```
+
+- `name` is the package-local import alias; the dependency's own
+  `[project] name` is separate identity metadata.
+- `sprig resolve` writes a deterministic `sprig.lock` (commit it). `check`,
+  `build` and `run` refuse a missing or stale lock and never move a Git branch
+  themselves — only `resolve` does.
+- A Git dependency is locked to an exact commit SHA; a later branch move does
+  not change a locked build.
+- Import exported modules with `import "@math/vector.spr" as vector`. Only
+  modules listed in the dependency's `exports` are importable; paths are
+  canonicalized and cannot escape the dependency source root.
+- `--offline` uses the Git cache only (`~/.sprig/git`); a missing cached
+  revision fails with `SPR-DEP-OFFLINE`.
+- Cycles and duplicate aliases are rejected with structured diagnostics.
+
+**Maven/JVM dependencies are not implemented**: declaring `[[jvm]]` fails with
+`SPR-DEP-MAVEN`, and third-party jars still need explicit `--classpath`. See
+[Known limitations](/en/reference/KNOWN_LIMITATIONS).
