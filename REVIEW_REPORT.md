@@ -10,10 +10,10 @@
 
 | 对象 | 精确身份 / 证据用途 |
 |---|---|
-| v0.7 / alpha.2 对照基线 | `e354969`（前一轮独立审查后的报告提交；正确性修复在 `d1ca3f5`） |
+| v0.7 / alpha.2 对照基线 | `e354969de99fa57a9cbbba80084c04833118d316`（前一轮独立审查后的报告提交；正确性修复在 `d1ca3f5ba17dbfe031470e3a0aa69255279fa49b`） |
 | 初始候选 | `283702d9cc338112429b02b84d3c6fdb2bff6455` |
 | 初始候选对应 main | `cb2b4e7e27c44e47b834b9866f4ae8a72f75a538`，两者 tree 均为 `c9cf3e97160f726f17ad688ba3ab6ac17687f725` |
-| 本轮最终修复代码提交 | `6732029f484081c4d1eb82820767e8d9dbe5588a`（泛型/项目修复 `9f3d266`，init 边界 `d4869e2`，诊断文案 `6732029`） |
+| 本轮最终修复代码提交 | `7f0099e27c11693765c31f77229dcf40feea0be8`（泛型/项目 `9f3d266`，init `d4869e2`，诊断 `6732029`，安全扩宽 `2eb1c2f`，复合赋值 `f4e5f02`，membership `7f0099e`） |
 | 当前元数据 | compiler `0.2.0-alpha.1`，language `0.8-dev`；最近已发布版本仍为 `v0.1.0-alpha.1` |
 
 已读取 frozen v0.7 spec、当前 grammar、泛型契约、数值契约、JVM 文档、项目说明、
@@ -25,8 +25,10 @@ capability catalog、Agent guide、release draft、实现报告及相关源码�
 - **发布要求**：所有者此次要求的依赖解析、锁定及 stage-1 集成比现有实现契约更广。
   能诚实声明“不支持”，不代表已经满足这些发布要求。
 
-修复没有改变数字语法、整数/浮点/Decimal 运行时、JVM metadata 实现或 v0.7
-集合可变性契约。grammar 中 v0.8 增量为 generic/requires、扩展 variant payload 和
+修复没有改变数字语法、整数/浮点/Decimal 运算规则、JVM metadata 实现或 v0.7
+集合可变性契约。运行时新增两个内部可空安全扩宽适配器，保留 null 并保证一次求值；
+后端现在按已检查的目标类型扩宽，再使用 Long/Double 装箱。这是落实已有规则，
+不是新增隐式有损转换。grammar 中 v0.8 增量为 generic/requires、扩展 variant payload 和
 带类型候选的 postfix brackets；本轮修复不需要新增语法。
 
 ## 2. 发布阻塞项
@@ -54,6 +56,10 @@ SDK packaging 和 archive smoke。docs gate 通过 **18** 个 runnable snippets�
 - 泛型首轮 **40** 程序、**209** 截断前缀，**16** 失败，测试进程 exit 1。
 - 清单首轮 **23** 场景，**23** 失败，测试进程 exit 1。
 - 普通跨模块 variant 构造由独立 SDK Agent 发现并由审查侧复现。
+- 后续已通过全部旧 gates 的 `6732029` 仍在合法 Int32→Int 泛型组合中出现
+  `ClassCastException`；List 查找静默错误、Map 字面量键静默不匹配、可空扩宽 javac
+  拒绝也均已复现。SDK-only `2eb1c2f` 复测独立发现 `in` 的扩宽遗漏。
+  这说明旧的全绿结果不能代替新增组合测试或最终 SHA 的验收。
 
 ### 可复现命令
 
@@ -82,7 +88,7 @@ bin/sprig run tests/adversarial/v08/fixtures/generic_recursive_visitor.spr --jso
 
 ### 最终修复提交的实际结果
 
-以下结果均对应代码 SHA `6732029f484081c4d1eb82820767e8d9dbe5588a`。
+以下结果均对应代码 SHA `7f0099e27c11693765c31f77229dcf40feea0be8`。
 本地两个 worktree 构建结束后 `git status --porcelain` 均为空。
 
 | Gate | JDK 17.0.19 | JDK 26.0.1 |
@@ -97,13 +103,13 @@ bin/sprig run tests/adversarial/v08/fixtures/generic_recursive_visitor.spr --jso
 | CLI contract | 19 个 rejected-option 案例及端到端契约通过 | 同样通过 |
 | Stage-1 frontend probe | check/javac/JVM golden、malformed ranges、case evolution 通过 | 同样通过 |
 | Project 原套件 | 14/14 | 14/14 |
-| 新泛型对抗测试 | 46 个程序、209 个 prefixes，0 failure | 同样通过 |
+| 新泛型对抗测试 | 60 个程序、209 个 prefixes，0 failure | 同样通过 |
 | 新清单/项目/init 对抗测试 | 31 个场景，0 failure | 同样通过 |
 | 独立 grammar harness | 24/24，syntax-only | 24/24，syntax-only |
 | Clean package + SDK smoke | 通过 | 通过 |
 
 最终代码的 docs gate：18/18 snippets、tooling/version consistency、VitePress 全部通过。
-同 SHA 的 [hosted CI #36231451322](https://github.com/ColinHouse/Sprig/actions/runs/36231451322)
+同 SHA 的 [hosted CI #36233522993](https://github.com/ColinHouse/Sprig/actions/runs/36233522993)
 中 JDK 17、JDK 26、Documentation site 全部 success；两项 JDK job 都包含完整测试、
 grammar harness、package 和 SDK archive smoke，已经核对 job logs 的真实计数。
 
@@ -111,9 +117,9 @@ grammar harness、package 和 SDK archive smoke，已经核对 job logs 的真�
 
 SDK-only 最终盲测使用独立 clean JDK17 checkout 打包的 archive：
 
-- source revision：`6732029`，BUILD_INFO 明确 `Working tree clean: yes`。
-- ZIP SHA-256：`9a4a8a4ed827321308cf6a2a3339d542786ec427d274d01a3b3c022287f7d7a4`。
-- compiler JAR SHA-256：`5f147ea558fd0c86cc115e1c4bedebb151abe03f4124580f2a55f38799da1ce5`。
+- source revision：`7f0099e`，BUILD_INFO 明确 `Working tree clean: yes`。
+- ZIP SHA-256：`e69aa46ce49c9d91648a846549c766ab1428b71ef5f8e2dd1b4a8a2e33d9536d`。
+- compiler JAR SHA-256：`78e51beb3b4a939410eb7c407bf81253f4ea39ee42ee1a5f58c7154423cceafc`。
 - ANTLR JAR SHA-256：`eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76`。
 
 已实际核验 generic/project/dependency docs、README/AGENT_GUIDE、license/notice、examples、
@@ -129,12 +135,12 @@ CLI、JSON 和 consistency matrix 分别验证不同阶段；JVM 执行采用真
 
 ## 4. 已修复的重要发现
 
-所有位置是 `compiler/src/main/java/sprig/compiler/` 下的相关方法；最小用例在 `tests/adversarial/v08/fixtures/`，
+除另注明的 runtime 文件外，源码位置是 `compiler/src/main/java/sprig/compiler/` 下的相关方法；最小用例在 `tests/adversarial/v08/fixtures/`，
 预期诊断与输出在 `cases.json`，未删除或放宽原测试断言。关键位置可直接查看
 [assignability](compiler/src/main/java/sprig/compiler/sem/Semantics.java#L42)、
-[common type](compiler/src/main/java/sprig/compiler/sem/TypeChecker.java#L1568)、
+[common type](compiler/src/main/java/sprig/compiler/sem/TypeChecker.java#L1548)、
 [generic instantiation](compiler/src/main/java/sprig/compiler/sem/TypeRefResolver.java#L226)、
-[Java lowering](compiler/src/main/java/sprig/compiler/gen/JavaGenerator.java#L1334) 和
+[Java lowering](compiler/src/main/java/sprig/compiler/gen/JavaGenerator.java#L1351) 和
 [project CLI](compiler/src/main/java/sprig/compiler/cli/Main.java#L408)。
 
 | 级别 | 发现与修复 | 最小复现 / 原失败阶段 | 源码定位 |
@@ -145,6 +151,10 @@ CLI、JSON 和 consistency matrix 分别验证不同阶段；JVM 执行采用真
 | P0 | generic 返回容器的 Java cast 分组错误，索引时 cast 落到元素上 | `call_index.spr`；原运行 Long→SprigList `ClassCastException`；现输出 `2` | `gen/JavaGenerator.java:unboxGeneric` |
 | P0 | 泛型函数内 `size[T](...)` 被 name resolver 当作索引，把 T 当运行时变量 | `generic_recursive_visitor.spr`；原 `SPR-NAME-UNRESOLVED`；现递归遍历输出 `2` | `sem/NameResolver.java:resolveExpr(Subscript)` |
 | P0 | erased result cast 在被丢弃的表达式位置不是合法 Java statement；现以局部临时值保留一次求值 | `generic_discard.spr`；codegen/javac。完整重跑也防止临时变量使用不可访问 JDK bridge 返回类型，采用 Java `var` | `gen/JavaGenerator.java:emitStmt` |
+| P0 | 安全数值扩宽后仍按源类型装箱，generic Int/Float slot 混入 Integer/Float；按 substituted target type 扩宽后装箱 | `widen_generic/variant/nullable_generic.spr`；原运行 Integer→Long cast 失败 | `gen/JavaGenerator.java:genericArgument/convertedExpression` |
+| P0 | List 查找/删除、Map 字面量键及 `in` 未统一装箱，静默 false/-1/missing；现与插入使用相同目标类型 | `widen_list_lookup.spr`、`widen_map_literal.spr`、`widen_membership.spr`；原 exit 0 但结果错误，Map membership 还触发 javac 拒绝 | `gen/JavaGenerator.java:emitListLit/emitMapLit/emitBuiltinMethod/emitBinary` |
+| P1 | 已接受的可空数值、普通参数/返回、集合插入及索引没有落实安全扩宽 | `widen_nullable/calls/list/map/nullable_collections.spr`；原 check 0、javac 失败；现 null 保留，一次求值 | `gen/JavaGenerator.java:convertedExpression`、`runtime/NumericOps.java:widenInt32Nullable/widenFloat32Nullable` |
+| P1 | generic 字段复合赋值读取 Object 未拆箱，javac 拒绝；现按具体字段类型读回再 checked arithmetic | `generic_compound_assignment.spr`；索引接收者调用计数为 1；`generic_compound_overflow.spr` 仍实际抛 Int addition overflow，无 unreachable 输出 | `gen/JavaGenerator.java:emitAssign/unboxGeneric` |
 | P1 | Practical Strict nullable rule 只扫描已经解析的顶层 signature，漏掉 forward、nested、local、indirect use | `generic_nullable_forward/nested/local/indirect/call.spr`；原静态接受，现 `SPR-TYPE-GENERIC-NULLABLE` | `sem/TypeRefResolver.java:resolveArguments/declaredRefs` |
 | P1 | substitution 后的 nested `Map[K,V]` 未重新验证 numeric key 禁令 | `generic_map_float_nested.spr`；原静态接受，现数值诊断 | `sem/TypeRefResolver.java:resolveArguments` |
 | P1 | late/nested `requires` 授予能力，违背 leading-clause 契约 | `constraint_late/nested.spr`；现 `SPR-GENERIC-CONSTRAINT`，不授予 equality | `sem/TypeChecker.java:checkFunction/checkRequires` |
@@ -191,6 +201,52 @@ print(head[Int]([[42]]))
 不能当作 compiler bug。最终源程序显式 `.toList()`，继续检查 generic variant 的实参推断；
 未放宽 List/MutableList 规则。
 
+### 数值组合的最小复现与修复
+
+```sprig
+generic T:
+    class Box:
+        var value: T
+let n: Int32 = 7
+let b = Box[Int](value=n)
+print(b.value)
+```
+
+`6732029` 的 check/build 成功，run exit 1，报 Integer→Long `ClassCastException`。
+最终版本 check/build/run 成功，输出 `7`。命令：
+
+```bash
+bin/sprig run tests/adversarial/v08/fixtures/widen_generic.spr --json
+bin/sprig run tests/adversarial/v08/fixtures/widen_list_lookup.spr --json
+bin/sprig run tests/adversarial/v08/fixtures/widen_map_literal.spr --json
+bin/sprig run tests/adversarial/v08/fixtures/widen_membership.spr --json
+bin/sprig run tests/adversarial/v08/fixtures/generic_compound_overflow.spr --json
+```
+
+另一个最小程序：
+
+```sprig
+let item: Int32 = 7
+let xs: List[Int] = [7]
+print(item in xs)
+```
+
+在 `2eb1c2f` 仍 check/build/run exit 0，却输出 `false`。
+独立 SDK Agent 发现后已复现；最终必须输出 `true`。
+`widen_list_lookup` 修复前输出 `false/-1/false/1`，修复后 `true/0/true/0`；
+`widen_map_literal` 原输出 `missing`，现必须 `8`，不是仅仅避免崩溃。
+
+新增 **14** 个 regression programs，覆盖 nullable null/value、Int32 最大/最小值、
+Float32 最大/最小正值、负零、generic class/function/variant、普通函数与 lambda 调用、
+List/Map 插入/索引/查找/成员判断、复合赋值和一次求值。溢出用例要求 check/build
+成功、runtime 明确失败且没有后续输出；没有降低原整数溢出检查。
+容器保持不变性，不做隐式批量复制；Int→Float 等有损转换继续静态拒绝。
+
+补充测试初稿曾使用不存在的 `mutable` 关键字和 grammar 不接受的 call-root lvalue；
+先按现有规范修正测试源码，再对旧 clean SDK 复现。修复中的 metadata receiver
+空类型回归也经已有 BigInt/Decimal fixture 发现并修复。迭代期间中止的旧 SHA 验证、
+正在重建 jar 时的失败和变更测试输入造成的 oracle mismatch 不计入最终通过结果。
+
 ## 5. 语言一致性、数值与 JVM 边界
 
 - explicit typed function signatures、named class/variant constructors、let rebinding 拒绝、
@@ -202,7 +258,7 @@ print(head[Int]([[42]]))
   equality；浮点 NaN 和 signed zero 案例通过，不把 boxed Java equality 当作数值契约。
 - Int 固定 64 位、Int32 固定 32 位、checked overflow、禁止整数 `/`、显式 `divTrunc`、
   checked/lossy conversions、IEEE Float/Float32 和 Decimal 规则保持原实现。
-  66 项 numeric suite 是实际重跑结果；类型安全并不证明算法稳定性、物理单位或任意科学结果。
+  66 项 numeric suite 与新增安全扩宽组合是实际重跑结果；类型安全并不证明算法稳定性、物理单位或任意科学结果。
 - Java generic collection 仍是 erased JVM boundary，不会自动伪造 `List[String]`；没有隐式
   collection adapter。本轮没有把手动下载 JAR 说成 Maven dependency resolution。
 - 既有 metadata safety 和实际 third-party classpath suite 重跑；JVM indexing 不初始化被查询类。
@@ -235,13 +291,13 @@ compile exit 1 契约纠正后重跑九条命令，保留原记录。这是测�
 manifest parse errors 补 URI/range；manifest
 跨记录语义错误目前仍指向 line 1，这是剩余 P2 诊断质量限制。
 
-最终复测针对上述 `6732029` clean SDK，由同一独立 Agent 重新执行：
+上一轮针对 `6732029` clean SDK 的复测（历史证据，不认证最终版本）：
 
 - **108** 条完整日志命令：89 exit 0、16 exit 1、3 exit 2。
 - 原有 **13** 个程序各自 check/build/run；新增 **4** 种特殊目录名 init 后各自
   check/build/run，合计 **17** 个程序的 **51** 个 phase 成功。
 - **5** 个静态反例及 **14** 个 dependency/API/classpath 预期非零结果保持拒绝。
-- 含 metadata/manifest/输出检查共 **93/93** 最终 verdict 匹配预期。
+- 含 metadata/manifest/输出检查共 **93/93** 当轮 verdict 匹配预期。
 - 普通跨模块 variant 不再需要 wrapper；Some/None/match、三参数 class/function、
   leading Equatable、nested generic collections 均实际执行成功。
 - newline、quote、backslash 和组合目录名精确 roundtrip；生成的可执行行与 Hello 模板
@@ -252,7 +308,40 @@ manifest parse errors 补 URI/range；manifest
 最终检查所有可执行行与模板完全相同并保持原 runtime 输出期望，保留初稿记录；
 不是修 SDK 或放宽实际执行行为。local/Git/Maven 的 unsupported 结果继续保留。
 
-该盲测结论不是“全任务通过”：local/Git/Maven resolution 仍不可用。
+### 最终 `7f0099e` SDK 盲测
+
+同一独立 Agent 只读取最终 SDK，执行 JDK 26.0.1；SDK 在 clean JDK 17.0.19 checkout
+构建，source/ZIP/JAR identity 均与第 3 节一致。本轮完整日志核对为：
+
+- **155** 条命令：126 exit 0、26 exit 1、3 exit 2。
+- **29** 个正常程序各自 check/build/run，**87** 个 phase 成功，所有 stdout 与独立参考匹配。
+- **14** 个静态/语法反例、**1** 个实际运行时 overflow、**14** 个 dependency/API/classpath
+  反例，共 **29** 次预期非零；没有非预期非零或正常程序错误输出。
+- **141** 个 checked outcomes：**139** 个符合原严格 oracle；**2** 个诊断码预期差异原样保留。
+  141 个行为结果符合预期包括“正确拒绝”，不能把它写成所有发布功能已实现。
+- 独立 scalar/nullable/collections effect counts 分别为 8/12/26；十个唯一 tag 的出现
+  次数及顺序匹配。Float32 0.1 的期望取自 Python struct binary32 pack/unpack，
+  不是复制编译器输出。Int32 最大值跨 Int 运算正确到 2147483648。
+- 原 membership 最小程序输出 true；方法和 `in` 对照输出四个 true。
+  generic compound 每步分别核对 receiver/RHS 计数 1…5，结果 42/40/80/1.75/0.875。
+  overflow 实际抛 NumericError，receiver/RHS 各打印一次，后续 marker 不执行。
+  审查侧又独立执行这两个 compound/overflow 输入，确认参考结果。
+- 四种特殊目录名仍精确 roundtrip、check/build/run 通过；SDK 未修改。
+
+`2eb1c2f` 的 **143** 条历史盲测命令及 membership 的 check/javac/runtime 不一致
+保留为失败证据，未用控制程序替换原失败输入；最终重跑的是相同原程序。
+
+**剩余 P2 诊断限制**：Int?→Float? 正确拒绝，但返回 `SPR-TYPE-NULLABLE` 并建议先判空，
+没有清楚指出有损数值转换风险；List[Int32]→List[Int] 返回 `SPR-TYPE-ASSIGN`，
+而测试初稿猜测 `SPR-TYPE-MISMATCH`。后者 expected/actual 正确，属于测试代码 oracle
+偏差；前者提示需改进。两项不是严格 oracle 全通过，未悄悄修改原判定标志。
+Java 生成错误有时回映射到下一条语句，runtime 数值错误 range 仍为 null；
+不能声称所有失败都已有精确源码位置。
+
+该盲测结论不是“全任务通过”：local/Git/Maven resolution、锁定/offline、project API
+自动 classpath 仍不可用。手工指定相同 JAR 路径的 api/check/build/run 成功只证明
+显式 classpath 互操作，不证明 Maven resolver。
+
 
 ## 7. 50 项发布要求的覆盖和未完成项
 
@@ -268,7 +357,7 @@ manifest parse errors 补 URI/range；manifest
 | 36–37 | 阅读并运行原 stage-1 frontend probe 和 Stack/Table 实验；递归 generic Visitor 实测；项目集成缺口仍阻塞 |
 | 38–40 | 初轮与最终 SDK 盲测、clean packaging、内容/版本审计；language 仍 0.8-dev，禁止只改 metadata 过关 |
 | 41–43 | P0/P1 修复与严格 regressions；原测试断言保留；最终完整重跑 |
-| 44 | 最终代码 SHA 的 [CI](https://github.com/ColinHouse/Sprig/actions/runs/36231451322) 三项全部 success；交付报告提交的 exact HEAD checks 见 [PR #9 Checks](https://github.com/ColinHouse/Sprig/pull/9/checks)，需另行核对，不能用父提交绿灯代替 |
+| 44 | 最终代码 SHA 的 [CI](https://github.com/ColinHouse/Sprig/actions/runs/36233522993) 三项全部 success；交付报告提交的 exact HEAD checks 见 [PR #9 Checks](https://github.com/ColinHouse/Sprig/pull/9/checks)，交付时另行核对，不能用父提交绿灯代替 |
 | 45–50 | 本报告判定 NOT READY；发布条件不满足，没有 tag/prerelease，也没有 post-release verification 的成功声明 |
 
 ## 8. 架构与自举判断
@@ -281,7 +370,7 @@ ANTLR 负责词法/语法，grammar 没有塞入核心语义 action。前端生�
 重复的类型解析应继续归并到 TypeRefResolver/Substitution 的规则入口；这轮已把 forward、
 nested 和 instantiated annotations 放到同一校验入口，并在副本上解析，避免覆盖模板类型。
 Java raw erasure 仍使 result adaptation 容易遗漏；下一轮应继续审查更多 composition，
-不能把现有 46 案例视为所有 generic 程序的完备证明。
+不能把现有 60 案例视为所有 generic 程序的完备证明。
 
 Sprig 有递归函数、closed variants/match、typed collections、字符串/字符相关 API、JVM
 文件及进程服务，具备逐步写 lexer/parser/AST/symbol-table 的表达能力。单文件 frontend
@@ -301,7 +390,8 @@ probe 和本轮递归 Tree Visitor 是真实起点；Stack[T]/Table[K,V] 能减�
    classpath，验证无 plugin/hook 执行和不初始化 metadata 类。
 4. 将 Sprig frontend probe 拆成真实 stage-1 项目，用一/二/三参数抽象只解决实际重复，
    保留 Java host 的 filesystem/JVM/platform 服务边界。
-5. 补 manifest record-level 诊断位置和 SDK composition examples，再进行 SDK-only 盲测。
+5. 补 manifest record-level 诊断位置、generated Java 回映射精度、运行时源码位置和
+   nullable 数值错误的准确 code/hint；用 SDK composition examples 再做独立盲测。
    必须重新确认 exact final SHA 的双 JDK/docs/package hosted gates 后才可发布。
 
 无 inference、variance、Comparable、interfaces/traits、registry、LSP 或 implicit Java
@@ -309,7 +399,7 @@ collection conversion 属公开的当前限制；本轮不强行添加。未验�
 完整泛型正确性证明、依赖安全性和完整 self-hosting 均不在通过结论内。
 
 交付入口：[草稿 PR #9](https://github.com/ColinHouse/Sprig/pull/9)。本报告和索引说明
-的后续记录提交不改变上述编译器、测试或 SDK 文档；最终交付 SHA 与其 exact-SHA CI
+的后续记录提交不改变上述 `7f0099e` 编译器、测试或 SDK 文档；最终交付 SHA 与其 exact-SHA CI
 通过 PR 最新 Checks 和交付消息记录。默认分支未改动，未合并草稿 PR。
 
 本轮代码、测试和文档由 AI 辅助完成；审查结论来自实际独立执行、源码定位和 SDK-only
