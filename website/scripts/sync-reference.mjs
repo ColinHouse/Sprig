@@ -19,6 +19,7 @@ const pages = [
   ['docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP.md'],
   ['docs/STAGE1_ROADMAP.md', 'generated/en/reference/STAGE1_ROADMAP.md'],
   ['spec/docs/LANGUAGE_SPEC.md', 'generated/en/reference/LANGUAGE_SPEC.md'],
+  ['spec/docs/GENERICS.md', 'generated/en/reference/GENERICS.md'],
   ['spec/docs/QUICK_REFERENCE.md', 'generated/en/reference/QUICK_REFERENCE_DESIGN.md'],
   ['spec/docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP_DESIGN.md'],
   ['spec/docs/AGENT_TOOL_PROTOCOL.md', 'generated/en/reference/AGENT_TOOL_PROTOCOL.md'],

@@ -1,0 +1,5 @@
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+let value = identity(42)

@@ -12,6 +12,14 @@ in `grammar/`, and the implementation status in
 `docs/FEATURE_STATUS_IMPLEMENTED.md`. The grammar smoke harness is
 `tools/test-grammar.sh` with sources in `tools/grammar-harness/`.
 
+## v0.8 generics
+
+The v0.8 generics contract implemented by the stage-0 compiler is in
+`docs/GENERICS.md`. It covers the `generic T:` block syntax, explicit type
+application, the nullable-argument rule, erasure/boxing and the indexing
+boundary. Multiple parameters, inference, variance and capability semantics
+are explicitly out of scope.
+
 ## What is new in v0.7
 
 - `variant Expr: Literal(value: Int) ...` — a sealed sum type with immutable

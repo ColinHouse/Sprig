@@ -44,7 +44,7 @@ A successful run:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "toolVersion": "sprig-compiler 0.2.0-alpha.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -58,7 +58,7 @@ A failed check (path shortened here; the real `uri` is a `file:` URI):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.1.0-alpha.2",
+  "toolVersion": "sprig-compiler 0.2.0-alpha.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},

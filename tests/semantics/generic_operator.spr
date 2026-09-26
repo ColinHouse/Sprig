@@ -1,0 +1,3 @@
+generic T:
+    func twice(value: T) -> T:
+        return value + value

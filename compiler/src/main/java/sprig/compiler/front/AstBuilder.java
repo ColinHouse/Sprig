@@ -37,7 +37,9 @@ public final class AstBuilder {
         }
         Module module = new Module(path, uri, imports);
         for (ParseTree child : program.children) {
-            if (child instanceof SprigParser.ClassDefinitionContext ctx) {
+            if (child instanceof SprigParser.GenericDefinitionContext ctx) {
+                module.decls.add(buildGeneric(ctx));
+            } else if (child instanceof SprigParser.ClassDefinitionContext ctx) {
                 module.decls.add(buildClass(ctx));
             } else if (child instanceof SprigParser.EnumDefinitionContext ctx) {
                 module.decls.add(buildEnum(ctx));
@@ -50,6 +52,25 @@ public final class AstBuilder {
             }
         }
         return module;
+    }
+
+    private Decl buildGeneric(SprigParser.GenericDefinitionContext ctx) {
+        SprigParser.GenericBodyContext body = ctx.genericSuite().genericBody();
+        Decl decl;
+        if (body.classDefinition() != null) {
+            decl = buildClass(body.classDefinition());
+        } else if (body.enumDefinition() != null) {
+            decl = buildEnum(body.enumDefinition());
+        } else if (body.variantDefinition() != null) {
+            decl = buildVariant(body.variantDefinition());
+        } else {
+            decl = buildFunction(body.functionDefinition());
+        }
+        decl.typeParams.add(ctx.IDENT().getText());
+        if (decl.span == null) {
+            decl.span = span(ctx);
+        }
+        return decl;
     }
 
     private Decl.Import buildImport(SprigParser.ImportStatementContext ctx) {
@@ -95,13 +116,16 @@ public final class AstBuilder {
         List<Decl.VariantCase> cases = new ArrayList<>();
         for (SprigParser.VariantCaseContext caseCtx : ctx.variantSuite().variantCase()) {
             List<Decl.Field> fields = new ArrayList<>();
+            List<SprigParser.VariantFieldContext> fieldContexts = new ArrayList<>();
             if (caseCtx.variantFields() != null) {
-                for (SprigParser.VariantFieldContext fieldCtx : caseCtx.variantFields().variantField()) {
-                    Decl.Field field = new Decl.Field(fieldCtx.IDENT().getText(), false,
-                            buildTypeRef(fieldCtx.typeRef()), null);
-                    field.span = span(fieldCtx);
-                    fields.add(field);
-                }
+                fieldContexts.addAll(caseCtx.variantFields().variantField());
+            }
+            fieldContexts.addAll(caseCtx.variantField());
+            for (SprigParser.VariantFieldContext fieldCtx : fieldContexts) {
+                Decl.Field field = new Decl.Field(fieldCtx.IDENT().getText(), false,
+                        buildTypeRef(fieldCtx.typeRef()), null);
+                field.span = span(fieldCtx);
+                fields.add(field);
             }
             Decl.VariantCase variantCase = new Decl.VariantCase(caseCtx.IDENT().getText(), fields);
             variantCase.span = span(caseCtx);
@@ -185,6 +209,13 @@ public final class AstBuilder {
             SprigParser.AssignmentContext assign = ctx.assignment();
             Stmt.Assign stmt = new Stmt.Assign(buildAssignTarget(assign.assignmentTarget()),
                     assign.assignmentOperator().getText(), buildExpression(assign.expression()));
+            stmt.span = span(ctx);
+            return stmt;
+        }
+        if (ctx.requiresStatement() != null) {
+            SprigParser.RequiresStatementContext requires = ctx.requiresStatement();
+            Stmt.Requires stmt = new Stmt.Requires(requires.IDENT().getText(),
+                    requires.qualifiedName().getText());
             stmt.span = span(ctx);
             return stmt;
         }
@@ -390,10 +421,20 @@ public final class AstBuilder {
                 Expr.Call call = new Expr.Call(current, buildArguments(argsCtx));
                 call.span = span(ctx);
                 current = call;
-            } else if (child instanceof SprigParser.ExpressionContext indexCtx) {
-                Expr.Index index = new Expr.Index(current, buildExpression(indexCtx));
-                index.span = span(indexCtx);
-                current = index;
+            } else if (child instanceof SprigParser.SubscriptContext subscriptCtx) {
+                SprigParser.SubscriptContentContext content = subscriptCtx.subscriptContent();
+                Expr.Subscript subscript;
+                if (content.expression() != null) {
+                    subscript = new Expr.Subscript(current, buildExpression(content.expression()), null);
+                } else {
+                    List<TypeRef> args = new ArrayList<>();
+                    for (SprigParser.TypeRefContext typeRef : content.typeRef()) {
+                        args.add(buildTypeRef(typeRef));
+                    }
+                    subscript = new Expr.Subscript(current, null, args);
+                }
+                subscript.span = span(subscriptCtx);
+                current = subscript;
             } else if (child instanceof TerminalNode node) {
                 if (node.getSymbol().getType() == SprigLexer.LPAREN) {
                     boolean hasArgs = i + 1 < ctx.children.size()

@@ -1,8 +1,10 @@
 package sprig.compiler.sem;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import sprig.compiler.ast.Decl;
 import sprig.compiler.ast.Expr;
@@ -19,6 +21,7 @@ import sprig.compiler.types.EnumType;
 import sprig.compiler.types.FunctionType;
 import sprig.compiler.types.JavaType;
 import sprig.compiler.types.NativeType;
+import sprig.compiler.types.TypeParameterType;
 import sprig.compiler.types.Type;
 import sprig.compiler.types.VariantType;
 import sprig.runtime.SprigError;
@@ -243,8 +246,20 @@ public final class NameResolver {
         }
     }
 
+    /** Lexical generic parameters of the function/class body being resolved. */
+    private Map<String, Type> bodyTypeParams = Map.of();
+
+    private static Map<String, Type> typeParamsOf(Decl decl) {
+        Map<String, Type> map = new HashMap<>();
+        for (String name : decl.typeParams) {
+            map.put(name, new TypeParameterType(decl, name));
+        }
+        return map;
+    }
+
     private void resolveDeclTypes(Module module, Decl decl) {
         if (decl instanceof Decl.ClassDecl classDecl) {
+            classDecl.typeParamTypes.putAll(typeParamsOf(classDecl));
             Set<String> fieldNames = new HashSet<>();
             for (Decl.Field field : classDecl.fields) {
                 if (!fieldNames.add(field.name)) {
@@ -258,7 +273,7 @@ public final class NameResolver {
                 symbol.module = module;
                 symbol.span = field.span;
                 field.symbol = symbol;
-                field.type = typeResolver.resolve(module, field.typeRef);
+                field.type = typeResolver.resolve(module, field.typeRef, classDecl.typeParamTypes);
                 symbol.type = field.type;
             }
             Set<String> methodNames = new HashSet<>();
@@ -280,6 +295,7 @@ public final class NameResolver {
                 }
             }
         } else if (decl instanceof Decl.VariantDecl variantDecl) {
+            variantDecl.typeParamTypes.putAll(typeParamsOf(variantDecl));
             Set<String> caseNames = new HashSet<>();
             for (Decl.VariantCase variantCase : variantDecl.cases) {
                 if (!caseNames.add(variantCase.name)) {
@@ -299,7 +315,7 @@ public final class NameResolver {
                     symbol.module = module;
                     symbol.span = field.span;
                     field.symbol = symbol;
-                    field.type = typeResolver.resolve(module, field.typeRef);
+                    field.type = typeResolver.resolve(module, field.typeRef, variantDecl.typeParamTypes);
                     symbol.type = field.type;
                 }
             }
@@ -309,15 +325,20 @@ public final class NameResolver {
     }
 
     private void resolveFunctionTypes(Module module, Decl.Func func) {
+        if (func.owner != null) {
+            func.typeParamTypes.putAll(func.owner.typeParamTypes);
+        } else {
+            func.typeParamTypes.putAll(typeParamsOf(func));
+        }
         List<Type> paramTypes = new ArrayList<>();
         for (Decl.Param param : func.params) {
-            param.type = typeResolver.resolve(module, param.typeRef);
+            param.type = typeResolver.resolve(module, param.typeRef, func.typeParamTypes);
             param.symbol.type = param.type;
             paramTypes.add(param.type);
         }
-        func.returnType = typeResolver.resolveReturn(module, func.returnTypeRef);
+        func.returnType = typeResolver.resolveReturn(module, func.returnTypeRef, func.typeParamTypes);
         for (TypeRef ref : func.throwsRefs) {
-            Type type = typeResolver.resolve(module, ref);
+            Type type = typeResolver.resolve(module, ref, func.typeParamTypes);
             if (!Semantics.isErrorType(type)) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
                         "throws requires an error type (Error or an imported Throwable)",
@@ -358,7 +379,10 @@ public final class NameResolver {
         for (Decl.Field sibling : owner.fields) {
             scope.forbiddenFields.add(sibling.name);
         }
+        Map<String, Type> previous = bodyTypeParams;
+        bodyTypeParams = owner.typeParamTypes;
         resolveExpr(module, scope, field.defaultExpr);
+        bodyTypeParams = previous;
     }
 
     private void resolveFunctionBody(Module module, Decl.Func func, Decl.ClassDecl owner) {
@@ -372,9 +396,12 @@ public final class NameResolver {
             }
             scope.locals.put(param.name, param.symbol);
         }
+        Map<String, Type> previous = bodyTypeParams;
+        bodyTypeParams = func.typeParamTypes;
         for (Stmt stmt : func.body) {
             resolveStmt(module, scope, stmt);
         }
+        bodyTypeParams = previous;
     }
 
     private static boolean hasField(Decl.ClassDecl owner, String name) {
@@ -399,7 +426,7 @@ public final class NameResolver {
         if (stmt instanceof Stmt.VarDecl varDecl) {
             if (varDecl.symbol == null) {
                 if (varDecl.typeRef != null) {
-                    typeResolver.resolve(module, varDecl.typeRef);
+                    typeResolver.resolve(module, varDecl.typeRef, bodyTypeParams);
                 }
                 Symbol symbol = declareLocal(module, scope, varDecl.name, varDecl.span, varDecl.mutable,
                         varDecl.typeRef == null ? null : varDecl.typeRef.resolved);
@@ -445,7 +472,7 @@ public final class NameResolver {
         } else if (stmt instanceof Stmt.Try tryStmt) {
             resolveBlock(module, scope, tryStmt.body);
             for (Stmt.Try.CatchClause clause : tryStmt.catches) {
-                clause.caughtType = typeResolver.resolve(module, clause.typeRef);
+                clause.caughtType = typeResolver.resolve(module, clause.typeRef, bodyTypeParams);
                 Scope catchScope = childScope(scope);
                 Symbol symbol = declareLocal(module, catchScope, clause.name, clause.typeRef.span, false,
                         clause.caughtType);
@@ -462,7 +489,9 @@ public final class NameResolver {
                     diagnostics.add(Diagnostic.error(Codes.MATCH_UNKNOWN_CASE, Phase.TYPE,
                             "Match case must be written as Type.Case", module.uri, branch.caseTypeRef.span));
                 } else {
-                    branch.caseTypeRef.resolved = typeResolver.resolve(module, branch.caseTypeRef);
+                    // The branch names the declaration; explicit generic
+                    // arguments are not needed (the scrutinee supplies them).
+                    branch.caseTypeRef.resolved = typeResolver.resolveUnapplied(module, branch.caseTypeRef);
                 }
                 Scope branchScope = childScope(scope);
                 if (branch.binder != null) {
@@ -527,6 +556,34 @@ public final class NameResolver {
         } else if (expr instanceof Expr.Index index) {
             resolveExpr(module, scope, index.receiver);
             resolveExpr(module, scope, index.index);
+        } else if (expr instanceof Expr.Subscript subscript) {
+            resolveExpr(module, scope, subscript.base);
+            if (subscript.index != null) {
+                resolveExpr(module, scope, subscript.index);
+            } else if (subscript.typeArgs != null) {
+                // A bracket payload that parsed as type references may still be
+                // ordinary indexing, for example values[index]. When the base
+                // is not a type name, build and resolve the index expression
+                // now so name references keep their symbols.
+                Symbol baseSymbol = subscript.base instanceof Expr.Name baseName
+                        ? baseName.symbol : null;
+                boolean typeLike = baseSymbol != null && (baseSymbol.isType()
+                        || baseSymbol.kind == Symbol.Kind.BUILTIN_TYPE);
+                if (!typeLike && subscript.base instanceof Expr.FieldAccess member
+                        && member.receiver instanceof Expr.Name qualifier
+                        && qualifier.symbol != null
+                        && qualifier.symbol.kind == Symbol.Kind.MODULE) {
+                    // Module-qualified generic use: math.Box[Int](...)
+                    typeLike = true;
+                }
+                if (!typeLike) {
+                    Expr candidate = TypeChecker.indexFromTypeArgs(subscript.typeArgs);
+                    if (candidate != null) {
+                        resolveExpr(module, scope, candidate);
+                        subscript.resolvedIndex = candidate;
+                    }
+                }
+            }
         } else if (expr instanceof Expr.Unary unary) {
             resolveExpr(module, scope, unary.operand);
         } else if (expr instanceof Expr.Binary binary) {
@@ -546,7 +603,7 @@ public final class NameResolver {
         } else if (expr instanceof Expr.Lambda lambda) {
             Scope lambdaScope = childScope(scope);
             for (Decl.Param param : lambda.params) {
-                param.type = typeResolver.resolve(module, param.typeRef);
+                param.type = typeResolver.resolve(module, param.typeRef, bodyTypeParams);
                 Symbol symbol = new Symbol(Symbol.Kind.PARAM, param.name, param.type);
                 symbol.span = param.typeRef.span;
                 param.symbol = symbol;

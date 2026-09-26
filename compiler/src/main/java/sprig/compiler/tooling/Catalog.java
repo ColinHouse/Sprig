@@ -41,7 +41,8 @@ public final class Catalog {
 
     public static List<String> topics() {
         return List.of("language", "types", "functions", "classes", "variants", "match",
-                "nullability", "errors", "collections", "numerics", "modules", "jvm", "agents");
+                "nullability", "errors", "collections", "numerics", "modules", "jvm",
+                "generics", "agents");
     }
 
     public static Map<String, Object> help(String topic) {

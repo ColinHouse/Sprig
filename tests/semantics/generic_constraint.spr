@@ -1,0 +1,4 @@
+generic T:
+    func max(a: T, b: T) -> T:
+        requires T: Comparable
+        return a

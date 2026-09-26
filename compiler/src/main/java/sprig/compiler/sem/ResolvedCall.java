@@ -24,6 +24,12 @@ public final class ResolvedCall {
     public Type returnType;
     public Type receiverType;
     public boolean staticJvm;
+    /** v0.8 explicit generic type arguments at this use site, when present. */
+    public List<Type> typeArgs = List.of();
+    /** v0.8 substitution used for this call: T := concrete argument. */
+    public java.util.Map<sprig.compiler.types.TypeParameterType, Type> substitution = java.util.Map.of();
+    /** Instantiated receiver/constructor type for generic classes and variants. */
+    public Type instantiatedType;
 
     public static ResolvedCall of(Kind kind, Type returnType) {
         ResolvedCall call = new ResolvedCall();

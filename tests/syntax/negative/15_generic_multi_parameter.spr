@@ -1,0 +1,3 @@
+generic T, E:
+    class Pair:
+        let first: T

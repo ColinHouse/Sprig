@@ -239,5 +239,41 @@
     "file": "capture_mutable.spr",
     "expected_diagnostic": "SPR-TYPE-CAPTURE",
     "status": "checked by output/scripts/test.sh"
+  },
+  {
+    "file": "generic_inference.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-ARGS-REQUIRED",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_wrong_arity.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-ARITY",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_nullable_arg.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-NULLABLE",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_constraint.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_scope_leak.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_operator.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
   }
 ]

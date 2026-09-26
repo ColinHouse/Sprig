@@ -1,0 +1,17 @@
+generic T:
+    class Box:
+        let value: T
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+let box: Box[Int] = Box[Int](value=1)
+print(identity[Int](box.value))
+let empty: Option[String] = Option[String].None

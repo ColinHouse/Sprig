@@ -110,9 +110,11 @@ def main():
           unit_collection.returncode != 0 and diagnostic_codes(unit_collection) == ["SPR-TYPE-UNIT"],
           unit_collection.stdout + unit_collection.stderr)
     fake = run("check", CASES / "fake_generic.spr")
+    # v0.8: non-generic types with type arguments report the dedicated
+    # generic-arity code instead of the old placeholder TYPE-MISMATCH.
     check("non-generic-type-arguments-rejected", fake.returncode != 0 and
           diagnostic_codes(run("check", "--json", CASES / "fake_generic.spr")) ==
-          ["SPR-TYPE-MISMATCH"] * 3)
+          ["SPR-TYPE-GENERIC-ARITY"] * 3)
     lambda_effect = run("check", "--json", CASES / "jvm_lambda_checked.spr")
     check("checked-exception-in-lambda-rejected-before-javac", lambda_effect.returncode != 0 and
           diagnostic_codes(lambda_effect) == ["SPR-FLOW-THROWS"],

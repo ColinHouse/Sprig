@@ -1,7 +1,7 @@
-# Sprig v0.7 stage-0 — implemented feature status
+# Sprig v0.8-dev stage-0 — implemented feature status
 
 This table reflects what the compiler in this directory **actually does**, as
-verified by `scripts/test.sh`. It is the implementation-side companion to the
+verified by `scripts/test.sh` (113 checks on the v0.8 development tree). It is the implementation-side companion to the
 design kit's `docs/FEATURE_STATUS.md`.
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
@@ -16,6 +16,9 @@ design kit's `docs/FEATURE_STATUS.md`.
 | Nullability `T?`, null checks, narrowing | yes | yes (`SPR-TYPE-NULL/NULLABLE`) | boxed nullable locals | runtime 07 |
 | `List`/`MutableList`/`Map`/`MutableMap`, snapshots, indexing, `in` | yes | yes, distinct mutability | runtime wrappers | runtime 09/16 |
 | Immutable collection mutation rejected | — | yes (`SPR-COLLECTION-IMMUTABLE`) | — | semantics |
+| User generics: `generic T:` for class/variant/function, explicitly applied as `Box[Int]`, erased and boxed in generated Java | yes | yes (`SPR-TYPE-GENERIC-*`) | raw Java classes + compiler-controlled boxing/unboxing | runtime 19, semantics 6 cases, syntax 08 |
+| Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |
+| `requires T: Capability` clauses | parsed | placement/name checked, capability implication **not implemented** (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
 | Flow: definite return, unreachable code | — | yes (`SPR-FLOW-*`) | — | semantics |
@@ -33,13 +36,12 @@ design kit's `docs/FEATURE_STATUS.md`.
 | Match on statically inferred variant case | yes | singleton exhaustiveness; impossible other branches rejected | concrete case `instanceof` dispatch | correctness regressions |
 | JSON CLI results | — | includes command/status and structured diagnostics | run output carried as `programOutput` | correctness regressions |
 
-Not implemented (honest status): user-defined generics, inheritance or
-interfaces, `match` expressions, nested/positional patterns, function types in
-source, `%=`, tuples/destructuring, varargs/arrays/annotations in interop,
-general-purpose file IO library, package manifests, LSP, incremental checking,
-self-hosting. Java generic arguments are displayed by `sprig api` but not
-enforced as Sprig generics. Array and varargs members are reported as
-unavailable rather than silently mapped.
+Not implemented (honest status): multiple generic parameters, generic type
+inference, generic constraints/variance, inheritance or interfaces, `match`
+expressions, nested/positional patterns, function types in source, `%=`,
+tuples/destructuring, varargs/arrays/annotations in interop, file IO library,
+the `sprig.toml` project system and dependency resolution, package manifests,
+LSP, incremental checking, self-hosting.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries. Earlier
 implementation reports from the former `output/` development tree were moved
 out of the public repository into the maintainer's local archive during the

@@ -121,6 +121,30 @@ public abstract class Expr extends Node {
         }
     }
 
+    /**
+     * v0.8 postfix bracket with an ambiguous payload. Exactly one of
+     * {@link #index} and {@link #typeArgs} is set: type arguments when the
+     * bracket parsed as type references, an expression otherwise. The checker
+     * decides from symbol kinds whether the whole form is an indexing
+     * operation or a generic type application, so {@code values[index]} keeps
+     * indexing while {@code Box[Int].Some(...)} is a generic use.
+     */
+    public static final class Subscript extends Expr {
+        public final Expr base;
+        public final Expr index;
+        public final List<TypeRef> typeArgs;
+        /** Set by the checker when the type-argument payload is really indexing. */
+        public Expr resolvedIndex;
+        /** Set by the checker when this is a generic type application. */
+        public Type applicationType;
+
+        public Subscript(Expr base, Expr index, List<TypeRef> typeArgs) {
+            this.base = base;
+            this.index = index;
+            this.typeArgs = typeArgs == null ? null : List.copyOf(typeArgs);
+        }
+    }
+
     public static final class Unary extends Expr {
         public final String op; // "-", "+", "not"
         public final Expr operand;

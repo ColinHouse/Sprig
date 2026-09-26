@@ -33,7 +33,9 @@ import sprig.compiler.types.ListType;
 import sprig.compiler.types.MapType;
 import sprig.compiler.types.NativeType;
 import sprig.compiler.types.NullableType;
+import sprig.compiler.types.Substitution;
 import sprig.compiler.types.Type;
+import sprig.compiler.types.TypeParameterType;
 import sprig.compiler.types.VariantCaseType;
 import sprig.compiler.types.VariantType;
 import sprig.runtime.SprigError;
@@ -112,6 +114,7 @@ public final class TypeChecker {
             Map.entry("MutableMap.clear", new int[]{0, 0}));
 
     private final Diagnostics diagnostics;
+    private final TypeRefResolver typeResolver;
 
     private Module module;
     private Decl.Func currentFunction;
@@ -121,9 +124,12 @@ public final class TypeChecker {
     private final Deque<Map<Symbol, Type>> narrowing = new ArrayDeque<>();
     private final Deque<List<Type>> caughtStack = new ArrayDeque<>();
     private final Deque<List<Type>> effectCollectors = new ArrayDeque<>();
+    /** v0.8 lexical generic parameters of the declaration being checked. */
+    private Map<String, Type> activeTypeParams = Map.of();
 
     public TypeChecker(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
+        this.typeResolver = new TypeRefResolver(diagnostics);
     }
 
     public void check(Module module) {
@@ -133,7 +139,8 @@ public final class TypeChecker {
                 for (Decl.Field field : classDecl.fields) {
                     if (field.defaultExpr != null) {
                         currentFunction = null;
-                        currentClass = null;
+                        currentClass = classDecl;
+                        activeTypeParams = classDecl.typeParamTypes;
                         narrowing.clear();
                         caughtStack.clear();
                         List<Type> effects = new ArrayList<>();
@@ -155,6 +162,7 @@ public final class TypeChecker {
         }
         currentFunction = null;
         currentClass = null;
+        activeTypeParams = Map.of();
         loopDepth = 0;
         narrowing.clear();
         caughtStack.clear();
@@ -167,14 +175,17 @@ public final class TypeChecker {
     // ------------------------------------------------------------------
 
     private void checkFunction(Decl.Func func, Decl.ClassDecl owner) {
+        Map<String, Type> previousTypeParams = activeTypeParams;
         currentFunction = func;
         currentClass = owner;
+        activeTypeParams = func.typeParamTypes;
         loopDepth = 0;
         narrowing.clear();
         caughtStack.clear();
         narrowing.push(new HashMap<>());
         checkSequence(func.body);
         narrowing.pop();
+        activeTypeParams = previousTypeParams;
         Type returnType = func.returnType;
         if (returnType != NativeType.UNIT && returnType != NativeType.ERROR && !definitelyReturns(func.body)) {
             diagnostics.add(Diagnostic.error(Codes.FLOW_MISSING_RETURN, Phase.FLOW,
@@ -232,6 +243,8 @@ public final class TypeChecker {
             checkTry(tryStmt);
         } else if (stmt instanceof Stmt.Match match) {
             checkMatch(match);
+        } else if (stmt instanceof Stmt.Requires requires) {
+            checkRequires(requires);
         } else if (stmt instanceof Stmt.Break) {
             if (loopDepth == 0) {
                 diagnostics.add(Diagnostic.error(Codes.FLOW_BREAK, Phase.FLOW,
@@ -536,6 +549,32 @@ public final class TypeChecker {
         }
     }
 
+    /**
+     * v0.8 {@code requires T: Capability}. The syntax is accepted and checked
+     * for placement and parameter identity; capability implication is not
+     * implemented in this alpha, so a clause always reports
+     * {@code SPR-GENERIC-CONSTRAINT} rather than silently doing nothing.
+     */
+    private void checkRequires(Stmt.Requires requires) {
+        boolean parameterVisible = activeTypeParams.containsKey(requires.parameter);
+        if (!parameterVisible) {
+            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+                    "requires names unknown type parameter '" + requires.parameter + "'",
+                    module.uri, requires.span));
+        }
+        if (!requires.capability.equals("Comparable") && !requires.capability.equals("Equatable")) {
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                    "Unknown capability '" + requires.capability
+                            + "'; v0.8 defines Comparable and Equatable",
+                    module.uri, requires.span));
+            return;
+        }
+        diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                "Capability checking for '" + requires.capability
+                        + "' is not implemented yet; remove the requires clause or use a concrete type",
+                module.uri, requires.span));
+    }
+
     private void checkMatch(Stmt.Match match) {
         Type scrutinee = checkExpr(match.scrutinee, null);
         if (scrutinee.isNullable()) {
@@ -565,10 +604,8 @@ public final class TypeChecker {
         }
         for (Stmt.Match.Branch branch : match.branches) {
             Type caseOwner = branch.caseTypeRef.resolved;
-            Type expectedOwner = scrutinee instanceof VariantCaseType caseType
-                    ? new VariantType(caseType.variant) : scrutinee;
             if (caseOwner != null && caseOwner != NativeType.ERROR
-                    && (valid ? !caseOwner.equals(expectedOwner) : true)) {
+                    && (valid ? !sameMatchOwner(caseOwner, scrutinee) : true)) {
                 diagnostics.add(Diagnostic.error(Codes.MATCH_WRONG_TYPE, Phase.TYPE,
                         "Case '" + branch.caseName + "' does not belong to matched type "
                                 + scrutinee.display(), module.uri, branch.caseTypeRef.span)
@@ -592,7 +629,7 @@ public final class TypeChecker {
                             "Variant " + variantType.decl.name + " has no case '" + branch.caseName + "'",
                             module.uri, branch.caseTypeRef.span));
                 } else {
-                    branch.binderType = new VariantCaseType(variantType.decl, variantCase);
+                    branch.binderType = new VariantCaseType(variantType.decl, variantType.args, variantCase);
                     if (branch.binderSymbol != null) {
                         branch.binderSymbol.type = branch.binderType;
                     }
@@ -637,6 +674,28 @@ public final class TypeChecker {
         }
     }
 
+    /**
+     * Match branches name the variant/enum declaration, while the scrutinee
+     * may be an instantiation such as {@code Option[Int]}; v0.8 compares the
+     * declaration identity so exhaustiveness survives generic instantiation.
+     */
+    private static boolean sameMatchOwner(Type caseOwner, Type scrutinee) {
+        if (scrutinee instanceof VariantCaseType caseType) {
+            if (caseOwner instanceof VariantType variantType) {
+                return variantType.decl == caseType.variant;
+            }
+            return caseOwner instanceof VariantCaseType ownerCase
+                    && ownerCase.variant == caseType.variant;
+        }
+        if (scrutinee instanceof VariantType variantType) {
+            return caseOwner instanceof VariantType owner && owner.decl == variantType.decl;
+        }
+        if (scrutinee instanceof EnumType enumType) {
+            return caseOwner instanceof EnumType owner && owner.decl == enumType.decl;
+        }
+        return false;
+    }
+
     private static Decl.VariantCase findVariantCase(Decl.VariantDecl decl, String name) {
         for (Decl.VariantCase variantCase : decl.cases) {
             if (variantCase.name.equals(name)) {
@@ -670,6 +729,8 @@ public final class TypeChecker {
             type = checkCall(call, expected);
         } else if (expr instanceof Expr.Index index) {
             type = checkIndex(index);
+        } else if (expr instanceof Expr.Subscript subscript) {
+            type = checkSubscript(subscript);
         } else if (expr instanceof Expr.Unary unary) {
             type = checkUnary(unary, expected);
         } else if (expr instanceof Expr.Binary binary) {
@@ -800,33 +861,289 @@ public final class TypeChecker {
     }
 
     private Type checkIndex(Expr.Index index) {
-        Type receiver = checkExpr(index.receiver, null);
+        return checkIndexOn(index.receiver, index.index, index.span);
+    }
+
+    private Type checkIndexOn(Expr receiverExpr, Expr indexExpr, Span span) {
+        Type receiver = checkExpr(receiverExpr, null);
         if (receiver.isNullable()) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
-                    "Cannot index a value that may be null", module.uri, index.span));
+                    "Cannot index a value that may be null", module.uri, span));
             receiver = receiver.nonNull();
         }
         if (receiver instanceof ListType list) {
-            Type idx = checkExpr(index.index, NativeType.INT);
-            requireAssignable(NativeType.INT, idx, index.index.span, Codes.TYPE_MISMATCH, "list index");
+            Type idx = checkExpr(indexExpr, NativeType.INT);
+            requireAssignable(NativeType.INT, idx, indexExpr.span, Codes.TYPE_MISMATCH, "list index");
             return list.element;
         }
         if (receiver instanceof MapType map) {
-            Type idx = checkExpr(index.index, map.key);
-            requireAssignable(map.key, idx, index.index.span, Codes.TYPE_MISMATCH, "map key");
+            Type idx = checkExpr(indexExpr, map.key);
+            requireAssignable(map.key, idx, indexExpr.span, Codes.TYPE_MISMATCH, "map key");
             return NullableType.of(map.value);
         }
         if (receiver == NativeType.STRING) {
-            Type idx = checkExpr(index.index, NativeType.INT);
-            requireAssignable(NativeType.INT, idx, index.index.span, Codes.TYPE_MISMATCH, "string index");
+            Type idx = checkExpr(indexExpr, NativeType.INT);
+            requireAssignable(NativeType.INT, idx, indexExpr.span, Codes.TYPE_MISMATCH, "string index");
             return NativeType.STRING;
         }
         if (receiver != NativeType.ERROR) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
-                    "Type " + receiver.display() + " does not support indexing", module.uri, index.span));
+                    "Type " + receiver.display() + " does not support indexing", module.uri, span));
         }
-        checkExpr(index.index, null);
+        checkExpr(indexExpr, null);
         return NativeType.ERROR;
+    }
+
+    /**
+     * v0.8 bracket form used as a plain expression. When the base is a value,
+     * a single plain type-argument-looking name is reinterpreted as indexing
+     * so {@code values[index]} keeps its v0.7 meaning; when the base is a
+     * generic type, a bare application is not a value.
+     */
+    private Type checkSubscript(Expr.Subscript subscript) {
+        if (subscript.index != null) {
+            return checkIndexOn(subscript.base, subscript.index, subscript.span);
+        }
+        Type application = genericApplicationType(subscript, false);
+        if (application != null) {
+            diagnostics.add(Diagnostic.error(Codes.NAME_NOT_A_VALUE, Phase.NAME,
+                    "Generic type application " + application.display()
+                            + " is not a value; construct a case or instance instead",
+                    module.uri, subscript.span));
+            return NativeType.ERROR;
+        }
+        Expr index = subscript.resolvedIndex != null ? subscript.resolvedIndex
+                : indexFromTypeArgs(subscript.typeArgs);
+        if (index != null) {
+            subscript.resolvedIndex = index;
+            return checkIndexOn(subscript.base, index, subscript.span);
+        }
+        checkExpr(subscript.base, null);
+        return NativeType.ERROR;
+    }
+
+    /** Converts a single plain type argument back into an index expression. */
+    public static Expr indexFromTypeArgs(java.util.List<sprig.compiler.ast.TypeRef> typeArgs) {
+        if (typeArgs == null || typeArgs.size() != 1) {
+            return null;
+        }
+        sprig.compiler.ast.TypeRef ref = typeArgs.get(0);
+        if (ref.nullable || !ref.args.isEmpty() || ref.parts.isEmpty()) {
+            return null;
+        }
+        Expr current = new Expr.Name(ref.parts.get(0));
+        current.span = ref.span;
+        for (int i = 1; i < ref.parts.size(); i++) {
+            Expr.FieldAccess access = new Expr.FieldAccess(current, ref.parts.get(i));
+            access.span = ref.span;
+            current = access;
+        }
+        return current;
+    }
+
+    /**
+     * Resolves a {@code Base[Args]} form as a generic type application when
+     * the base names a generic declaration. Returns {@code null} when the form
+     * is ordinary indexing or unresolvable; diagnostics are reported only when
+     * the base is clearly a generic type used incorrectly.
+     */
+    private Type genericApplicationType(Expr.Subscript subscript, boolean forMemberAccess) {
+        Symbol symbol = subscript.base instanceof Expr.Name name ? name.symbol : null;
+        Type baseType = null;
+        if (symbol != null) {
+            if (symbol.kind == Symbol.Kind.VARIANT || symbol.kind == Symbol.Kind.ENUM) {
+                baseType = symbol.type;
+            } else if (symbol.kind == Symbol.Kind.CLASS) {
+                baseType = symbol.type;
+            }
+        } else if (subscript.base instanceof Expr.FieldAccess access) {
+            ResolvedField resolved = resolveFieldAccess(access, false);
+            if (resolved.kind == ResolvedField.Kind.MODULE_TYPE) {
+                baseType = resolved.type;
+            }
+        }
+        if (baseType instanceof VariantType variantType && !variantType.decl.typeParams.isEmpty()) {
+            List<Type> args = resolveGenericArgs(variantType.decl, subscript);
+            if (args == null) {
+                return NativeType.ERROR;
+            }
+            VariantType applied = new VariantType(variantType.decl, args);
+            subscript.applicationType = applied;
+            return applied;
+        }
+        if (baseType instanceof ClassType classType && !classType.decl.typeParams.isEmpty()) {
+            List<Type> args = resolveGenericArgs(classType.decl, subscript);
+            if (args == null) {
+                return NativeType.ERROR;
+            }
+            ClassType applied = new ClassType(classType.decl, args);
+            subscript.applicationType = applied;
+            return applied;
+        }
+        if (baseType != null && subscript.typeArgs != null && !subscript.typeArgs.isEmpty()) {
+            Decl decl = baseType instanceof ClassType c ? c.decl
+                    : baseType instanceof VariantType v ? v.decl
+                    : baseType instanceof EnumType e ? e.decl : null;
+            if (decl != null) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_ARITY, Phase.TYPE,
+                        "Type '" + decl.name + "' is not generic and accepts no type arguments",
+                        module.uri, subscript.span));
+                return NativeType.ERROR;
+            }
+        }
+        return null;
+    }
+
+    private List<Type> resolveGenericArgs(Decl decl, Expr.Subscript subscript) {
+        return typeResolver.resolveArguments(module, decl, subscript.typeArgs, activeTypeParams,
+                subscript.span, subscript.span);
+    }
+
+    /** The generic class or function a {@code Base[Args]} call site refers to. */
+    private Type checkGenericCall(Expr.Subscript subscript, Expr.Call call, Type expected) {
+        Symbol symbol = subscript.base instanceof Expr.Name name ? name.symbol : null;
+        if (symbol != null && symbol.kind == Symbol.Kind.CLASS) {
+            return checkGenericClassConstruction((ClassType) symbol.type, symbol, subscript, call);
+        }
+        if (symbol != null && (symbol.kind == Symbol.Kind.FUNCTION || symbol.kind == Symbol.Kind.METHOD)) {
+            Decl.Func func = (Decl.Func) symbol.decl;
+            if (func != null) {
+                return checkGenericFunctionCall(func, symbol, subscript, call);
+            }
+        }
+        if (symbol != null && symbol.kind == Symbol.Kind.VARIANT) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
+                    "Construct generic variant values with Type[Arg].Case(...) or Type[Arg].Case",
+                    module.uri, call.span));
+            checkArgsUnchecked(call);
+            return NativeType.ERROR;
+        }
+        if (subscript.base instanceof Expr.FieldAccess access) {
+            ResolvedField field = resolveFieldAccess(access, true);
+            if (field.kind == ResolvedField.Kind.MODULE_TYPE && field.type instanceof ClassType classType) {
+                return checkGenericClassConstruction(classType, field.symbol, subscript, call);
+            }
+            if (field.kind == ResolvedField.Kind.MODULE_FUNCTION && field.methodDecl != null) {
+                return checkGenericFunctionCall(field.methodDecl, field.symbol, subscript, call);
+            }
+        }
+        // Ordinary indexing followed by a call; v0.8 does not support
+        // index-then-call for function values through this surface form.
+        Expr index = subscript.resolvedIndex != null ? subscript.resolvedIndex
+                : indexFromTypeArgs(subscript.typeArgs);
+        if (index != null) {
+            subscript.resolvedIndex = index;
+            Type receiver = checkIndexOn(subscript.base, index, subscript.span);
+            if (receiver instanceof FunctionType functionType) {
+                ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.FUNCTION_VALUE,
+                        functionType.result);
+                resolved.functionType = functionType;
+                checkFunctionValueCall(functionType, call);
+                return functionType.result;
+            }
+            if (receiver != NativeType.ERROR) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
+                        "The indexed value is not callable", module.uri, call.span)
+                        .withTypes("function value", receiver.display()));
+            }
+            checkArgsUnchecked(call);
+            return NativeType.ERROR;
+        }
+        checkArgsUnchecked(call);
+        return NativeType.ERROR;
+    }
+
+    private Type checkGenericClassConstruction(ClassType base, Symbol symbol, Expr.Subscript subscript,
+                                               Expr.Call call) {
+        Decl.ClassDecl decl = base.decl;
+        if (decl.typeParams.isEmpty()) {
+            if (subscript.typeArgs != null && !subscript.typeArgs.isEmpty()) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_ARITY, Phase.TYPE,
+                        "Class '" + decl.name + "' is not generic and accepts no type arguments",
+                        module.uri, subscript.span));
+            }
+            ClassType plain = new ClassType(decl);
+            ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, plain);
+            resolved.classDecl = decl;
+            resolved.symbol = symbol;
+            checkClassConstructor(plain, call);
+            return plain;
+        }
+        List<Type> args = resolveGenericArgs(decl, subscript);
+        if (args == null) {
+            checkArgsUnchecked(call);
+            return NativeType.ERROR;
+        }
+        ClassType classType = new ClassType(decl, args);
+        subscript.applicationType = classType;
+        ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, classType);
+        resolved.classDecl = decl;
+        resolved.symbol = symbol;
+        resolved.typeArgs = args;
+        resolved.substitution = Substitution.forClass(classType);
+        resolved.instantiatedType = classType;
+        checkClassConstructor(classType, call);
+        return classType;
+    }
+
+    private Type checkGenericFunctionCall(Decl.Func func, Symbol symbol, Expr.Subscript subscript,
+                                          Expr.Call call) {
+        if (func.typeParams.isEmpty()) {
+            if (subscript.typeArgs != null && !subscript.typeArgs.isEmpty()) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_ARITY, Phase.TYPE,
+                        "Function '" + func.name + "' is not generic and accepts no type arguments",
+                        module.uri, subscript.span));
+            }
+            ResolvedCall resolved = resolvedCall(call,
+                    func.isMethod() ? ResolvedCall.Kind.METHOD : ResolvedCall.Kind.FUNCTION,
+                    func.returnType);
+            resolved.symbol = symbol;
+            resolved.methodDecl = func;
+            checkPositionalCall(func, call, func.name);
+            return func.returnType;
+        }
+        List<Type> args = resolveGenericArgs(func, subscript);
+        if (args == null) {
+            checkArgsUnchecked(call);
+            return NativeType.ERROR;
+        }
+        Map<TypeParameterType, Type> map = Substitution.forFunction(func, args);
+        Type returnType = Substitution.apply(func.returnType, map);
+        ResolvedCall resolved = resolvedCall(call,
+                func.isMethod() ? ResolvedCall.Kind.METHOD : ResolvedCall.Kind.FUNCTION, returnType);
+        resolved.symbol = symbol;
+        resolved.methodDecl = func;
+        resolved.typeArgs = args;
+        resolved.substitution = map;
+        checkPositionalCallSubstituted(func, call, func.name, map);
+        return returnType;
+    }
+
+    private void checkPositionalCallSubstituted(Decl.Func func, Expr.Call call, String label,
+                                                Map<TypeParameterType, Type> map) {
+        if (call.hasNamedArgs()) {
+            diagnostics.add(Diagnostic.error(Codes.CALL_POSITIONAL_REQUIRED, Phase.TYPE,
+                    "Function '" + label + "' takes positional arguments only; remove the names",
+                    module.uri, call.span));
+        }
+        List<Expr.Arg> args = call.args;
+        if (args.size() != func.params.size()) {
+            diagnostics.add(Diagnostic.error(Codes.CALL_ARITY, Phase.TYPE,
+                    "Function '" + label + "' expects " + func.params.size()
+                            + " argument(s) but got " + args.size(),
+                    module.uri, call.span));
+        }
+        int count = Math.min(args.size(), func.params.size());
+        for (int i = 0; i < count; i++) {
+            Type expected = Substitution.apply(func.params.get(i).type, map);
+            Type actual = checkExpr(args.get(i).value, expected);
+            requireAssignable(expected, actual, args.get(i).value.span, Codes.TYPE_MISMATCH,
+                    "argument " + (i + 1) + " of " + label);
+        }
+        for (int i = count; i < args.size(); i++) {
+            checkExpr(args.get(i).value, null);
+        }
+        requireHandled(func.throwsTypes, call.span);
     }
 
     private Type checkUnary(Expr.Unary unary, Type expected) {
@@ -882,12 +1199,58 @@ public final class TypeChecker {
         Type left = checkExpr(binary.left, null);
         Type right = checkExpr(binary.right,
                 binary.right instanceof Expr.IntLit || binary.right instanceof Expr.FloatLit ? left : null);
+        // v0.8: a bare type parameter guarantees no operators. Null checks are
+        // the one universally valid comparison and stay allowed.
+        boolean nullCheck = left == NativeType.NULL || right == NativeType.NULL;
+        if (!nullCheck && (containsTypeParameter(left) || containsTypeParameter(right))) {
+            if (left != NativeType.ERROR && right != NativeType.ERROR) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                        "Operator '" + op + "' is not available for generic type parameter "
+                                + (containsTypeParameter(left) ? left.display() : right.display())
+                                + "; capabilities are not implemented yet",
+                        module.uri, binary.span)
+                        .withHint("Use a concrete type, or wait for requires-based capabilities."));
+            }
+            return NativeType.ERROR;
+        }
         return switch (op) {
             case "==", "!=" -> checkEquality(binary, left, right);
             case "+", "-", "*", "/", "%" -> checkArithmetic(op, left, right, binary.span, false);
             case "<", "<=", ">", ">=" -> checkOrdering(binary, left, right);
             default -> NativeType.ERROR;
         };
+    }
+
+    static boolean containsTypeParameter(Type type) {
+        if (type == null) {
+            return false;
+        }
+        if (type instanceof TypeParameterType) {
+            return true;
+        }
+        if (type instanceof NullableType nullable) {
+            return containsTypeParameter(nullable.inner);
+        }
+        if (type instanceof ListType list) {
+            return containsTypeParameter(list.element);
+        }
+        if (type instanceof MapType map) {
+            return containsTypeParameter(map.key) || containsTypeParameter(map.value);
+        }
+        if (type instanceof ClassType classType) {
+            return classType.args.stream().anyMatch(TypeChecker::containsTypeParameter);
+        }
+        if (type instanceof VariantType variantType) {
+            return variantType.args.stream().anyMatch(TypeChecker::containsTypeParameter);
+        }
+        if (type instanceof VariantCaseType caseType) {
+            return caseType.variantArgs.stream().anyMatch(TypeChecker::containsTypeParameter);
+        }
+        if (type instanceof FunctionType function) {
+            return function.params.stream().anyMatch(TypeChecker::containsTypeParameter)
+                    || containsTypeParameter(function.result);
+        }
+        return false;
     }
 
     private Type checkIn(Expr.Binary binary) {
@@ -1245,6 +1608,9 @@ public final class TypeChecker {
 
     private Type checkCall(Expr.Call call, Type expected) {
         Expr callee = call.callee;
+        if (callee instanceof Expr.Subscript subscript && subscript.typeArgs != null) {
+            return checkGenericCall(subscript, call, expected);
+        }
         if (callee instanceof Expr.Name name) {
             Symbol symbol = name.symbol;
             if (symbol == null) {
@@ -1256,6 +1622,9 @@ public final class TypeChecker {
                         return checkBuiltinFunction(name.name, call);
                     }
                     Decl.Func func = (Decl.Func) symbol.decl;
+                    if (!func.typeParams.isEmpty()) {
+                        requireExplicitTypeArguments(func, call);
+                    }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.FUNCTION, func.returnType);
                     resolved.symbol = symbol;
                     resolved.methodDecl = func;
@@ -1264,6 +1633,9 @@ public final class TypeChecker {
                 }
                 case METHOD -> {
                     Decl.Func func = (Decl.Func) symbol.decl;
+                    if (!func.typeParams.isEmpty()) {
+                        requireExplicitTypeArguments(func, call);
+                    }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
                     resolved.symbol = symbol;
                     resolved.methodDecl = func;
@@ -1287,6 +1659,12 @@ public final class TypeChecker {
                 }
                 case CLASS -> {
                     ClassType classType = (ClassType) symbol.type;
+                    if (classType.decl.isGeneric()) {
+                        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                                "Class '" + classType.decl.name + "' is generic; construction requires explicit"
+                                        + " type arguments, e.g. " + classType.decl.name + "[Type](...)",
+                                module.uri, call.span));
+                    }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, classType);
                     resolved.classDecl = classType.decl;
                     resolved.symbol = symbol;
@@ -1348,15 +1726,21 @@ public final class TypeChecker {
                 }
                 case METHOD -> {
                     Decl.Func func = field.methodDecl;
-                    ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
+                    Map<TypeParameterType, Type> map = field.substitution;
+                    Type returnType = Substitution.apply(func.returnType, map);
+                    ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, returnType);
                     resolved.symbol = func.symbol;
                     resolved.methodDecl = func;
                     resolved.receiverType = field.receiverType;
-                    checkPositionalCall(func, call, func.name);
-                    return func.returnType;
+                    resolved.substitution = map;
+                    checkPositionalCallSubstituted(func, call, func.name, map);
+                    return returnType;
                 }
                 case MODULE_FUNCTION -> {
                     Decl.Func func = field.methodDecl;
+                    if (!func.typeParams.isEmpty()) {
+                        requireExplicitTypeArguments(func, call);
+                    }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.MODULE_FUNCTION,
                             func.returnType);
                     resolved.symbol = field.symbol;
@@ -1437,6 +1821,14 @@ public final class TypeChecker {
         return NativeType.ERROR;
     }
 
+    private void requireExplicitTypeArguments(Decl.Func func, Expr.Call call) {
+        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                (func.isMethod() ? "Method '" : "Function '") + func.name
+                        + "' is generic; a call requires explicit type arguments, e.g. "
+                        + func.name + "[Type](...)",
+                module.uri, call.span));
+    }
+
     private ResolvedCall resolvedCall(Expr.Call call, ResolvedCall.Kind kind, Type returnType) {
         ResolvedCall resolved = ResolvedCall.of(kind, returnType);
         call.resolved = resolved;
@@ -1498,6 +1890,12 @@ public final class TypeChecker {
 
     private void checkClassConstructor(ClassType classType, Expr.Call call) {
         Decl.ClassDecl decl = classType.decl;
+        Map<TypeParameterType, Type> map = classType.args.isEmpty()
+                ? Map.of() : Substitution.forClass(classType);
+        if (call.resolved != null) {
+            call.resolved.substitution = map;
+            call.resolved.instantiatedType = classType;
+        }
         if (call.hasPositionalArgs()) {
             diagnostics.add(Diagnostic.error(Codes.CALL_NAMED_REQUIRED, Phase.TYPE,
                     "Constructor of class " + decl.name + " requires named arguments, e.g. "
@@ -1521,15 +1919,17 @@ public final class TypeChecker {
                 diagnostics.add(Diagnostic.error(Codes.CALL_DUPLICATE_FIELD, Phase.TYPE,
                         "Duplicate constructor field '" + arg.name + "'", module.uri, arg.value.span));
             }
-            Type actual = checkExpr(arg.value, field.type);
-            requireAssignable(field.type, actual, arg.value.span, Codes.TYPE_MISMATCH,
+            Type fieldType = Substitution.apply(field.type, map);
+            Type actual = checkExpr(arg.value, fieldType);
+            requireAssignable(fieldType, actual, arg.value.span, Codes.TYPE_MISMATCH,
                     "field '" + arg.name + "'");
         }
         Set<Type> omittedDefaultEffects = new LinkedHashSet<>();
         for (Decl.Field field : decl.fields) {
             if (field.defaultExpr == null && !provided.contains(field.name)) {
                 diagnostics.add(Diagnostic.error(Codes.CALL_MISSING_FIELD, Phase.TYPE,
-                        "Missing required field '" + field.name + ":" + field.type.display() + "'",
+                        "Missing required field '" + field.name + ":"
+                                + Substitution.apply(field.type, map).display() + "'",
                         module.uri, call.span));
             }
             if (field.defaultExpr != null && !provided.contains(field.name)) {
@@ -1558,6 +1958,14 @@ public final class TypeChecker {
 
     private Type checkVariantConstructor(ResolvedField field, Expr.Call call) {
         Decl.VariantCase variantCase = field.variantCase;
+        Map<TypeParameterType, Type> map = Map.of();
+        if (field.type instanceof VariantCaseType caseType && !caseType.variantArgs.isEmpty()) {
+            map = Substitution.forVariant(new VariantType(caseType.variant, caseType.variantArgs));
+        }
+        if (call.resolved != null) {
+            call.resolved.substitution = map;
+            call.resolved.instantiatedType = field.type;
+        }
         if (variantCase.payloadless()) {
             diagnostics.add(Diagnostic.error(Codes.CALL_ARITY, Phase.TYPE,
                     "Variant case " + field.type.display() + " has no payload; write "
@@ -1595,14 +2003,16 @@ public final class TypeChecker {
                 diagnostics.add(Diagnostic.error(Codes.CALL_DUPLICATE_FIELD, Phase.TYPE,
                         "Duplicate field '" + arg.name + "'", module.uri, arg.value.span));
             }
-            Type actual = checkExpr(arg.value, payload.type);
-            requireAssignable(payload.type, actual, arg.value.span, Codes.TYPE_MISMATCH,
+            Type payloadType = Substitution.apply(payload.type, map);
+            Type actual = checkExpr(arg.value, payloadType);
+            requireAssignable(payloadType, actual, arg.value.span, Codes.TYPE_MISMATCH,
                     "field '" + arg.name + "'");
         }
         for (Decl.Field payload : variantCase.fields) {
             if (!provided.contains(payload.name)) {
                 diagnostics.add(Diagnostic.error(Codes.CALL_MISSING_FIELD, Phase.TYPE,
-                        "Missing required field '" + payload.name + ":" + payload.type.display() + "'",
+                        "Missing required field '" + payload.name + ":"
+                                + Substitution.apply(payload.type, map).display() + "'",
                         module.uri, call.span));
             }
         }
@@ -1710,11 +2120,38 @@ public final class TypeChecker {
     // ------------------------------------------------------------------
 
     private ResolvedField resolveFieldAccess(Expr.FieldAccess access, boolean forCall) {
+        if (access.receiver instanceof Expr.Subscript subscript && subscript.typeArgs != null) {
+            Type application = subscript.applicationType != null
+                    ? subscript.applicationType
+                    : genericApplicationType(subscript, true);
+            if (application instanceof VariantType variantType) {
+                ResolvedField resolved = variantCaseValue(variantType, access);
+                access.resolved = resolved;
+                return resolved;
+            }
+            if (application != null && application != NativeType.ERROR) {
+                diagnostics.add(Diagnostic.error(Codes.NAME_NOT_A_VALUE, Phase.NAME,
+                        "Type " + application.display() + " has no case '" + access.name + "'",
+                        module.uri, access.span));
+                ResolvedField resolved = errorField(access);
+                access.resolved = resolved;
+                return resolved;
+            }
+        }
         if (access.receiver instanceof Expr.Name name && name.symbol != null) {
             Symbol symbol = name.symbol;
             ResolvedField resolved = switch (symbol.kind) {
                 case MODULE -> moduleMember(symbol.module, access);
-                case VARIANT -> variantCaseValue((VariantType) symbol.type, access);
+                case VARIANT -> {
+                    VariantType variantType = (VariantType) symbol.type;
+                    if (variantType.decl.isGeneric()) {
+                        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                                "Variant '" + variantType.decl.name + "' is generic; write "
+                                        + variantType.decl.name + "[Type]." + access.name,
+                                module.uri, access.span));
+                    }
+                    yield variantCaseValue(variantType, access);
+                }
                 case ENUM -> enumCaseValue((EnumType) symbol.type, access);
                 case BUILTIN_TYPE -> builtinStatic(symbol.type, access);
                 case JAVA_TYPE -> javaMember(symbol.javaClass != null
@@ -1830,9 +2267,13 @@ public final class TypeChecker {
         ResolvedField field = new ResolvedField();
         field.kind = ResolvedField.Kind.VARIANT_CASE_VALUE;
         field.variantCase = variantCase;
-        field.type = new VariantCaseType(variantType.decl, variantCase);
+        field.type = new VariantCaseType(variantType.decl, variantType.args, variantCase);
         field.payloadless = variantCase.payloadless();
         field.constructorRef = true;
+        field.typeArgs = variantType.args;
+        if (!variantType.args.isEmpty()) {
+            field.substitution = Substitution.forVariant(variantType);
+        }
         return field;
     }
 
@@ -1900,14 +2341,17 @@ public final class TypeChecker {
     }
 
     private ResolvedField classMember(ClassType classType, Expr.FieldAccess access) {
+        Map<TypeParameterType, Type> map = classType.args.isEmpty()
+                ? Map.of() : Substitution.forClass(classType);
         for (Decl.Field field : classType.decl.fields) {
             if (field.name.equals(access.name)) {
                 ResolvedField resolved = new ResolvedField();
                 resolved.kind = ResolvedField.Kind.CLASS_FIELD;
                 resolved.fieldDecl = field;
                 resolved.symbol = field.symbol;
-                resolved.type = field.type;
+                resolved.type = Substitution.apply(field.type, map);
                 resolved.receiverType = classType;
+                resolved.substitution = map;
                 return resolved;
             }
         }
@@ -1916,8 +2360,9 @@ public final class TypeChecker {
                 ResolvedField resolved = new ResolvedField();
                 resolved.kind = ResolvedField.Kind.METHOD;
                 resolved.methodDecl = method;
-                resolved.type = method.returnType;
+                resolved.type = Substitution.apply(method.returnType, map);
                 resolved.receiverType = classType;
+                resolved.substitution = map;
                 return resolved;
             }
         }
@@ -1931,14 +2376,18 @@ public final class TypeChecker {
     }
 
     private ResolvedField variantPayload(VariantCaseType caseType, Expr.FieldAccess access) {
+        Map<TypeParameterType, Type> map = caseType.variantArgs.isEmpty()
+                ? Map.of()
+                : Substitution.forVariant(new VariantType(caseType.variant, caseType.variantArgs));
         for (Decl.Field field : caseType.variantCase.fields) {
             if (field.name.equals(access.name)) {
                 ResolvedField resolved = new ResolvedField();
                 resolved.kind = ResolvedField.Kind.VARIANT_PAYLOAD;
                 resolved.fieldDecl = field;
                 resolved.symbol = field.symbol;
-                resolved.type = field.type;
+                resolved.type = Substitution.apply(field.type, map);
                 resolved.receiverType = caseType;
+                resolved.substitution = map;
                 return resolved;
             }
         }
