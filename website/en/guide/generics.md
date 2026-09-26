@@ -19,15 +19,17 @@ generic T:
         let value: T
 ```
 
-`generic T:` wraps one class, variant, enum or function. v0.8 exposes exactly
-one type parameter (`generic T, E:` is a syntax error), and `T` is visible only
-inside the block — using it after the block is `SPR-NAME-UNRESOLVED`.
+`generic T:` wraps one class, variant or function. Blocks can declare any
+number of parameters (`generic K, V:`), duplicate names are rejected, and
+parameters are visible only inside the block — using one after the block is
+`SPR-NAME-UNRESOLVED`.
 
 ## Use sites write `[Type]`
 
 ```sprig
 let box = Box[Int](value=42)          # generic constructor
 let value = identity[Int](42)          # generic function
+let entry = Entry[String, Int](key="age", value=18)
 let some: Option[Int] = Option[Int].Some(value=1)
 let none: Option[Int] = Option[Int].None
 ```
@@ -40,10 +42,11 @@ report `SPR-TYPE-GENERIC-ARITY`.
 ## What a bare `T` can do
 
 Inside a generic declaration, `T` can be assigned, passed, returned and stored
-in compatible generic containers. It has **no operators, ordering, equality or
-methods**: `value + value` is `SPR-TYPE-OPERAND`. `requires T: Comparable`
-clauses are parsed but capability implications are not implemented yet, so a
-clause reports `SPR-GENERIC-CONSTRAINT`.
+in compatible generic containers. It has **no operators, ordering or
+methods**: `value + value` is `SPR-TYPE-OPERAND`. Equality needs an explicit
+capability: `requires K: Equatable` makes `==`/`!=` on that parameter legal
+with value equality. `requires K: Comparable` is parsed but not implemented
+(`SPR-GENERIC-CONSTRAINT`).
 
 ## Nullable arguments
 

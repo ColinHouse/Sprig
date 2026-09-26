@@ -1,0 +1,6 @@
+generic T:
+    class First:
+        let value: T
+
+    class Second:
+        let value: T

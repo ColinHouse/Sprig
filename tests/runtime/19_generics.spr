@@ -64,3 +64,54 @@ generic T:
         return b
 
 print(second[String]("first", "second"))
+
+# Multiple type parameters are supported without an arbitrary limit.
+generic K, V:
+    class Entry:
+        let key: K
+        let value: V
+
+generic T, E:
+    variant Result:
+        Ok:
+            value: T
+        Err:
+            error: E
+
+generic A, B:
+    func choose(first: A, second: B) -> B:
+        return second
+
+let entry = Entry[String, Int](key="age", value=18)
+print(entry.key + "=" + entry.value.toString())
+print(entry.value + 1)
+
+let ok: Result[Int, String] = Result[Int, String].Ok(value=42)
+let err: Result[Int, String] = Result[Int, String].Err(error="bad")
+match ok:
+    case Result.Ok as payload:
+        print(payload.value)
+    case Result.Err as payload:
+        print(payload.error)
+match err:
+    case Result.Ok as payload:
+        print(payload.value)
+    case Result.Err as payload:
+        print(payload.error)
+
+print(choose[String, Int]("x", 7))
+
+let nested_entry = Entry[String, Box[Int]](key="b", value=Box[Int](value=9))
+print(nested_entry.value.value)
+
+# The only implemented capability: equality under 'requires X: Equatable'.
+generic K:
+    func contains_key(keys: List[K], target: K) -> Bool:
+        requires K: Equatable
+        for key in keys:
+            if key == target:
+                return true
+        return false
+
+print(contains_key[String](["a", "b"], "b"))
+print(contains_key[Int]([1, 2], 9))

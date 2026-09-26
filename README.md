@@ -29,7 +29,7 @@ to be readable by people and predictable for coding agents.
 > [release notes](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
 > [known limitations](docs/KNOWN_LIMITATIONS.md).
 
-The repository's `0.2.0-alpha.1` development tree adds v0.8 single-parameter generics and offline agent-facing commands
+The repository's `0.2.0-alpha.1` development tree adds v0.8 multi-parameter generics, an `Equatable` capability, a `sprig.toml` project model and offline agent-facing commands
 (`help <topic>`, `capabilities`, `api`, `doctor`, structured `explain`) and
 explicit local `--classpath`. The **latest published archive remains
 v0.1.0-alpha.1** until a separate alpha.2 release is validated and published.

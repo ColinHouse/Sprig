@@ -11,13 +11,15 @@ program
       | variantDefinition | functionDefinition | statement)* EOF
     ;
 
-// v0.8: one block-scoped generic type parameter around one declaration.
-// The parameter is only visible inside this block and never leaks.
-genericDefinition: GENERIC IDENT COLON genericSuite;
+// v0.8: block-scoped generic parameters around exactly one declaration.
+// Parameters are only visible inside this block and never leak. There is no
+// arbitrary limit on their number.
+genericDefinition: GENERIC typeParameterList COLON genericSuite;
+typeParameterList: IDENT (COMMA IDENT)*;
 genericSuite
     : NEWLINE INDENT genericBody DEDENT
     ;
-genericBody: classDefinition | enumDefinition | variantDefinition | functionDefinition;
+genericBody: classDefinition | variantDefinition | functionDefinition;
 
 importStatement: IMPORT (qualifiedName | STRING) (AS IDENT)?;
 qualifiedName: IDENT (DOT IDENT)*;

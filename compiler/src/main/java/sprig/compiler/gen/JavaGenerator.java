@@ -926,7 +926,7 @@ public final class JavaGenerator {
         }
         switch (field.kind) {
             case CLASS_FIELD, VARIANT_PAYLOAD: {
-                String code = emitExpr(access.receiver) + "." + mangle(access.name);
+                String code = "(" + emitExpr(access.receiver) + ")." + mangle(access.name);
                 if (field.fieldDecl != null && !field.substitution.isEmpty()
                         && containsTypeParameter(field.fieldDecl.type)) {
                     return unboxGeneric(code, field.type);
@@ -947,10 +947,10 @@ public final class JavaGenerator {
             case JAVA_FIELD:
                 String javaField = field.jvm.isStatic()
                         ? sourceName(field.jvm.owner) + "." + field.jvm.name
-                        : emitExpr(access.receiver) + "." + field.jvm.name;
+                        : "(" + emitExpr(access.receiver) + ")." + field.jvm.name;
                 return convertJvmResult(field.jvm.field.getType(), javaField);
             case ERROR_MESSAGE:
-                return emitExpr(access.receiver) + ".getMessage()";
+                return "(" + emitExpr(access.receiver) + ").getMessage()";
             case BUILTIN_METHOD:
                 if (field.builtinId.equals("toString")) {
                     return "sprig.runtime.SprigRuntime.str(" + emitExpr(access.receiver) + ")";
@@ -1185,7 +1185,7 @@ public final class JavaGenerator {
                 Decl.Func func = resolved.methodDecl;
                 String receiver = thisRef();
                 if (call.callee instanceof Expr.FieldAccess access) {
-                    receiver = emitExpr(access.receiver);
+                    receiver = "(" + emitExpr(access.receiver) + ")";
                 }
                 String args = resolved.substitution.isEmpty()
                         ? positionalArgs(call)

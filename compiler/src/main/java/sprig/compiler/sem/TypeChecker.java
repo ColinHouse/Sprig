@@ -562,17 +562,32 @@ public final class TypeChecker {
                     "requires names unknown type parameter '" + requires.parameter + "'",
                     module.uri, requires.span));
         }
-        if (!requires.capability.equals("Comparable") && !requires.capability.equals("Equatable")) {
+        if (requires.capability.equals("Equatable")) {
+            if (parameterVisible && currentFunction != null) {
+                currentFunction.equatableParams.add(requires.parameter);
+            }
+            return;
+        }
+        if (requires.capability.equals("Comparable")) {
             diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
-                    "Unknown capability '" + requires.capability
-                            + "'; v0.8 defines Comparable and Equatable",
+                    "Capability 'Comparable' is not implemented yet; only Equatable is available",
                     module.uri, requires.span));
             return;
         }
         diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
-                "Capability checking for '" + requires.capability
-                        + "' is not implemented yet; remove the requires clause or use a concrete type",
+                "Unknown capability '" + requires.capability
+                        + "'; v0.8 defines Comparable and Equatable",
                 module.uri, requires.span));
+    }
+
+    /** Whether equality on this parameter is justified by a requires clause. */
+    private boolean isEquatableParameter(Type type) {
+        if (!(type instanceof TypeParameterType parameter)) {
+            return false;
+        }
+        return currentFunction != null
+                && currentFunction.equatableParams.contains(parameter.name)
+                && activeTypeParams.containsKey(parameter.name);
     }
 
     private void checkMatch(Stmt.Match match) {
@@ -1203,13 +1218,21 @@ public final class TypeChecker {
         // the one universally valid comparison and stay allowed.
         boolean nullCheck = left == NativeType.NULL || right == NativeType.NULL;
         if (!nullCheck && (containsTypeParameter(left) || containsTypeParameter(right))) {
+            if ((op.equals("==") || op.equals("!="))
+                    && left.equals(right) && isEquatableParameter(left)) {
+                binary.valueEquality = true;
+                return NativeType.BOOL;
+            }
             if (left != NativeType.ERROR && right != NativeType.ERROR) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
                         "Operator '" + op + "' is not available for generic type parameter "
                                 + (containsTypeParameter(left) ? left.display() : right.display())
                                 + "; capabilities are not implemented yet",
                         module.uri, binary.span)
-                        .withHint("Use a concrete type, or wait for requires-based capabilities."));
+                        .withHint("Use a concrete type, or declare 'requires "
+                                + (containsTypeParameter(left) && left instanceof TypeParameterType p
+                                        ? p.name : "T")
+                                + ": Equatable' for equality."));
             }
             return NativeType.ERROR;
         }

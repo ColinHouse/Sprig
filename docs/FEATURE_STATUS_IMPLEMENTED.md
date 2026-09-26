@@ -16,9 +16,12 @@ design kit's `docs/FEATURE_STATUS.md`.
 | Nullability `T?`, null checks, narrowing | yes | yes (`SPR-TYPE-NULL/NULLABLE`) | boxed nullable locals | runtime 07 |
 | `List`/`MutableList`/`Map`/`MutableMap`, snapshots, indexing, `in` | yes | yes, distinct mutability | runtime wrappers | runtime 09/16 |
 | Immutable collection mutation rejected | — | yes (`SPR-COLLECTION-IMMUTABLE`) | — | semantics |
-| User generics: `generic T:` for class/variant/function, explicitly applied as `Box[Int]`, erased and boxed in generated Java | yes | yes (`SPR-TYPE-GENERIC-*`) | raw Java classes + compiler-controlled boxing/unboxing | runtime 19, semantics 6 cases, syntax 08 |
+| User generics: `generic K, V:` blocks (one or more parameters) for class/variant/function, explicitly applied as `Entry[String, Int]`, erased and boxed in generated Java | yes | yes (`SPR-TYPE-GENERIC-*`) | raw Java classes + compiler-controlled boxing/unboxing | runtime 19, visitor generic_stack, semantics 8 cases, syntax 08 |
 | Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |
-| `requires T: Capability` clauses | parsed | placement/name checked, capability implication **not implemented** (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
+| `requires X: Equatable` equality capability | yes | equality on the parameter allowed only with the clause; value equality in codegen | boxed `Objects`-style equality | visitor generic_stack, runtime 19 |
+| `requires X: Comparable` | parsed | rejected as not implemented (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
+| Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model 14 checks |
+| Dependencies: local/Git/Maven resolution, `sprig.lock`, offline cache | — | declared only, reported `SPR-PROJECT-UNSUPPORTED` (`resolved: false`) | — | project model |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
 | Flow: definite return, unreachable code | — | yes (`SPR-FLOW-*`) | — | semantics |
@@ -36,12 +39,12 @@ design kit's `docs/FEATURE_STATUS.md`.
 | Match on statically inferred variant case | yes | singleton exhaustiveness; impossible other branches rejected | concrete case `instanceof` dispatch | correctness regressions |
 | JSON CLI results | — | includes command/status and structured diagnostics | run output carried as `programOutput` | correctness regressions |
 
-Not implemented (honest status): multiple generic parameters, generic type
-inference, generic constraints/variance, inheritance or interfaces, `match`
+Not implemented (honest status): generic type inference, variance,
+`Comparable` and user-defined capabilities, inheritance or interfaces, `match`
 expressions, nested/positional patterns, function types in source, `%=`,
 tuples/destructuring, varargs/arrays/annotations in interop, file IO library,
-the `sprig.toml` project system and dependency resolution, package manifests,
-LSP, incremental checking, self-hosting.
+dependency resolution and `sprig.lock` (the manifest/project model
+exists), LSP, incremental checking, self-hosting.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries. Earlier
 implementation reports from the former `output/` development tree were moved
 out of the public repository into the maintainer's local archive during the

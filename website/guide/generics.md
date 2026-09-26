@@ -18,15 +18,16 @@ generic T:
         let value: T
 ```
 
-`generic T:` 包裹一个 class、variant、enum 或 function。v0.8 只暴露一个类型
-参数（`generic T, E:` 是语法错误），并且 `T` 只在块内可见——在块外使用会得到
-`SPR-NAME-UNRESOLVED`。
+`generic T:` 包裹一个 class、variant 或 function。一个块可以声明任意数量
+的参数（`generic K, V:`），重复参数会被拒绝，参数只在块内可见——在块外使用会
+得到 `SPR-NAME-UNRESOLVED`。
 
 ## 使用处必须写出 `[Type]`
 
 ```sprig
 let box = Box[Int](value=42)          # 泛型构造
 let value = identity[Int](42)          # 泛型函数
+let entry = Entry[String, Int](key="age", value=18)
 let some: Option[Int] = Option[Int].Some(value=1)
 let none: Option[Int] = Option[Int].None
 ```
@@ -38,9 +39,9 @@ let none: Option[Int] = Option[Int].None
 ## 裸 `T` 能做什么
 
 在泛型声明内部，`T` 可以赋值、传参、返回，也可以放进兼容的泛型容器。但它
-**没有运算符、排序、相等比较和方法**：`value + value` 会得到
-`SPR-TYPE-OPERAND`。`requires T: Comparable` 子句会被解析，但能力蕴含尚未实现，
-因此每个子句都会报 `SPR-GENERIC-CONSTRAINT`。
+**没有运算符、排序和方法**：`value + value` 会得到 `SPR-TYPE-OPERAND`。相等比较
+需要显式能力：`requires K: Equatable` 之后，该参数上的 `==`/`!=` 合法并按值比较。
+`requires K: Comparable` 会被解析但尚未实现（`SPR-GENERIC-CONSTRAINT`）。
 
 ## 可空类型参数
 

@@ -249,9 +249,14 @@ public final class NameResolver {
     /** Lexical generic parameters of the function/class body being resolved. */
     private Map<String, Type> bodyTypeParams = Map.of();
 
-    private static Map<String, Type> typeParamsOf(Decl decl) {
+    private Map<String, Type> typeParamsOf(Module module, Decl decl) {
         Map<String, Type> map = new HashMap<>();
         for (String name : decl.typeParams) {
+            if (map.containsKey(name)) {
+                diagnostics.add(Diagnostic.error(Codes.NAME_DUPLICATE, Phase.NAME,
+                        "Duplicate generic parameter '" + name + "'", module.uri, decl.span));
+                continue;
+            }
             map.put(name, new TypeParameterType(decl, name));
         }
         return map;
@@ -259,7 +264,7 @@ public final class NameResolver {
 
     private void resolveDeclTypes(Module module, Decl decl) {
         if (decl instanceof Decl.ClassDecl classDecl) {
-            classDecl.typeParamTypes.putAll(typeParamsOf(classDecl));
+            classDecl.typeParamTypes.putAll(typeParamsOf(module, classDecl));
             Set<String> fieldNames = new HashSet<>();
             for (Decl.Field field : classDecl.fields) {
                 if (!fieldNames.add(field.name)) {
@@ -295,7 +300,7 @@ public final class NameResolver {
                 }
             }
         } else if (decl instanceof Decl.VariantDecl variantDecl) {
-            variantDecl.typeParamTypes.putAll(typeParamsOf(variantDecl));
+            variantDecl.typeParamTypes.putAll(typeParamsOf(module, variantDecl));
             Set<String> caseNames = new HashSet<>();
             for (Decl.VariantCase variantCase : variantDecl.cases) {
                 if (!caseNames.add(variantCase.name)) {
@@ -328,7 +333,7 @@ public final class NameResolver {
         if (func.owner != null) {
             func.typeParamTypes.putAll(func.owner.typeParamTypes);
         } else {
-            func.typeParamTypes.putAll(typeParamsOf(func));
+            func.typeParamTypes.putAll(typeParamsOf(module, func));
         }
         List<Type> paramTypes = new ArrayList<>();
         for (Decl.Param param : func.params) {

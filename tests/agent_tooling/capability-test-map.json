@@ -32,9 +32,13 @@
     "tests/runtime/18_lambda_zero_arg.spr"
   ],
   "feature.genericConstraints": [
-    "tests/semantics/generic_constraint.spr"
+    "tests/visitor/generic_stack.spr",
+    "tests/runtime/19_generics.spr"
   ],
   "feature.genericTypeInference": [
     "tests/semantics/generic_inference.spr"
+  ],
+  "feature.multipleGenericParameters": [
+    "tests/runtime/19_generics.spr"
   ]
 }

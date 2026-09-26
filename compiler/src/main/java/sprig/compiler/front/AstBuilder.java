@@ -59,14 +59,14 @@ public final class AstBuilder {
         Decl decl;
         if (body.classDefinition() != null) {
             decl = buildClass(body.classDefinition());
-        } else if (body.enumDefinition() != null) {
-            decl = buildEnum(body.enumDefinition());
         } else if (body.variantDefinition() != null) {
             decl = buildVariant(body.variantDefinition());
         } else {
             decl = buildFunction(body.functionDefinition());
         }
-        decl.typeParams.add(ctx.IDENT().getText());
+        for (TerminalNode parameter : ctx.typeParameterList().IDENT()) {
+            decl.typeParams.add(parameter.getText());
+        }
         if (decl.span == null) {
             decl.span = span(ctx);
         }

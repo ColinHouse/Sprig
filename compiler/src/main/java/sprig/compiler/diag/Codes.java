@@ -56,6 +56,11 @@ public final class Codes {
     public static final String GENERIC_NULLABLE = "SPR-TYPE-GENERIC-NULLABLE";
     public static final String GENERIC_CONSTRAINT = "SPR-GENERIC-CONSTRAINT";
 
+    // PROJECT (v0.8)
+    public static final String PROJECT_MANIFEST = "SPR-PROJECT-MANIFEST";
+    public static final String PROJECT_ENTRY = "SPR-PROJECT-ENTRY";
+    public static final String PROJECT_UNSUPPORTED = "SPR-PROJECT-UNSUPPORTED";
+
     // CALL
     public static final String CALL_NAMED_REQUIRED = "SPR-CALL-NAMED-REQUIRED";
     public static final String CALL_POSITIONAL_REQUIRED = "SPR-CALL-POSITIONAL-REQUIRED";

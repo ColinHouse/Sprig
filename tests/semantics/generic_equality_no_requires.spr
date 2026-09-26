@@ -1,0 +1,3 @@
+generic K:
+    func same(a: K, b: K) -> Bool:
+        return a == b

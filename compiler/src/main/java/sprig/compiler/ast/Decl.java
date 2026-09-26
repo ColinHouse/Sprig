@@ -50,6 +50,12 @@ public abstract class Decl extends Node {
          * a method. Filled by the name resolver.
          */
         public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
+        /**
+         * v0.8 capability set established by {@code requires X: Equatable}
+         * clauses in this function's body. Equality on those parameters is
+         * checked with value equality in generated Java.
+         */
+        public final java.util.Set<String> equatableParams = new java.util.LinkedHashSet<>();
 
         public Func(String name, List<Param> params, TypeRef returnTypeRef,
                     List<TypeRef> throwsRefs, List<Stmt> body) {

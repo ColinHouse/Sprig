@@ -1,0 +1,3 @@
+generic T, T:
+    class Box:
+        let value: T

@@ -275,5 +275,17 @@
     "expected_diagnostic": "SPR-TYPE-OPERAND",
     "status": "future semantic checker only",
     "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_duplicate_parameter.spr",
+    "expected_diagnostic": "SPR-NAME-DUPLICATE",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
+  },
+  {
+    "file": "generic_equality_no_requires.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "future semantic checker only",
+    "source": "v0.8 generics"
   }
 ]
