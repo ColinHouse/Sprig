@@ -18,6 +18,7 @@ def command(*args):
     data = json.loads(p.stdout)
     assert data['exitCode'] == p.returncode, (args, data)
     assert not any(d['code'] == 'SPR-JVM-INTERNAL' for d in data['diagnostics']), data
+    assert all('capabilities are not implemented yet' not in d['message'] for d in data['diagnostics']), data
     return p.returncode, data
 
 

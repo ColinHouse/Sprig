@@ -1236,9 +1236,9 @@ public final class TypeChecker {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
                         "Operator '" + op + "' is not available for generic type parameter "
                                 + (containsTypeParameter(left) ? left.display() : right.display())
-                                + "; capabilities are not implemented yet",
+                                + "; this operation needs a supported leading capability",
                         module.uri, binary.span)
-                        .withHint("Use a concrete type, or declare 'requires "
+                        .withHint("Use a concrete type, or begin the function with 'requires "
                                 + (containsTypeParameter(left) && left instanceof TypeParameterType p
                                         ? p.name : "T")
                                 + ": Equatable' for equality."));
