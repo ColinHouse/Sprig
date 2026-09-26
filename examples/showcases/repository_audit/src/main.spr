@@ -1,0 +1,28 @@
+import "../../../../std/files.spr" as files
+import "../../../../std/process.spr" as process
+import "../../../../std/json.spr" as json
+import "./walk.spr" as walk
+import "./report.spr" as report
+import java.io.IOException as IOException
+
+func main() -> Unit throws IOException, Error:
+    let args = process.arguments()
+    if args.size() > 2:
+        throw Error("usage: repository-audit [directory [report.json]]")
+    var root = "fixtures/tree"
+    if args.size() > 0:
+        root = args.get(0)
+    let inventory = walk.collect(root)
+    report.print_report(inventory)
+    if args.size() == 2:
+        files.write_utf8(args.get(1), json.stringify(report.document(inventory)) + "\n")
+        print("JSON report written")
+
+try:
+    main()
+catch problem: IOException:
+    print("IO error: " + problem.message)
+    throw problem
+catch problem: Error:
+    print("Audit error: " + problem.message)
+    throw problem

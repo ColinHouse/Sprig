@@ -16,7 +16,7 @@ import sprig.compiler.diag.Codes;
  * {@code sprig resolve} writes it. Unknown schema versions are rejected.
  */
 public final class Lockfile {
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
 
     public static String edgeId(String owner, String alias) {
         return owner + "/@" + java.net.URLEncoder.encode(alias, StandardCharsets.UTF_8);
@@ -44,7 +44,12 @@ public final class Lockfile {
         public String repository;
         public String sha256;
         public boolean direct;
+        public String extension = "jar";
+        public String classifier = "";
+        public int classpathOrder = -1;
+        public String coordinate() { return group + ":" + artifact + ":" + extension + ":" + classifier + ":" + version; }
     }
+    public record JvmEdge(String parent, String child) {}
 
     public int lockVersion;
     public String language;
@@ -52,6 +57,7 @@ public final class Lockfile {
     public String manifestSha;
     public final List<SprigEntry> sprig = new ArrayList<>();
     public final List<JvmEntry> jvm = new ArrayList<>();
+    public final List<JvmEdge> jvmEdges = new ArrayList<>();
 
     public static String digest(byte[] bytes) {
         try {
@@ -145,6 +151,8 @@ public final class Lockfile {
         for (SprigEntry entry : lock.sprig)
             if (!entry.owner.equals("root") && !ids.contains(entry.owner))
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Unknown dependency edge owner", null);
+        java.util.Set<String> coordinates = new java.util.HashSet<>();
+        java.util.Set<Integer> orders = new java.util.HashSet<>();
         for (var entry : toml.entries("jvm")) {
             JvmEntry jvm = new JvmEntry();
             jvm.group = entry.get("group");
@@ -153,11 +161,36 @@ public final class Lockfile {
             jvm.repository = entry.get("repository");
             jvm.sha256 = entry.get("sha256");
             jvm.direct = "true".equals(entry.get("direct"));
+            jvm.extension = entry.get("extension");
+            jvm.classifier = entry.get("classifier");
+            try { jvm.classpathOrder = Integer.parseInt(entry.get("classpath-order")); }
+            catch (RuntimeException e) { throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid Maven classpath order", null); }
             if (jvm.group == null || jvm.artifact == null || jvm.version == null) {
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                         "sprig.lock [[jvm]] entry is missing group/artifact/version", null);
             }
+            try { MavenResolver.validate(jvm.group, jvm.artifact, jvm.version); }
+            catch (DepError e) { throw new DepError(Codes.PROJECT_LOCK_SCHEMA, e.getMessage(), null); }
+            if (jvm.extension == null || !List.of("jar", "pom").contains(jvm.extension)
+                    || jvm.classifier == null || !jvm.classifier.matches("[A-Za-z0-9_.-]*")
+                    || jvm.classifier.contains("..") || jvm.repository == null
+                    || jvm.sha256 == null || !jvm.sha256.matches("[0-9a-f]{64}")
+                    || !coordinates.add(jvm.coordinate()) || jvm.classpathOrder < -1
+                    || (jvm.extension.equals("pom") != (jvm.classpathOrder == -1))
+                    || (jvm.classpathOrder >= 0 && !orders.add(jvm.classpathOrder)))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid or duplicate Maven artifact identity/checksum/order", null);
             lock.jvm.add(jvm);
+        }
+        for (int i = 0; i < orders.size(); i++) if (!orders.contains(i))
+            throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Maven classpath order must be contiguous", null);
+        java.util.Set<JvmEdge> edges = new java.util.HashSet<>();
+        for (var e : toml.entries("jvm-edge")) {
+            JvmEdge edge = new JvmEdge(e.get("parent"), e.get("child"));
+            if (edge.parent() == null || edge.child() == null
+                    || !(edge.parent().equals("root") || coordinates.contains(edge.parent()))
+                    || !coordinates.contains(edge.child()) || !edges.add(edge))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid Maven graph edge", null);
+            lock.jvmEdges.add(edge);
         }
         return lock;
     }
@@ -192,7 +225,8 @@ public final class Lockfile {
         }
         List<JvmEntry> jvmSorted = new ArrayList<>(jvm);
         jvmSorted.sort(Comparator.comparing((JvmEntry e) -> e.group)
-                .thenComparing(e -> e.artifact).thenComparing(e -> e.version));
+                .thenComparing(e -> e.artifact).thenComparing(e -> e.version)
+                .thenComparing(e -> e.extension).thenComparing(e -> e.classifier));
         for (JvmEntry entry : jvmSorted) {
             sb.append('\n').append("[[jvm]]\n");
             sb.append("group = ").append(quote(entry.group)).append('\n');
@@ -204,8 +238,14 @@ public final class Lockfile {
             if (entry.sha256 != null) {
                 sb.append("sha256 = ").append(quote(entry.sha256)).append('\n');
             }
+            sb.append("extension = ").append(quote(entry.extension)).append('\n');
+            sb.append("classifier = ").append(quote(entry.classifier)).append('\n');
+            sb.append("classpath-order = ").append(entry.classpathOrder).append('\n');
             sb.append("direct = ").append(entry.direct).append('\n');
         }
+        jvmEdges.stream().distinct().sorted(Comparator.comparing(JvmEdge::parent).thenComparing(JvmEdge::child))
+                .forEach(e -> sb.append("\n[[jvm-edge]]\nparent = ").append(quote(e.parent()))
+                        .append("\nchild = ").append(quote(e.child())).append('\n'));
         return sb.toString();
     }
 

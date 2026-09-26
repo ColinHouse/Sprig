@@ -1,4 +1,4 @@
-# Known limitations — v0.2.0-alpha.1
+# Known limitations — v0.3.0-alpha.1
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the Sprig v0.7 design kit.
@@ -13,21 +13,16 @@ by the Sprig v0.7 design kit.
 - Generic code is erased and boxed in generated Java (type parameters become
   `Object`). Boxing/unboxing is compiler-controlled, but generic values carry
   no JVM-level type information at runtime.
-- Sprig dependencies resolve for **local paths and Git** (`sprig resolve`
-  writes a deterministic `sprig.lock`, `@alias/module.spr` imports are checked
-  against `exports`, and `--offline` rebuilds from the cache). **Maven/JVM
-  dependency resolution is not implemented**: declaring `[[jvm]]` fails with
-  `SPR-DEP-MAVEN`, and `sprig api`/`check`/`run` still need explicit
-  `--classpath` for third-party jars. Git checkouts are verified against exact HEAD, clean tracked/untracked
-  contents and cache metadata on every reuse. Modified checkouts are rejected
-  with SPR-DEP-GIT; no Maven artifacts are fetched.
-  `sprig.lock` covers Sprig dependencies; JVM coordinates are recorded only
-  when resolution exists.
-- The early dependency system covers local/Git Sprig packages. Maven resolution,
-  publishing/registry workflows, a standard-library distribution, language server,
-  IDE plugin, debugger and editor integration are not implemented.
-  Explicit local JAR/directory `--classpath` is available for `check`, `build`,
-  `run`, and `api`; only explicitly resolved Git Sprig packages are downloaded.
+- Local/Git Sprig and Maven JVM dependencies are resolved by `sprig resolve`.
+  Schema-3 locks verify graph identity, manifests and JAR/POM SHA-256. Shared
+  project classpaths work for check/build/run/api/doctor; only resolve uses
+  Maven networking. Apache Resolver handles effective POMs and mediation.
+  Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
+  and non-JAR runtime artifacts remain unsupported. See `DEPENDENCIES.md`.
+- The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
+  text/time and a typed JSON model. It is intentionally experimental; there is
+  no giant library, HTTP server abstraction or stable package registry.
+  LSP, IDE/debugger integration and incremental compilation are absent.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java generic signatures, type-use
   nullability annotations, arrays, varargs, and collection adapters are limited
@@ -44,14 +39,15 @@ by the Sprig v0.7 design kit.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
-- Local tests cover macOS Apple Silicon with JDK 17.0.19 and 26.0.1; hosted CI
-  covers Linux with JDK 17 and 26. Compiler classes use `javac --release 17`.
-  Other platforms/architectures have not been validated.
+- Compiler classes use `javac --release 17`. CI defines Linux/macOS/Windows
+  with JDK 17 and 26; definitions are not execution evidence. The current
+  release validation report records which exact source/archive gates ran.
+  No production or architecture-wide portability guarantee is made.
 - Local dependency locks contain canonical absolute paths and are not portable.
   Manifest semantic errors can point to line 1. Cache tree verification adds IO;
   OS locks have no timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after
   validation is outside the cooperative cache model.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig v0.2.0-alpha.1 is a prerelease under Apache-2.0 (`LICENSE`, `NOTICE`),
+- Sprig v0.3.0-alpha.1 is a prerelease under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.

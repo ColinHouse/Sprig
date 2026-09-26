@@ -30,13 +30,13 @@
 | 显式本地 `--classpath` | `api`/`check`/`build`/`run` 使用同一 JAR 或目录路径；没有自动下载。 |
 
 | 多参数显式泛型、Equatable | 不变泛型；无推断。 |
-| sprig.toml、本地/Git 依赖、schema-2 lock、exports、离线构建 | 已实现；Maven 不支持。 |
+| sprig.toml、本地/Git 依赖、schema-3 lock、exports、离线构建 | 已实现；Maven 有效 POM/传递依赖、统一 classpath。 |
 
 ## 尚未实现
 
 泛型推断、variance、Comparable、继承与接口、`match` 表达式、嵌套/位置模式、源码中的函数类型、
 `%=`、元组与解构、数组/变长参数、完整的 Java 泛型与注解互操作、文件 IO 库、
-Maven 解析、发布/registry、LSP/IDE 集成、增量检查、自举（stage-1）。
+发布/registry、LSP/IDE 集成、增量检查、自举（stage-1）。
 
 完整边界与原因见[已知限制](/reference/known-limitations)和英文的
 [Known limitations](/en/reference/KNOWN_LIMITATIONS)。

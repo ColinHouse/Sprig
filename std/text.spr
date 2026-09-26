@@ -1,0 +1,50 @@
+# UTF-16 indexed helpers, matching the implemented String indexing contract.
+func starts_with(value: String, prefix: String) -> Bool:
+    if prefix.length() > value.length():
+        return false
+    return value.substring(0, prefix.length()) == prefix
+
+func ends_with(value: String, suffix: String) -> Bool:
+    if suffix.length() > value.length():
+        return false
+    return value.substring(value.length() - suffix.length(), value.length()) == suffix
+
+func split(value: String, separator: String) -> List[String] throws Error:
+    if separator.length() == 0:
+        throw Error("split separator must not be empty")
+    let output: MutableList[String] = []
+    var start: Int = 0
+    var index: Int = 0
+    while index + separator.length() <= value.length():
+        if value.substring(index, index + separator.length()) == separator:
+            output.append(value.substring(start, index))
+            index += separator.length()
+            start = index
+        else:
+            index += 1
+    output.append(value.substring(start, value.length()))
+    return output.toList()
+
+func lines(value: String) -> List[String]:
+    let output: MutableList[String] = []
+    var start: Int = 0
+    var index: Int = 0
+    while index < value.length():
+        if value.charAt(index) == "\n":
+            var end = index
+            if end > start and value.charAt(end - 1) == "\r":
+                end -= 1
+            output.append(value.substring(start, end))
+            start = index + 1
+        index += 1
+    output.append(value.substring(start, value.length()))
+    return output.toList()
+
+func trim(value: String) -> String:
+    var start: Int = 0
+    var end = value.length()
+    while start < end and (value.charAt(start) == " " or value.charAt(start) == "\t" or value.charAt(start) == "\r" or value.charAt(start) == "\n"):
+        start += 1
+    while end > start and (value.charAt(end - 1) == " " or value.charAt(end - 1) == "\t" or value.charAt(end - 1) == "\r" or value.charAt(end - 1) == "\n"):
+        end -= 1
+    return value.substring(start, end)

@@ -1,0 +1,69 @@
+import "../../../../std/json.spr" as json
+import "./model.spr" as model
+
+func number(value: Int) -> json.Value:
+    return json.Value.Number(text=value.toString())
+
+func file_json(stats: model.FileStats) -> json.Value:
+    let members: List[json.Member] = [json.Member(key="path", value=json.Value.Text(value=stats.path)), json.Member(key="extension", value=json.Value.Text(value=stats.extension)), json.Member(key="lines", value=number(stats.lines)), json.Member(key="code", value=number(stats.code_lines())), json.Member(key="blank", value=number(stats.blank)), json.Member(key="comments", value=number(stats.comments)), json.Member(key="characters", value=number(stats.characters))]
+    return json.Value.Object(members=members)
+
+func finding_message(finding: model.Finding) -> String:
+    match finding:
+        case model.Finding.TrailingWhitespace as item:
+            return item.path + ": trailing whitespace on " + item.count.toString() + " lines"
+        case model.Finding.TabIndent as item:
+            return item.path + ": tab indentation on " + item.count.toString() + " lines"
+        case model.Finding.LargeFile as item:
+            return item.path + ": large file (" + item.lines.toString() + " lines)"
+        case model.Finding.Skipped as item:
+            return item.path + ": skipped " + item.reason
+
+func groups(inventory: model.Inventory) -> List[model.Bucket[model.FileStats]]:
+    let output: MutableList[model.Bucket[model.FileStats]] = []
+    for stats in inventory.files:
+        var found = false
+        for bucket in output:
+            if bucket.key == stats.extension:
+                bucket.add(stats)
+                found = true
+        if not found:
+            let bucket = model.Bucket[model.FileStats](key=stats.extension)
+            bucket.add(stats)
+            output.append(bucket)
+    return output.toList()
+
+func line_total(values: List[model.FileStats]) -> Int:
+    var total: Int = 0
+    for stats in values:
+        total += stats.lines
+    return total
+
+func code_total(values: List[model.FileStats]) -> Int:
+    var total: Int = 0
+    for stats in values:
+        total += stats.code_lines()
+    return total
+
+func summary(inventory: model.Inventory) -> String:
+    let values = inventory.files.toList()
+    return "files=" + values.size().toString() + " directories=" + inventory.directories.toString() + " lines=" + line_total(values).toString() + " code=" + code_total(values).toString() + " skipped=" + inventory.ignored.toString()
+
+func print_report(inventory: model.Inventory) -> Unit:
+    print("Sprig repository audit")
+    print(summary(inventory))
+    for bucket in groups(inventory):
+        print(bucket.key + ": files=" + bucket.items.size().toString() + " lines=" + line_total(bucket.values()).toString())
+    print("findings=" + inventory.findings.size().toString())
+    for finding in inventory.findings:
+        print(finding_message(finding))
+
+func document(inventory: model.Inventory) -> json.Value:
+    let entries: MutableList[json.Value] = []
+    for stats in inventory.files:
+        entries.append(file_json(stats))
+    let findings: MutableList[json.Value] = []
+    for finding in inventory.findings:
+        findings.append(json.Value.Text(value=finding_message(finding)))
+    let members: List[json.Member] = [json.Member(key="summary", value=json.Value.Text(value=summary(inventory))), json.Member(key="files", value=json.Value.Array(values=entries.toList())), json.Member(key="findings", value=json.Value.Array(values=findings.toList()))]
+    return json.Value.Object(members=members)

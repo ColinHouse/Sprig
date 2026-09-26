@@ -15,7 +15,7 @@ import sprig.compiler.diag.Phase;
 /** One resolved classpath for reflection, javac, the child JVM and CLI metadata. */
 public final class JvmClasspath {
     private static List<Path> entries = List.of();
-    private static ClassLoader loader = JvmClasspath.class.getClassLoader();
+    private static ClassLoader loader = new ApplicationLoader(new URL[0]);
 
     private JvmClasspath() {}
 
@@ -45,14 +45,23 @@ public final class JvmClasspath {
         try {
             URL[] urls = new URL[resolved.size()];
             for (int i = 0; i < resolved.size(); i++) urls[i] = resolved.get(i).toUri().toURL();
-            // URLClassLoader is parent-first. First user entry wins duplicate names.
-            loader = new URLClassLoader(urls, JvmClasspath.class.getClassLoader());
+            if (loader instanceof URLClassLoader old) old.close();
+            loader = new ApplicationLoader(urls);
             entries = List.copyOf(resolved);
             return true;
         } catch (IOException e) {
             diagnostics.error(Codes.JVM_CLASSPATH, Phase.JVM,
                     "Cannot resolve classpath: " + e.getMessage(), null, null);
             return false;
+        }
+    }
+
+    /** Tool implementation JARs must never become implicit application dependencies. */
+    private static final class ApplicationLoader extends URLClassLoader {
+        ApplicationLoader(URL[] urls) { super(urls, ClassLoader.getPlatformClassLoader()); }
+        @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+            if (name.startsWith("sprig.runtime.")) return JvmClasspath.class.getClassLoader().loadClass(name);
+            return super.loadClass(name, resolve);
         }
     }
 

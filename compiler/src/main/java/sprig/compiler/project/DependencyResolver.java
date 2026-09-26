@@ -25,9 +25,9 @@ import sprig.compiler.diag.Span;
  * package-local, exports are enforced for external consumers, and Git
  * revisions come from the lockfile once resolved.
  *
- * <p>JVM (Maven) dependencies are represented in the lockfile model but
- * artifact resolution is not implemented in this alpha; see the validation
- * report for the recorded blocker.
+ * <p>JVM declarations across the resolved package tree are collected by
+ * Apache Maven Resolver. Build consumers validate locked content without
+ * re-resolving the Maven graph.
  */
 public final class DependencyResolver {
     private DependencyResolver() {
@@ -229,7 +229,10 @@ public final class DependencyResolver {
         Package root = build(project, "root", "", "root", null, null, null, lock, offline, false, new ArrayDeque<>());
         if (new Result(root, lock).entries().size() != lock.sprig.size())
             throw new DepError(Codes.PROJECT_LOCK_STALE, "Lock contains unexpected dependency edges; run `sprig resolve`", null);
-        return new Result(root, lock);
+        Result result = new Result(root, lock);
+        MavenResolver.validateDeclarations(result);
+        MavenResolver.load(lock);
+        return result;
     }
 
     private static Package build(Project project, String id, String alias, String kind, String url,
@@ -244,8 +247,6 @@ public final class DependencyResolver {
         }
         Package pkg = new Package(alias, project, project.root, kind, url, requested, revision,
                 manifestSha, false);
-        if (!project.jvmDependencies.isEmpty())
-            throw new DepError(Codes.DEP_MAVEN, "Maven dependencies are unsupported in package " + project.name, null);
         pkg.id = id;
         pkg.owner = id.equals("root") ? "" : id.substring(0, id.lastIndexOf("/@"));
         for (Project.Dependency dependency : project.dependencies) {

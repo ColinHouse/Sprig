@@ -133,7 +133,7 @@ even though the JVM sees a boxed value.
 ## Not part of v0.8
 
 Generic inference, variance, `Comparable` and any user-defined capability,
-generic constraints on JVM types, and registry/Maven features. The
+generic constraints on JVM types, and registry/publishing features. The
 manifest and entry-discovery model (`sprig.toml`, `init`, `project`, `deps`,
-`run --bin`), lockfiles and local/Git resolution are implemented. Maven/JVM
-resolution remains unsupported; see the current project/dependency documentation.
+`run --bin`), schema-3 lockfiles, local/Git and Apache Maven resolution are implemented;
+see the current project/dependency documentation.

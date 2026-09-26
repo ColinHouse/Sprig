@@ -1,0 +1,33 @@
+{
+  "distribution": "apache-maven-3.9.11",
+  "url": "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.zip",
+  "sha512": "03e2d65d4483a3396980629f260e25cac0d8b6f7f2791e4dc20bc83f9514db8d0f05b0479e699a5f34679250c49c8e52e961262ded468a20de0be254d8207076",
+  "jars": {
+    "commons-codec-1.18.0.jar": "ba005f304cef92a3dede24a38ad5ac9b8afccf0d8f75839d6c1338634cf7f6e4",
+    "httpclient-4.5.14.jar": "c8bc7e1c51a6d4ce72f40d2ebbabf1c4b68bfe76e732104b04381b493478e9d6",
+    "httpcore-4.4.16.jar": "6c9b3dd142a09dc468e23ad39aad6f75a0f2b85125104469f026e52a474e464f",
+    "javax.inject-1.jar": "91c77044a50c481636c32d916fd89c9118a72195390452c81065080f957de7ff",
+    "jcl-over-slf4j-1.7.36.jar": "ab57ca8fd223772c17365d121f59e94ecbf0ae59d08c03a3cb5b81071c019195",
+    "maven-artifact-3.9.11.jar": "0bfd1c121f907642344311d81e4dfd93eba6c24dc712cc0aeae273eb22833022",
+    "maven-builder-support-3.9.11.jar": "5b1de1560ec19c4c69a655f986455888f3a0bcc3c160cac1f1edb87de3825f77",
+    "maven-model-3.9.11.jar": "163aa596f976264384efeb50b4cb8a806086fd64a9b755ad1f69195fed3998ad",
+    "maven-model-builder-3.9.11.jar": "c4c72accdcd848332c1a37995610a6a369d49fdaabc43e85f0022a5b77de3ba7",
+    "maven-repository-metadata-3.9.11.jar": "f8655f5f0060e0032944f2a23688d186e140d2184749bcfa1927f83cd6a8b1a2",
+    "maven-resolver-api-1.9.24.jar": "c0ce14849298720dcf3b09fe9e263b3c576d2d6cd43c61f8aa9d6117e04e5e47",
+    "maven-resolver-connector-basic-1.9.24.jar": "18b7d557c41379db8b157ba95263c676f52c293f5416b67bd1db083e99b30383",
+    "maven-resolver-impl-1.9.24.jar": "3cd88edda00c46242cdbe57aefb47703519d176d9e8a500333de15faf41b0e1d",
+    "maven-resolver-named-locks-1.9.24.jar": "a222b0a5ca4c145e8e0f45207a23bcce18bdbe1f1c980e4e9fb332591ee8c91a",
+    "maven-resolver-provider-3.9.11.jar": "b5d6e52ae1ecf1cb62ede2234234ba3093149524066488e84415187ce478c582",
+    "maven-resolver-spi-1.9.24.jar": "e3153906e93333c106ee18babb72ba7984ccb15e9116ea08f88c71b8d9387e01",
+    "maven-resolver-transport-file-1.9.24.jar": "b09268d41e1dfcae15a829d45a512ca29d62b727421d3bd6383ac6252e5e960f",
+    "maven-resolver-transport-http-1.9.24.jar": "a0de339a8dd3473d9abaa1cf974507f38783e26af31d36a90c1e59cc8714ded0",
+    "maven-resolver-util-1.9.24.jar": "aeb7e776a8c47b1c317a2581f299e2525b044cb8abde31164e970bbbefab12b1",
+    "plexus-interpolation-1.28.jar": "ab2a8715570438a2e4164d85ad3e8d489eabc38ea5093c2eb8ab7f58403535b5",
+    "plexus-utils-3.6.0.jar": "27ef130e32c236090e408fb5498d94cb9ea26d14070fb1c8985d607b62d098d1",
+    "slf4j-api-1.7.36.jar": "d3ef575e3e4979678dc01bf1dcce51021493b4d11fb7f1be8ad982877c16a1c0",
+    "slf4j-nop-1.7.36.jar": "c214958b07816cb4412b30c7bdbd4308ffdc6ba2a83767b8f3a9229cbd9274d6"
+  },
+  "external": {
+    "slf4j-nop-1.7.36.jar": "https://repo.maven.apache.org/maven2/org/slf4j/slf4j-nop/1.7.36/slf4j-nop-1.7.36.jar"
+  }
+}

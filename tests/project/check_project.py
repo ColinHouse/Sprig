@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """v0.8 project model: discovery, sprig.toml, default entry, lock requirement."""
+import os
 import json
 from pathlib import Path
 import subprocess
@@ -7,7 +8,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 CHECKS = 0
 
 

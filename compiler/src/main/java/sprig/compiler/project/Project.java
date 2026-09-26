@@ -14,9 +14,8 @@ import java.util.Set;
  * v0.8 project model: {@code sprig.toml} discovery, the default layout
  * ({@code src/main.spr}) and manifest metadata.
  *
- * <p>Dependency resolution is intentionally absent: the model records what the
- * manifest declares, marks it unresolved, and the CLI reports that clearly
- * instead of pretending to resolve it.
+ * <p>Dependency graph and artifact resolution live in DependencyResolver and
+ * MavenResolver; this model only validates manifest declarations.
  */
 public final class Project {
     public static final String MANIFEST = "sprig.toml";
@@ -149,6 +148,8 @@ public final class Project {
                 throw new Toml.TomlException(
                         "[[jvm]] accepts exact versions only: " + depVersion, 1);
             }
+            try { MavenResolver.validate(group, artifact, depVersion); }
+            catch (DepError e) { throw new Toml.TomlException(e.getMessage(), 1); }
             jvm.add(new JvmDependency(group, artifact, depVersion));
         }
         this.jvmDependencies = List.copyOf(jvm);

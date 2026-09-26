@@ -5,6 +5,7 @@ For each input the script records what each CLI phase does and verifies that
 front-end guarantees are not bypassed by build/run. Written by the acceptance
 reviewer.
 """
+import os
 import json
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 CASES = ROOT / "acceptance" / "cases"
 OUT = ROOT / "acceptance" / "results"
 WORK = ROOT / "build" / "acceptance_matrix"

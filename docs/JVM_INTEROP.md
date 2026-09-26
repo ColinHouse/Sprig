@@ -52,13 +52,15 @@ sprig build app.spr --classpath lib/widget.jar -d build/app
 sprig run app.spr --classpath lib/widget.jar
 ```
 
-Repeat `--classpath` or use the platform path separator. Relative paths are
-resolved against the command's current working directory. The compiler/JDK
-parent loader wins over user entries; then the first user entry wins duplicate
-classes. Missing entries raise `SPR-JVM-CLASSPATH`. This is a deterministic
-local JVM classpath, not a Maven resolver. Local/Git Sprig packages use the separate
-project dependency system. Third-party class
-initializers execute only if the user program actually executes the class.
+Manifest `[[jvm]]` dependencies are resolved by `sprig resolve` using Apache
+Resolver; `api/check/build/run/doctor` automatically use the locked project JARs.
+Repeat `--classpath` or use the platform path separator for additional local
+entries. Relative paths resolve against cwd. JDK/runtime classes, then locked
+JARs in recorded order, then explicit entries: first application entry wins.
+Compiler implementation JARs do not leak into application imports. Missing
+explicit entries raise `SPR-JVM-CLASSPATH`; missing/corrupt locked artifacts
+raise `SPR-DEP-OFFLINE`/`SPR-DEP-CHECKSUM`. Class initialization occurs only when
+the user program executes that class. See [dependencies](DEPENDENCIES.md).
 
 `sprig api` includes Java's declared exception types. Inside a named Sprig
 function, checked Java exceptions must be caught or covered by that function's

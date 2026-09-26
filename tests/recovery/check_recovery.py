@@ -11,6 +11,7 @@ Two layers:
 
 Run from any directory: python3 tests/recovery/check_recovery.py
 """
+import os
 import json
 import subprocess
 import sys
@@ -18,7 +19,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 
 INCOMPLETE = [
     "let x =\n",

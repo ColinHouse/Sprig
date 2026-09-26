@@ -91,6 +91,9 @@ branch = "main"
   revision fails with `SPR-DEP-OFFLINE`.
 - Cycles and duplicate aliases are rejected with structured diagnostics.
 
-**Maven/JVM dependencies are not implemented**: declaring `[[jvm]]` fails with
-`SPR-DEP-MAVEN`, and third-party jars still need explicit `--classpath`. See
-[Known limitations](/en/reference/KNOWN_LIMITATIONS).
+**Maven/JVM dependencies are implemented in the v0.3 source candidate.**
+Declare exact release coordinates in `[[jvm]]`, run resolve, then use
+check/build/run/api/doctor without manually locating JARs. Apache Resolver handles
+parents/BOMs/transitives. Schema-3 locks record JAR/POM SHA-256, graph and order.
+Warm cache is required offline; consumers never re-resolve. See
+[dependency contract](https://github.com/ColinHouse/Sprig/blob/main/docs/DEPENDENCIES.md).

@@ -1,0 +1,21 @@
+import "../../std/json.spr" as json
+
+let value = json.parse("{\"ok\":true,\"nested\":[null,12.50,\"a\\nb\",{\"x\":-2e3}]}")
+print(json.stringify(value))
+print(json.stringify(json.parse("\"\\u4f60\\u597d\"")))
+try:
+    json.parse("[1,]")
+catch problem: Error:
+    print("rejected trailing comma")
+try:
+    json.parse("{\"x\":1,\"x\":2}")
+catch problem: Error:
+    print("rejected duplicate key")
+try:
+    json.parse("01")
+catch problem: Error:
+    print("rejected leading zero")
+try:
+    json.parse("true false")
+catch problem: Error:
+    print("rejected trailing text")

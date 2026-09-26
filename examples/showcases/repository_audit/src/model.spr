@@ -1,0 +1,49 @@
+# Immutable measurements, explicit mutable aggregation.
+class FileStats:
+    let path: String
+    let extension: String
+    let characters: Int
+    let lines: Int
+    let blank: Int
+    let comments: Int
+    let trailing: Int
+    let tabs: Int
+
+    func code_lines() -> Int:
+        return lines - blank - comments
+
+variant Finding:
+    TrailingWhitespace(path: String, count: Int)
+    TabIndent(path: String, count: Int)
+    LargeFile(path: String, lines: Int)
+    Skipped(path: String, reason: String)
+
+generic T:
+    class Bucket:
+        let key: String
+        var items: MutableList[T] = []
+
+        func add(item: T) -> Unit:
+            items.append(item)
+
+        func values() -> List[T]:
+            return items.toList()
+
+class Inventory:
+    var files: MutableList[FileStats] = []
+    var findings: MutableList[Finding] = []
+    var directories: Int = 0
+    var ignored: Int = 0
+
+    func add_file(stats: FileStats) -> Unit:
+        files.append(stats)
+        if stats.trailing > 0:
+            findings.append(Finding.TrailingWhitespace(path=stats.path, count=stats.trailing))
+        if stats.tabs > 0:
+            findings.append(Finding.TabIndent(path=stats.path, count=stats.tabs))
+        if stats.lines > 400:
+            findings.append(Finding.LargeFile(path=stats.path, lines=stats.lines))
+
+    func skipped(path: String, reason: String) -> Unit:
+        ignored += 1
+        findings.append(Finding.Skipped(path=path, reason=reason))

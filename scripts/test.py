@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Full test.sh contract, with native Windows launcher and Python process calls."""
+from pathlib import Path
+import json
+import os
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
+
+
+def main():
+    passed, failures = 0, []
+
+    def record(name, ok, details=""):
+        nonlocal passed
+        if ok:
+            passed += 1
+        else:
+            failures.append(name)
+            print(f"FAIL: {name}\n{details}", flush=True)
+
+    def sprig(*args):
+        return subprocess.run([str(SPRIG), *map(str, args)], cwd=ROOT,
+                              capture_output=True, text=True, encoding="utf-8")
+
+    if not SPRIG.is_file() or sprig("version").returncode:
+        print("Build first: python3 scripts/build.py", file=sys.stderr)
+        return 2
+    for category in ("positive", "negative"):
+        for source in sorted((ROOT / "tests/syntax" / category).glob("*.spr")):
+            proc = sprig("check", "--syntax-only", source)
+            output = proc.stdout + proc.stderr
+            ok = proc.returncode == 0 if category == "positive" else (
+                proc.returncode != 0 and ("SPR-LEX-" in output or "SPR-SYNTAX-" in output))
+            record(f"syntax-{category} {source.name}", ok, output)
+    for category in ("runtime", "visitor"):
+        for source in sorted((ROOT / "tests" / category).glob("*.spr")):
+            golden = source.with_suffix(".out")
+            if not golden.is_file():
+                continue
+            proc = sprig("run", source)
+            # test.sh command substitution ignores trailing newlines in stdout/stderr.
+            output = proc.stdout + proc.stderr
+            record(f"{category} {source.name}", proc.returncode == 0 and
+                   output.rstrip("\n") == golden.read_text(encoding="utf-8").rstrip("\n"), output)
+    proc = sprig("check", ROOT / "tests/visitor/nonexhaustive.spr")
+    record("visitor exhaustiveness", "SPR-MATCH-NONEXHAUSTIVE" in proc.stdout + proc.stderr)
+    for source in sorted((ROOT / "examples").glob("*.spr")):
+        proc = sprig("run", source)
+        record(f"example {source.name}", proc.returncode == 0, proc.stdout + proc.stderr)
+    record("explain", sprig("explain", "SPR-MATCH-NONEXHAUSTIVE").returncode == 0)
+    try:
+        json.loads(sprig("check", "--json", ROOT / "tests/semantics/missing_case.spr").stdout)
+        record("check JSON envelope", True)
+    except ValueError as error:
+        record("check JSON envelope", False, str(error))
+    suites = ["scripts/check_cases.py", "tests/numeric/check_numeric.py",
+              "tests/correctness/check_correctness.py", "tests/recovery/check_recovery.py",
+              "acceptance/scripts/run_acceptance.py", "acceptance/scripts/json_matrix.py",
+              "acceptance/scripts/consistency_matrix.py", "tests/agent_tooling/check_tooling.py",
+              "tests/cli_contract/check_cli_contract.py", "tests/bootstrap/check_probe.py",
+              "tests/project/check_project.py", "tests/project_deps/check_deps.py",
+              "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
+              "tests/adversarial/v08/check_projects.py"]
+    suites += ["tests/maven/check_resolver.py", "scripts/test-stdlib.py",
+               "scripts/test-showcases.py"]
+    for suite in suites:
+        print(f"== {suite} ==", flush=True)
+        command = [sys.executable, str(ROOT / suite)]
+        if suite == "scripts/check_cases.py":
+            command.append(str(ROOT))
+        record(suite, subprocess.run(command, cwd=ROOT).returncode == 0)
+    print(f"summary: {passed} gates/cases passed, {len(failures)} failed")
+    for name in failures:
+        print(f"failed: {name}")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

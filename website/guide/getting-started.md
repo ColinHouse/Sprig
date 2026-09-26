@@ -1,10 +1,12 @@
-# 快速开始
+# 五分钟创建第一个项目
 
-本页说明如何获得 stage-0 编译器并运行第一个 Sprig 程序。
+Sprig 是面向 CLI 工具、自动化和可靠应用代码的实验性 JVM 语言。
+安装 **JDK 17+**，确保 `java` 和 `javac` 都在 `PATH`。SDK 不包含 JDK。
 
-## 安装方式
+## 下载与校验
 
-**方式 A：下载 Alpha 发行包**（包含编译器、runtime、ANTLR 与启动脚本，不含 JDK）：
+公开 SDK 为 [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)。
+从发行页下载 ZIP 与同名 `.sha256`。Linux/macOS：
 
 ```bash
 curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
@@ -12,104 +14,81 @@ curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sp
 shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
 unzip sprig-v0.2.0-alpha.1-jdk.zip
 cd sprig-v0.2.0-alpha.1-jdk
-./bin/sprig run examples/hello.spr
 ```
 
-**方式 B：从源码构建**，见下文。
+Linux 也可用 `sha256sum -c`；校验不符时停止。源代码里程碑目标是
+v0.3.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。
+v0.2 发行包支持本地/Git 依赖，第三方 JVM 库需显式 classpath。
 
-## 环境要求
+## 初始化、解析、运行
 
-| 工具 | 版本 | 用途 |
-|---|---|---|
-| JDK | 17 或更新 | 编译器以 `javac --release 17` 构建，已在 OpenJDK 17.0.19 与 26.0.1（macOS Apple Silicon）上端到端运行；托管 CI 在 Linux 上覆盖两个版本。 |
-| Python | 3.12 或更新 | 测试与验收脚本。 |
-| `curl` | 任意 | 首次构建时下载固定版本的 ANTLR 4.13.2 工具 JAR。 |
-| Node.js | 20 或更新 | 仅在本地构建本文档站时需要。 |
-
-## 构建编译器
+保存启动器绝对路径，进入新项目后仍可调用：
 
 ```bash
+./bin/sprig version
+SPRIG="$(pwd)/bin/sprig"
+"$SPRIG" init my-tool
+cd my-tool
+"$SPRIG" resolve
+"$SPRIG" run
+```
+
+程序输出：`Hello, Sprig!`。`init` 创建 `sprig.toml` 和 `src/main.spr`，不覆盖
+已有文件；`resolve` 生成 `sprig.lock`；`run` 类型检查、生成 Java、调用 `javac`
+并在 JVM 运行。修改源码不用重新生成锁；修改 manifest 或依赖需要重新 resolve。
+
+## Windows 与源码构建
+
+Windows SDK 发布前可用原生源码构建；需要 Git、JDK 17+、Python 3.12+，
+不需要 Bash 或 Maven CLI。PowerShell：
+
+```powershell
 git clone https://github.com/ColinHouse/Sprig.git
-cd Sprig
-./scripts/build.sh
+Set-Location Sprig
+py -3 scripts/build.py
+$Sprig = (Resolve-Path .\bin\sprig.cmd).Path
+& $Sprig version
+& $Sprig init my-tool
+Set-Location my-tool
+& $Sprig resolve
+& $Sprig run
 ```
 
-当 `tools/antlr-4.13.2-complete.jar` 不存在时，脚本会从 Maven Central
-下载它并校验 SHA-256，然后从 `grammar/` 重新生成解析器，用
-`javac --release 17` 编译 `compiler/` 和 `runtime/`，最后生成 `bin/sprig`。
+Linux/macOS 克隆同一仓库，用 `python3 scripts/build.py`，再执行上面的
+`bin/sprig` 流程。首次构建下载固定版本 ANTLR 和 Maven Resolver 库；仅构建
+文档及完整贡献验证时需要 Node.js 20+/npm。实际验证过的平台看[发行状态](/project/release-status)。
 
-```text
-Generating ANTLR4 parser...
-Compiling compiler + runtime...
-Built Sprig stage-0 compiler.
-  launcher:  .../bin/sprig
-  classes:   .../build/classes
-  compiler:  .../build/sprig-compiler.jar
-```
+## 查询、修改、检查、修复
 
-## 运行第一个程序
-
-<<< @/../examples/hello.spr
+在项目里执行（没有设置 PATH 时用启动器绝对路径代替 `sprig`）：
 
 ```bash
-./bin/sprig run examples/hello.spr
+sprig capabilities --json
+sprig help generics --json
+sprig api java.time.LocalDate --json
+sprig check --json
+sprig explain SPR-TYPE-NULLABLE --json
+sprig run
 ```
 
-```text
-Hello, Ada!
-```
+诊断提供稳定码与源位置。Java 引用结果须判空，整数除法和泛型参数须显式。
+JSON 格式见[工具与 JSON](/guide/tooling)。不要从其他语言猜测规则。
 
-`run` 会先做类型检查，再生成 Java 源码、调用 `javac`，最后在 JVM 上执行。
+## 做一个实用工具
 
-## 命令行
+[Showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)包括
+输出 JSON 的仓库审计器、真实 Maven 库应用和源码分析器，各 README 给出输入和命令。
+基础语法见[语言导览](/guide/language-tour)。
 
-```text
-Usage: sprig <command> [options]
-
-  check <file.spr> [--json] [--syntax-only]   parse and type-check
-  run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
-  build <file.spr> [-d dir] [--json]          emit Java sources + .class files
-  help [topic] [--json]                       带版本的语言参考
-  capabilities [--json]                      已实现能力清单
-  api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
-  doctor [--classpath JAR] [--json]          检查编译环境
-  explain <SPR-CODE> [--json]                 解释诊断码
-  codes [--json]                              list every diagnostic code
-  version
-```
-
-| 命令 | 作用 |
-|---|---|
-| `check` | 运行词法、缩进、解析、名称解析与类型检查，不写任何文件。 |
-| `run` | 在 `check` 之后生成 Java、调用 `javac` 并运行程序。 |
-| `build` | 把生成的 Java 源码与 `.class` 文件写入 `-d <dir>`（默认 `sprig-build`）。 |
-| `help` / `capabilities` / `api` / `doctor` | 发行包内的离线语言、JVM 与环境查询。 |
-| `explain` | 解释一个稳定的诊断码，例如 `SPR-MATCH-NONEXHAUSTIVE`。 |
-| `codes` | 列出全部诊断码。 |
-| `--json` | 把结果封装为单个机器可读的 JSON 文档。 |
-| `--syntax-only` | 只做词法、缩进与解析。 |
-
-JSON 结果与稳定诊断码见[工具与 JSON](/guide/tooling)。
-
-## 运行项目测试
-
-```bash
-./scripts/test.sh
-```
-
-该脚本会运行语法正反例、46 个语义期望用例、带 golden stdout 的运行时程序、
-visitor 程序、示例、数值边界、解析器恢复模糊测试以及独立验收矩阵，最后输出
-`N passed, 0 failed`，任何失败都会以非零状态退出。
-
-独立的语法 smoke harness：
-
-```bash
-ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
-```
+想和编码 Agent 一起贡献？读[贡献指南（英文）](/en/project/contributing)和
+`AGENTS.md`，挑选有验收条件的小任务，运行 `scripts/verify.sh`
+（Windows：`py -3 scripts/verify.py`），审查后提交 PR。
 
 ## 常见问题
 
-- **提示 `JDK required`**：安装 JDK 17 或更新版本，并确保 `java` 与 `javac` 在 `PATH` 中。
-- **ANTLR 校验和不匹配**：删除 `tools/antlr-4.13.2-complete.jar` 后重新构建，让脚本重新下载。
-- **`SPR-LEX-TAB`**：Sprig 的缩进只能使用空格，不能使用制表符。
-- **Java 引用结果被报告为可空**：这是有意设计；请先用 `!= null` 判空再调用方法。
+- **找不到 JDK**：检查 `java -version` 和 `javac -version`，确认安装的是 JDK。
+- **锁缺失或过期**：在项目目录执行 resolve；manifest 修改后需重新解析。
+- **离线缓存缺失**：先联网 resolve，锁文件本身不包含所有依赖文件。
+- **`SPR-LEX-TAB`**：缩进使用空格。
+- **Java 结果可空**：先 `!= null` 收窄再使用。
+- **校验不符**：保留证据并重新下载对应文件，不要关闭校验。

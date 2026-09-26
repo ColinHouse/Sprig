@@ -2,7 +2,7 @@
 
 This table reflects what the compiler in this directory **actually does**, as
 verified by `scripts/test.sh`. The release validation record is
-[on GitHub](https://github.com/ColinHouse/Sprig/blob/main/docs/post-v0.7/V08_VALIDATION_REPORT.md).
+[on GitHub](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md).
 The historical v0.7 design kit describes target semantics rather than current capabilities.
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
@@ -24,7 +24,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model suite |
 | Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver suite |
 | Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` verified detached checkouts | dependency resolver |
-| Maven/JVM dependency resolution | manifest only | rejected loudly with `SPR-DEP-MAVEN` (see validation report) | explicit `--classpath` remains | project model |
+| Maven/JVM dependency resolution | exact direct release coordinates | Apache Resolver effective POM + transitive mediation, schema-3 hashes/graph | shared locked check/build/run/api/doctor classpath | Maven fixtures + real commons-text showcase |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
 | Flow: definite return, unreachable code | — | yes (`SPR-FLOW-*`) | — | semantics |
@@ -35,7 +35,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | `BigInt` and `Decimal` | yes | distinct native types | BigInteger/BigDecimal wrappers | numeric acceptance suite |
 | Java checked exceptions + typed catch + `error.message` | yes | yes | Java try/catch | runtime 15 |
 | `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
-| Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | local/Git packages resolve separately; JVM JARs remain explicit | agent tooling suite |
+| Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | locked JVM JARs precede explicit entries; compiler libraries isolated | agent tooling suite |
 | javac error → Sprig span translation | — | — | line map | by design |
 | Checked effects from omitted class defaults | — | checked at each constructor call; explicit field values skip unused defaults | defaults still evaluate per instance, in declaration order | correctness regressions |
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
@@ -45,7 +45,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`
 expressions, nested/positional patterns, function types in source, `%=`,
-tuples/destructuring, varargs/arrays/annotations in interop, file IO library,
-Maven/JVM dependency resolution, LSP, incremental checking,
+tuples/destructuring, varargs/arrays/annotations in interop,
+LSP, publishing/registry, incremental checking,
 self-hosting.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries.

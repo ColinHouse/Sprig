@@ -1,12 +1,13 @@
-# Getting Started
+# Five-minute first project
 
-This page explains how to get the stage-0 compiler and run a first Sprig
-program.
+Sprig is an experimental JVM language for CLI tools, automation and reliable
+application code. Install **JDK 17+**; both `java` and `javac` must be on `PATH`.
+The SDK contains the compiler/runtime libraries and launcher, not a JDK.
 
-## Install
+## Download and verify
 
-**Option A — download the alpha archive** (compiler, runtime, ANTLR and
-launcher; no JDK included):
+The published SDK is [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
+Download the ZIP and its `.sha256` from that release. On Linux/macOS:
 
 ```bash
 curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
@@ -14,110 +15,95 @@ curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sp
 shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
 unzip sprig-v0.2.0-alpha.1-jdk.zip
 cd sprig-v0.2.0-alpha.1-jdk
-./bin/sprig run examples/hello.spr
 ```
 
-**Option B — build from source**, described below.
+On Linux, `sha256sum -c` is also available. Stop if the checksum differs.
+The source milestone is v0.3.0-alpha.1; use the release assets and capability
+output to check which features your SDK actually includes. The v0.2 archive
+supports local/Git dependencies and explicit JVM classpaths.
 
-## Requirements
+## Initialize, resolve, run
 
-| Tool | Version | Why |
-|---|---|---|
-| JDK | 17 or newer | The compiler builds with `javac --release 17` and has been run end-to-end on OpenJDK 17.0.19 and 26.0.1 (macOS Apple Silicon); hosted CI exercises both on Linux. |
-| Python | 3.12 or newer | Test and acceptance scripts. |
-| `curl` | any | The first build downloads the pinned ANTLR 4.13.2 tool JAR if it is missing. |
-| Node.js | 20 or newer | Only needed to build this documentation site. |
-
-## Build the compiler
+Inside the extracted SDK, save an absolute launcher path so changing directory
+keeps it available:
 
 ```bash
-./scripts/build.sh
+./bin/sprig version
+SPRIG="$(pwd)/bin/sprig"
+"$SPRIG" init my-tool
+cd my-tool
+"$SPRIG" resolve
+"$SPRIG" run
 ```
 
-The script downloads `antlr-4.13.2-complete.jar` from Maven Central when
-`tools/antlr-4.13.2-complete.jar` is absent, verifies its SHA-256 digest,
-regenerates the parser from `grammar/`, compiles `compiler/` and `runtime/`
-with `javac --release 17`, and writes `bin/sprig`.
+Expected program output:
 
 ```text
-Generating ANTLR4 parser...
-Compiling compiler + runtime...
-Built Sprig stage-0 compiler.
-  launcher:  .../bin/sprig
-  classes:   .../build/classes
-  compiler:  .../build/sprig-compiler.jar
+Hello, Sprig!
 ```
 
-## Run your first program
+`init` creates `sprig.toml` and `src/main.spr` without overwriting existing
+files. `resolve` creates `sprig.lock`. `run` checks types, generates Java,
+invokes `javac`, and executes on the JVM. Source edits do not require a new
+lock; manifest/dependency changes require `resolve` again.
 
-<<< @/../examples/hello.spr
+## Windows and source builds
+
+Use the portable source build until a Windows SDK is published. Requires Git,
+JDK 17+ and Python 3.12+; Maven CLI and Bash are not required. PowerShell:
+
+```powershell
+git clone https://github.com/ColinHouse/Sprig.git
+Set-Location Sprig
+py -3 scripts/build.py
+$Sprig = (Resolve-Path .\bin\sprig.cmd).Path
+& $Sprig version
+& $Sprig init my-tool
+Set-Location my-tool
+& $Sprig resolve
+& $Sprig run
+```
+
+On Linux/macOS, clone the same repository and use `python3 scripts/build.py`,
+then the `bin/sprig` sequence above. The first build downloads pinned ANTLR and
+Maven Resolver libraries. Node.js 20+/npm is needed only for documentation and
+the full contributor gate. [Release status](/en/project/release-status) states
+which OS/JDK combinations have actually passed.
+
+## Ask the compiler, then edit
+
+From your project (replace `sprig` with the absolute launcher if it is not on `PATH`):
 
 ```bash
-./bin/sprig run examples/hello.spr
+sprig capabilities --json
+sprig help generics --json
+sprig api java.time.LocalDate --json
+sprig check --json
+sprig explain SPR-TYPE-NULLABLE --json
+sprig run
 ```
 
-```text
-Hello, Ada!
-```
+JSON diagnostics carry stable codes and source positions. Do not guess from
+another language: Java reference results are nullable, integer division is
+explicit and generics use explicit type arguments.
+[Tooling and JSON](/en/guide/tooling) explains the envelopes.
 
-`run` type-checks the file, generates Java source, compiles it with `javac`
-and executes the result on the JVM.
+## Make it useful
 
-## Command line
+Try the [showcase projects](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases):
+repository auditing with JSON output, a real Maven-library application and
+source analysis. Each README specifies the entry, fixture and offline boundary.
+Learn individual constructs in the [language tour](/en/guide/language-tour).
 
-```text
-Usage: sprig <command> [options]
+Want to contribute with your coding agent? Read
+[Contributing](/en/project/contributing) and `AGENTS.md`, choose a scoped issue,
+run `scripts/verify.sh` (`py -3 scripts/verify.py` on Windows), review and open a PR.
 
-  check <file.spr> [--json] [--syntax-only]   parse and type-check
-  run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
-  build <file.spr> [-d dir] [--json]          emit Java sources + .class files
-  help [topic] [--json]                       versioned language reference
-  capabilities [--json]                      implemented feature inventory
-  api <Java.Class> [--member NAME] [--classpath JAR] [--json] inspect signatures
-  doctor [--classpath JAR] [--json]          inspect compiler environment
-  explain <SPR-CODE> [--json]                 explain a diagnostic code
-  codes [--json]                              list every diagnostic code
-  version
-```
+## First-run problems
 
-| Command | What it does |
-|---|---|
-| `check` | Runs the lexer, layout adapter, parser, name resolution and type checking. Writes nothing. |
-| `run` | Does everything `check` does, then emits Java, invokes `javac` and runs the program. |
-| `build` | Emits generated Java sources and `.class` files under `-d <dir>` (default `sprig-build`). |
-| `help` / `capabilities` / `api` / `doctor` | Offline language, JVM and environment discovery included in this release. |
-| `explain` | Prints the meaning of a stable diagnostic code such as `SPR-MATCH-NONEXHAUSTIVE`. |
-| `codes` | Lists every diagnostic code. |
-| `--json` | Wraps the result in a single machine-readable JSON document. |
-| `--syntax-only` | Stops after lexing, layout and parsing. |
-
-See [Tooling and JSON](/en/guide/tooling) for the JSON envelope and stable error
-codes.
-
-## Run the project tests
-
-```bash
-./scripts/test.sh
-```
-
-This runs syntax positives and negatives, 46 semantic expectation cases,
-runtime programs with golden stdout, visitor programs, examples, numeric
-boundary tests, parser recovery fuzzing, and the independent acceptance
-matrices. The suite prints a final `N passed, 0 failed` line and exits non-zero
-on any failure.
-
-An independent grammar smoke harness is also available:
-
-```bash
-ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
-```
-
-## Common first-run problems
-
-- **`JDK required`** — install JDK 17 or newer and make sure `java` and
-  `javac` are on `PATH`.
-- **Checksum mismatch for ANTLR** — delete
-  `tools/antlr-4.13.2-complete.jar` and rebuild so it is downloaded again.
-- **`SPR-LEX-TAB`** — Sprig indentation uses spaces, never tabs.
-- **A Java reference result is reported as nullable** — this is intentional.
-  Narrow it with a `!= null` check before calling methods on it.
+- **JDK unavailable:** install a JDK and check both `java -version` and `javac -version`.
+- **Missing or stale lock:** run `resolve` in the project after manifest edits.
+- **Offline cache miss:** populate the cache with an online resolve first; a lock alone is insufficient.
+- **`SPR-LEX-TAB`:** use spaces for indentation.
+- **Nullable Java result:** narrow with `!= null` before use.
+- **Checksum mismatch:** retain the evidence and redownload the affected artifact; never disable checksum verification.

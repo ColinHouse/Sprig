@@ -1,0 +1,122 @@
+lock-version = 3
+language = "0.8"
+compiler = "0.3.0-alpha.1"
+manifest-sha256 = "8f546e06b877d0eb27a30a4ed8619f057f4172ccc95c1c9fedc172814d341633"
+
+[[jvm]]
+group = "org.apache"
+artifact = "apache"
+version = "30"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "63dd4a393a9c0dfcb314efe83871a41d243bc8d200cbc7f2d197f30da78239d8"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache"
+artifact = "apache"
+version = "31"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "555d0c9eaa69c042aff924927b9381e8f8174136d355eead445224452e6291cc"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-lang3"
+version = "3.14.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "7b96bf3ee68949abb5bc465559ac270e0551596fa34523fddf890ec418dde13c"
+extension = "jar"
+classifier = ""
+classpath-order = 1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-lang3"
+version = "3.14.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "110438863bad37c28f906bf87016e38c7a8c758ba321e09d11dc5a2363a8e79e"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-parent"
+version = "64"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "6f19638994e8357b4ed734696f992057efaafa1235673998133299798e2ccddb"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-parent"
+version = "69"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "d50da9c39bdca823d618d1b4a03b73f196497fcb8616fd0da727c8623592a9bb"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-text"
+version = "1.12.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "de023257ff166044a56bd1aa9124e843cd05dac5806cc705a9311f3556d5a15f"
+extension = "jar"
+classifier = ""
+classpath-order = 0
+direct = true
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-text"
+version = "1.12.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "b2d4341c921981cb35d5570f4fc9732a08a34b1528dee84c0507c7f2719a334f"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.junit"
+artifact = "junit-bom"
+version = "5.10.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "e006dd8894f9fc7b75fc32bb12fe5ed8be65667d5b454f99e2e0b8c5bb8d30b3"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.junit"
+artifact = "junit-bom"
+version = "5.10.2"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "169dd904a4b0f6520cffe658cc62292bfe9f3c14a989fa92120724cde43a9968"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm-edge]]
+parent = "org.apache.commons:commons-text:jar::1.12.0"
+child = "org.apache.commons:commons-lang3:jar::3.14.0"
+
+[[jvm-edge]]
+parent = "root"
+child = "org.apache.commons:commons-text:jar::1.12.0"

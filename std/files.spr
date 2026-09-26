@@ -1,0 +1,57 @@
+# Ordinary Sprig API. IO failures preserve java.io.IOException.
+import sprig.runtime.host.HostFiles as HostFiles
+import java.io.IOException as IOException
+
+func read_utf8(path: String) -> String throws IOException, Error:
+    let value = HostFiles.readUtf8(path)
+    if value != null:
+        return value
+    throw Error("host read_utf8 returned null")
+
+func write_utf8(path: String, value: String) -> Unit throws IOException:
+    HostFiles.writeUtf8(path, value)
+
+func exists(path: String) -> Bool:
+    return HostFiles.exists(path)
+
+func is_directory(path: String) -> Bool:
+    return HostFiles.isDirectory(path)
+
+func is_file(path: String) -> Bool:
+    return HostFiles.isRegularFile(path)
+
+func make_directory(path: String) -> Unit throws IOException:
+    HostFiles.makeDirectory(path)
+
+func join(base: String, child: String) -> String throws Error:
+    let value = HostFiles.join(base, child)
+    if value != null:
+        return value
+    throw Error("host join returned null")
+
+func normalize(path: String) -> String throws Error:
+    let value = HostFiles.normalize(path)
+    if value != null:
+        return value
+    throw Error("host normalize returned null")
+
+func file_name(path: String) -> String throws Error:
+    let value = HostFiles.fileName(path)
+    if value != null:
+        return value
+    throw Error("host file_name returned null")
+
+func list(path: String) -> List[String] throws IOException, Error:
+    let snapshot = HostFiles.directory(path)
+    if snapshot != null:
+        let entries: MutableList[String] = []
+        var index: Int = 0
+        while index < snapshot.size():
+            let entry = snapshot.entry(index)
+            if entry != null:
+                entries.append(entry)
+            else:
+                throw Error("host directory entry returned null")
+            index += 1
+        return entries.toList()
+    throw Error("host directory returned null")

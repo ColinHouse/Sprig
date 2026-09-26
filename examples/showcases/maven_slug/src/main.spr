@@ -1,0 +1,53 @@
+# Maven supplies mature text behavior. Sprig owns the typed command/data flow.
+import org.apache.commons.text.WordUtils as WordUtils
+import org.apache.commons.text.StringEscapeUtils as StringEscapeUtils
+import "../../../../std/process.spr" as process
+import "../../../../std/files.spr" as files
+import "../../../../std/text.spr" as text
+import java.io.IOException as IOException
+
+func slug(value: String) -> String:
+    var result = ""
+    var separator = false
+    var index: Int = 0
+    let lower = value.toLowerCase()
+    while index < lower.length():
+        let ch = lower.charAt(index)
+        if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
+            if separator and result.length() > 0:
+                result += "-"
+            result += ch
+            separator = false
+        else:
+            separator = true
+        index += 1
+    return result
+
+func render(title: String) -> String throws Error:
+    let normalized = WordUtils.capitalizeFully(text.trim(title))
+    if normalized != null:
+        let escaped = StringEscapeUtils.escapeHtml4(normalized)
+        if escaped != null:
+            return "<article id=\"" + slug(normalized) + "\"><h1>" + escaped + "</h1></article>"
+    throw Error("commons-text unexpectedly returned null")
+
+func main() -> Unit throws IOException, Error:
+    let args = process.arguments()
+    if args.size() > 2:
+        throw Error("usage: maven-slug [title [output.html]]")
+    var title = "sprig & THE jvm"
+    if args.size() > 0:
+        title = args.get(0)
+    let html = render(title)
+    print(html)
+    if args.size() == 2:
+        files.write_utf8(args.get(1), html + "\n")
+
+try:
+    main()
+catch problem: IOException:
+    print("IO error: " + problem.message)
+    throw problem
+catch problem: Error:
+    print("Render error: " + problem.message)
+    throw problem

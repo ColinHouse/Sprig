@@ -24,6 +24,7 @@ public final class JavaRunner {
         Path errFile = workDir.resolve("program.err");
         List<String> command = new ArrayList<>();
         command.add(javaBinary());
+        command.add("-Dfile.encoding=UTF-8");
         command.add("-cp");
         command.add(classesDir + (JvmClasspath.entries().isEmpty() ? ""
                 : java.io.File.pathSeparator + JvmClasspath.forProcess()));

@@ -1,0 +1,11 @@
+[project]
+name = "maven-slug"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+entry = "src/main.spr"
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-text"
+version = "1.12.0"

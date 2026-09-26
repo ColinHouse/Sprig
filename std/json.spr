@@ -1,0 +1,258 @@
+# Closed recursive JSON. Numbers retain exact validated lexemes, never Float.
+import sprig.runtime.host.HostText as HostText
+
+variant Value:
+    Null
+    Boolean(value: Bool)
+    Number(text: String)
+    Text(value: String)
+    Array(values: List[Value])
+    Object(members: List[Member])
+
+class Member:
+    let key: String
+    let value: Value
+
+func unicode_unit(hex: String) -> String throws Error:
+    let value = HostText.unicodeUnit(hex)
+    if value != null:
+        return value
+    throw Error("host unicode conversion returned null")
+
+func digit(ch: String) -> Bool:
+    return ch >= "0" and ch <= "9"
+
+func hex_digit(ch: String) -> Bool:
+    return digit(ch) or (ch >= "a" and ch <= "f") or (ch >= "A" and ch <= "F")
+
+class Reader:
+    let source: String
+    var offset: Int = 0
+
+    func fail(message: String) -> Unit throws Error:
+        throw Error("JSON at UTF-16 offset " + offset.toString() + ": " + message)
+
+    func current() -> String:
+        if offset >= source.length():
+            return ""
+        return source.charAt(offset)
+
+    func whitespace() -> Unit:
+        while current() == " " or current() == "\t" or current() == "\r" or current() == "\n":
+            offset += 1
+
+    func expect(token: String) -> Unit throws Error:
+        if source.substring(offset, source.length()).length() < token.length():
+            fail("expected " + token)
+        if source.substring(offset, offset + token.length()) != token:
+            fail("expected " + token)
+        offset += token.length()
+
+    func string_value() -> String throws Error:
+        expect("\"")
+        var value = ""
+        while current() != "\"":
+            let ch = current()
+            if ch == "":
+                fail("unterminated string")
+            if HostText.isControl(ch):
+                fail("unescaped control character")
+            offset += 1
+            if ch == "\\":
+                let escape = current()
+                offset += 1
+                if escape == "\"" or escape == "\\" or escape == "/":
+                    value += escape
+                elif escape == "b":
+                    value += unicode_unit("0008")
+                elif escape == "f":
+                    value += unicode_unit("000c")
+                elif escape == "n":
+                    value += "\n"
+                elif escape == "r":
+                    value += "\r"
+                elif escape == "t":
+                    value += "\t"
+                elif escape == "u":
+                    var hex = ""
+                    var count: Int = 0
+                    while count < 4:
+                        if not hex_digit(current()) or current() == "":
+                            fail("invalid unicode escape")
+                        hex += current()
+                        offset += 1
+                        count += 1
+                    let unit = HostText.unicodeUnit(hex)
+                    if unit != null:
+                        value += unit
+                    else:
+                        fail("host unicode conversion returned null")
+                else:
+                    fail("invalid escape")
+            else:
+                value += ch
+        offset += 1
+        return value
+
+    func number_value() -> String throws Error:
+        let start = offset
+        if current() == "-":
+            offset += 1
+        if current() == "0":
+            offset += 1
+            if digit(current()):
+                fail("leading zero")
+        elif current() >= "1" and current() <= "9":
+            while digit(current()):
+                offset += 1
+        else:
+            fail("expected number")
+        if current() == ".":
+            offset += 1
+            if not digit(current()):
+                fail("expected fraction digits")
+            while digit(current()):
+                offset += 1
+        if current() == "e" or current() == "E":
+            offset += 1
+            if current() == "+" or current() == "-":
+                offset += 1
+            if not digit(current()):
+                fail("expected exponent digits")
+            while digit(current()):
+                offset += 1
+        return source.substring(start, offset)
+
+    func value(depth: Int) -> Value throws Error:
+        if depth > 128:
+            fail("nesting exceeds 128")
+        whitespace()
+        let ch = current()
+        if ch == "n":
+            expect("null")
+            return Value.Null
+        if ch == "t":
+            expect("true")
+            return Value.Boolean(value=true)
+        if ch == "f":
+            expect("false")
+            return Value.Boolean(value=false)
+        if ch == "\"":
+            return Value.Text(value=string_value())
+        if ch == "[":
+            return array(depth)
+        if ch == "{":
+            return object(depth)
+        if ch == "-" or digit(ch):
+            return Value.Number(text=number_value())
+        fail("expected JSON value")
+        return Value.Null
+
+    func array(depth: Int) -> Value throws Error:
+        expect("[")
+        whitespace()
+        let values: MutableList[Value] = []
+        if current() != "]":
+            values.append(value(depth + 1))
+            whitespace()
+            while current() == ",":
+                offset += 1
+                values.append(value(depth + 1))
+                whitespace()
+        expect("]")
+        return Value.Array(values=values.toList())
+
+    func object(depth: Int) -> Value throws Error:
+        expect("{")
+        whitespace()
+        let members: MutableList[Member] = []
+        let keys: MutableList[String] = []
+        if current() != "}":
+            var more = true
+            while more:
+                whitespace()
+                let key = string_value()
+                if keys.contains(key):
+                    fail("duplicate object key: " + key)
+                keys.append(key)
+                whitespace()
+                expect(":")
+                members.append(Member(key=key, value=value(depth + 1)))
+                whitespace()
+                more = current() == ","
+                if more:
+                    offset += 1
+        expect("}")
+        return Value.Object(members=members.toList())
+
+func parse(source: String) -> Value throws Error:
+    let reader = Reader(source=source)
+    let value = reader.value(0)
+    reader.whitespace()
+    if reader.offset != source.length():
+        reader.fail("trailing text")
+    return value
+
+func quote(value: String) -> String throws Error:
+    var result = "\""
+    var index: Int = 0
+    while index < value.length():
+        let ch = value.charAt(index)
+        if ch == "\"" or ch == "\\":
+            result += "\\" + ch
+        elif ch == "\n":
+            result += "\\n"
+        elif ch == "\r":
+            result += "\\r"
+        elif ch == "\t":
+            result += "\\t"
+        elif HostText.isControl(ch):
+            let escaped = HostText.controlEscape(ch)
+            if escaped != null:
+                result += escaped
+            else:
+                throw Error("host control escape returned null")
+        else:
+            result += ch
+        index += 1
+    return result + "\""
+
+func render(value: Value, depth: Int) -> String throws Error:
+    if depth > 128:
+        throw Error("JSON nesting exceeds 128")
+    match value:
+        case Value.Null:
+            return "null"
+        case Value.Boolean as node:
+            if node.value:
+                return "true"
+            return "false"
+        case Value.Number as node:
+            let reader = Reader(source=node.text)
+            reader.number_value()
+            if reader.offset != node.text.length():
+                reader.fail("invalid number lexeme")
+            return node.text
+        case Value.Text as node:
+            return quote(node.value)
+        case Value.Array as node:
+            var result = "["
+            var separator = ""
+            for child in node.values:
+                result += separator + render(child, depth + 1)
+                separator = ","
+            return result + "]"
+        case Value.Object as node:
+            var result = "{"
+            var separator = ""
+            let keys: MutableList[String] = []
+            for member in node.members:
+                if keys.contains(member.key):
+                    throw Error("duplicate object key: " + member.key)
+                keys.append(member.key)
+                result += separator + quote(member.key) + ":" + render(member.value, depth + 1)
+                separator = ","
+            return result + "}"
+
+func stringify(value: Value) -> String throws Error:
+    return render(value, 0)

@@ -1,0 +1,26 @@
+name: Language design pressure
+description: Report a motivating program and evidence for a future language decision.
+title: "[Design]: "
+labels: [design-required]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivating program and repeated friction
+      description: Include actual code, compiler/JDK version, and concrete occurrences.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Current-language alternatives
+      description: Show whether libraries, explicit wrappers or tooling can solve the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision requested and semantic boundaries
+      description: Describe the smallest question; this issue does not authorize implementation.
+    validations:
+      required: true

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Adversarial manifest validation, unresolved dependency and discovery tests."""
+import os
 import json
 from pathlib import Path
 import subprocess
 import tempfile
 
-CLI = Path(__file__).resolve().parents[3] / 'bin/sprig'
+CLI = Path(__file__).resolve().parents[3] / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')
 cases={
 'invalid-source-path':'[project]\nname="a"\nsource="\x00"\n',
 'duplicate-root-key':'exports=[]\nexports=[]\n[project]\nname="a"\n',
@@ -79,7 +80,7 @@ def main():
             ('git', '[[dependency]]\nname="remote"\ngit="file:///nonexistent/repo.git"\nbranch="main"\n',
              'SPR-DEP-GIT', 'SPR-PROJECT-LOCK-MISSING'),
             ('maven', '[[jvm]]\ngroup="org.example"\nartifact="missing"\nversion="1.0"\n',
-             'SPR-DEP-MAVEN', 'SPR-DEP-MAVEN'),
+             'SPR-DEP-MAVEN', 'SPR-PROJECT-LOCK-MISSING'),
         ):
             manifest.write_text('[project]\nname="a"\n'+declaration)
             (root/'sprig.lock').unlink(missing_ok=True)

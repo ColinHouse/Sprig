@@ -1,4 +1,4 @@
-# Sprig agent bootstrap guide (v0.2.0-alpha.1)
+# Sprig agent bootstrap guide (v0.3.0-alpha.1)
 
 This guide assumes only the release archive and a JDK 17+ are available.
 The compiler's versioned catalog is the quickest source of implemented syntax.
@@ -28,9 +28,10 @@ an expression. A Java reference result is nullable until checked. `List` and
 `MutableList` differ. Integer `/` is rejected; use `divTrunc` when truncation is
 intended. No implicit mixed numeric promotion is performed.
 
-For a third-party JAR, pass the same `--classpath path/to/library.jar` to
-`api`, `check`, `build`, and `run`. Paths resolve against the current working
-directory. Repeat the flag for multiple entries. No download occurs. Inspect
+For a Maven library, declare exact release coordinates in `[[jvm]]` and run
+`sprig resolve`; `api/check/build/run/doctor` then share the locked classpath.
+Only resolve downloads. Extra local JARs can use repeated `--classpath` flags;
+paths resolve against cwd and follow locked entries. Inspect
 `api`'s `usableFromSprig`, `signatureSupported`, `interopLevel`,
 `unusableReason`, `genericBoundary`, and `checkedExceptions` before writing a
 call. `usableFromSprig` means the compiler can bind and emit the erased JVM
@@ -56,12 +57,13 @@ For generics, read `docs/GENERICS.md`: parameters and uses are explicit,
 including multiple parameters. `requires T: Equatable` must lead the function
 body. Generic variant cases use expanded payloads and match case owners omit
 type arguments. `docs/PROJECTS.md` defines the strict manifest subset;
-`docs/DEPENDENCIES.md` describes local/Git resolution, edge lock identities,
+`docs/DEPENDENCIES.md` describes local/Git/Maven resolution, schema-3 lock identities,
 exports and offline cache validation. Run `sprig resolve` before project builds.
 Use `import "@alias/module.spr" as module` for an exported dependency module.
-Project-based compilation refuses missing or stale locks and unsupported Maven declarations. An explicit source
-file outside the project source root bypasses the project, so pass every manually acquired JVM JAR with
-`--classpath`. Do not treat that as Maven resolution.
+Project compilation refuses missing/stale locks or missing/corrupt locked JARs.
+An explicit file outside the project source root bypasses the project graph;
+use local `--classpath` there. `std/` provides ordinary typed IO/JSON modules;
+see `docs/STANDARD_LIBRARY.md` and the three `examples/showcases` projects.
 
 For details, see `docs/QUICK_REFERENCE.md`, `docs/JVM_INTEROP.md`,
 `docs/NUMERIC_SEMANTICS.md`, and `docs/KNOWN_LIMITATIONS.md` in the archive.

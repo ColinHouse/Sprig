@@ -70,4 +70,4 @@ Verify SHA-256, extract, then run `bin/sprig version`, `capabilities --json`,
 `check examples/hello.spr` and `run examples/hello.spr`. JDK 17+ is required;
 the archive includes compiler/runtime and ANTLR, not a JDK. The package includes
 LICENSE/NOTICE and third-party provenance. See the
-[validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/post-v0.7/V08_VALIDATION_REPORT.md).
+[validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md).

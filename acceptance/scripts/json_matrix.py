@@ -5,13 +5,14 @@ Runs each case, requires stdout to be a single parseable JSON document in JSON
 mode, records exit codes, code sets, whether program output leaked to stdout,
 and stderr content. Written by the acceptance reviewer (not the implementer).
 """
+import os
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 OUT = ROOT / "acceptance" / "results"
 CASES = ROOT / "acceptance" / "cases"
 

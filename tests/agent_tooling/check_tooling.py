@@ -9,7 +9,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-SPRIG = ROOT / "bin" / "sprig"
+SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 COUNT = 0
 
 
@@ -32,7 +32,7 @@ def obj(proc):
 
 def main():
     catalog = obj(run("capabilities", "--json"))
-    check("catalog-version", catalog["compilerVersion"] == "0.2.0-alpha.1"
+    check("catalog-version", catalog["compilerVersion"] == "0.3.0-alpha.1"
           and catalog["languageVersion"] == "0.8-dev" and catalog["jdk"]["minimum"] == 17)
     check("catalog-types", catalog["collectionTypes"] ==
           ["List[T]", "MutableList[T]", "Map[K,V]", "MutableMap[K,V]"])
