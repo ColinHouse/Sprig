@@ -1,187 +1,155 @@
-# Sprig v0.8 completion — dependency system validation report
+# Sprig v0.8-dev — current cleanup validation
 
-**Tree:** branch `v0.8-dependency-system` from `cb2b4e7` (merged PR #8).
-**Target:** language v0.8, compiler `0.2.0-alpha.1` (not released; draft notes
-only). **Status: READY FOR INDEPENDENT RELEASE AUDIT** — no tag or Release was
-created by this round.
+**Verdict: READY FOR INDEPENDENT CLEANUP AUDIT.**
 
-Baseline frozen before changes: `cb2b4e7`, 117/117 tests, numeric 66/66,
-grammar SHA-256 `acff6111…` (lexer) / `c63aaaa7…` (parser). Current tree:
-**118/118** (`scripts/test.sh`), dependency resolver **21/21**, project model
-**18/18**, numeric 66/66, grammar harness 21/21, docs gate 18/18 + VitePress
-build, SDK archive offline smoke passed.
+This is the sole current development validation report. Catalog plus executable
+behavior define capabilities. REVIEW_REPORT.md is historical evidence with its
+original SHA-specific findings preserved. No tag or release is created.
 
-## 1. Is a local path dependency actually usable?
+## Candidate and public state
 
-Yes. `[[dependency]] name = … path = "../lib"` is resolved recursively:
-the dependency's own `sprig.toml`, source root, exports and dependencies are
-loaded, paths are canonicalized, and the dependency source modules compile
-through the normal pipeline. Dependency `name` is the package-local import
-alias; the dependency's `[project] name` is separate identity metadata and both
-are recorded in `sprig.lock`. Evidence: `tests/project_deps/check_deps.py`
-(local, transitive, cycle, scope).
+Baseline: main `3058bd0f47d8146641af509a1da89090bc56b3d0`, verified through
+GitHub API; its tree matches local merged candidate 18c2ed3. Native Git fetch
+was attempted and failed due TCP connectivity; the signed GitHub commit object
+was reconstructed and its SHA independently verified locally. PRs #9 and #10
+are merged. The latest public prerelease remains v0.1.0-alpha.1 (2026-09-24).
+Compiler metadata is 0.2.0-alpha.1, language is 0.8-dev.
 
-## 2. Does `@package/...` import work?
+Final implementation candidate: `25640c7af417bed21edca0ce01330dab3330c0c4`.
+Subsequent commits update validation evidence only. The exact final repository
+HEAD and its checks are available on [draft PR #11](https://github.com/ColinHouse/Sprig/pull/11)
+and [its current checks](https://github.com/ColinHouse/Sprig/pull/11/checks).
+The report cannot embed its own containing commit SHA; the handoff supplies that SHA.
+Implementation hosted CI [36250877825](https://github.com/ColinHouse/Sprig/actions/runs/36250877825)
+is success for JDK 17, JDK 26 and Documentation site on the exact implementation SHA.
+The earlier main baseline CI [36248014975](https://github.com/ColinHouse/Sprig/actions/runs/36248014975)
+was also success. GitHub job metadata and completed required steps were checked;
+a job-log download failed due connectivity to the results receiver, so hosted
+per-case counts are not claimed from that unavailable download.
 
-Yes. `import "@math/vector.spr" as vector` resolves through the importing
-package's declared aliases only. Transitive aliases are not visible: the root
-cannot import `@b/…` unless it declares `b` itself (`alias-scope-is-package-
-local` check), while an intermediate package can import its own direct
-dependency. Relative `./…` and Java imports are unchanged.
+## Resolver correctness
 
-## 3. Are exports enforced?
+Lock schema is **2**. Each edge has `id`, `owner` and package-local `name`;
+`root/@a/@util` and `root/@b/@util` are different entries. Resolve and load use
+identical IDs. Missing, duplicated or inconsistent IDs/owners/aliases, invalid
+SHA/digests and old schema are structured errors. Edge identity uses UTF-8
+percent-encoded alias components; dotted and Unicode aliases retain their
+existing behavior without restricting manifest names. Load checks edge kind, local
+path, project name, source and manifest digest, with no fallback lookup by alias.
+Diamonds keep separate edge records for the same physical package. Local source
+edits remain live; local manifest edits stale the lock. Local paths are canonical
+absolute paths and therefore nonportable, an explicitly documented alpha limit.
 
-Yes. `exports = [...]` (inside `[project]` or top level) controls which modules
-external consumers may import. Non-exported modules report
-`SPR-PROJECT-NOT-EXPORTED` with the alias, module and export list in the JSON
-data. Import paths are normalized and canonicalized; `..`, absolute paths and
-symlink escapes out of the dependency source root report `SPR-DEP-NOT-FOUND`.
-Cycles report `SPR-DEP-CYCLE` with the chain in the diagnostic data, and
-duplicate aliases are rejected at manifest parse time.
+Exports retain normalized logical paths. Package imports reject absolute and
+parent traversal and compare real target against real source root. Exported
+symlinks to internal files are allowed; file and directory escapes are rejected.
+Relative imports keep the language's existing behavior and are not a filesystem
+sandbox.
 
-## 4. Is `sprig.lock` deterministic?
+Git reuse checks exact HEAD, marker and clean tracked, untracked and ignored
+contents. File bytes and modes are also checked against locked Git blob hashes,
+so assume-unchanged cannot hide tampering. Tampering fails with SPR-DEP-GIT,
+including offline mode. Bare clone
+and detached checkout use unique temporary directories, verify before install,
+and rename atomically where supported. A per-repository FileChannel lock
+serializes cross-process cache mutation; safe same-filesystem rename is the
+fallback. Failure cleans temporary directories. `resolve --offline` validates
+the existing graph and cache instead of merely comparing root manifest digest.
 
-Yes. `sprig.lock` is generated only by `sprig resolve`, uses sorted entries and
-a stable renderer; two consecutive resolves produce byte-identical files
-(checked in both suites). The schema records lock version, language, compiler,
-root manifest SHA-256, and per dependency: alias, kind, canonical path or
-Git URL, requested ref, resolved revision, dependency project name, source
-root and dependency manifest SHA-256. Unknown `lock-version` values are
-rejected with `SPR-PROJECT-LOCK-SCHEMA`.
+## Capability boundaries
 
-## 5. Is a stale lock rejected?
+Multi-parameter generics, Practical Strict nullable generics, leading Equatable,
+local/Git dependencies, exports, exact revision lock, offline build, project
+selection, JSON diagnostics and Agent tooling remain implemented. Maven is false:
+no artifacts or transitive Maven graph are resolved; project-aware JVM classpath
+is false. Third-party JARs still use explicit --classpath. Comparable, interfaces,
+traits, variance, inference, registry, LSP and IDE integration remain unsupported.
+Stage-1 is a single-file frontend probe with a separate generic data structure
+experiment; full project migration and self-hosting remain future work.
 
-Yes. `check`, `build`, `run` and `deps` require a current lock:
-- no lock → `SPR-PROJECT-LOCK-MISSING` (hint: run `sprig resolve`);
-- root manifest changed → `SPR-PROJECT-LOCK-STALE`;
-- dependency manifest changed → `SPR-PROJECT-LOCK-STALE` for that alias;
-- Git URL/ref changed in the manifest → stale entry.
+## Verification
 
-Nothing auto-resolves, and no command rewrites the lock. Single-file mode is
-unaffected: `sprig run hello.spr` outside a project needs no lock.
+Baseline full suite: 120 top-level checks passed. The new normal-CI cleanup
+suite covers duplicate scoped aliases, different targets, diamond, deterministic
+edge IDs, old/corrupt locks, local source edits, ordinary exports, file/directory
+symlink escapes, internal symlink, tracked/marker/untracked tampering, HEAD
+mismatch and two processes materializing the same SHA from an empty cache.
+Targeted cleanup suite: 36 checks passed, including index-flag bypass rejection
+and dotted/Unicode alias preservation.
+Final verification used separate source snapshots for JDK 17.0.19 and 26.0.1;
+compiler and test files were compared with the committed candidate. Both full
+commands completed with exit 0. No generic/numeric oracle or existing golden
+was changed. One intermediate run used a newly added JSON-field assertion with
+an older JAR; that build/test staging mismatch is excluded from final evidence.
 
-## 6. Is a Git branch locked to a SHA?
+| Gate | JDK 17 | JDK 26 |
+|---|---|---|
+| ANTLR generation + compiler/runtime javac | pass | pass |
+| Complete scripts/test.sh | 121/121 | 121/121 |
+| Semantics | 54/54 | 54/54 |
+| Numeric / correctness | 66/66, 22/22 | same |
+| Recovery | 467/467, including 435 prefixes | same |
+| Acceptance / JSON / consistency | 52/52, 13/13, 10/10 | same |
+| Agent tooling / CLI | 89/89; 19 rejected-option cases and E2E contract | same |
+| Project / original dependencies | 18/18, 21/21 | same |
+| New cleanup regressions | 36/36 | same |
+| Generic adversarial | 61 programs, 209 prefixes, no failures | same |
+| Project adversarial | 31 cases, no failures | same |
+| Grammar harness | 24/24, syntax only | same |
+| SDK archive smoke | pass | pass |
 
-Yes. `sprig resolve` runs `git ls-remote <url> refs/heads/<branch>`, stores the
-exact commit in `sprig.lock`, and materializes that revision into
-`~/.sprig/git/checkouts/…` (bare cache in `~/.sprig/git/repos/…`, verified
-`HEAD == revision`). Build/check/run never read the branch; the URL is stored
-without credentials and displayed redacted.
+Documentation: 18 runnable snippets, upgraded capability gate and VitePress
+production build pass. Three deliberate stale-document probes (single-parameter
+only, no resolve, Maven complete) were independently rejected. Counts above are
+suite-specific; 121 is a top-level aggregation and must not be added to subcounts.
 
-## 7. Does a locked build survive a branch move?
-
-Yes, verified with a real local bare remote: after the remote branch advanced
-from commit A to C, `sprig run` still produced A's result; `sprig resolve`
-updated the lock to C and then `run` produced C's result. Offline runs from
-cache behaved identically.
-
-## 8. Do Maven direct/transitive dependencies work?
-
-**No — this is the release blocker.** `[[jvm]]` coordinates are parsed and
-validated (exact versions only), but artifact resolution is not implemented;
-`sprig resolve` fails loudly with `SPR-DEP-MAVEN` naming the coordinate, and
-`capabilities` reports `mavenDependencies: false`.
-
-Recorded blocker (per the “do not stop silently” rule):
-
-- **Exact failing case:** `sprig resolve` with
-  `[[jvm]] group = "com.fasterxml.jackson.core", artifact =
-  "jackson-databind", version = "2.18.4"` → cannot produce the transitive
-  artifact graph or a JVM classpath.
-- **Why the current architecture cannot safely implement it in this round:**
-  the instruction forbids a hand-written POM/mediation resolver, so Apache
-  Maven Resolver must be used. Resolver needs a pinned runtime closure
-  (resolver api/spi/impl/util/connectors/transport plus maven-model,
-  maven-model-builder, repository-metadata, plexus-utils/interpolation and
-  slf4j — roughly a dozen jars). `scripts/build.sh` is a curl + `javac`
-  pipeline with SHA-256 pinning and no dependency mechanism; `package-alpha.sh`
-  must bundle every runtime jar for the SDK archive. Wiring and validating that
-  closure is a build-system change, not a small code patch.
-- **Attempted/considered and rejected:** shelling out to `mvn` (adds a Maven
-  requirement the plan forbids), and re-implementing POM semantics (explicitly
-  forbidden).
-- **Minimal decision required:** approve a pinned Resolver bundle
-  (exact versions listed in the notices and verified by `build.sh`) so the
-  resolver runs on JDK + SDK only, or approve an SDK layout that vendors those
-  jars. Once approved, the remaining work is mechanical: collect the artifact
-  graph, SHA-256 each file into `sprig.lock`, cache under `~/.sprig/maven`, and
-  feed the same resolved classpath into check/build/run/api/doctor.
-
-## 9. Do check/build/run/api share one classpath?
-
-For Sprig dependencies, yes: a single `DependencyResolver.Result` feeds every
-command (the compiler receives it as its import resolver; deps/project/doctor
-read the same lock-derived model). JVM classpath sharing is **not** complete:
-there are no resolved JVM dependencies to share yet, so `--classpath` remains
-explicit and `projectAwareClasspath` reports `false`.
-
-## 10. Is offline mode really zero-network?
-
-For local and Git dependencies, yes: `--offline` gates every network-capable
-path (`ls-remote`, `clone`, `fetch`), uses only `~/.sprig/git`, and fails with
-`SPR-DEP-OFFLINE` naming the missing revision when the cache is incomplete.
-Verified: warm-cache `run --offline` succeeded, a current lock resolved
-offline without network, and an empty cache offline failed with the structured
-diagnostic. Maven offline is not applicable until the blocker above is
-resolved.
-
-## 11. Is checksum corruption detected?
-
-For the implemented surface there are no downloaded artifacts to checksum:
-Git checkouts are verified by `HEAD == locked revision` plus a revision marker,
-and the lock records the revision itself. Maven artifact SHA-256 recording is
-part of the blocked work (question 8). Recorded as a P2 limitation: Git object
-integrity relies on Git's own hashing, not an extra lockfile checksum.
-
-## 12. Is stage-1 migrated to the project system?
-
-**No.** The Sprig-written generic slice (`tests/visitor/generic_stack.spr`)
-still exercises `Stack[T]`/`Table[K,V]`, and a small local dependency fixture
-is tested, but `examples/stage1_frontend_probe/frontend.spr` has not been
-split into a multi-module project that consumes `@util`-style dependencies.
-This is recorded remaining work, not claimed.
-
-## 13. Was the blind Agent test run?
-
-**No.** It requires a frozen release-candidate SDK and an isolated agent; it is
-left to the independent release audit. `help projects`/`help dependencies`
-text and `project --json`/`deps --json`/`doctor --json` now expose the
-information such a test needs.
-
-## 14. Any silent miscompile?
-
-None known. The full suite (118 checks) covers v0.7 compatibility, generics,
-numerics, recovery, correctness, acceptance, agent tooling, CLI contracts,
-project model and the new dependency resolver. One process-level bug was found
-and fixed during development (TOML scoping polluted root lock scalars);
-locking, exports and traversal behavior are covered by regression checks.
-
-## 15. Any dependency nondeterminism?
-
-None observed in the implemented surface: lock rendering is sorted and
-byte-identical across resolves; Git builds use only the locked revision; local
-dependencies are explicitly marked `portable = false` and their manifest
-changes are detected as stale; no command silently upgrades anything. The
-unimplemented Maven resolver is the remaining unknown and is exactly why an
-independent audit is required before release.
-
-## 16. Remaining real limitations (P2)
-
-- Maven/JVM dependency resolution and project-aware JVM classpath (blocker).
-- Git dependencies expose only `branch =` in the manifest (no tag/rev syntax),
-  and credentialed URLs are not supported (credentials are stripped).
-- No extra checksum pinning for Git objects beyond the locked revision.
-- `sprig api`/`doctor` see project metadata but not a resolved JVM classpath.
-- `frontend.spr` stage-1 migration and the blind Agent test are outstanding.
-- `Comparable` and user-defined capabilities remain unimplemented
-  (`SPR-GENERIC-CONSTRAINT`, `genericCapabilities: ["Equatable"]`).
-
-## Capability state after this round
-
+```bash
+./scripts/build.sh
+./scripts/test.sh
+python3 tests/project_deps/check_cleanup.py
+python3 tests/project_deps/check_deps.py
+ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
+./scripts/check-docs.sh
+./scripts/package-alpha.sh
+python3 tools/check-sdk-archive.py
 ```
-userGenerics=true  multipleGenericParameters=true  genericConstraints=true
-genericCapabilities=["Equatable"]
-packageManifest=true  lockfile=true  localDependencies=true  gitDependencies=true
-packageExports=true   offlineResolution=true
-mavenDependencies=false  projectAwareClasspath=false  centralSprigRegistry=false
-```
+
+Select the relevant JDK via JAVA_HOME and PATH. Build/test/package sequentially
+within each checkout; use separate checkouts for parallel JDK runs. The clean
+local development archive records source 25640c7; ZIP SHA-256 is
+`54b5c0f2f346de04740d8792a08d1b0ac24d90a117f337e70027d366a2aade2b`.
+It was smoke-tested on both JDKs and was not uploaded as a release asset.
+Timestamped archives are not claimed to be byte-for-byte reproducible.
+
+## Repaired findings
+
+| Severity | Before | Current behavior / source |
+|---|---|---|
+| P1 | Global alias lookup could choose another package's lock entry | Schema-2 owner/edge identity in Lockfile and DependencyResolver.build/findLockEntry; scoped aliases and diamonds are tested |
+| P1 | Lexical path confinement allowed exported symlink escapes | DependencyResolver.Result.resolve checks real root/target while retaining logical exports |
+| P1 | Revision marker alone allowed modified Git source under a locked SHA | GitCache.validCheckout/matchesTree checks HEAD, marker, status, bytes and modes; dirty tracked/untracked and index-flag bypass fail |
+| P1/P2 | Concurrent clone/checkout could expose or delete partial state | GitCache.materialize holds a per-repository OS lock; unique verified temporary trees are installed atomically |
+| P1 | Historical public claims contradicted executable capabilities | Current document inventory and Catalog-driven consistency gate; old evidence explicitly superseded |
+| P2 | Project declarations could print Git credentials | Project.toJsonMap redacts URL userinfo; regression asserts no secret in output |
+
+No known unresolved P0/P1 has been confirmed within this cleanup scope. This
+verdict requests independent cleanup audit, not release publication or a claim
+that Maven and stage-1 completion are finished.
+
+## Documentation gate and remaining limits
+
+The consistency checker maintains an explicit inventory of current documents;
+historical reports are excluded. Catalog flags drive forbidden contradictory
+claims for generics, local/Git/lock and Maven. Current generic contracts are
+mirrored and compared byte-for-byte. Exact counts are confined to this report;
+other current documents describe passing gates without duplicating counts.
+
+Known P2: local locks are nonportable, metadata errors can point to line 1,
+project/doctor summaries are metadata rather than full cache-integrity proof
+(use deps or check for graph validation), dependency diagnostics may lack an
+exact source span, Git availability is required even offline, locking
+has no timeout, and concurrent hostile mutation after validation is outside
+the cooperative local cache model. Full Git content verification costs I/O;
+Git submodules are unsupported and are rejected rather than silently ignored.
+No new silent miscompile or nondeterminism
+has been observed in the tested cases; this is not a proof of all programs.

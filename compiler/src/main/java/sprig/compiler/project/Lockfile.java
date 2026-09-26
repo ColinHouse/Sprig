@@ -16,9 +16,15 @@ import sprig.compiler.diag.Codes;
  * {@code sprig resolve} writes it. Unknown schema versions are rejected.
  */
 public final class Lockfile {
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
+
+    public static String edgeId(String owner, String alias) {
+        return owner + "/@" + java.net.URLEncoder.encode(alias, StandardCharsets.UTF_8);
+    }
 
     public static final class SprigEntry {
+        public String id;
+        public String owner;
         public String name;
         public String kind;          // "local" | "git"
         public String path;          // local only, canonical
@@ -88,13 +94,18 @@ public final class Lockfile {
         }
         if (lock.lockVersion != VERSION) {
             throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
-                    "Unsupported lockfile schema " + lock.lockVersion + "; expected " + VERSION, null);
+                    "Unsupported lockfile schema " + lock.lockVersion + "; expected " + VERSION + "; run `sprig resolve`", null);
         }
         lock.language = toml.scalar("", "language");
         lock.compiler = toml.scalar("", "compiler");
         lock.manifestSha = toml.scalar("", "manifest-sha256");
+        if (lock.manifestSha == null || !lock.manifestSha.matches("[0-9a-f]{64}"))
+            throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid root manifest digest", null);
+        java.util.Set<String> ids = new java.util.HashSet<>();
         for (var entry : toml.entries("sprig")) {
             SprigEntry sprig = new SprigEntry();
+            sprig.id = entry.get("id");
+            sprig.owner = entry.get("owner");
             sprig.name = entry.get("name");
             sprig.kind = entry.get("kind");
             sprig.path = entry.get("path");
@@ -105,6 +116,14 @@ public final class Lockfile {
             sprig.manifestSha = entry.get("manifest-sha256");
             sprig.source = entry.get("source");
             sprig.portable = "true".equals(entry.get("portable"));
+            if (sprig.id == null || sprig.owner == null || sprig.name == null
+                    || sprig.name.isBlank()
+                    || !(sprig.owner.equals("root") || sprig.owner.startsWith("root/@"))
+                    || !sprig.id.equals(edgeId(sprig.owner, sprig.name)) || !ids.add(sprig.id))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Missing, duplicate or inconsistent dependency edge identity", null);
+            if (sprig.kind == null || !java.util.List.of("local", "git").contains(sprig.kind)
+                    || sprig.manifestSha == null || !sprig.manifestSha.matches("[0-9a-f]{64}"))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid dependency kind or manifest digest", null);
             if (sprig.name == null || sprig.kind == null || sprig.projectName == null
                     || sprig.manifestSha == null || sprig.source == null) {
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
@@ -119,8 +138,13 @@ public final class Lockfile {
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                         "sprig.lock local entry '" + sprig.name + "' is missing path", null);
             }
+            if (sprig.kind.equals("git") && !sprig.revision.matches("[0-9a-f]{40}"))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Git revision must be an exact commit SHA", null);
             lock.sprig.add(sprig);
         }
+        for (SprigEntry entry : lock.sprig)
+            if (!entry.owner.equals("root") && !ids.contains(entry.owner))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Unknown dependency edge owner", null);
         for (var entry : toml.entries("jvm")) {
             JvmEntry jvm = new JvmEntry();
             jvm.group = entry.get("group");
@@ -146,10 +170,11 @@ public final class Lockfile {
         sb.append("compiler = ").append(quote(compiler == null ? "" : compiler)).append('\n');
         sb.append("manifest-sha256 = ").append(quote(manifestSha == null ? "" : manifestSha)).append('\n');
         List<SprigEntry> sorted = new ArrayList<>(sprig);
-        sorted.sort(Comparator.comparing((SprigEntry e) -> e.kind)
-                .thenComparing(e -> e.name).thenComparing(e -> e.path == null ? "" : e.path));
+        sorted.sort(Comparator.comparing(e -> e.id));
         for (SprigEntry entry : sorted) {
             sb.append('\n').append("[[sprig]]\n");
+            sb.append("id = ").append(quote(entry.id)).append('\n');
+            sb.append("owner = ").append(quote(entry.owner)).append('\n');
             sb.append("name = ").append(quote(entry.name)).append('\n');
             sb.append("kind = ").append(quote(entry.kind)).append('\n');
             if (entry.kind.equals("local")) {

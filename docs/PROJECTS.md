@@ -2,7 +2,8 @@
 
 `sprig init` creates a manifest and `src/main.spr` without overwriting files.
 `project --json` searches upward for the nearest `sprig.toml`. `check/build/run`
-without a source use its entry; an explicit file always bypasses discovery.
+without a source use its entry; an explicit file outside the source root bypasses the project; files within
+the source root retain its dependency graph.
 
 ```toml
 exports = ["public.spr"]
@@ -32,5 +33,8 @@ point to line 1; parse errors point to the offending line.
 `run --bin tool` selects a bin. Multiple bins without a declared project entry
 require `--bin`; a declared entry supplies an explicit default. `source` is
 metadata, not a sandbox; local file imports keep their v0.7 relative-path
-semantics. There is no dependency export boundary until a resolver exists.
+semantics. External package imports use `@alias/module.spr`; aliases are
+package-local and logical paths must be listed in the dependency exports.
+Project check/build/run requires a current generated `sprig.lock`; run
+`sprig resolve` after manifest changes. Local source edits do not stale a lock.
 See `DEPENDENCIES.md` before declaring a dependency.

@@ -588,6 +588,7 @@ public final class Main {
         try {
             requireNoJvmDependencies(project);
             if (options.offline && lockCurrent(project)) {
+                DependencyResolver.load(project, Lockfile.parse(Files.readString(project.lockPath())), true);
                 if (!options.json) {
                     System.out.println("already resolved: sprig.lock matches sprig.toml");
                 }
@@ -604,10 +605,15 @@ public final class Main {
                 // declared JVM coordinates are recorded as unresolved and the
                 // build keeps using explicit --classpath.
             }
-            Path temp = project.lockPath().resolveSibling(Project.LOCKFILE + ".tmp");
+            Path temp = Files.createTempFile(project.root, ".sprig-lock-", ".tmp");
             Files.writeString(temp, lock.render());
-            Files.move(temp, project.lockPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            try {
+                try { Files.move(temp, project.lockPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+                catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    Files.move(temp, project.lockPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            } finally { Files.deleteIfExists(temp); }
             return reportResolve(options, project, result, false);
         } catch (DepError e) {
             diagnostics.add(depDiagnostic(e));
@@ -813,7 +819,14 @@ public final class Main {
         }
         Lockfile lock = null;
         if (Files.isRegularFile(project.lockPath())) {
-            lock = Lockfile.parse(Files.readString(project.lockPath()));
+            try {
+                lock = Lockfile.parse(Files.readString(project.lockPath()));
+                DependencyResolver.load(project, lock, true);
+            } catch (DepError e) {
+                diagnostics.add(depDiagnostic(e));
+                report(diagnostics, options.json, "deps", 1, null);
+                return 1;
+            }
         }
         if (options.json) {
             List<Object> sprig = new ArrayList<>();
@@ -824,7 +837,9 @@ public final class Main {
                     item.put("name", entry.name);
                     item.put("kind", entry.kind);
                     item.put("projectName", entry.projectName);
-                    item.put("direct", isDirect(project, entry.name));
+                    item.put("id", entry.id);
+                    item.put("owner", entry.owner);
+                    item.put("direct", entry.owner.equals("root"));
                     item.put("resolved", true);
                     if (entry.kind.equals("git")) {
                         item.put("url", GitCache.redact(entry.url));
@@ -902,7 +917,7 @@ public final class Main {
             for (Project.Dependency dependency : project.dependencies) {
                 boolean found = false;
                 for (Lockfile.SprigEntry entry : lock.sprig) {
-                    if (entry.name.equals(dependency.name)) {
+                    if (entry.id.equals(Lockfile.edgeId("root", dependency.name))) {
                         found = true;
                     }
                 }

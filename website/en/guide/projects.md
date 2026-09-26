@@ -73,7 +73,10 @@ git = "https://example.com/math.git"
 branch = "main"
 ```
 
-- `name` is the package-local import alias; the dependency's own
+- Schema 2 identifies edges as `root/@a/@util`; old schemas require resolve.
+- Real paths confine symlinks; exported internal symlinks are allowed.
+- Git cache reuse validates HEAD, marker and tracked/untracked contents; tampering fails.
+- `name` is the package-local import alias; distinct packages may reuse it; the dependency's own
   `[project] name` is separate identity metadata.
 - `sprig resolve` writes a deterministic `sprig.lock` (commit it). `check`,
   `build` and `run` refuse a missing or stale lock and never move a Git branch

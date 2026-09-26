@@ -1,5 +1,9 @@
 # Sprig v0.7 — language contract (proposed)
 
+> Historical v0.7 design contract. Current implemented v0.8-dev behavior is
+> described by the executable capability catalog, docs/FEATURE_STATUS_IMPLEMENTED.md
+> and docs/post-v0.7/V08_VALIDATION_REPORT.md.
+
 ## General principles
 
 Target: an independent small statically typed JVM language that initially translates typed Sprig IR to Java source (`javac` compiles that source). **Not** a Java syntax superset. The reference ANTLR4 frontend and Java layout adapter are not a compiler. Keep one canonical syntax for each operation rather than accumulating aliases. No pipeline operator. All named functions/methods declare parameter and return types, including `-> Unit`. Variables can use initializer-based local inference; class fields need explicit types. Expressions do not use implicit truthiness or chained comparisons.
@@ -10,7 +14,7 @@ Target: an independent small statically typed JVM language that initially transl
 
 ## 2. Types and functions
 
-Native types: `Int` (signed 64-bit), `Float` (64-bit binary floating), `Bool`, `String`, `Unit`, and nullable `T?`. Collections: `List[T]`, `MutableList[T]`, `Map[K,V]`, `MutableMap[K,V]` with distinct mutability types. No implicit conversions between a mutable list and immutable list: use explicit snapshot methods returning a new outer collection. Typed empty literal requires contextual type. Generic type application syntax is recognized; the implemented v0.8 generics contract (single-parameter `generic T:` blocks, explicit application, no inference/constraints) is specified in `GENERICS.md`. Basic numeric operator behavior, overflow and integer division require explicit specification before full runtime claims. A `Bool` is required by conditions, without truthiness/coercion. Anonymous expression lambdas are `fn(x: Int) => expr` with inferred expression result; named funcs require explicit results.
+Native types: `Int` (signed 64-bit), `Float` (64-bit binary floating), `Bool`, `String`, `Unit`, and nullable `T?`. Collections: `List[T]`, `MutableList[T]`, `Map[K,V]`, `MutableMap[K,V]` with distinct mutability types. No implicit conversions between a mutable list and immutable list: use explicit snapshot methods returning a new outer collection. Typed empty literal requires contextual type. Generic type application syntax is recognized; the current v0.8 generics contract (multiple explicit parameters, leading Equatable requirements, no inference) is specified in `GENERICS.md`. Basic numeric operator behavior, overflow and integer division require explicit specification before full runtime claims. A `Bool` is required by conditions, without truthiness/coercion. Anonymous expression lambdas are `fn(x: Int) => expr` with inferred expression result; named funcs require explicit results.
 
 ## 3. Object construction
 

@@ -6,7 +6,7 @@ or downloadable archive exists.** The latest published prerelease is
 
 ## Intended content
 
-- v0.8 single-parameter user generics: `generic T:` blocks, explicit `[Type]`
+- v0.8 multi-parameter user generics: `generic K, V:` blocks, explicit `[Type]`
   application, generic variants with expanded payloads, strict arity, block
   scope, Practical Strict nullable arguments, and erased/boxed JVM lowering.
 - `sprig help generics` and capabilities flags reporting the generics,
@@ -22,11 +22,11 @@ or downloadable archive exists.** The latest published prerelease is
 - Maven/JVM dependency resolution is **not implemented**: declaring `[[jvm]]`
   fails with `SPR-DEP-MAVEN`, and third-party jars need explicit
   `--classpath`. There is no project-aware JVM classpath yet.
-- Capability implications for `requires T: Comparable|Equatable` are parsed
-  but not enforced.
-- Multiple type parameters and inference are rejected by design.
+- Leading `requires T: Equatable` is implemented; Comparable and user-defined
+  capabilities remain unsupported.
+- Generic inference and variance are rejected by design.
 - A v0.2.0-alpha.1 archive has not been packaged, checksummed and smoke-tested
   from this tree yet; `scripts/package-alpha.sh` builds a local candidate only.
 
-See `docs/post-v0.7/GENERICS_IMPLEMENTATION_REPORT.md` for the implementation
+See `docs/post-v0.7/V08_VALIDATION_REPORT.md` for the implementation
 and validation record.

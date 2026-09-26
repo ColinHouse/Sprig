@@ -178,6 +178,7 @@ else
 fi
 
 echo "== 17. independent v0.8 adversarial generics, numerics and manifests =="
+if python3 "$ROOT/tests/project_deps/check_cleanup.py"; then pass; else fail "resolver cleanup"; fi
 if python3 "$ROOT/tests/adversarial/v08/check_generics.py"; then pass; else fail "v0.8 adversarial generics"; fi
 if python3 "$ROOT/tests/adversarial/v08/check_projects.py"; then pass; else fail "v0.8 adversarial projects"; fi
 

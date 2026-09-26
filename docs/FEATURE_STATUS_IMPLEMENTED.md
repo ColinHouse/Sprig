@@ -20,9 +20,9 @@ design kit's `docs/FEATURE_STATUS.md`.
 | Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |
 | `requires X: Equatable` equality capability | yes | equality on the parameter allowed only with the clause; value equality in codegen | boxed `Objects`-style equality | visitor generic_stack, runtime 19 |
 | `requires X: Comparable` | parsed | rejected as not implemented (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
-| Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model 14 checks |
-| Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver 21 checks |
-| Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` immutable checkouts | dependency resolver |
+| Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model suite |
+| Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver suite |
+| Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` verified detached checkouts | dependency resolver |
 | Maven/JVM dependency resolution | manifest only | rejected loudly with `SPR-DEP-MAVEN` (see validation report) | explicit `--classpath` remains | project model |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
@@ -34,7 +34,7 @@ design kit's `docs/FEATURE_STATUS.md`.
 | `BigInt` and `Decimal` | yes | distinct native types | BigInteger/BigDecimal wrappers | numeric acceptance suite |
 | Java checked exceptions + typed catch + `error.message` | yes | yes | Java try/catch | runtime 15 |
 | `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
-| Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | no automatic dependency resolution | agent tooling suite |
+| Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | local/Git packages resolve separately; JVM JARs remain explicit | agent tooling suite |
 | javac error → Sprig span translation | — | — | line map | by design |
 | Checked effects from omitted class defaults | — | checked at each constructor call; explicit field values skip unused defaults | defaults still evaluate per instance, in declaration order | correctness regressions |
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |

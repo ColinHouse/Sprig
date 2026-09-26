@@ -87,7 +87,7 @@ version
 
 - LSP / IDE 语言服务器、
 - `sprig fmt`、`sprig test`、
-- 包清单、Maven 依赖解析或模块仓库、
+- Maven 依赖解析或模块仓库、
 - 增量检查。
 
 历史[Agent 工具协议（英文，提案）](/en/reference/AGENT_TOOL_PROTOCOL)

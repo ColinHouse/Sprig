@@ -56,9 +56,11 @@ For generics, read `docs/GENERICS.md`: parameters and uses are explicit,
 including multiple parameters. `requires T: Equatable` must lead the function
 body. Generic variant cases use expanded payloads and match case owners omit
 type arguments. `docs/PROJECTS.md` defines the strict manifest subset;
-`docs/DEPENDENCIES.md` states the unsupported resolver/lock/cache boundary.
-Project-based compilation refuses unresolved declarations. An explicit source
-file bypasses project discovery, so pass every manually acquired JVM JAR with
+`docs/DEPENDENCIES.md` describes local/Git resolution, edge lock identities,
+exports and offline cache validation. Run `sprig resolve` before project builds.
+Use `import "@alias/module.spr" as module` for an exported dependency module.
+Project-based compilation refuses missing or stale locks and unsupported Maven declarations. An explicit source
+file outside the project source root bypasses the project, so pass every manually acquired JVM JAR with
 `--classpath`. Do not treat that as Maven resolution.
 
 For details, see `docs/QUICK_REFERENCE.md`, `docs/JVM_INTEROP.md`,

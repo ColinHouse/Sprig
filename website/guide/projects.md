@@ -79,7 +79,10 @@ branch = "main"
   `exports` 列出的模块可被外部导入，路径会 canonicalize，无法逃出依赖源码根。
 - `--offline` 只使用 Git 缓存（`~/.sprig/git`），缓存缺 revision 时以
   `SPR-DEP-OFFLINE` 明确失败。
-- 依赖环与重复别名都会被结构化诊断拒绝。
+- 依赖环与同一包内重复别名会被拒绝；不同包可使用相同别名。
+- lock schema 2 使用 `root/@a/@util` 标识依赖边；旧 schema 要求重新 resolve。
+- symlink 通过 real path 检查；根内且逻辑路径被 export 的 symlink 允许。
+- Git 缓存验证 HEAD、marker 与 tracked/untracked 内容；修改会明确失败。
 
 **Maven/JVM 依赖尚未实现**：声明 `[[jvm]]` 会以 `SPR-DEP-MAVEN` 失败，第三方
 jar 目前仍需显式 `--classpath`。见[已知限制](/reference/known-limitations)。

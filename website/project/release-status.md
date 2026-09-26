@@ -38,3 +38,7 @@
 
 另见[已知限制](/reference/known-limitations)与
 [Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。
+
+当前开发版本支持多参数泛型、本地/Git 依赖、lockfile 与离线构建；Maven/JVM
+解析和 stage-1 项目迁移尚未完成。唯一当前验证报告为
+`docs/post-v0.7/V08_VALIDATION_REPORT.md`，历史报告仅适用于各自记录的 SHA。
