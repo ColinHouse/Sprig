@@ -1,4 +1,4 @@
-# v0.8 generics: one parameter per block, explicit [Type] at every use.
+# v0.8 generics: one or more parameters per block, explicit [Type] at every use.
 generic T:
     class Box:
         let value: T

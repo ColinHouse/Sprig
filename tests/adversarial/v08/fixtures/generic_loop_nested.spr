@@ -1,0 +1,6 @@
+generic T:
+    func first(xs:List[List[T]]) -> T?:
+        for row in xs:
+            return row.get(0)
+        return null
+print(first[Int]([[7]]))

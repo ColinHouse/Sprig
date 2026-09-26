@@ -1,0 +1,16 @@
+generic T:
+    variant Tree:
+        Leaf:
+            value: T
+        Pair:
+            left: Tree[T]
+            right: Tree[T]
+generic T:
+    func size(tree: Tree[T]) -> Int:
+        match tree:
+            case Tree.Leaf as leaf:
+                return 1
+            case Tree.Pair as pair:
+                return size[T](pair.left) + size[T](pair.right)
+let tree: Tree[Int] = Tree[Int].Pair(left=Tree[Int].Leaf(value=2), right=Tree[Int].Leaf(value=3))
+print(size[Int](tree))

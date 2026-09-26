@@ -1,0 +1,15 @@
+let n: Int32 = 7
+let data: MutableMap[Int, Int] = {n: n}
+print(data.get(7))
+print(data.containsKey(n))
+data.set(n,n)
+print(data.size())
+data[n] = n
+print(data.size())
+print(data.get(n))
+print(data[n])
+print(data.remove(n))
+print(data.size())
+let f: Float32 = 1.5
+let values: Map[String, Float] = {"x": f}
+print(values.get("x"))

@@ -1,0 +1,16 @@
+class Holder:
+    var value: Int?
+    func set(n: Int?) -> Unit:
+        value = n
+func consume(n: Int?) -> Int?:
+    return n
+let n: Int32 = 7
+let h = Holder(value=n)
+print(h.value)
+h.set(n)
+print(h.value)
+print(consume(n))
+let fnc = fn(x: Int) => x
+print(fnc(n))
+let optional = fn(x: Int?) => x
+print(optional(n))

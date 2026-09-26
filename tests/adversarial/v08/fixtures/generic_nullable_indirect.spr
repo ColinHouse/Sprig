@@ -1,0 +1,7 @@
+generic T:
+    class Maybe:
+        let value:T?
+generic T:
+    class Outer:
+        let item:Maybe[T]
+let o:Outer[String?]? = null

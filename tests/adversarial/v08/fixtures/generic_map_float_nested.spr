@@ -1,0 +1,4 @@
+generic K, V:
+    func empty() -> List[Map[K,V]]:
+        return []
+print(empty[Float,Int]())

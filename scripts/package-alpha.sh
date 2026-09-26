@@ -33,8 +33,10 @@ cp "$ROOT/docs/QUICK_REFERENCE.md" "$ROOT/docs/FEATURE_STATUS_IMPLEMENTED.md" \
   "$ROOT/docs/JVM_INTEROP.md" "$ROOT/docs/NUMERIC_SEMANTICS.md" \
   "$ROOT/docs/DIAGNOSTIC_CODES.md" "$ROOT/docs/KNOWN_LIMITATIONS.md" \
   "$ROOT/docs/HOST_SERVICES.md" "$PKG/docs/"
+cp "$ROOT/spec/docs/GENERICS.md" "$PKG/docs/"
+cp "$ROOT/docs/PROJECTS.md" "$ROOT/docs/DEPENDENCIES.md" "$PKG/docs/"
 cat > "$PKG/README.md" <<'EOF'
-# Sprig alpha.2 Agent SDK
+# Sprig v0.2.0-alpha.1 development Agent SDK
 
 This package contains the Java stage-0 compiler/runtime and ANTLR 4.13.2. It
 compiles Sprig source to Java, invokes `javac`, then runs on the JVM. It is

@@ -1,0 +1,9 @@
+generic T:
+    class Box:
+        let value:T
+generic T:
+    func first(xs:List[Box[T]]) -> T?:
+        for row in xs:
+            return row.value
+        return null
+print(first[Int]([Box[Int](value=7)]))

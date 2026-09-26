@@ -1,0 +1,6 @@
+generic T:
+    class Box:
+        var value: T
+let b = Box[Int](value=9223372036854775807)
+b.value += 1
+print("unreachable")

@@ -1,0 +1,9 @@
+generic A,B,C:
+    class Triple:
+        let first: A
+        let second: B
+        let third: C
+let t = Triple[Int,String,Bool](first=42,second="ok",third=true)
+print(t.first)
+print(t.second)
+print(t.third)

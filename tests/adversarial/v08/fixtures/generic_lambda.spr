@@ -1,0 +1,4 @@
+generic T:
+    func copy(xs: List[T]) -> List[T]:
+        return xs.map(fn(x: T) => x)
+print(copy[Int]([1,2]))

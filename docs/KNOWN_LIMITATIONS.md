@@ -1,4 +1,4 @@
-# Known limitations (Stage-0 alpha.2 development)
+# Known limitations (Stage-0 v0.2.0-alpha.1 development)
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the Sprig v0.7 design kit.
@@ -49,5 +49,6 @@ by the Sprig v0.7 design kit.
   platform or architecture has been exercised locally.
 - The project is licensed under Apache-2.0 (`LICENSE` and `NOTICE`). The
   latest published prerelease is `v0.1.0-alpha.1`; the `0.2.0-alpha.1`
-  development tree is not released, and no project package or manifest
-  commands exist yet.
+  development tree is not released. Manifest commands, local/Git dependency
+  resolution, lockfiles and offline builds exist; Maven resolution and the
+  integrated multi-module stage-1 project are still absent.

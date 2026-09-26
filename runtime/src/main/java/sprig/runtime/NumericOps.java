@@ -7,6 +7,14 @@ import java.math.BigInteger;
 public final class NumericOps {
     private NumericOps() {}
 
+    /** Backend-only safe widening for nullable boxed values; no lossy conversion. */
+    public static Long widenInt32Nullable(Integer value) {
+        return value == null ? null : Long.valueOf(value.longValue());
+    }
+    public static Double widenFloat32Nullable(Float value) {
+        return value == null ? null : Double.valueOf(value.doubleValue());
+    }
+
     public static long add(long a, long b) { try { return Math.addExact(a, b); }
         catch (ArithmeticException e) { throw new SprigNumericError("Int addition overflow"); } }
     public static long sub(long a, long b) { try { return Math.subtractExact(a, b); }

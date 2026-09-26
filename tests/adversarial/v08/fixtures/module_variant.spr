@@ -1,0 +1,9 @@
+import "./module_variant_model.spr" as model
+let value = model.Choice.Replace(value=42)
+print(value.value)
+let wrapped: model.Option[Int] = model.Option[Int].Some(value=7)
+match wrapped:
+    case model.Option.Some as item:
+        print(item.value)
+    case model.Option.None:
+        print(0)

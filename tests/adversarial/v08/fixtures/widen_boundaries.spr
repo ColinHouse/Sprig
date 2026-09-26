@@ -1,0 +1,15 @@
+generic T:
+    class Box:
+        let value: T
+let hi: Int32 = 2147483647
+let lo: Int32 = -2147483648
+print(Box[Int](value=hi).value)
+print(Box[Int](value=lo).value)
+let zero: Float32 = -0.0
+let wide = Box[Float](value=zero).value
+print(1.0 / wide)
+let max: Float32 = 3.4028234663852886e38
+let expanded: Float = max
+print(expanded == max.toFloat())
+let smallest: Float32 = 1.401298464324817e-45
+print(Box[Float](value=smallest).value == smallest.toFloat())

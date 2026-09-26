@@ -1,0 +1,4 @@
+generic T:
+    class Box:
+        let value:T
+let b:Box[Int] = Box(value=42)

@@ -3,6 +3,7 @@ package sprig.compiler.project;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 
 /**
@@ -56,6 +57,9 @@ public final class Toml {
         if (line.startsWith("[[") && line.endsWith("]]")) {
             String name = line.substring(2, line.length() - 2).trim();
             requireName(name, lineNumber);
+            if (!allowBareValues && !Set.of("bin", "dependency", "jvm").contains(name)) {
+                throw new TomlException("Unknown array table '" + name + "'", lineNumber);
+            }
             currentTable = name;
             currentEntry = new LinkedHashMap<>();
             tableArrays.computeIfAbsent(name, key -> new ArrayList<>()).add(currentEntry);
@@ -64,6 +68,14 @@ public final class Toml {
         if (line.startsWith("[") && line.endsWith("]")) {
             String name = line.substring(1, line.length() - 1).trim();
             requireName(name, lineNumber);
+            if (!allowBareValues) {
+                if (!name.equals("project")) {
+                    throw new TomlException("Unknown table '" + name + "'", lineNumber);
+                }
+                if (tables.containsKey(name)) {
+                    throw new TomlException("Duplicate table '" + name + "'", lineNumber);
+                }
+            }
             currentTable = name;
             currentEntry = null;
             tables.computeIfAbsent(name, key -> new ArrayList<>()).add(new LinkedHashMap<>());
@@ -78,11 +90,28 @@ public final class Toml {
         if (key.isEmpty()) {
             throw new TomlException("Missing key before '='", lineNumber);
         }
+        if (!allowBareValues) {
+            Set<String> allowed = switch (currentTable) {
+                case "" -> currentEntry == null ? Set.of("exports") : Set.of();
+                case "project" -> Set.of("name", "version", "language", "source", "entry", "exports");
+                case "bin" -> Set.of("name", "entry");
+                case "dependency" -> Set.of("name", "path", "git", "branch");
+                case "jvm" -> Set.of("group", "artifact", "version");
+                default -> Set.of();
+            };
+            if (!allowed.contains(key)) {
+                throw new TomlException("Unknown key '" + key + "' in '"
+                        + currentTable + "'", lineNumber);
+            }
+        }
         boolean topLevel = currentEntry == null && currentTable.isEmpty();
         if (value.startsWith("[")) {
             List<String> parsedArray = parseArray(value, lineNumber);
             if (currentEntry == null) {
                 if (topLevel) {
+                    if (!allowBareValues && arrays.containsKey(key)) {
+                        throw new TomlException("Duplicate key '" + key + "'", lineNumber);
+                    }
                     arrays.put(key, parsedArray);
                 } else {
                     scopedArrays.put(currentTable + "." + key, parsedArray);
@@ -93,6 +122,9 @@ public final class Toml {
         }
         String parsedValue = parseString(value, lineNumber);
         if (topLevel) {
+            if (!allowBareValues && scalars.containsKey(key)) {
+                throw new TomlException("Duplicate key '" + key + "'", lineNumber);
+            }
             scalars.put(key, parsedValue);
         }
         record(key, parsedValue, lineNumber);
@@ -130,7 +162,7 @@ public final class Toml {
         }
         int index = 0;
         while (index < body.length()) {
-            while (index < body.length() && (body.charAt(index) == ' ' || body.charAt(index) == ',')) {
+            while (index < body.length() && body.charAt(index) == ' ') {
                 index++;
             }
             if (index >= body.length()) {
@@ -139,8 +171,11 @@ public final class Toml {
             if (body.charAt(index) != '"') {
                 throw new TomlException("Array items must be quoted strings", lineNumber);
             }
-            int end = body.indexOf('"', index + 1);
-            if (end < 0) {
+            int end = index + 1;
+            while (end < body.length() && body.charAt(end) != '"') {
+                end++;
+            }
+            if (end >= body.length()) {
                 throw new TomlException("Unterminated string in array", lineNumber);
             }
             items.add(body.substring(index + 1, end));
@@ -148,8 +183,22 @@ public final class Toml {
             while (index < body.length() && body.charAt(index) == ' ') {
                 index++;
             }
-            if (index < body.length() && body.charAt(index) != ',') {
-                throw new TomlException("Expected ',' between array items", lineNumber);
+            if (index < body.length()) {
+                if (body.charAt(index) != ',') {
+                    throw new TomlException("Expected ',' between array items", lineNumber);
+                }
+                index++;
+                int probe = index;
+                while (probe < body.length() && body.charAt(probe) == ' ') {
+                    probe++;
+                }
+                if (probe >= body.length()) {
+                    break;
+                }
+                if (body.charAt(probe) == ',') {
+                    throw new TomlException("Empty array item", lineNumber);
+                }
+                index = probe;
             }
         }
         return items;
@@ -157,7 +206,15 @@ public final class Toml {
 
     private String parseString(String value, int lineNumber) {
         if (value.length() >= 2 && value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"') {
-            return value.substring(1, value.length() - 1);
+            String body = value.substring(1, value.length() - 1);
+            if (!allowBareValues) {
+                for (int i = 0; i < body.length(); i++) {
+                    if (body.charAt(i) == '"' && (i == 0 || body.charAt(i - 1) != '\\')) {
+                        throw new TomlException("Unexpected quote inside a string value", lineNumber);
+                    }
+                }
+            }
+            return body;
         }
         if (allowBareValues && value.matches("[A-Za-z0-9_.+-]+")) {
             return value;

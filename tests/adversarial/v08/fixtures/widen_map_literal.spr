@@ -1,0 +1,7 @@
+let n: Int32 = 7
+let data: Map[Int, Int] = {n: n}
+let value = data.get(7)
+if value != null:
+    print(value + 1)
+else:
+    print("missing")

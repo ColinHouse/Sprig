@@ -1,0 +1,7 @@
+generic T,E:
+    variant Result:
+        Ok:
+            value:T
+        Err:
+            error:E
+let x:Result[Int,String] = Result[String,Int].Ok(value="x")

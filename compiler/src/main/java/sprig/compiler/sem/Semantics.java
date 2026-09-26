@@ -39,7 +39,7 @@ public final class Semantics {
             return false;
         }
         if (target instanceof VariantType variant && source instanceof VariantCaseType caseType) {
-            return variant.decl == caseType.variant;
+            return variant.decl == caseType.variant && variant.args.equals(caseType.variantArgs);
         }
         if (target instanceof JavaType javaTarget) {
             if (javaTarget.clazz == Object.class || javaTarget.clazz == java.io.Serializable.class

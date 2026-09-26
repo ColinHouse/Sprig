@@ -1,0 +1,6 @@
+class Holder:
+    let item: Maybe[String?]?
+generic T:
+    class Maybe:
+        let value: T?
+let h = Holder(item=null)

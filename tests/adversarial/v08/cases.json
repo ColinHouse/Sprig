@@ -1,0 +1,246 @@
+[
+  {
+    "name": "nested_list",
+    "output": "42\n"
+  },
+  {
+    "name": "nested_map",
+    "output": "42\n"
+  },
+  {
+    "name": "generic_lambda",
+    "output": "[1, 2]\n"
+  },
+  {
+    "name": "generic_nullable_nested",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_nullable_forward",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_map_float",
+    "code": "SPR-NUM-CONVERSION"
+  },
+  {
+    "name": "generic_map_float_nested",
+    "code": "SPR-NUM-CONVERSION"
+  },
+  {
+    "name": "constraint_late",
+    "code": "SPR-GENERIC-CONSTRAINT"
+  },
+  {
+    "name": "constraint_nested",
+    "code": "SPR-GENERIC-CONSTRAINT"
+  },
+  {
+    "name": "constraint_top",
+    "code": "SPR-NAME-UNRESOLVED"
+  },
+  {
+    "name": "wrong_constraint",
+    "code": "SPR-GENERIC-CONSTRAINT"
+  },
+  {
+    "name": "nullable_positions_ok",
+    "output": "true\n"
+  },
+  {
+    "name": "nullable_positions_bad",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "3params",
+    "output": "42\nok\ntrue\n"
+  },
+  {
+    "name": "constraint_float",
+    "output": "true\nfalse\n"
+  },
+  {
+    "name": "generic_no_inference",
+    "code": "SPR-TYPE-GENERIC-ARGS-REQUIRED"
+  },
+  {
+    "name": "ctor_no_inference",
+    "code": "SPR-TYPE-GENERIC-ARGS-REQUIRED"
+  },
+  {
+    "name": "invariant",
+    "code": "SPR-TYPE-ASSIGN"
+  },
+  {
+    "name": "wrong_variant_argument",
+    "code": "SPR-TYPE-ASSIGN"
+  },
+  {
+    "name": "list_index",
+    "output": "3\n"
+  },
+  {
+    "name": "call_index",
+    "output": "2\n"
+  },
+  {
+    "name": "generic_target_variable",
+    "code": "SPR-SYNTAX-ERROR"
+  },
+  {
+    "name": "generic_alias_bracket",
+    "code": "SPR-SYNTAX-ERROR"
+  },
+  {
+    "name": "generic_alias_angle",
+    "code": "SPR-SYNTAX-ERROR"
+  },
+  {
+    "name": "boxing_Int",
+    "output": "42\n42\n"
+  },
+  {
+    "name": "boxing_Int32",
+    "output": "42\n42\n"
+  },
+  {
+    "name": "boxing_Float",
+    "output": "1.5\n1.5\n"
+  },
+  {
+    "name": "boxing_Float32",
+    "output": "1.5\n1.5\n"
+  },
+  {
+    "name": "boxing_Bool",
+    "output": "true\ntrue\n"
+  },
+  {
+    "name": "boxing_BigInt",
+    "output": "42\n42\n"
+  },
+  {
+    "name": "boxing_Decimal",
+    "output": "0.1\n0.1\n"
+  },
+  {
+    "name": "boxing_String",
+    "output": "hi\nhi\n"
+  },
+  {
+    "name": "boxing_Stringnullable",
+    "output": "null\nnull\n"
+  },
+  {
+    "name": "generic_loop_nested",
+    "output": "7\n"
+  },
+  {
+    "name": "generic_loop_box",
+    "output": "7\n"
+  },
+  {
+    "name": "generic_infer_variant_list",
+    "output": "2\n"
+  },
+  {
+    "name": "generic_mixed_variant_list",
+    "code": "SPR-TYPE-MISMATCH"
+  },
+  {
+    "name": "generic_nullable_local",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_nullable_indirect",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_case_corruption",
+    "code": "SPR-TYPE-ASSIGN"
+  },
+  {
+    "name": "module_variant",
+    "output": "42\n7\n"
+  },
+  {
+    "name": "generic_nullable_call",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_recursive_visitor",
+    "output": "2\n"
+  },
+  {
+    "name": "generic_nested_map_value",
+    "output": "42\n"
+  },
+  {
+    "name": "generic_collection_chaining",
+    "output": "5\n"
+  },
+  {
+    "name": "generic_discard",
+    "output": "once\n0\n"
+  },
+  {
+    "name": "widen_generic",
+    "output": "7\n7\n7\n7\n1.5\n1.5\n"
+  },
+  {
+    "name": "widen_variant",
+    "output": "7\n"
+  },
+  {
+    "name": "widen_nullable",
+    "output": "7\n7\n7\n7\nnull\n7\n2\n1.5\nnull\n"
+  },
+  {
+    "name": "widen_nullable_generic",
+    "output": "7\nnull\n7\n1.5\n"
+  },
+  {
+    "name": "widen_list",
+    "output": "[7, 7, 7]\ntrue\n0\ntrue\n[7, 7]\n1.5\n"
+  },
+  {
+    "name": "widen_map",
+    "output": "7\ntrue\n1\n1\n7\n7\n7\n0\n1.5\n"
+  },
+  {
+    "name": "widen_calls",
+    "output": "7\n7\n7\n7\n7\n"
+  },
+  {
+    "name": "widen_map_literal",
+    "output": "8\n"
+  },
+  {
+    "name": "widen_list_lookup",
+    "output": "true\n0\ntrue\n0\n"
+  },
+  {
+    "name": "widen_nullable_collections",
+    "output": "[7, 7, 7]\n1.5\n[1.5, null]\n"
+  },
+  {
+    "name": "widen_boundaries",
+    "output": "2147483647\n-2147483648\n-Infinity\ntrue\ntrue\n"
+  },
+  {
+    "name": "generic_compound_assignment",
+    "output": "8\n1\n56\n49\n3.5\n"
+  },
+  {
+    "name": "generic_compound_overflow",
+    "runtimeMessage": "Int addition overflow"
+  },
+  {
+    "name": "widen_membership",
+    "output": "true\ntrue\n2\ntrue\ntrue\ntrue\n"
+  },
+  {
+    "name": "builtin_result_width",
+    "output": "[3, 7]\n[1.5]\n3\n1.5\n8\n"
+  }
+]

@@ -43,7 +43,7 @@ Inside a generic declaration, `T` supports assignment, passing, returning and
 being placed in compatible generic containers. It has no operators, ordering
 or methods, and equality only when the enclosing function declares it:
 `value + value` is `SPR-TYPE-OPERAND`, and `a == b` is rejected unless the
-function contains `requires K: Equatable`, in which case equality is checked
+function starts with `requires K: Equatable`, in which case equality is checked
 with value equality on the boxed representation.
 
 Capabilities are deliberately minimal:
@@ -52,6 +52,9 @@ Capabilities are deliberately minimal:
 |---|---|
 | `Equatable` | implemented for `<T>` equality under `requires X: Equatable` |
 | `Comparable` | parsed, but not implemented (`SPR-GENERIC-CONSTRAINT`) |
+
+Clauses must form a leading prefix of the function body. A late or nested
+clause reports `SPR-GENERIC-CONSTRAINT` and grants no capability.
 
 Any `requires` clause naming a parameter that is not in scope reports
 `SPR-NAME-UNRESOLVED`.
@@ -69,7 +72,9 @@ Any `requires` clause naming a parameter that is not in scope reports
 
   then `Box[String]` is legal but `Box[String?]` is rejected with
   `SPR-TYPE-GENERIC-NULLABLE`. The compiler does not flatten `T?` or invent
-  `String??`; the declaration already owns the nullable position.
+  `String??`; the declaration already owns the nullable position. This applies
+  recursively to written annotations, local/lambda types and nested generic
+  applications, and is independent of declaration order.
 
 ## Generic variants
 
@@ -84,7 +89,18 @@ generic T:
 ```
 
 `Option[Int].Some(value=42)` builds a value; `Option[Int].None` is a value, not
-a call. Exhaustive `match` works on instantiations and a new case still
+a call. A match writes the unapplied case owner; do not put `[Int]` in a case:
+
+```sprig
+func read(option: Option[Int]) -> Int:
+    match option:
+        case Option.Some as some:
+            return some.value
+        case Option.None:
+            return 0
+```
+
+Exhaustive `match` works on instantiations and a new case still
 reports `SPR-MATCH-NONEXHAUSTIVE` for every match that misses it.
 
 ## Relationship to indexing
@@ -116,5 +132,6 @@ even though the JVM sees a boxed value.
 
 Generic inference, variance, `Comparable` and any user-defined capability,
 generic constraints on JVM types, and registry/dependency features. The
-project system (`sprig.toml`, `sprig.lock`, dependencies) is not implemented
-in this tree.
+manifest and entry-discovery model (`sprig.toml`, `init`, `project`, `deps`,
+`run --bin`) is implemented. Lockfiles and local/Git/Maven dependency
+resolution are not implemented; see the SDK project/dependency documentation.

@@ -1,0 +1,12 @@
+let n: Int32? = 7
+let absent: Int32? = null
+let data: MutableList[Int?] = [n, absent]
+data.append(n)
+data.set(1, n)
+print(data)
+let table: MutableMap[Int, Float?] = {7: null}
+let f: Float32? = 1.5
+table.set(7, f)
+print(table.get(7))
+let xs: List[Float?] = [f, null]
+print(xs)

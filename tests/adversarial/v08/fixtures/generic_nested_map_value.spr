@@ -1,0 +1,8 @@
+generic K, V:
+    func value(data: Map[K, List[V]], key: K) -> V?:
+        let values = data.get(key)
+        if values != null:
+            return values.get(0)
+        return null
+let data: Map[String, List[Int]] = {"x": [42]}
+print(value[String, Int](data, "x"))

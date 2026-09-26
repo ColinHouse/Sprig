@@ -174,7 +174,15 @@ public final class TypeChecker {
     // Functions and statements
     // ------------------------------------------------------------------
 
+    private final Set<Stmt.Requires> leadingRequirements = new HashSet<>();
+
     private void checkFunction(Decl.Func func, Decl.ClassDecl owner) {
+        leadingRequirements.clear();
+        func.equatableParams.clear();
+        for (Stmt stmt : func.body) {
+            if (!(stmt instanceof Stmt.Requires requires)) break;
+            leadingRequirements.add(requires);
+        }
         Map<String, Type> previousTypeParams = activeTypeParams;
         currentFunction = func;
         currentClass = owner;
@@ -549,13 +557,14 @@ public final class TypeChecker {
         }
     }
 
-    /**
-     * v0.8 {@code requires T: Capability}. The syntax is accepted and checked
-     * for placement and parameter identity; capability implication is not
-     * implemented in this alpha, so a clause always reports
-     * {@code SPR-GENERIC-CONSTRAINT} rather than silently doing nothing.
-     */
+    /** Only leading function clauses may grant equality capability. */
     private void checkRequires(Stmt.Requires requires) {
+        if (currentFunction != null && !leadingRequirements.contains(requires)) {
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                    "requires must appear before all other statements in the function body",
+                    module.uri, requires.span));
+            return;
+        }
         boolean parameterVisible = activeTypeParams.containsKey(requires.parameter);
         if (!parameterVisible) {
             diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
@@ -1227,9 +1236,9 @@ public final class TypeChecker {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
                         "Operator '" + op + "' is not available for generic type parameter "
                                 + (containsTypeParameter(left) ? left.display() : right.display())
-                                + "; capabilities are not implemented yet",
+                                + "; this operation needs a supported leading capability",
                         module.uri, binary.span)
-                        .withHint("Use a concrete type, or declare 'requires "
+                        .withHint("Use a concrete type, or begin the function with 'requires "
                                 + (containsTypeParameter(left) && left instanceof TypeParameterType p
                                         ? p.name : "T")
                                 + ": Equatable' for equality."));
@@ -1556,8 +1565,8 @@ public final class TypeChecker {
             return b;
         }
         if (a instanceof VariantCaseType caseA && b instanceof VariantCaseType caseB
-                && caseA.variant == caseB.variant) {
-            return new VariantType(caseA.variant);
+                && caseA.variant == caseB.variant && caseA.variantArgs.equals(caseB.variantArgs)) {
+            return new VariantType(caseA.variant, caseA.variantArgs);
         }
         return null;
     }
@@ -2189,6 +2198,28 @@ public final class TypeChecker {
             if (resolved != null) {
                 access.resolved = resolved;
                 return resolved;
+            }
+        }
+        if (access.receiver instanceof Expr.FieldAccess qualifier) {
+            ResolvedField namespace = resolveFieldAccess(qualifier, false);
+            if (namespace.kind == ResolvedField.Kind.MODULE_TYPE) {
+                ResolvedField resolved = null;
+                if (namespace.type instanceof VariantType variant) {
+                    if (variant.decl.isGeneric()) {
+                        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                                "Generic variant '" + variant.decl.name + "' requires explicit type arguments",
+                                module.uri, access.span));
+                    }
+                    resolved = variantCaseValue(variant, access);
+                } else if (namespace.type instanceof EnumType enumType) {
+                    resolved = enumCaseValue(enumType, access);
+                } else if (namespace.type instanceof JavaType javaType) {
+                    resolved = javaMember(javaType, access, true);
+                }
+                if (resolved != null) {
+                    access.resolved = resolved;
+                    return resolved;
+                }
             }
         }
         Type receiver = checkExpr(access.receiver, null);

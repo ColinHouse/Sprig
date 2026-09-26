@@ -27,6 +27,7 @@ import sprig.compiler.types.MapType;
 import sprig.compiler.types.NativeType;
 import sprig.compiler.types.NullableType;
 import sprig.compiler.types.Type;
+import sprig.compiler.types.Substitution;
 import sprig.compiler.types.TypeParameterType;
 import sprig.compiler.types.VariantCaseType;
 import sprig.compiler.types.VariantType;
@@ -65,6 +66,7 @@ public final class JavaGenerator {
     private int lambdaDepth;
     private Module currentModule;
     private Decl.ClassDecl currentClassDecl;
+    private Type currentReturnType;
 
     public JavaGenerator(Compilation compilation, Diagnostics diagnostics) {
         this.compilation = compilation;
@@ -550,7 +552,7 @@ public final class JavaGenerator {
         for (Stmt stmt : module.topStatements) {
             if (stmt instanceof Stmt.VarDecl varDecl) {
                 w.map(varDecl.span);
-                w.line(mangle(varDecl.name) + " = " + emitExpr(varDecl.init) + ";");
+                w.line(mangle(varDecl.name) + " = " + convertedExpression(varDecl.init, varDecl.symbol.type) + ";");
             } else {
                 emitStmt(w, stmt);
             }
@@ -586,6 +588,7 @@ public final class JavaGenerator {
     private void emitFunction(JavaWriter w, Decl.Func func, Decl.ClassDecl owner) {
         resetLocals();
         currentClassDecl = owner;
+        currentReturnType = func.returnType;
         lambdaDepth = 0;
         w.map(func.span);
         w.line("// Sprig " + currentModule.path.getFileName() + ":" + func.span.display()
@@ -630,18 +633,26 @@ public final class JavaGenerator {
         if (stmt instanceof Stmt.VarDecl varDecl) {
             w.map(varDecl.span);
             w.line(javaType(varDecl.symbol.type) + " " + localName(varDecl.symbol) + " = "
-                    + emitExpr(varDecl.init) + ";");
+                    + convertedExpression(varDecl.init, varDecl.symbol.type) + ";");
         } else if (stmt instanceof Stmt.Assign assign) {
             emitAssign(w, assign);
         } else if (stmt instanceof Stmt.ExprStmt exprStmt) {
             w.map(stmt.span);
-            w.line(emitExpr(exprStmt.expr) + ";");
+            String expression = emitExpr(exprStmt.expr);
+            if (exprStmt.expr.type != NativeType.UNIT) {
+                // Casts/unboxing are value expressions, not legal Java statement
+                // expressions. Preserve evaluation once in an inferred throwaway local; a JVM return type may be
+                // inaccessible by name (e.g. a JDK covariant bridge).
+                expression = (exprStmt.expr.type == NativeType.NULL ? "java.lang.Object" : "var")
+                        + " " + freshTemp("discard") + " = " + expression;
+            }
+            w.line(expression + ";");
         } else if (stmt instanceof Stmt.Return ret) {
             w.map(stmt.span);
             if (ret.value == null) {
                 w.line("return;");
             } else {
-                w.line("return " + emitExpr(ret.value) + ";");
+                w.line("return " + convertedExpression(ret.value, currentReturnType) + ";");
             }
         } else if (stmt instanceof Stmt.Throw thr) {
             w.map(stmt.span);
@@ -705,21 +716,27 @@ public final class JavaGenerator {
                 receiver = temp;
             }
             String lhs = receiver + "." + mangle(access.name);
-            w.line(lhs + " = " + assignmentValue(field.type, lhs, assign) + ";");
+            String oldValue = lhs;
+            if (!assign.op.equals("=") && field.fieldDecl != null
+                    && !field.substitution.isEmpty() && containsTypeParameter(field.fieldDecl.type)) {
+                oldValue = unboxGeneric(oldValue, field.type);
+            }
+            w.line(lhs + " = " + assignmentValue(field.type, oldValue, assign) + ";");
             return;
         }
         Expr.Index index = (Expr.Index) target;
         String receiver = freshTemp("collection");
         String key = freshTemp("key");
         w.line("var " + receiver + " = " + emitExpr(index.receiver) + ";");
-        w.line("var " + key + " = " + emitExpr(index.index) + ";");
+        Type keyType = index.receiver.type.nonNull() instanceof MapType map ? map.key : NativeType.INT;
+        w.line("var " + key + " = " + convertedExpression(index.index, keyType) + ";");
         String oldValue = receiver + ".get(" + key + ")";
         w.line(receiver + ".set(" + key + ", " + assignmentValue(index.type, oldValue, assign) + ");");
     }
 
     private String assignmentValue(Type targetType, String oldValue, Stmt.Assign assign) {
+        if (assign.op.equals("=")) return convertedExpression(assign.value, targetType);
         String value = emitExpr(assign.value);
-        if (assign.op.equals("=")) return value;
         String op = assign.op.substring(0, 1);
         if (targetType == NativeType.STRING && op.equals("+")) {
             return "(sprig.runtime.SprigRuntime.str(" + oldValue + ") + sprig.runtime.SprigRuntime.str("
@@ -754,12 +771,19 @@ public final class JavaGenerator {
     private void emitFor(JavaWriter w, Stmt.ForStmt forStmt) {
         w.map(forStmt.span);
         String var = localName(forStmt.symbol);
-        String iterable = emitExpr(forStmt.iterable);
+        String iterable = "(" + emitExpr(forStmt.iterable) + ")";
+        boolean erased = containsTypeParameter(forStmt.iterable.type);
+        String values = forStmt.forKind == sprig.compiler.sem.ForKind.MAP_KEYS
+                ? iterable + ".keys()" : iterable;
+        if (erased) {
+            values = "((java.lang.Iterable<" + boxedJavaType(forStmt.symbol.type)
+                    + ">) (java.lang.Iterable<?>) (" + values + "))";
+        }
         switch (forStmt.forKind) {
             case STRING -> w.open("for (char " + var + "$c : " + iterable + ".toCharArray())");
             case MAP_KEYS -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : "
-                    + iterable + ".keys())");
-            default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + iterable + ")");
+                    + values + ")");
+            default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + values + ")");
         }
         if (forStmt.forKind == sprig.compiler.sem.ForKind.STRING) {
             w.line("java.lang.String " + var + " = java.lang.String.valueOf(" + var + "$c);");
@@ -981,7 +1005,14 @@ public final class JavaGenerator {
             return "java.lang.String.valueOf(" + emitExpr(receiverExpr)
                     + ".charAt(sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(indexExpr) + ")))";
         }
-        return emitExpr(receiverExpr) + ".get(" + emitExpr(indexExpr) + ")";
+        Type keyType = receiver instanceof MapType map ? map.key : NativeType.INT;
+        String code = "(" + emitExpr(receiverExpr) + ").get(" + convertedExpression(indexExpr, keyType) + ")";
+        if (containsTypeParameter(receiver)) {
+            Type element = receiver instanceof ListType list ? list.element
+                    : receiver instanceof MapType map ? NullableType.of(map.value) : NativeType.ERROR;
+            code = unboxGeneric(code, element);
+        }
+        return code;
     }
 
     private String emitUnary(Expr.Unary unary) {
@@ -1015,6 +1046,9 @@ public final class JavaGenerator {
         }
         if (op.equals("in")) {
             Type rightType = binary.right.type == null ? null : binary.right.type.nonNull();
+            Type expected = rightType instanceof MapType map ? map.key
+                    : rightType instanceof ListType list ? list.element : NativeType.STRING;
+            left = convertedExpression(binary.left, expected);
             String method = rightType instanceof MapType ? ".containsKey(" : ".contains(";
             return "(" + right + method + left + "))";
         }
@@ -1118,7 +1152,7 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(emitExpr(lit.items.get(i)));
+            sb.append(convertedExpression(lit.items.get(i), ((ListType) lit.type).element));
         }
         return sb.append(')').toString();
     }
@@ -1134,7 +1168,8 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(emitExpr(lit.keys.get(i))).append(", ").append(emitExpr(lit.values.get(i)));
+            sb.append(convertedExpression(lit.keys.get(i), mapType.key)).append(", ")
+                    .append(convertedExpression(lit.values.get(i), mapType.value));
         }
         return sb.append(')').toString();
     }
@@ -1161,7 +1196,7 @@ public final class JavaGenerator {
         }
         sb.append(") {").append('\n');
         if (functionType != null && functionType.result != NativeType.UNIT) {
-            sb.append("        return ").append(emitExpr(lambda.body)).append(";\n");
+            sb.append("        return ").append(convertedExpression(lambda.body, functionType.result)).append(";\n");
         } else {
             sb.append("        ").append(emitExpr(lambda.body)).append(";\n");
             sb.append("        return null;\n");
@@ -1206,7 +1241,7 @@ public final class JavaGenerator {
                     if (value == null) {
                         sb.append(field.name).append("$missing");
                     } else {
-                        sb.append(genericArgument(value, field.type));
+                        sb.append(genericArgument(value, field.type, resolved.substitution));
                     }
                 }
                 return sb.append(')').toString();
@@ -1272,41 +1307,44 @@ public final class JavaGenerator {
             }
             Expr value = call.args.get(i).value;
             Type declared = i < params.size() ? params.get(i).type : null;
-            sb.append(genericArgument(value, declared));
+            sb.append(genericArgument(value, declared, call.resolved.substitution));
         }
         return sb.toString();
     }
 
-    /** Boxes when the declared (generic) parameter slot is erased to Object. */
-    private String genericArgument(Expr value, Type declared) {
-        if (declared != null && containsTypeParameter(declared)) {
-            return boxedExpression(value);
+    /** Lower only the safe scalar widenings already approved by the checker.
+     * Nullable adapters preserve null and evaluate their argument exactly once.
+     */
+    private String convertedExpression(Expr value, Type target) {
+        String code = emitExpr(value);
+        Type source = value.type;
+        if (source == null || target == null) return code;
+        if (source.nonNull() == NativeType.INT32 && target.nonNull() == NativeType.INT) {
+            return source.isNullable()
+                    ? "sprig.runtime.NumericOps.widenInt32Nullable(" + code + ")"
+                    : "((long) (" + code + "))";
         }
-        return emitExpr(value);
+        if (source.nonNull() == NativeType.FLOAT32 && target.nonNull() == NativeType.FLOAT) {
+            return source.isNullable()
+                    ? "sprig.runtime.NumericOps.widenFloat32Nullable(" + code + ")"
+                    : "((double) (" + code + "))";
+        }
+        return code;
     }
 
-    private String boxedExpression(Expr value) {
-        String code = emitExpr(value);
-        Type type = value.type;
-        if (type == null || type.isNullable()) {
-            return code;
-        }
-        Type base = type.nonNull();
-        if (base == NativeType.INT) {
-            return "java.lang.Long.valueOf(" + code + ")";
-        }
-        if (base == NativeType.INT32) {
-            return "java.lang.Integer.valueOf(" + code + ")";
-        }
-        if (base == NativeType.FLOAT) {
-            return "java.lang.Double.valueOf(" + code + ")";
-        }
-        if (base == NativeType.FLOAT32) {
-            return "java.lang.Float.valueOf(" + code + ")";
-        }
-        if (base == NativeType.BOOL) {
-            return "java.lang.Boolean.valueOf(" + code + ")";
-        }
+    /** Use the instantiated type before boxing into an erased generic slot. */
+    private String genericArgument(Expr value, Type declared,
+            Map<TypeParameterType, Type> substitution) {
+        Type concrete = Substitution.apply(declared, substitution);
+        String code = convertedExpression(value, concrete);
+        if (declared == null || !containsTypeParameter(declared)
+                || concrete == null || concrete.isNullable()) return code;
+        Type base = concrete.nonNull();
+        if (base == NativeType.INT) return "java.lang.Long.valueOf(" + code + ")";
+        if (base == NativeType.INT32) return "java.lang.Integer.valueOf(" + code + ")";
+        if (base == NativeType.FLOAT) return "java.lang.Double.valueOf(" + code + ")";
+        if (base == NativeType.FLOAT32) return "java.lang.Float.valueOf(" + code + ")";
+        if (base == NativeType.BOOL) return "java.lang.Boolean.valueOf(" + code + ")";
         return code;
     }
 
@@ -1345,7 +1383,7 @@ public final class JavaGenerator {
         if (base == NativeType.DECIMAL) {
             return "((sprig.runtime.SprigDecimal) " + code + ")";
         }
-        return "(" + javaType(concrete) + ") (" + code + ")";
+        return "((" + javaType(concrete) + ") (" + code + "))";
     }
 
     private static boolean containsTypeParameter(Type type) {
@@ -1395,7 +1433,15 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(emitExpr(call.args.get(i).value));
+            Type expected = null;
+            if (call.resolved.methodDecl != null && i < call.resolved.methodDecl.params.size()) {
+                expected = Substitution.apply(call.resolved.methodDecl.params.get(i).type,
+                        call.resolved.substitution);
+            } else if (call.resolved.functionType != null
+                    && i < call.resolved.functionType.params.size()) {
+                expected = call.resolved.functionType.params.get(i);
+            }
+            sb.append(convertedExpression(call.args.get(i).value, expected));
         }
         return sb.toString();
     }
@@ -1410,9 +1456,9 @@ public final class JavaGenerator {
             first = false;
             Expr value = findNamedArg(call, field.name);
             if (value != null) {
-                sb.append(genericArgument(value, field.type));
+                sb.append(genericArgument(value, field.type, resolved.substitution));
             } else if (field.defaultExpr != null) {
-                sb.append(genericArgument(field.defaultExpr, field.type));
+                sb.append(genericArgument(field.defaultExpr, field.type, resolved.substitution));
             } else {
                 sb.append(field.name).append("$missing");
             }
@@ -1462,14 +1508,36 @@ public final class JavaGenerator {
     private String emitBuiltinMethod(Expr.Call call, ResolvedCall resolved) {
         String id = resolved.builtinId;
         Expr.FieldAccess access = (Expr.FieldAccess) call.callee;
-        String recv = emitExpr(access.receiver);
+        String recv = "(" + emitExpr(access.receiver) + ")";
         List<Expr> args = new ArrayList<>();
         for (Expr.Arg arg : call.args) {
             args.add(arg.value);
         }
         String a0 = args.isEmpty() ? null : emitExpr(args.get(0));
         String a1 = args.size() < 2 ? null : emitExpr(args.get(1));
-        return switch (id) {
+        // Sprig builtins have fixed result widths. Do not let Java choose an
+        // int/float overload from narrower, safely assignable actual arguments.
+        if (id.equals("Int.min") || id.equals("Int.max")) {
+            a0 = convertedExpression(args.get(0), NativeType.INT);
+            a1 = convertedExpression(args.get(1), NativeType.INT);
+        } else if (id.equals("Float.abs")) {
+            a0 = convertedExpression(args.get(0), NativeType.FLOAT);
+        }
+        Type receiver = access.receiver.type == null ? null : access.receiver.type.nonNull();
+        if (receiver instanceof ListType list) {
+            if (Set.of("List.contains", "List.indexOf", "MutableList.append",
+                    "MutableList.remove", "MutableList.contains").contains(id)) {
+                a0 = convertedExpression(args.get(0), list.element);
+            } else if (id.equals("MutableList.set") || id.equals("MutableList.insert")) {
+                a1 = convertedExpression(args.get(1), list.element);
+            }
+        } else if (receiver instanceof MapType map) {
+            if (Set.of("Map.get", "Map.containsKey", "MutableMap.set", "MutableMap.remove").contains(id)) {
+                a0 = convertedExpression(args.get(0), map.key);
+            }
+            if (id.equals("MutableMap.set")) a1 = convertedExpression(args.get(1), map.value);
+        }
+        String code = switch (id) {
             case "toString" -> "sprig.runtime.SprigRuntime.str(" + recv + ")";
             case "Int.toString" -> "java.lang.Long.toString(" + recv + ")";
             case "Int.toFloat", "Int.toFloatExact" -> "sprig.runtime.NumericOps.toFloatExact(" + recv + ")";
@@ -1575,6 +1643,13 @@ public final class JavaGenerator {
             case "MutableMap.clear" -> recv + ".clear()";
             default -> "null";
         };
+        if (containsTypeParameter(access.receiver.type)
+                && (id.equals("List.get") || id.equals("Map.get")
+                    || id.equals("MutableList.removeAt") || id.equals("MutableMap.remove")
+                    || resolved.returnType instanceof ListType || resolved.returnType instanceof MapType)) {
+            code = unboxGeneric(code, resolved.returnType);
+        }
+        return code;
     }
 
     private String emitJvmMethod(Expr.Call call, ResolvedCall resolved) {

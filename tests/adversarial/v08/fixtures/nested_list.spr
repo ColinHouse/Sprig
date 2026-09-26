@@ -1,0 +1,4 @@
+generic T:
+    func head(xs: List[List[T]]) -> T:
+        return xs.get(0).get(0)
+print(head[Int]([[42]]))

@@ -32,7 +32,11 @@ to be readable by people and predictable for coding agents.
 The repository's `0.2.0-alpha.1` development tree adds v0.8 multi-parameter generics, an `Equatable` capability, and a `sprig.toml` project model with local/Git dependency resolution, a deterministic `sprig.lock` and offline builds
 (`help <topic>`, `capabilities`, `api`, `doctor`, structured `explain`) and
 explicit local `--classpath`. The **latest published archive remains
-v0.1.0-alpha.1** until a separate alpha.2 release is validated and published.
+v0.1.0-alpha.1** until the next candidate passes its independent release gates.
+
+The latest consolidated acceptance report is [REVIEW_REPORT.md](REVIEW_REPORT.md).
+The current v0.8 candidate is **NOT READY — RELEASE BLOCKERS REMAIN**: dependency
+resolution/lockfiles and the integrated stage-1 project are incomplete.
 
 ## What Sprig is
 

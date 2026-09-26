@@ -1,4 +1,4 @@
-# Sprig agent bootstrap guide (alpha.2 development)
+# Sprig agent bootstrap guide (v0.2.0-alpha.1 development)
 
 This guide assumes only the release archive and a JDK 17+ are available.
 The compiler's versioned catalog is the quickest source of implemented syntax.
@@ -9,6 +9,9 @@ bin/sprig doctor --json
 bin/sprig capabilities --json
 bin/sprig help language --json
 bin/sprig help match --json
+bin/sprig help generics --json
+bin/sprig help projects --json
+bin/sprig help dependencies --json
 bin/sprig api java.time.LocalDate --json
 bin/sprig check program.spr --json
 bin/sprig explain SPR-CODE --json
@@ -48,6 +51,15 @@ exits without a JVM exception are reported as `SPR-PROGRAM-EXIT` with
 Use the code with `explain --json`, repair the source, and rerun `check` before
 `run`. Never invent syntax or accept a lossy conversion without deciding the
 numerical meaning.
+
+For generics, read `docs/GENERICS.md`: parameters and uses are explicit,
+including multiple parameters. `requires T: Equatable` must lead the function
+body. Generic variant cases use expanded payloads and match case owners omit
+type arguments. `docs/PROJECTS.md` defines the strict manifest subset;
+`docs/DEPENDENCIES.md` states the unsupported resolver/lock/cache boundary.
+Project-based compilation refuses unresolved declarations. An explicit source
+file bypasses project discovery, so pass every manually acquired JVM JAR with
+`--classpath`. Do not treat that as Maven resolution.
 
 For details, see `docs/QUICK_REFERENCE.md`, `docs/JVM_INTEROP.md`,
 `docs/NUMERIC_SEMANTICS.md`, and `docs/KNOWN_LIMITATIONS.md` in the archive.

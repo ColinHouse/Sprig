@@ -1,0 +1,6 @@
+generic T:
+    func equal(a: T,b: T) -> Bool:
+        let unused = 1
+        requires T: Equatable
+        return a == b
+print(equal[Int](1,1))

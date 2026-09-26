@@ -84,5 +84,6 @@ generic T:
 
 ## v0.8 尚未包含
 
-多类型参数、类型推断、型变、能力蕴含语义，以及项目/依赖系统。见
+类型推断、型变、`Comparable`、用户自定义能力和依赖解析。多类型参数、
+`Equatable` 以及项目清单模型已经实现。见
 [已知限制](/reference/known-limitations)。

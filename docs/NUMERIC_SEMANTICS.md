@@ -46,6 +46,14 @@ uses Java's parser and is a separate, potentially overflowing API.
 | `Decimal` → `Int`/`Float` | no | `.toIntExact()`, `.toFloatExact()`, `.toFloatLossy()` |
 | `Decimal` ↔ binary float | no | explicit conversion; construct Decimal from decimal text or Java BigDecimal |
 
+Safe widening also applies to nullable numeric values: `Int32?` → `Int?`
+and `Float32?` → `Float?` preserve `null`. At every accepted scalar value
+boundary (assignment, parameter, return, generic payload and collection
+insertion/lookup), the backend widens **before boxing** into the target JVM
+wrapper (`Long` / `Double`), with exactly one evaluation of the expression.
+Generic containers remain invariant; this rule does not convert an entire
+`List[Int32]` to `List[Int]` or copy its elements implicitly.
+
 `toFloatLossy` and `toFloat32Lossy` may round, overflow to Infinity, or
 underflow to zero. They require an explicit call. There is no implicit
 `Number` supertype that silently mixes decimal and binary arithmetic.

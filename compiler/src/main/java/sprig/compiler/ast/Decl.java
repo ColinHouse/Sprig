@@ -11,8 +11,7 @@ public abstract class Decl extends Node {
     /**
      * v0.8 generic parameter names declared by an enclosing
      * {@code generic T:} block. Empty for ordinary declarations. The list is
-     * deliberately a list, not a single field, so multi-parameter generics can
-     * be added later without reshaping the type system.
+     * supports one or more ordered parameters.
      */
     public final List<String> typeParams = new java.util.ArrayList<>();
 

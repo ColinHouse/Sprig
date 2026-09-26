@@ -15,7 +15,8 @@ with tempfile.TemporaryDirectory(prefix="sprig-sdk-smoke-") as temp:
     sdk = Path(temp) / f"sprig-v{version}-jdk"
     cli = sdk / "bin" / "sprig"
     for name in ("README.md", "INSTALL.md", "AGENT_GUIDE.md", f"RELEASE_NOTES-v{version}.md",
-                 "docs/QUICK_REFERENCE.md",
+                 "docs/QUICK_REFERENCE.md", "docs/GENERICS.md",
+                 "docs/PROJECTS.md", "docs/DEPENDENCIES.md",
                  "docs/FEATURE_STATUS_IMPLEMENTED.md", "docs/JVM_INTEROP.md",
                  "docs/NUMERIC_SEMANTICS.md", "docs/DIAGNOSTIC_CODES.md",
                  "docs/KNOWN_LIMITATIONS.md", "LICENSE", "NOTICE"):

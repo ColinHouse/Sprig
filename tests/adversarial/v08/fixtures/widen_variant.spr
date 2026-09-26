@@ -1,0 +1,12 @@
+generic T:
+    variant Value:
+        Some:
+            value: T
+        None
+let n: Int32 = 7
+let value: Value[Int] = Value[Int].Some(value=n)
+match value:
+    case Value.Some as some:
+        print(some.value)
+    case Value.None:
+        print("unexpected")

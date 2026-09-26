@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * v0.8 project model: {@code sprig.toml} discovery, the default layout
@@ -27,6 +29,7 @@ public final class Project {
     public final String language;
     public final String source;
     public final String defaultEntry;
+    public final boolean hasExplicitEntry;
     public final List<Bin> bins;
     public final List<String> exports;
     public final List<Dependency> dependencies;
@@ -88,13 +91,17 @@ public final class Project {
         this.version = project.getOrDefault("version", "0.1.0");
         this.language = project.getOrDefault("language", "0.8");
         this.source = project.getOrDefault("source", "src");
+        this.hasExplicitEntry = project.containsKey("entry");
         this.defaultEntry = project.getOrDefault("entry", source + "/main.spr");
+        validatePath(source, "source");
+        validatePath(defaultEntry, "entry");
         List<String> exported = toml.array("project", "exports");
         if (exported.isEmpty()) {
             exported = toml.array("exports");
         }
         this.exports = List.copyOf(exported);
 
+        Set<String> binNames = new HashSet<>();
         List<Bin> parsedBins = new ArrayList<>();
         for (Map<String, String> bin : toml.entries("bin")) {
             String binName = bin.get("name");
@@ -102,24 +109,29 @@ public final class Project {
             if (binName == null || binName.isBlank() || entry == null || entry.isBlank()) {
                 throw new Toml.TomlException("[[bin]] requires name and entry", 1);
             }
+            if (!binNames.add(binName)) throw new Toml.TomlException("Duplicate bin name '" + binName + "'", 1);
+            validatePath(entry, "bin entry");
             parsedBins.add(new Bin(binName, entry));
         }
         this.bins = List.copyOf(parsedBins);
 
+        Set<String> depNames = new HashSet<>();
         List<Dependency> deps = new ArrayList<>();
-        java.util.Set<String> depNames = new java.util.LinkedHashSet<>();
         for (Map<String, String> dep : toml.entries("dependency")) {
             String depName = dep.get("name");
             if (depName == null || depName.isBlank()) {
                 throw new Toml.TomlException("[[dependency]] requires name", 1);
             }
-            if (!depNames.add(depName)) {
-                throw new Toml.TomlException("Duplicate dependency name '" + depName + "'", 1);
-            }
-            if (dep.get("path") != null && dep.get("git") != null) {
+            if (!depNames.add(depName)) throw new Toml.TomlException("Duplicate dependency name '" + depName + "'", 1);
+            if ((dep.get("path") != null) == (dep.get("git") != null)) {
                 throw new Toml.TomlException(
-                        "dependency '" + depName + "' cannot be both path and git", 1);
+                        "dependency '" + depName + "' requires exactly one of path or git", 1);
             }
+            if (dep.get("branch") != null && dep.get("git") == null)
+                throw new Toml.TomlException("branch is only valid for a git dependency", 1);
+            for (String key : List.of("path", "git", "branch"))
+                if (dep.containsKey(key) && dep.get(key).isBlank())
+                    throw new Toml.TomlException("Dependency " + key + " cannot be blank", 1);
             deps.add(new Dependency(depName, dep.get("path"), dep.get("git"), dep.get("branch")));
         }
         this.dependencies = List.copyOf(deps);
@@ -129,17 +141,26 @@ public final class Project {
             String group = dep.get("group");
             String artifact = dep.get("artifact");
             String depVersion = dep.get("version");
-            if (group == null || artifact == null || depVersion == null) {
+            if (group == null || group.isBlank() || artifact == null || artifact.isBlank() || depVersion == null || depVersion.isBlank()) {
                 throw new Toml.TomlException("[[jvm]] requires group, artifact and version", 1);
             }
-            if (depVersion.contains("^") || depVersion.contains(">") || depVersion.contains("<")
-                    || depVersion.equals("latest") || depVersion.equals("+")) {
+            if (!depVersion.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")
+                    || depVersion.equalsIgnoreCase("LATEST") || depVersion.equalsIgnoreCase("RELEASE")) {
                 throw new Toml.TomlException(
                         "[[jvm]] accepts exact versions only: " + depVersion, 1);
             }
             jvm.add(new JvmDependency(group, artifact, depVersion));
         }
         this.jvmDependencies = List.copyOf(jvm);
+    }
+
+    private static void validatePath(String text, String field) {
+        try {
+            if (text.isBlank()) throw new IllegalArgumentException("empty path");
+            Path.of(text);
+        } catch (IllegalArgumentException e) {
+            throw new Toml.TomlException("Invalid " + field + " path: " + e.getMessage(), 1);
+        }
     }
 
     /** Loads one manifest file (does not search upward). */
