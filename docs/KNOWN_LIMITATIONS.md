@@ -13,12 +13,15 @@ by the Sprig v0.7 design kit.
 - Generic code is erased and boxed in generated Java (type parameters become
   `Object`). Boxing/unboxing is compiler-controlled, but generic values carry
   no JVM-level type information at runtime.
-- The project model exists (`sprig.toml` discovery, defaults, `sprig init`,
-  `sprig project --json`, `sprig deps --json`, explicit-file priority,
-  `sprig run --bin`), but **dependency resolution is not implemented**:
-  declared local/Git/Maven dependencies are listed with `resolved: false` and
-  `SPR-PROJECT-UNSUPPORTED`; there is no `sprig.lock`, no offline cache and no
-  project-aware `sprig api` classpath yet. JVM jars still require `--classpath`.
+- Sprig dependencies resolve for **local paths and Git** (`sprig resolve`
+  writes a deterministic `sprig.lock`, `@alias/module.spr` imports are checked
+  against `exports`, and `--offline` rebuilds from the cache). **Maven/JVM
+  dependency resolution is not implemented**: declaring `[[jvm]]` fails with
+  `SPR-DEP-MAVEN`, and `sprig api`/`check`/`run` still need explicit
+  `--classpath` for third-party jars. Git dependency checkouts and cached
+  artifacts are not checksum-verified (no Maven artifacts are fetched at all).
+  `sprig.lock` covers Sprig dependencies; JVM coordinates are recorded only
+  when resolution exists.
 - There is no package manager, Maven dependency resolver, standard-library
   distribution, language server, IDE plugin, debugger, or editor integration.
   Explicit local JAR/directory `--classpath` is available for `check`, `build`,
@@ -46,5 +49,6 @@ by the Sprig v0.7 design kit.
   platform or architecture has been exercised locally.
 - The project is licensed under Apache-2.0 (`LICENSE` and `NOTICE`). The
   latest published prerelease is `v0.1.0-alpha.1`; the `0.2.0-alpha.1`
-  development tree is not released. Manifest commands exist; dependency
-  resolution, a lockfile and the integrated stage-1 project are still absent.
+  development tree is not released. Manifest commands, local/Git dependency
+  resolution, lockfiles and offline builds exist; Maven resolution and the
+  integrated multi-module stage-1 project are still absent.

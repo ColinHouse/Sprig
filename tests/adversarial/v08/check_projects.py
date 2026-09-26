@@ -47,6 +47,8 @@ def main():
         unusual.mkdir()
         status, data = invoke(unusual, 'init')
         assert status == 0, data
+        status, data = invoke(unusual, 'resolve')
+        assert status == 0, data
         status, data = invoke(unusual, 'run')
         assert status == 0 and data['programOutput'] == 'Hello, Sprig!\n', data
         print('pass init directory name remains data, never source code')
@@ -61,28 +63,43 @@ def main():
                 failures.append(name)
                 print('FAIL', name, error)
         manifest.write_text('[project]\nname="a"\n[[bin]]\nname="a"\nentry="src/main.spr"\n[[bin]]\nname="b"\nentry="src/main.spr"\n')
+        status, data = invoke(root, 'resolve')
+        assert status == 0, data
         status, data = invoke(root, 'run')
         assert status == 1 and 'SPR-PROJECT-ENTRY' in [d['code'] for d in data['diagnostics']], data
         for name in ('a', 'b'):
             status, data = invoke(root, 'run', '--bin', name)
             assert status == 0 and data['programOutput'] == 'hello\n', data
         print('pass multiple binary selection and ambiguous default')
-        for kind, declaration in {
-            'local': '[[dependency]]\nname="missing"\npath="../missing"\n',
-            'git': '[[dependency]]\nname="remote"\ngit="https://invalid.example/repo"\nbranch="main"\n',
-            'maven': '[[jvm]]\ngroup="org.example"\nartifact="missing"\nversion="1.0"\n'
-        }.items():
+        standalone = root/'standalone.spr'
+        standalone.write_text('print("standalone")\n')
+        for kind, declaration, expected, project_code in (
+            ('local', '[[dependency]]\nname="missing"\npath="../missing"\n',
+             'SPR-DEP-NOT-FOUND', 'SPR-PROJECT-LOCK-MISSING'),
+            ('git', '[[dependency]]\nname="remote"\ngit="file:///nonexistent/repo.git"\nbranch="main"\n',
+             'SPR-DEP-GIT', 'SPR-PROJECT-LOCK-MISSING'),
+            ('maven', '[[jvm]]\ngroup="org.example"\nartifact="missing"\nversion="1.0"\n',
+             'SPR-DEP-MAVEN', 'SPR-DEP-MAVEN'),
+        ):
             manifest.write_text('[project]\nname="a"\n'+declaration)
+            (root/'sprig.lock').unlink(missing_ok=True)
             for mode in ('check', 'build', 'run'):
                 try:
                     status, data = invoke(root, mode)
-                    assert status != 0 and 'SPR-PROJECT-UNSUPPORTED' in [d['code'] for d in data['diagnostics']], data
-                    status, data = invoke(root, mode, source)
-                    assert status == 0, data  # explicit-file compatibility ignores project
-                    print('pass', kind, mode, 'and explicit file')
+                    assert status != 0 and project_code in [d['code'] for d in data['diagnostics']], data
+                    status, data = invoke(root, mode, standalone)
+                    assert status == 0, data  # explicit file outside the source root ignores project
+                    print('pass', kind, mode, 'explicit-file compatibility')
                 except AssertionError as error:
                     failures.append(kind+'-'+mode)
                     print('FAIL', kind, mode, error)
+            try:
+                status, data = invoke(root, 'resolve')
+                assert status == 1 and expected in [d['code'] for d in data['diagnostics']], data
+                print('pass', kind, 'resolve reports', expected)
+            except AssertionError as error:
+                failures.append(kind+'-resolve')
+                print('FAIL', kind, 'resolve', error)
     print(f'adversarial projects: {len(cases)+13} cases, {len(failures)} failures')
     return bool(failures)
 

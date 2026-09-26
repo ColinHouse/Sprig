@@ -1,7 +1,7 @@
 # Sprig v0.8-dev stage-0 — implemented feature status
 
 This table reflects what the compiler in this directory **actually does**, as
-verified by `scripts/test.sh` (see the independent audit for exact counts). It is the implementation-side companion to the
+verified by `scripts/test.sh` (see `docs/post-v0.7/V08_VALIDATION_REPORT.md` for exact counts). It is the implementation-side companion to the
 design kit's `docs/FEATURE_STATUS.md`.
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
@@ -21,7 +21,9 @@ design kit's `docs/FEATURE_STATUS.md`.
 | `requires X: Equatable` equality capability | yes | equality on the parameter allowed only with the clause; value equality in codegen | boxed `Objects`-style equality | visitor generic_stack, runtime 19 |
 | `requires X: Comparable` | parsed | rejected as not implemented (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
 | Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model 14 checks |
-| Dependencies: local/Git/Maven resolution, `sprig.lock`, offline cache | — | declared only, reported `SPR-PROJECT-UNSUPPORTED` (`resolved: false`) | — | project model |
+| Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver 21 checks |
+| Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` immutable checkouts | dependency resolver |
+| Maven/JVM dependency resolution | manifest only | rejected loudly with `SPR-DEP-MAVEN` (see validation report) | explicit `--classpath` remains | project model |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
 | Flow: definite return, unreachable code | — | yes (`SPR-FLOW-*`) | — | semantics |
@@ -43,8 +45,8 @@ Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`
 expressions, nested/positional patterns, function types in source, `%=`,
 tuples/destructuring, varargs/arrays/annotations in interop, file IO library,
-dependency resolution and `sprig.lock` (the manifest/project model
-exists), LSP, incremental checking, self-hosting.
+Maven/JVM dependency resolution, LSP, incremental checking,
+self-hosting.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries. Earlier
 implementation reports from the former `output/` development tree were moved
 out of the public repository into the maintainer's local archive during the

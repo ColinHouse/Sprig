@@ -15,6 +15,7 @@ import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
+import sprig.compiler.diag.Span;
 import sprig.compiler.front.AstBuilder;
 import sprig.compiler.front.ParserFrontend;
 import sprig.compiler.sem.NameResolver;
@@ -109,12 +110,20 @@ public final class Compiler {
         for (Decl.Import imp : module.imports) {
             String alias = sprig.compiler.sem.ImportNames.aliasFor(imp);
             if (imp.fileImport) {
-                Path base = abs.getParent() == null ? Path.of(".") : abs.getParent();
-                Path dependency = base.resolve(imp.pathOrClass).normalize().toAbsolutePath();
-                Module dependencyModule = load(dependency, modules, order, stack);
-                if (dependencyModule != null && alias != null) {
-                    module.importedModules.put(alias, dependencyModule);
-                    module.dependencyClosure.put(dependency, dependencyModule);
+                Path dependency;
+                if (importResolver != null) {
+                    dependency = importResolver.resolve(abs, imp.pathOrClass, diagnostics,
+                            module.uri, imp.span);
+                } else {
+                    Path base = abs.getParent() == null ? Path.of(".") : abs.getParent();
+                    dependency = base.resolve(imp.pathOrClass).normalize().toAbsolutePath();
+                }
+                if (dependency != null) {
+                    Module dependencyModule = load(dependency, modules, order, stack);
+                    if (dependencyModule != null && alias != null) {
+                        module.importedModules.put(alias, dependencyModule);
+                        module.dependencyClosure.put(dependency, dependencyModule);
+                    }
                 }
             } else {
                 Class<?> clazz = loadJavaClass(imp.pathOrClass);
@@ -132,6 +141,18 @@ public final class Compiler {
         modules.put(abs, module);
         order.add(module);
         return module;
+    }
+
+    /** Resolves a file import in project context (package deps, exports). */
+    public interface FileImportResolver {
+        Path resolve(Path fromFile, String spec, Diagnostics diagnostics, String uri, Span span);
+    }
+
+    private FileImportResolver importResolver;
+
+    public Compiler setImportResolver(FileImportResolver resolver) {
+        this.importResolver = resolver;
+        return this;
     }
 
     /** Loads a class without running static initializers. */

@@ -29,7 +29,7 @@ to be readable by people and predictable for coding agents.
 > [release notes](docs/releases/RELEASE_NOTES-v0.1.0-alpha.1.md) and
 > [known limitations](docs/KNOWN_LIMITATIONS.md).
 
-The repository's `0.2.0-alpha.1` development tree adds v0.8 multi-parameter generics, an `Equatable` capability, a `sprig.toml` project model and offline agent-facing commands
+The repository's `0.2.0-alpha.1` development tree adds v0.8 multi-parameter generics, an `Equatable` capability, and a `sprig.toml` project model with local/Git dependency resolution, a deterministic `sprig.lock` and offline builds
 (`help <topic>`, `capabilities`, `api`, `doctor`, structured `explain`) and
 explicit local `--classpath`. The **latest published archive remains
 v0.1.0-alpha.1** until the next candidate passes its independent release gates.
@@ -174,7 +174,7 @@ The compiler is a Java seed that emits Java source and invokes `javac`; it
 does not compile itself. v0.8 single-parameter generics are implemented, but
 multiple type parameters, inference, capability implications, inheritance,
 `match` expressions, arrays, varargs, full Java generic/annotation interop,
-file IO, a project/dependency system, a package manager, a language server and
+file IO, Maven/JVM dependency resolution, a project-aware JVM classpath, a package manager, a language server and
 stage-1 self-hosting are **not implemented**. Runtime numeric errors do not always carry an exact source
 span. Local verification covers macOS Apple Silicon with OpenJDK 17.0.19 and
 26.0.1; hosted CI covers Linux. See

@@ -73,3 +73,12 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-PROJECT-MANIFEST | `sprig.toml` is missing, malformed, or lacks a required field. |
 | SPR-PROJECT-ENTRY | The project entry point is missing or the named `--bin` is unknown. |
 | SPR-PROJECT-UNSUPPORTED | The operation needs unimplemented project features (dependency resolution, lockfiles). |
+| SPR-PROJECT-LOCK-MISSING | This project has no `sprig.lock`; run `sprig resolve`. |
+| SPR-PROJECT-LOCK-STALE | `sprig.toml` or a dependency manifest changed after `sprig.lock` was written; run `sprig resolve`. |
+| SPR-PROJECT-LOCK-SCHEMA | The lockfile schema version is not supported. |
+| SPR-PROJECT-NOT-EXPORTED | A module imported from a dependency is not in its `exports`. |
+| SPR-DEP-CYCLE | Sprig project dependencies form a cycle. |
+| SPR-DEP-NOT-FOUND | A declared Sprig dependency or module cannot be found. |
+| SPR-DEP-GIT | A Git dependency operation failed. |
+| SPR-DEP-OFFLINE | A required dependency resource is missing from the cache in offline mode. |
+| SPR-DEP-MAVEN | A JVM (Maven) dependency operation failed. |

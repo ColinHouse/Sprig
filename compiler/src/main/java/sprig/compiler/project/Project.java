@@ -95,7 +95,11 @@ public final class Project {
         this.defaultEntry = project.getOrDefault("entry", source + "/main.spr");
         validatePath(source, "source");
         validatePath(defaultEntry, "entry");
-        this.exports = List.copyOf(toml.array("exports"));
+        List<String> exported = toml.array("project", "exports");
+        if (exported.isEmpty()) {
+            exported = toml.array("exports");
+        }
+        this.exports = List.copyOf(exported);
 
         Set<String> binNames = new HashSet<>();
         List<Bin> parsedBins = new ArrayList<>();

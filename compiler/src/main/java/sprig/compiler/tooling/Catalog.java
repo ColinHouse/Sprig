@@ -81,6 +81,7 @@ public final class Catalog {
         DATA.stringPropertyNames().stream().filter(k -> k.startsWith("feature.")).sorted()
                 .forEach(k -> features.put(k.substring(8), Boolean.parseBoolean(get(k))));
         result.put("features", features);
+        result.put("genericCapabilities", list("genericCapabilities"));
         result.put("lambdaMaxArity", Integer.parseInt(get("lambdaMaxArity")));
         result.put("matchBehavior", "statement; exhaustive; no wildcard");
         result.put("numericSemanticsProfile", get("numericProfile"));

@@ -15,6 +15,10 @@ import sprig.compiler.Compilation;
 import sprig.compiler.Compiler;
 import sprig.compiler.diag.CodeDocs;
 import sprig.compiler.diag.Codes;
+import sprig.compiler.project.DepError;
+import sprig.compiler.project.GitCache;
+import sprig.compiler.project.DependencyResolver;
+import sprig.compiler.project.Lockfile;
 import sprig.compiler.project.Project;
 import sprig.compiler.project.Toml;
 import sprig.compiler.diag.Diagnostic;
@@ -85,6 +89,7 @@ public final class Main {
             case "run" -> run(args);
             case "build" -> build(args);
             case "init" -> init(args);
+            case "resolve" -> resolve(args);
             case "project" -> project(args);
             case "deps" -> deps(args);
             case "explain" -> explain(args);
@@ -114,6 +119,7 @@ public final class Main {
         out.println("  api <Java.Class> [--member NAME] [--classpath PATH] [--json] inspect JVM signatures");
         out.println("  doctor [--classpath PATH] [--json]          inspect compiler environment");
         out.println("  init [dir]                                  create sprig.toml and src/main.spr");
+        out.println("  resolve [--offline] [--json]               resolve dependencies and write sprig.lock");
         out.println("  project [--json]                            project discovery and manifest metadata");
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
@@ -246,6 +252,31 @@ public final class Main {
         data.put("locale", java.util.Locale.getDefault().toLanguageTag());
         data.put("encoding", System.getProperty("file.encoding"));
         data.put("cwd", Path.of("").toAbsolutePath().toString());
+        data.put("offline", options.offline);
+        GitCache gitCache = new GitCache(GitCache.defaultRoot(), options.offline);
+        Map<String, Object> git = new LinkedHashMap<>();
+        git.put("available", gitCache.available());
+        if (gitCache.available()) {
+            git.put("version", gitCache.version());
+        }
+        data.put("git", git);
+        data.put("cacheRoot", Path.of(System.getProperty("user.home"), ".sprig").toString());
+        try {
+            Project context = Project.discover(Path.of(""));
+            if (context != null) {
+                data.put("projectRoot", context.root.toString());
+                data.put("projectManifest", context.manifest.toString());
+                data.put("lockStatus", lockState(context));
+                Lockfile lock = Files.isRegularFile(context.lockPath())
+                        ? Lockfile.parse(Files.readString(context.lockPath())) : null;
+                data.put("resolvedSprigDependencies", lock == null ? 0 : lock.sprig.size());
+                data.put("resolvedJvmDependencies", lock == null ? 0 : lock.jvm.size());
+            }
+        } catch (Toml.TomlException e) {
+            data.put("manifestError", "line " + e.line + ": " + e.getMessage());
+        } catch (DepError | IOException e) {
+            data.put("lockError", e.getMessage());
+        }
         if (json) System.out.println(ToolJson.encode(data));
         else for (Map.Entry<String, Object> entry : data.entrySet())
             System.out.println(entry.getKey() + ": " + entry.getValue());
@@ -282,16 +313,22 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "check");
         if (prepared != 0) return prepared;
-        Path source = resolveProjectSource(options, diagnostics, "check");
+        Prepared sourcePrep = prepareSource(options, diagnostics, "check");
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "check", 1, null);
             return 1;
         }
-        if (source == null) return commandError("check", "Missing <file.spr> and no sprig.toml found", options.json);
+        if (sourcePrep.source == null) {
+            return commandError("check", "Missing <file.spr> and no sprig.toml found", options.json);
+        }
         if (options.syntaxOnly) {
-            new Compiler(diagnostics).parseOnly(source);
+            new Compiler(diagnostics).parseOnly(sourcePrep.source);
         } else {
-            new Compiler(diagnostics).compile(source);
+            Compiler compiler = new Compiler(diagnostics);
+            if (sourcePrep.graph != null) {
+                compiler.setImportResolver(sourcePrep.graph);
+            }
+            compiler.compile(sourcePrep.source);
         }
         int status = diagnostics.hasErrors() ? 1 : 0;
         report(diagnostics, options.json, "check", status, null);
@@ -303,13 +340,19 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "build");
         if (prepared != 0) return prepared;
-        Path source = resolveProjectSource(options, diagnostics, "build");
+        Prepared sourcePrep = prepareSource(options, diagnostics, "build");
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
             return 1;
         }
-        if (source == null) return commandError("build", "Missing <file.spr> and no sprig.toml found", options.json);
-        Compilation compilation = new Compiler(diagnostics).compile(source);
+        if (sourcePrep.source == null) {
+            return commandError("build", "Missing <file.spr> and no sprig.toml found", options.json);
+        }
+        Compiler buildCompiler = new Compiler(diagnostics);
+        if (sourcePrep.graph != null) {
+            buildCompiler.setImportResolver(sourcePrep.graph);
+        }
+        Compilation compilation = buildCompiler.compile(sourcePrep.source);
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
             return 1;
@@ -349,13 +392,20 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "run");
         if (prepared != 0) return prepared;
-        Path source = resolveProjectSource(options, diagnostics, "run");
+        Prepared sourcePrep = prepareSource(options, diagnostics, "run");
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "run", 1, null);
             return 1;
         }
-        if (source == null) return commandError("run", "Missing <file.spr> and no sprig.toml found", options.json);
-        Compilation compilation = new Compiler(diagnostics).compile(source);
+        Path source = sourcePrep.source;
+        if (source == null) {
+            return commandError("run", "Missing <file.spr> and no sprig.toml found", options.json);
+        }
+        Compiler runCompiler = new Compiler(diagnostics);
+        if (sourcePrep.graph != null) {
+            runCompiler.setImportResolver(sourcePrep.graph);
+        }
+        Compilation compilation = runCompiler.compile(source);
         if (!diagnostics.hasErrors()) {
             JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics).generate();
             Path work = Files.createTempDirectory("sprig-run-");
@@ -404,53 +454,221 @@ public final class Main {
         return 1;
     }
 
-    /** Explicit source files win; otherwise use the discovered project entry. */
-    private static Path resolveProjectSource(Options options, Diagnostics diagnostics, String command) {
-        if (options.file != null) {
-            return options.file;
-        }
+    private static final class Prepared {
+        Path source;
+        DependencyResolver.Result graph;
+    }
+
+    /**
+     * Explicit source files win; project context applies when compiling the
+     * project entry or a file under the project source root. Manifest projects
+     * require a current sprig.lock (run `sprig resolve`).
+     */
+    private static Prepared prepareSource(Options options, Diagnostics diagnostics, String command) {
+        Prepared prepared = new Prepared();
         try {
             Project project = Project.discover(Path.of(""));
             if (project == null) {
-                return null;
+                prepared.source = options.file;
+                return prepared;
             }
-            if (!project.dependencies.isEmpty() || !project.jvmDependencies.isEmpty()) {
-                diagnostics.error(Codes.PROJECT_UNSUPPORTED, Phase.CLI,
-                        "Project declares unresolved dependencies; local/Git/Maven resolution is not implemented. "
-                                + "Use an explicit source file and --classpath for manually supplied JVM JARs.",
-                        project.manifest.toUri().toString(), null);
-                return null;
+            Path sourceRoot = project.root.resolve(project.source).normalize().toAbsolutePath();
+            Path explicit = options.file == null ? null : options.file.toAbsolutePath().normalize();
+            if (explicit != null && !explicit.startsWith(sourceRoot)) {
+                prepared.source = options.file;
+                return prepared;
             }
             if (options.bin != null) {
                 Path entry = project.entryForBin(options.bin);
                 if (entry == null) {
-                    diagnostics.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                    diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
                             "Project '" + project.name + "' has no --bin '" + options.bin + "'",
-                            project.manifest.toString(), null);
-                    return null;
+                            project.manifest.toString(), null));
+                    return prepared;
                 }
-                return entry;
-            }
-            if (project.bins.size() > 1 && !project.hasExplicitEntry) {
-                diagnostics.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                prepared.source = entry;
+            } else if (project.bins.size() > 1 && !project.hasExplicitEntry) {
+                diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
                         "Multiple binaries require --bin or an explicit [project] entry",
-                        project.manifest.toUri().toString(), null);
-                return null;
+                        project.manifest.toUri().toString(), null));
+                return prepared;
+            } else {
+                prepared.source = explicit != null ? explicit : project.entryPath();
             }
-            Path entry = project.entryPath();
-            if (!Files.isRegularFile(entry)) {
-                diagnostics.error(Codes.PROJECT_ENTRY, Phase.CLI,
+            if (explicit == null && !Files.isRegularFile(prepared.source)) {
+                diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
                         "Project entry does not exist: " + project.defaultEntry,
-                        project.manifest.toString(), null);
-                return null;
+                        project.manifest.toString(), null));
+                return prepared;
             }
-            return entry;
+            prepared.graph = loadProjectGraph(project, options);
+            return prepared;
+        } catch (Toml.TomlException e) {
+            diagnostics.add(Diagnostic.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
+                    manifestUri(), Span.point(Math.max(0, e.line - 1), 0)));
+            return prepared;
+        } catch (DepError e) {
+            diagnostics.add(depDiagnostic(e));
+            return prepared;
+        } catch (IOException e) {
+            diagnostics.add(Diagnostic.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                    "Project I/O failure: " + e.getMessage(), null, null));
+            return prepared;
+        }
+    }
+
+    /**
+     * Maven resolution is not implemented in this alpha. Declaring [[jvm]]
+     * dependencies fails loudly with a precise blocker instead of silently
+     * dropping them; single-file builds and --classpath keep working.
+     */
+    private static void requireNoJvmDependencies(Project project) {
+        if (project.jvmDependencies.isEmpty()) {
+            return;
+        }
+        Project.JvmDependency first = project.jvmDependencies.get(0);
+        throw new DepError(Codes.DEP_MAVEN,
+                "Maven dependency resolution is not implemented in this alpha: "
+                        + first.group + ":" + first.artifact + ":" + first.version,
+                project.manifest.toString())
+                .with("group", first.group)
+                .with("artifact", first.artifact)
+                .with("version", first.version)
+                .with("hint", "Remove [[jvm]] or pass the jar with --classpath.");
+    }
+
+    private static DependencyResolver.Result loadProjectGraph(Project project, Options options)
+            throws IOException {
+        requireNoJvmDependencies(project);
+        Path lockPath = project.lockPath();
+        if (!Files.isRegularFile(lockPath)) {
+            throw new DepError(Codes.PROJECT_LOCK_MISSING,
+                    "Project '" + project.name + "' has no sprig.lock", project.manifest.toString())
+                    .with("hint", "Run `sprig resolve`.");
+        }
+        Lockfile lock = Lockfile.parse(Files.readString(lockPath));
+        return DependencyResolver.load(project, lock, options.offline);
+    }
+
+    private static Diagnostic depDiagnostic(DepError error) {
+        Diagnostic diagnostic = Diagnostic.error(error.code, Phase.CLI, error.getMessage(), null, null);
+        if (!error.data.isEmpty()) {
+            diagnostic.withData(error.data);
+        }
+        Object hint = error.data.get("hint");
+        if (hint instanceof String text) {
+            diagnostic.withHint(text);
+        }
+        return diagnostic;
+    }
+
+    private static int resolve(String[] args) throws IOException {
+        Options options = Options.parse(args, 1);
+        Diagnostics diagnostics = new Diagnostics();
+        int prepared = prepare(options, diagnostics, "resolve");
+        if (prepared != 0) return prepared;
+        if (options.file != null) {
+            return commandError("resolve", "resolve takes no file argument", options.json);
+        }
+        Project project;
+        try {
+            project = Project.discover(Path.of(""));
         } catch (Toml.TomlException e) {
             diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
                     "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
-                    manifestUri(), sprig.compiler.diag.Span.point(e.line - 1, 0));
-            return null;
+                    manifestUri(), Span.point(Math.max(0, e.line - 1), 0));
+            report(diagnostics, options.json, "resolve", 1, null);
+            return 1;
         }
+        if (project == null) {
+            return commandError("resolve", "No sprig.toml found in this directory or above",
+                    options.json);
+        }
+        try {
+            requireNoJvmDependencies(project);
+            if (options.offline && lockCurrent(project)) {
+                if (!options.json) {
+                    System.out.println("already resolved: sprig.lock matches sprig.toml");
+                }
+                return reportResolve(options, project, null, true);
+            }
+            DependencyResolver.Result result = DependencyResolver.resolve(project, options.offline);
+            Lockfile lock = result.lock;
+            lock.manifestSha = Lockfile.digest(project.manifest);
+            lock.language = project.language;
+            lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
+            lock.jvm.clear();
+            for (Project.JvmDependency ignored : project.jvmDependencies) {
+                // Maven artifact resolution is not implemented in this alpha;
+                // declared JVM coordinates are recorded as unresolved and the
+                // build keeps using explicit --classpath.
+            }
+            Path temp = project.lockPath().resolveSibling(Project.LOCKFILE + ".tmp");
+            Files.writeString(temp, lock.render());
+            Files.move(temp, project.lockPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return reportResolve(options, project, result, false);
+        } catch (DepError e) {
+            diagnostics.add(depDiagnostic(e));
+            report(diagnostics, options.json, "resolve", 1, null);
+            return 1;
+        }
+    }
+
+    private static boolean lockCurrent(Project project) {
+        try {
+            if (!Files.isRegularFile(project.lockPath())) {
+                return false;
+            }
+            Lockfile lock = Lockfile.parse(Files.readString(project.lockPath()));
+            if (lock.manifestSha == null
+                    || !lock.manifestSha.equals(Lockfile.digest(project.manifest))) {
+                return false;
+            }
+            DependencyResolver.load(project, lock, true);
+            return true;
+        } catch (IOException | DepError e) {
+            return false;
+        }
+    }
+
+    private static int reportResolve(Options options, Project project,
+                                     DependencyResolver.Result result, boolean already) {
+        if (options.json) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("schemaVersion", 1);
+            data.put("command", "resolve");
+            data.put("exitCode", 0);
+            data.put("alreadyResolved", already);
+            data.put("lockfile", project.lockPath().toString());
+            if (result != null) {
+                List<Object> entries = new ArrayList<>();
+                for (Lockfile.SprigEntry entry : result.entries()) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("name", entry.name);
+                    item.put("kind", entry.kind);
+                    item.put("projectName", entry.projectName);
+                    item.put("resolved", true);
+                    if (entry.kind.equals("git")) {
+                        item.put("url", GitCache.redact(entry.url));
+                        item.put("requested", entry.requested);
+                        item.put("revision", entry.revision);
+                    } else {
+                        item.put("path", entry.path);
+                        item.put("portable", false);
+                    }
+                    entries.add(item);
+                }
+                data.put("sprig", entries);
+                data.put("jvm", List.of());
+            }
+            printJson(data);
+        } else if (!already) {
+            System.out.println("Resolved " + (result == null ? 0 : result.entries().size())
+                    + " Sprig dependency entries into " + project.lockPath());
+        }
+        return 0;
     }
 
     private static String manifestUri() {
@@ -476,9 +694,11 @@ public final class Main {
         }
         Files.createDirectories(entry.getParent());
         String name = dir.getFileName() == null ? "sprig-app" : dir.getFileName().toString();
-        Files.writeString(manifest, "[project]\nname = \"" + name.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        Files.writeString(manifest, "[project]\nname = \"" + name.replace("\\", "\\\\")
+                .replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
                 + "\"\nversion = \"0.1.0\"\nlanguage = \"0.8\"\n");
-        Files.writeString(entry, "# " + name.replace("\n", " ").replace("\r", " ") + " entry point.\n\nfunc main() -> Unit:\n"
+        Files.writeString(entry, "# " + name.replace("\n", " ").replace("\r", " ")
+                + " entry point.\n\nfunc main() -> Unit:\n"
                 + "    print(\"Hello, Sprig!\")\n\nmain()\n");
         if (options.json) {
             Map<String, Object> data = new LinkedHashMap<>();
@@ -486,10 +706,12 @@ public final class Main {
             data.put("command", "init");
             data.put("exitCode", 0);
             data.put("created", List.of(manifest.toString(), entry.toString()));
+            data.put("next", "Run `sprig resolve` to create sprig.lock.");
             printJson(data);
         } else {
             System.out.println("Created " + manifest);
             System.out.println("Created " + entry);
+            System.out.println("Run `sprig resolve` to create sprig.lock.");
         }
         return 0;
     }
@@ -508,7 +730,7 @@ public final class Main {
         } catch (Toml.TomlException e) {
             diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
                     "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
-                    manifestUri(), sprig.compiler.diag.Span.point(e.line - 1, 0));
+                    manifestUri(), Span.point(Math.max(0, e.line - 1), 0));
             report(diagnostics, options.json, "project", 1, null);
             return 1;
         }
@@ -521,7 +743,23 @@ public final class Main {
             data.put("schemaVersion", 1);
             data.put("command", "project");
             data.put("exitCode", 0);
-            data.put("project", project.toJsonMap());
+            Map<String, Object> map = project.toJsonMap();
+            String state = lockState(project);
+            map.put("lockStatus", state);
+            if (Files.isRegularFile(project.lockPath())) {
+                try {
+                    Lockfile lock = Lockfile.parse(Files.readString(project.lockPath()));
+                    map.put("resolvedSprigDependencies", lock.sprig.size());
+                    map.put("resolvedJvmDependencies", lock.jvm.size());
+                } catch (DepError e) {
+                    map.put("resolvedSprigDependencies", 0);
+                    map.put("resolvedJvmDependencies", 0);
+                }
+            }
+            map.put("cacheRoot", Path.of(System.getProperty("user.home"), ".sprig").toString());
+            GitCache git = new GitCache(GitCache.defaultRoot(), true);
+            map.put("gitAvailable", git.available());
+            data.put("project", map);
             printJson(data);
         } else {
             System.out.println("project: " + project.name + " " + project.version
@@ -554,48 +792,131 @@ public final class Main {
         } catch (Toml.TomlException e) {
             diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
                     "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
-                    manifestUri(), sprig.compiler.diag.Span.point(e.line - 1, 0));
+                    manifestUri(), Span.point(Math.max(0, e.line - 1), 0));
             report(diagnostics, options.json, "deps", 1, null);
             return 1;
         }
         if (project == null) {
             return commandError("deps", "No sprig.toml found in this directory or above", options.json);
         }
-        boolean declared = !project.dependencies.isEmpty() || !project.jvmDependencies.isEmpty();
-        Map<String, Object> projectJson = project.toJsonMap();
+        String state = lockState(project);
+        if (!state.equals("current") && !state.equals("empty")) {
+            String code = state.equals("missing") ? Codes.PROJECT_LOCK_MISSING
+                    : Codes.PROJECT_LOCK_STALE;
+            diagnostics.error(code, Phase.CLI,
+                    state.equals("missing")
+                            ? "Project '" + project.name + "' has no sprig.lock"
+                            : "sprig.toml and sprig.lock do not match",
+                    project.manifest.toString(), null);
+            report(diagnostics, options.json, "deps", 1, null);
+            return 1;
+        }
+        Lockfile lock = null;
+        if (Files.isRegularFile(project.lockPath())) {
+            lock = Lockfile.parse(Files.readString(project.lockPath()));
+        }
         if (options.json) {
+            List<Object> sprig = new ArrayList<>();
+            List<Object> jvm = new ArrayList<>();
+            if (lock != null) {
+                for (Lockfile.SprigEntry entry : lock.sprig) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("name", entry.name);
+                    item.put("kind", entry.kind);
+                    item.put("projectName", entry.projectName);
+                    item.put("direct", isDirect(project, entry.name));
+                    item.put("resolved", true);
+                    if (entry.kind.equals("git")) {
+                        item.put("url", GitCache.redact(entry.url));
+                        item.put("requested", entry.requested);
+                        item.put("revision", entry.revision);
+                    } else {
+                        item.put("path", entry.path);
+                        item.put("portable", false);
+                        item.put("manifestSha256", entry.manifestSha);
+                    }
+                    sprig.add(item);
+                }
+                for (Lockfile.JvmEntry entry : lock.jvm) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("group", entry.group);
+                    item.put("artifact", entry.artifact);
+                    item.put("version", entry.version);
+                    item.put("direct", entry.direct);
+                    item.put("sha256", entry.sha256);
+                    item.put("resolved", entry.sha256 != null);
+                    jvm.add(item);
+                }
+            }
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("schemaVersion", 1);
             data.put("command", "deps");
-            data.put("exitCode", declared ? 2 : 0);
-            data.put("sprigDependencies", projectJson.get("sprigDependencies"));
-            data.put("jvmDependencies", projectJson.get("jvmDependencies"));
-            if (declared) {
-                data.put("diagnostics", List.of(Map.of(
-                        "code", Codes.PROJECT_UNSUPPORTED,
-                        "phase", "CLI",
-                        "severity", "error",
-                        "message", "Dependency resolution and sprig.lock are not implemented yet;"
-                                + " declared dependencies are listed but unresolved")));
-            }
+            data.put("exitCode", 0);
+            data.put("lockStatus", state);
+            data.put("sprigDependencies", sprig);
+            data.put("jvmDependencies", jvm);
             printJson(data);
         } else {
-            for (Project.Dependency dep : project.dependencies) {
-                System.out.println("sprig " + dep.name + " "
-                        + (dep.isGit() ? dep.git + " @ " + dep.branch : dep.path) + " (unresolved)");
+            if (lock == null || lock.sprig.isEmpty()) {
+                System.out.println("no Sprig dependencies resolved");
             }
-            for (Project.JvmDependency dep : project.jvmDependencies) {
-                System.out.println("jvm " + dep.group + ":" + dep.artifact + ":" + dep.version
-                        + " (unresolved)");
+            for (Lockfile.SprigEntry entry : lock == null ? List.<Lockfile.SprigEntry>of() : lock.sprig) {
+                if (entry.kind.equals("git")) {
+                    System.out.println("sprig " + entry.name + " git " + GitCache.redact(entry.url)
+                            + " " + entry.requested + " -> " + entry.revision);
+                } else {
+                    System.out.println("sprig " + entry.name + " local " + entry.path
+                            + " (not portable)");
+                }
             }
-            if (!declared) {
-                System.out.println("no dependencies declared");
-            } else {
-                System.err.println("sprig: dependency resolution is not implemented yet;"
-                        + " use an explicit --classpath for JVM jars");
+            if (lock != null && !lock.jvm.isEmpty()) {
+                for (Lockfile.JvmEntry entry : lock.jvm) {
+                    System.out.println("jvm " + entry.group + ":" + entry.artifact + ":"
+                            + entry.version + " (not resolved)");
+                }
             }
         }
-        return declared ? 2 : 0;
+        return 0;
+    }
+
+    private static boolean isDirect(Project project, String name) {
+        for (Project.Dependency dependency : project.dependencies) {
+            if (dependency.name.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** "missing" | "empty" | "stale" | "malformed" | "current". */
+    private static String lockState(Project project) {
+        if (!Files.isRegularFile(project.lockPath())) {
+            return project.dependencies.isEmpty() ? "missing" : "missing";
+        }
+        try {
+            Lockfile lock = Lockfile.parse(Files.readString(project.lockPath()));
+            if (lock.manifestSha == null
+                    || !lock.manifestSha.equals(Lockfile.digest(project.manifest))) {
+                return "stale";
+            }
+            for (Project.Dependency dependency : project.dependencies) {
+                boolean found = false;
+                for (Lockfile.SprigEntry entry : lock.sprig) {
+                    if (entry.name.equals(dependency.name)) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    return "stale";
+                }
+            }
+            if (!project.jvmDependencies.isEmpty() && lock.jvm.isEmpty()) {
+                return "stale";
+            }
+            return "current";
+        } catch (DepError | IOException e) {
+            return "malformed";
+        }
     }
 
     private static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String uri) {
@@ -789,6 +1110,7 @@ public final class Main {
         boolean separatorProvided;
         String memberFilter;
         String bin;
+        boolean offline;
         List<String> classpath = new ArrayList<>();
         String optionError;
         List<String> programArgs = new ArrayList<>();
@@ -800,6 +1122,7 @@ public final class Main {
                 String arg = args[i];
                 switch (arg) {
                     case "--json" -> options.json = true;
+                    case "--offline" -> options.offline = true;
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
                     case "--bin" -> {
@@ -847,6 +1170,8 @@ public final class Main {
             if (outDirSpecified && !command.equals("build")) return "-d/--out is only valid with build";
             if (memberFilter != null && !command.equals("api")) return "--member is only valid with api";
             if (bin != null && !command.equals("run")) return "--bin is only valid with run";
+            if (offline && !List.of("resolve", "check", "build", "run", "api", "doctor")
+                    .contains(command)) return "--offline is not valid with " + command;
             if (!classpath.isEmpty() && !List.of("check", "build", "run", "api", "doctor").contains(command))
                 return "--classpath is not valid with " + command;
             if (separatorProvided && !command.equals("run")) return "-- is only valid with run";

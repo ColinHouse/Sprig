@@ -170,7 +170,14 @@ else
   fail "project model regressions"
 fi
 
-echo "== 16. independent v0.8 adversarial generics and manifests =="
+echo "== 16. dependency resolver (local, exports, lockfile, Git SHA lock, offline) =="
+if python3 "$ROOT/tests/project_deps/check_deps.py"; then
+  PASS=$((PASS + 1))
+else
+  fail "dependency resolver regressions"
+fi
+
+echo "== 17. independent v0.8 adversarial generics, numerics and manifests =="
 if python3 "$ROOT/tests/adversarial/v08/check_generics.py"; then pass; else fail "v0.8 adversarial generics"; fi
 if python3 "$ROOT/tests/adversarial/v08/check_projects.py"; then pass; else fail "v0.8 adversarial projects"; fi
 
