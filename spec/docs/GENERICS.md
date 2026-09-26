@@ -11,11 +11,12 @@ generic T:
         let value: T
 ```
 
-- `generic T:` wraps **one** declaration: a class, variant, enum or function.
-- v0.8 exposes exactly one type parameter. `generic T, E:` is a syntax error.
-- `T` is visible only inside the block; it never leaks, and a name or type
-  outside the block cannot refer to it. Using `T` after the block is
-  `SPR-NAME-UNRESOLVED`.
+- `generic T:` wraps **one** declaration: a class, variant or function.
+- Blocks may declare any number of parameters: `generic K, V:`. There is no
+  arbitrary limit, and there is no separate single-parameter type system.
+- Duplicate names in one list (`generic T, T:`) report `SPR-NAME-DUPLICATE`.
+- Parameters are visible only inside the block; they never leak, and a name or
+  type outside the block cannot refer to them (`SPR-NAME-UNRESOLVED`).
 
 ## Application is always explicit
 
@@ -26,11 +27,12 @@ let some: Option[Int] = Option[Int].Some(value=1)
 let none: Option[Int] = Option[Int].None
 ```
 
-- Every generic use site writes `[Type]`. There is no inference:
-  `identity(42)` and `Box(value=42)` report `SPR-TYPE-GENERIC-ARGS-REQUIRED`.
-- Wrong argument count reports `SPR-TYPE-GENERIC-ARITY`, including using a
-  generic type without arguments (`Box` in a type position) and applying
-  arguments to a non-generic type.
+- Every generic use site writes all `[Type]` arguments. There is no
+  inference: `identity(42)` and `Box(value=42)` report
+  `SPR-TYPE-GENERIC-ARGS-REQUIRED`; `Entry[String]` for a two-parameter
+  declaration reports `SPR-TYPE-GENERIC-ARITY`, as does a bare `Box` in a
+  type position or arguments on a non-generic type. Partial arguments are
+  never inferred from context.
 - Nested applications are ordinary:
   `List[Option[Int]]`, `Map[String, Box[Int]]`, `Box[List[String?]]`.
 - Generic types are **invariant**. No `out`/`in`, wildcards or subtyping.
@@ -38,14 +40,21 @@ let none: Option[Int] = Option[Int].None
 ## Type parameters have almost no abilities
 
 Inside a generic declaration, `T` supports assignment, passing, returning and
-being placed in compatible generic containers. It has no operators, no
-ordering, no equality and no methods. `value + value` where `value: T` is
-`SPR-TYPE-OPERAND`; this is not a bug but the price of not having capability
-implications yet.
+being placed in compatible generic containers. It has no operators, ordering
+or methods, and equality only when the enclosing function declares it:
+`value + value` is `SPR-TYPE-OPERAND`, and `a == b` is rejected unless the
+function contains `requires K: Equatable`, in which case equality is checked
+with value equality on the boxed representation.
 
-`requires T: Comparable` / `requires T: Equatable` clauses are parsed and
-placement-checked, but capability implication is **not implemented** in this
-alpha: every clause reports `SPR-GENERIC-CONSTRAINT`. Do not rely on them.
+Capabilities are deliberately minimal:
+
+| Capability | Status |
+|---|---|
+| `Equatable` | implemented for `<T>` equality under `requires X: Equatable` |
+| `Comparable` | parsed, but not implemented (`SPR-GENERIC-CONSTRAINT`) |
+
+Any `requires` clause naming a parameter that is not in scope reports
+`SPR-NAME-UNRESOLVED`.
 
 ## Nullability rule (Practical Strict)
 
@@ -105,7 +114,7 @@ even though the JVM sees a boxed value.
 
 ## Not part of v0.8
 
-Multiple type parameters, generic inference, capability implications
-(`requires` semantics), variance, generic constraints on JVM types, and
-registry/dependency features. The internal representation stores parameter
-lists, so multi-parameter support is a data change rather than a rewrite.
+Generic inference, variance, `Comparable` and any user-defined capability,
+generic constraints on JVM types, and registry/dependency features. The
+project system (`sprig.toml`, `sprig.lock`, dependencies) is not implemented
+in this tree.

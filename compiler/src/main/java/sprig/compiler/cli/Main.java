@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -14,6 +15,8 @@ import sprig.compiler.Compilation;
 import sprig.compiler.Compiler;
 import sprig.compiler.diag.CodeDocs;
 import sprig.compiler.diag.Codes;
+import sprig.compiler.project.Project;
+import sprig.compiler.project.Toml;
 import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.JsonWriter;
@@ -81,6 +84,9 @@ public final class Main {
             case "check" -> check(args);
             case "run" -> run(args);
             case "build" -> build(args);
+            case "init" -> init(args);
+            case "project" -> project(args);
+            case "deps" -> deps(args);
             case "explain" -> explain(args);
             case "codes" -> codes(args);
             case "capabilities" -> capabilities(args);
@@ -107,6 +113,9 @@ public final class Main {
         out.println("  capabilities [--json]                      implemented feature inventory");
         out.println("  api <Java.Class> [--member NAME] [--classpath PATH] [--json] inspect JVM signatures");
         out.println("  doctor [--classpath PATH] [--json]          inspect compiler environment");
+        out.println("  init [dir]                                  create sprig.toml and src/main.spr");
+        out.println("  project [--json]                            project discovery and manifest metadata");
+        out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
         out.println("  version");
     }
@@ -273,11 +282,16 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "check");
         if (prepared != 0) return prepared;
-        if (options.file == null) return commandError("check", "Missing <file.spr>", options.json);
+        Path source = resolveProjectSource(options, diagnostics, "check");
+        if (diagnostics.hasErrors()) {
+            report(diagnostics, options.json, "check", 1, null);
+            return 1;
+        }
+        if (source == null) return commandError("check", "Missing <file.spr> and no sprig.toml found", options.json);
         if (options.syntaxOnly) {
-            new Compiler(diagnostics).parseOnly(options.file);
+            new Compiler(diagnostics).parseOnly(source);
         } else {
-            new Compiler(diagnostics).compile(options.file);
+            new Compiler(diagnostics).compile(source);
         }
         int status = diagnostics.hasErrors() ? 1 : 0;
         report(diagnostics, options.json, "check", status, null);
@@ -289,8 +303,13 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "build");
         if (prepared != 0) return prepared;
-        if (options.file == null) return commandError("build", "Missing <file.spr>", options.json);
-        Compilation compilation = new Compiler(diagnostics).compile(options.file);
+        Path source = resolveProjectSource(options, diagnostics, "build");
+        if (diagnostics.hasErrors()) {
+            report(diagnostics, options.json, "build", 1, null);
+            return 1;
+        }
+        if (source == null) return commandError("build", "Missing <file.spr> and no sprig.toml found", options.json);
+        Compilation compilation = new Compiler(diagnostics).compile(source);
         if (diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
             return 1;
@@ -330,8 +349,13 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "run");
         if (prepared != 0) return prepared;
-        if (options.file == null) return commandError("run", "Missing <file.spr>", options.json);
-        Compilation compilation = new Compiler(diagnostics).compile(options.file);
+        Path source = resolveProjectSource(options, diagnostics, "run");
+        if (diagnostics.hasErrors()) {
+            report(diagnostics, options.json, "run", 1, null);
+            return 1;
+        }
+        if (source == null) return commandError("run", "Missing <file.spr> and no sprig.toml found", options.json);
+        Compilation compilation = new Compiler(diagnostics).compile(source);
         if (!diagnostics.hasErrors()) {
             JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics).generate();
             Path work = Files.createTempDirectory("sprig-run-");
@@ -364,7 +388,7 @@ public final class Main {
                 }
                 if (result.exitCode != 0) {
                     diagnostics.add(runtimeDiagnostic(result.stderr, result.exitCode,
-                            options.file.toAbsolutePath().toUri().toString()));
+                            source.toAbsolutePath().toUri().toString()));
                 }
                 report(diagnostics, options.json, "run", result.exitCode, options.json ? result.stdout : null);
                 return result.exitCode;
@@ -378,6 +402,179 @@ public final class Main {
         }
         report(diagnostics, options.json, "run", 1, null);
         return 1;
+    }
+
+    /** Explicit source files win; otherwise use the discovered project entry. */
+    private static Path resolveProjectSource(Options options, Diagnostics diagnostics, String command) {
+        if (options.file != null) {
+            return options.file;
+        }
+        try {
+            Project project = Project.discover(Path.of(""));
+            if (project == null) {
+                return null;
+            }
+            if (options.bin != null) {
+                Path entry = project.entryForBin(options.bin);
+                if (entry == null) {
+                    diagnostics.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                            "Project '" + project.name + "' has no --bin '" + options.bin + "'",
+                            project.manifest.toString(), null);
+                    return null;
+                }
+                return entry;
+            }
+            Path entry = project.entryPath();
+            if (!Files.isRegularFile(entry)) {
+                diagnostics.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                        "Project entry does not exist: " + project.defaultEntry,
+                        project.manifest.toString(), null);
+                return null;
+            }
+            return entry;
+        } catch (Toml.TomlException e) {
+            diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(), null, null);
+            return null;
+        }
+    }
+
+    private static void printJson(Map<String, Object> data) {
+        System.out.println(sprig.compiler.tooling.ToolJson.encode(data));
+    }
+
+    private static int init(String[] args) throws IOException {
+        Options options = Options.parse(args, 1);
+        Diagnostics diagnostics = new Diagnostics();
+        int prepared = prepare(options, diagnostics, "init");
+        if (prepared != 0) return prepared;
+        Path dir = options.file == null ? Path.of("").toAbsolutePath() : options.file.toAbsolutePath();
+        Path manifest = dir.resolve(Project.MANIFEST);
+        Path entry = dir.resolve("src/main.spr");
+        if (Files.exists(manifest) || Files.exists(entry)) {
+            return commandError("init", "Refusing to overwrite existing sprig.toml or src/main.spr",
+                    options.json);
+        }
+        Files.createDirectories(entry.getParent());
+        String name = dir.getFileName() == null ? "sprig-app" : dir.getFileName().toString();
+        Files.writeString(manifest, "[project]\nname = \"" + name
+                + "\"\nversion = \"0.1.0\"\nlanguage = \"0.8\"\n");
+        Files.writeString(entry, "# " + name + " entry point.\n\nfunc main() -> Unit:\n"
+                + "    print(\"Hello, Sprig!\")\n\nmain()\n");
+        if (options.json) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("schemaVersion", 1);
+            data.put("command", "init");
+            data.put("exitCode", 0);
+            data.put("created", List.of(manifest.toString(), entry.toString()));
+            printJson(data);
+        } else {
+            System.out.println("Created " + manifest);
+            System.out.println("Created " + entry);
+        }
+        return 0;
+    }
+
+    private static int project(String[] args) throws IOException {
+        Options options = Options.parse(args, 1);
+        Diagnostics diagnostics = new Diagnostics();
+        int prepared = prepare(options, diagnostics, "project");
+        if (prepared != 0) return prepared;
+        if (options.file != null) {
+            return commandError("project", "project takes no file argument", options.json);
+        }
+        Project project;
+        try {
+            project = Project.discover(Path.of(""));
+        } catch (Toml.TomlException e) {
+            diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(), null, null);
+            report(diagnostics, options.json, "project", 1, null);
+            return 1;
+        }
+        if (project == null) {
+            return commandError("project", "No sprig.toml found in this directory or above",
+                    options.json);
+        }
+        if (options.json) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("schemaVersion", 1);
+            data.put("command", "project");
+            data.put("exitCode", 0);
+            data.put("project", project.toJsonMap());
+            printJson(data);
+        } else {
+            System.out.println("project: " + project.name + " " + project.version
+                    + " (language " + project.language + ")");
+            System.out.println("root: " + project.root);
+            System.out.println("source: " + project.source);
+            System.out.println("entry: " + project.defaultEntry);
+            for (Project.Bin bin : project.bins) {
+                System.out.println("bin: " + bin.name + " -> " + bin.entry);
+            }
+            System.out.println("lockfile: " + (Files.isRegularFile(project.lockPath())
+                    ? "present" : "absent"));
+            System.out.println("dependencies: " + project.dependencies.size()
+                    + " Sprig, " + project.jvmDependencies.size() + " JVM");
+        }
+        return 0;
+    }
+
+    private static int deps(String[] args) throws IOException {
+        Options options = Options.parse(args, 1);
+        Diagnostics diagnostics = new Diagnostics();
+        int prepared = prepare(options, diagnostics, "deps");
+        if (prepared != 0) return prepared;
+        if (options.file != null) {
+            return commandError("deps", "deps takes no file argument", options.json);
+        }
+        Project project;
+        try {
+            project = Project.discover(Path.of(""));
+        } catch (Toml.TomlException e) {
+            diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(), null, null);
+            report(diagnostics, options.json, "deps", 1, null);
+            return 1;
+        }
+        if (project == null) {
+            return commandError("deps", "No sprig.toml found in this directory or above", options.json);
+        }
+        boolean declared = !project.dependencies.isEmpty() || !project.jvmDependencies.isEmpty();
+        Map<String, Object> projectJson = project.toJsonMap();
+        if (options.json) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("schemaVersion", 1);
+            data.put("command", "deps");
+            data.put("exitCode", declared ? 2 : 0);
+            data.put("sprigDependencies", projectJson.get("sprigDependencies"));
+            data.put("jvmDependencies", projectJson.get("jvmDependencies"));
+            if (declared) {
+                data.put("diagnostics", List.of(Map.of(
+                        "code", Codes.PROJECT_UNSUPPORTED,
+                        "phase", "CLI",
+                        "severity", "error",
+                        "message", "Dependency resolution and sprig.lock are not implemented yet;"
+                                + " declared dependencies are listed but unresolved")));
+            }
+            printJson(data);
+        } else {
+            for (Project.Dependency dep : project.dependencies) {
+                System.out.println("sprig " + dep.name + " "
+                        + (dep.isGit() ? dep.git + " @ " + dep.branch : dep.path) + " (unresolved)");
+            }
+            for (Project.JvmDependency dep : project.jvmDependencies) {
+                System.out.println("jvm " + dep.group + ":" + dep.artifact + ":" + dep.version
+                        + " (unresolved)");
+            }
+            if (!declared) {
+                System.out.println("no dependencies declared");
+            } else {
+                System.err.println("sprig: dependency resolution is not implemented yet;"
+                        + " use an explicit --classpath for JVM jars");
+            }
+        }
+        return declared ? 2 : 0;
     }
 
     private static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String uri) {
@@ -570,6 +767,7 @@ public final class Main {
         boolean outDirSpecified;
         boolean separatorProvided;
         String memberFilter;
+        String bin;
         List<String> classpath = new ArrayList<>();
         String optionError;
         List<String> programArgs = new ArrayList<>();
@@ -583,6 +781,10 @@ public final class Main {
                     case "--json" -> options.json = true;
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
+                    case "--bin" -> {
+                        if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.bin = args[++i];
+                        else options.optionError = "--bin requires a binary name";
+                    }
                     case "--member" -> {
                         if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.memberFilter = args[++i];
                         else options.optionError = "--member requires a JVM member name";
@@ -623,6 +825,7 @@ public final class Main {
             if (keep && !command.equals("run")) return "--keep is only valid with run";
             if (outDirSpecified && !command.equals("build")) return "-d/--out is only valid with build";
             if (memberFilter != null && !command.equals("api")) return "--member is only valid with api";
+            if (bin != null && !command.equals("run")) return "--bin is only valid with run";
             if (!classpath.isEmpty() && !List.of("check", "build", "run", "api", "doctor").contains(command))
                 return "--classpath is not valid with " + command;
             if (separatorProvided && !command.equals("run")) return "-- is only valid with run";

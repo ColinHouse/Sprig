@@ -55,3 +55,41 @@ words.push("b")
 words.push("c")
 print(drain[String](words))
 print(words.size())
+
+# A two-parameter abstraction with a real need: the stage-1 symbol
+# environment maps names to typed entries, so K and V are independent.
+# Key comparison is justified by 'requires K: Equatable'.
+generic K, V:
+    class Table:
+        let keys: MutableList[K] = []
+        let values: MutableList[V] = []
+
+        func put(key: K, value: V) -> Unit:
+            keys.append(key)
+            values.append(value)
+
+        func get(key: K) -> V?:
+            requires K: Equatable
+            for i in range(keys.size()):
+                if keys.get(i) == key:
+                    return values.get(i)
+            return null
+
+        func size() -> Int:
+            return keys.size()
+
+let names: Table[String, Int] = Table[String, Int]()
+names.put("x", 1)
+names.put("y", 2)
+let found = names.get("y")
+if found != null:
+    print(found)
+print(names.size())
+
+let table: Table[Int, String] = Table[Int, String]()
+table.put(7, "seven")
+let label = table.get(7)
+if label != null:
+    print(label)
+let missing = table.get(9)
+print(missing == null)

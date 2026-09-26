@@ -1,5 +1,6 @@
-generic T:
-    class Box:
-        let value: T
+generic K, V:
+    class Entry:
+        let key: K
+        let value: V
 
-let box = Box[Int, String](value=1)
+let entry = Entry[String](key="age", value=1)

@@ -15,3 +15,10 @@ generic T:
 let box: Box[Int] = Box[Int](value=1)
 print(identity[Int](box.value))
 let empty: Option[String] = Option[String].None
+
+generic K, V:
+    class Entry:
+        let key: K
+        let value: V
+
+let entry: Entry[String, Int] = Entry[String, Int](key="age", value=18)

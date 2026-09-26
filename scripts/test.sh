@@ -163,6 +163,13 @@ else
   fail "stage-1 frontend probe"
 fi
 
+echo "== 15. project model (sprig.toml, init, discovery, explicit-file priority) =="
+if python3 "$ROOT/tests/project/check_project.py"; then
+  PASS=$((PASS + 1))
+else
+  fail "project model regressions"
+fi
+
 echo
 echo "== summary: $PASS passed, $FAIL failed =="
 if [[ $FAIL -gt 0 ]]; then

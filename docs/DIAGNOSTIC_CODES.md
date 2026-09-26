@@ -69,4 +69,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-TYPE-GENERIC-ARITY | A generic declaration was used with the wrong number of type arguments (v0.8 exposes one). |
 | SPR-TYPE-GENERIC-ARGS-REQUIRED | A generic function or constructor needs explicit `[Type]` arguments; Sprig does not infer them. |
 | SPR-TYPE-GENERIC-NULLABLE | This type parameter is used with `?` in the declaration, so its argument must be non-nullable. |
-| SPR-GENERIC-CONSTRAINT | `requires` clauses are parsed in v0.8 but capability checking is not implemented yet. |
+| SPR-GENERIC-CONSTRAINT | An unsupported capability was requested; v0.8 implements `Equatable` only, not `Comparable`. |
+| SPR-PROJECT-MANIFEST | `sprig.toml` is missing, malformed, or lacks a required field. |
+| SPR-PROJECT-ENTRY | The project entry point is missing or the named `--bin` is unknown. |
+| SPR-PROJECT-UNSUPPORTED | The operation needs unimplemented project features (dependency resolution, lockfiles). |
