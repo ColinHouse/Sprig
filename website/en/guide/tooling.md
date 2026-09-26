@@ -93,7 +93,7 @@ The following are **proposed, not implemented**:
 
 - an LSP / IDE language server,
 - `sprig fmt`, `sprig test`,
-- package manifests, Maven dependency resolution or a module registry,
+- Maven dependency resolution or a module registry,
 - incremental checking.
 
 The historical [Agent tool protocol](/en/reference/AGENT_TOOL_PROTOCOL)

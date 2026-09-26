@@ -34,6 +34,8 @@ public final class DependencyResolver {
     }
 
     public static final class Package {
+        public String id;
+        public String owner;
         public final String alias;
         public final Project project;
         public final Path root;
@@ -66,6 +68,8 @@ public final class DependencyResolver {
         Lockfile.SprigEntry toEntry() {
             Lockfile.SprigEntry entry = new Lockfile.SprigEntry();
             entry.name = alias;
+            entry.id = id;
+            entry.owner = owner;
             entry.kind = kind;
             entry.projectName = project.name;
             entry.manifestSha = manifestSha;
@@ -138,6 +142,11 @@ public final class DependencyResolver {
             }
             String alias = spec.substring(1, slash);
             String rest = spec.substring(slash + 1).replace('\\', '/');
+            if (rest.startsWith("/") || java.util.Arrays.asList(rest.split("/")).contains("..")) {
+                diagnostics.error(Codes.DEP_NOT_FOUND, Phase.NAME, "Package import escapes source root: " + spec, uri, span);
+                return null;
+            }
+            rest = Path.of(rest).normalize().toString().replace('\\', '/');
             Package owner = packageOf(fromFile);
             if (owner == null) {
                 diagnostics.add(Diagnostic.error(Codes.DEP_NOT_FOUND, Phase.NAME,
@@ -168,6 +177,16 @@ public final class DependencyResolver {
                         .withData(Map.of("alias", alias, "module", rest)));
                 return null;
             }
+            try {
+                if (!target.toRealPath().startsWith(dependency.sourceRoot.toRealPath())) {
+                    diagnostics.error(Codes.DEP_NOT_FOUND, Phase.NAME,
+                            "Package import symlink escapes source root: " + spec, uri, span);
+                    return null;
+                }
+            } catch (IOException e) {
+                diagnostics.error(Codes.DEP_NOT_FOUND, Phase.NAME, "Cannot inspect package import: " + spec, uri, span);
+                return null;
+            }
             if (!dependency.exports.contains(rest)) {
                 diagnostics.add(Diagnostic.error(Codes.PROJECT_NOT_EXPORTED, Phase.NAME,
                         "Dependency '" + alias + "' does not export '" + rest + "'",
@@ -187,7 +206,7 @@ public final class DependencyResolver {
         lock.lockVersion = Lockfile.VERSION;
         lock.language = project.language;
         lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
-        Package root = build(project, "", "root", null, null, null, lock, offline, true, new ArrayDeque<>());
+        Package root = build(project, "root", "", "root", null, null, null, lock, offline, true, new ArrayDeque<>());
         lock.sprig.addAll(new Result(root, lock).entries());
         return new Result(root, lock);
     }
@@ -207,11 +226,13 @@ public final class DependencyResolver {
                     project.manifest.toString())
                     .with("hint", "Run `sprig resolve`.");
         }
-        Package root = build(project, "", "root", null, null, null, lock, offline, false, new ArrayDeque<>());
+        Package root = build(project, "root", "", "root", null, null, null, lock, offline, false, new ArrayDeque<>());
+        if (new Result(root, lock).entries().size() != lock.sprig.size())
+            throw new DepError(Codes.PROJECT_LOCK_STALE, "Lock contains unexpected dependency edges; run `sprig resolve`", null);
         return new Result(root, lock);
     }
 
-    private static Package build(Project project, String alias, String kind, String url,
+    private static Package build(Project project, String id, String alias, String kind, String url,
                                  String requested, String revision, Lockfile lock, boolean offline,
                                  boolean resolveMode, Deque<Path> stack) {
         String manifestSha;
@@ -223,7 +244,12 @@ public final class DependencyResolver {
         }
         Package pkg = new Package(alias, project, project.root, kind, url, requested, revision,
                 manifestSha, false);
+        if (!project.jvmDependencies.isEmpty())
+            throw new DepError(Codes.DEP_MAVEN, "Maven dependencies are unsupported in package " + project.name, null);
+        pkg.id = id;
+        pkg.owner = id.equals("root") ? "" : id.substring(0, id.lastIndexOf("/@"));
         for (Project.Dependency dependency : project.dependencies) {
+            String edgeId = id + "/@" + dependency.name;
             if (pkg.aliases.containsKey(dependency.name)) {
                 throw new DepError(Codes.PROJECT_MANIFEST,
                         "Duplicate dependency alias '" + dependency.name + "' in "
@@ -256,7 +282,7 @@ public final class DependencyResolver {
                     depRevision = git.remoteRevision(depUrl, dependency.branch == null
                             ? "main" : dependency.branch);
                 } else {
-                    Lockfile.SprigEntry entry = findLockEntry(lock, dependency.name);
+                    Lockfile.SprigEntry entry = findLockEntry(lock, edgeId);
                     if (entry == null || !"git".equals(entry.kind)
                             || !depUrl.equals(entry.url)
                             || !depRequested.equals(entry.requested)) {
@@ -300,16 +326,19 @@ public final class DependencyResolver {
             }
             String depManifestSha = shaOf(manifest);
             if (!resolveMode) {
-                Lockfile.SprigEntry entry = findLockEntry(lock, dependency.name);
+                Lockfile.SprigEntry entry = findLockEntry(lock, edgeId);
                 if (entry == null || entry.manifestSha == null
-                        || !entry.manifestSha.equals(depManifestSha)) {
+                        || !entry.manifestSha.equals(depManifestSha)
+                        || !depKind.equals(entry.kind) || !depProject.name.equals(entry.projectName)
+                        || !depProject.source.equals(entry.source)
+                        || (depKind.equals("local") && !depRoot.toString().equals(entry.path))) {
                     throw new DepError(Codes.PROJECT_LOCK_STALE,
                             "Dependency manifest changed for '" + dependency.name + "'",
                             manifest.toString()).with("hint", "Run `sprig resolve`.");
                 }
             }
             stack.push(canonicalRoot);
-            Package child = build(depProject, dependency.name, depKind, depUrl, depRequested,
+            Package child = build(depProject, edgeId, dependency.name, depKind, depUrl, depRequested,
                     depRevision, lock, offline, resolveMode, stack);
             stack.pop();
             pkg.aliases.put(dependency.name, child);
@@ -318,9 +347,9 @@ public final class DependencyResolver {
         return pkg;
     }
 
-    private static Lockfile.SprigEntry findLockEntry(Lockfile lock, String name) {
+    private static Lockfile.SprigEntry findLockEntry(Lockfile lock, String id) {
         for (Lockfile.SprigEntry entry : lock.sprig) {
-            if (entry.name.equals(name)) {
+            if (entry.id.equals(id)) {
                 return entry;
             }
         }

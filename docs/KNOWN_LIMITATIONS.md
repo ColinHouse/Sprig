@@ -18,14 +18,15 @@ by the Sprig v0.7 design kit.
   against `exports`, and `--offline` rebuilds from the cache). **Maven/JVM
   dependency resolution is not implemented**: declaring `[[jvm]]` fails with
   `SPR-DEP-MAVEN`, and `sprig api`/`check`/`run` still need explicit
-  `--classpath` for third-party jars. Git dependency checkouts and cached
-  artifacts are not checksum-verified (no Maven artifacts are fetched at all).
+  `--classpath` for third-party jars. Git checkouts are verified against exact HEAD, clean tracked/untracked
+  contents and cache metadata on every reuse. Modified checkouts are rejected
+  with SPR-DEP-GIT; no Maven artifacts are fetched.
   `sprig.lock` covers Sprig dependencies; JVM coordinates are recorded only
   when resolution exists.
 - There is no package manager, Maven dependency resolver, standard-library
   distribution, language server, IDE plugin, debugger, or editor integration.
   Explicit local JAR/directory `--classpath` is available for `check`, `build`,
-  `run`, and `api`; no dependencies are downloaded automatically.
+  `run`, and `api`; only explicitly resolved Git Sprig packages are downloaded.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java generic signatures, type-use
   nullability annotations, arrays, varargs, and collection adapters are limited

@@ -122,6 +122,8 @@ public final class Project {
             if (depName == null || depName.isBlank()) {
                 throw new Toml.TomlException("[[dependency]] requires name", 1);
             }
+            if (!depName.matches("[A-Za-z_][A-Za-z0-9_-]*"))
+                throw new Toml.TomlException("Dependency alias must be a package identifier: " + depName, 1);
             if (!depNames.add(depName)) throw new Toml.TomlException("Duplicate dependency name '" + depName + "'", 1);
             if ((dep.get("path") != null) == (dep.get("git") != null)) {
                 throw new Toml.TomlException(
@@ -236,7 +238,7 @@ public final class Project {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("name", dep.name);
             item.put("path", dep.path);
-            item.put("git", dep.git);
+            item.put("git", dep.git == null ? null : GitCache.redact(dep.git));
             item.put("branch", dep.branch);
             item.put("kind", dep.isGit() ? "git" : dep.isLocal() ? "local" : "unknown");
             item.put("resolved", false);
@@ -255,7 +257,7 @@ public final class Project {
         map.put("jvmDependencies", jvm);
         map.put("dependencyResolution",
                 (dependencies.isEmpty() && jvmDependencies.isEmpty())
-                        ? "not-needed" : "not-implemented");
+                        ? "not-needed" : "declared");
         return map;
     }
 }

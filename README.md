@@ -34,9 +34,10 @@ The repository's `0.2.0-alpha.1` development tree adds v0.8 multi-parameter gene
 explicit local `--classpath`. The **latest published archive remains
 v0.1.0-alpha.1** until the next candidate passes its independent release gates.
 
-The latest consolidated acceptance report is [REVIEW_REPORT.md](REVIEW_REPORT.md).
-The current v0.8 candidate is **NOT READY — RELEASE BLOCKERS REMAIN**: dependency
-resolution/lockfiles and the integrated stage-1 project are incomplete.
+The current validation report is [V08_VALIDATION_REPORT.md](docs/post-v0.7/V08_VALIDATION_REPORT.md).
+[REVIEW_REPORT.md](REVIEW_REPORT.md) preserves the earlier audit evidence.
+The current v0.8 candidate is **NOT READY — RELEASE BLOCKERS REMAIN**: Maven/JVM
+resolution and the integrated stage-1 project remain incomplete.
 
 ## What Sprig is
 
@@ -131,7 +132,7 @@ ANTLR_JAR="$PWD/tools/antlr-4.13.2-complete.jar" ./tools/test-grammar.sh
 - JVM interop for imported classes: constructors, fields, methods, overloads,
   checked exceptions, conservative nullability.
 - `sprig check`, `build`, `run`, `explain`, `codes`, `--json`,
-  `--syntax-only`; alpha.2 development adds topic `help`, `capabilities`,
+  `--syntax-only`; current development adds topic `help`, `capabilities`,
   `api`, `doctor` and explicit local `--classpath`.
 
 The authoritative list is
@@ -171,8 +172,8 @@ bin/, build/  generated locally by scripts/build.sh (not committed)
 ## Known limitations
 
 The compiler is a Java seed that emits Java source and invokes `javac`; it
-does not compile itself. v0.8 single-parameter generics are implemented, but
-multiple type parameters, inference, capability implications, inheritance,
+does not compile itself. v0.8 multi-parameter generics are implemented, but
+inference, capability implications, inheritance,
 `match` expressions, arrays, varargs, full Java generic/annotation interop,
 file IO, Maven/JVM dependency resolution, a project-aware JVM classpath, a package manager, a language server and
 stage-1 self-hosting are **not implemented**. Runtime numeric errors do not always carry an exact source

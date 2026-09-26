@@ -49,3 +49,8 @@ not because it is production-ready.
 
 See [Known limitations](/en/reference/KNOWN_LIMITATIONS) and the
 [stage-1 roadmap](/en/reference/STAGE1_ROADMAP).
+
+Current development supports multi-parameter generics and local/Git lockfile
+resolution with offline builds. Maven/JVM resolution and stage-1 project
+migration remain unsupported. Current evidence is recorded in
+`docs/post-v0.7/V08_VALIDATION_REPORT.md`; historical reports retain their own SHAs.

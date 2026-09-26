@@ -70,7 +70,7 @@ change touches, as applicable:
 - Do not commit generated code, class files, the ANTLR JAR, local paths,
   credentials or personal configuration.
 - `sprig api`, `capabilities`, `doctor`, and topic help are implemented in the
-  alpha.2 development tree. Do not present an LSP, `sprig fmt`, or package
+  v0.8-dev tree. Do not present an LSP, `sprig fmt`, or package
   manager as implemented.
 - Apache-2.0 and the public repository are established. Do not create a tag,
   release, or deployment claim without a verified release build and owner

@@ -76,17 +76,44 @@ public final class GitCache {
 
     /** Materializes one immutable revision from a bare cache into a checkout. */
     public Path materialize(String url, String revision) throws DepError {
+        if (revision == null || !revision.matches("[0-9a-f]{40}"))
+            throw new DepError(Codes.DEP_GIT, "Invalid locked Git revision", null);
+        Path mutex = root.resolve("locks").resolve(hash(url) + ".lock");
+        try {
+            Files.createDirectories(mutex.getParent());
+            try (var channel = java.nio.channels.FileChannel.open(mutex,
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE);
+                 var lock = channel.lock()) {
+                return materializeLocked(url, revision);
+            }
+        } catch (IOException e) {
+            throw new DepError(Codes.DEP_GIT, "Git cache lock failure: " + e.getMessage(), null);
+        }
+    }
+
+    private boolean validCheckout(Path checkout, String revision) {
+        try {
+            if (!Files.isRegularFile(checkout.resolve(".sprig-revision"))
+                    || !Files.readString(checkout.resolve(".sprig-revision")).trim().equals(revision)) return false;
+            String head = capture(List.of("-C", checkout.toString(), "rev-parse", "HEAD"), null);
+            String status = capture(List.of("-C", checkout.toString(), "status", "--porcelain",
+                    "--untracked-files=all", "--ignored"), null);
+            return head != null && head.trim().equals(revision) && status != null
+                    && status.lines().allMatch(line -> line.equals("?? .sprig-revision")
+                            || line.equals("!! .sprig-revision"));
+        } catch (IOException e) { return false; }
+    }
+
+    private Path materializeLocked(String url, String revision) throws DepError {
         String id = hash(url);
         Path bare = root.resolve("repos").resolve(id + ".git");
         Path checkout = root.resolve("checkouts").resolve(id).resolve(revision);
         try {
             Files.createDirectories(checkout.getParent());
-            if (Files.isRegularFile(checkout.resolve(".sprig-revision"))) {
-                String recorded = Files.readString(checkout.resolve(".sprig-revision")).trim();
-                if (recorded.equals(revision)) {
-                    return checkout;
-                }
-            }
+            if (validCheckout(checkout, revision)) return checkout;
+            if (Files.exists(checkout))
+                throw new DepError(Codes.DEP_GIT, "Git cache checkout is corrupted or modified: " + revision,
+                        "Remove the corrupted cache checkout and run `sprig resolve`.");
             if (!Files.isDirectory(bare)) {
                 if (offline) {
                     throw new DepError(Codes.DEP_OFFLINE,
@@ -94,9 +121,12 @@ public final class GitCache {
                                     + "; required revision " + revision, bare.toString());
                 }
                 Files.createDirectories(bare.getParent());
-                if (run(List.of("clone", "--bare", "--quiet", url, bare.toString()), null) != 0) {
-                    throw new DepError(Codes.DEP_GIT, "git clone failed for " + redact(url), null);
-                }
+                Path tempBare = Files.createTempDirectory(bare.getParent(), id + ".tmp-");
+                try {
+                    if (run(List.of("clone", "--bare", "--quiet", url, tempBare.toString()), null) != 0)
+                        throw new DepError(Codes.DEP_GIT, "git clone failed for " + redact(url), null);
+                    install(tempBare, bare);
+                } finally { deleteRecursively(tempBare); }
             }
             if (run(List.of("--git-dir=" + bare, "cat-file", "-e", revision + "^{commit}"), null) != 0) {
                 if (offline) {
@@ -111,21 +141,26 @@ public final class GitCache {
                             "Git revision " + revision + " not found in " + redact(url), null);
                 }
             }
-            deleteRecursively(checkout);
+            Path tempCheckout = Files.createTempDirectory(checkout.getParent(), revision + ".tmp-");
+            try {
             if (run(List.of("clone", "--quiet", "--no-checkout", "--shared",
-                    bare.toString(), checkout.toString()), null) != 0) {
+                    bare.toString(), tempCheckout.toString()), null) != 0) {
                 throw new DepError(Codes.DEP_GIT, "git checkout failed for " + redact(url), null);
             }
-            if (run(List.of("-C", checkout.toString(), "checkout", "--quiet", "--detach", revision),
+            if (run(List.of("-C", tempCheckout.toString(), "checkout", "--quiet", "--detach", revision),
                     null) != 0) {
                 throw new DepError(Codes.DEP_GIT, "git checkout failed for revision " + revision, null);
             }
-            String head = capture(List.of("-C", checkout.toString(), "rev-parse", "HEAD"), null);
+            String head = capture(List.of("-C", tempCheckout.toString(), "rev-parse", "HEAD"), null);
             if (head == null || !head.trim().equals(revision)) {
                 throw new DepError(Codes.DEP_GIT,
                         "Git checkout does not match locked revision " + revision, null);
             }
-            Files.writeString(checkout.resolve(".sprig-revision"), revision + "\n");
+            Files.writeString(tempCheckout.resolve(".sprig-revision"), revision + "\n");
+            if (!validCheckout(tempCheckout, revision))
+                throw new DepError(Codes.DEP_GIT, "Git checkout verification failed", null);
+            install(tempCheckout, checkout);
+            } finally { deleteRecursively(tempCheckout); }
             return checkout;
         } catch (IOException e) {
             throw new DepError(Codes.DEP_GIT, "Git cache I/O failure: " + e.getMessage(), null);
@@ -133,6 +168,11 @@ public final class GitCache {
     }
 
     // ------------------------------------------------------------------
+
+    private static void install(Path temp, Path destination) throws IOException {
+        try { Files.move(temp, destination, java.nio.file.StandardCopyOption.ATOMIC_MOVE); }
+        catch (java.nio.file.AtomicMoveNotSupportedException e) { Files.move(temp, destination); }
+    }
 
     private static String hash(String value) {
         try {

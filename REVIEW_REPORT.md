@@ -1,3 +1,6 @@
+> **Historical audit — superseded for current status by [V08_VALIDATION_REPORT.md](docs/post-v0.7/V08_VALIDATION_REPORT.md).**
+> Findings and test counts below apply to their recorded SHAs, before resolver cleanup.
+
 # Sprig v0.8 / compiler v0.2.0-alpha.1 — 独立审查与发布验收报告
 
 **判定：NOT READY — RELEASE BLOCKERS REMAIN**

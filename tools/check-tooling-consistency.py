@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SPRIG = ROOT / "bin" / "sprig"
@@ -56,6 +57,28 @@ for name, markers in required.items():
         assert marker in text, (name, marker)
 assert "no selected license" not in (ROOT / "docs" / "KNOWN_LIMITATIONS.md").read_text()
 assert not list(ROOT.glob("docs/**/REVIEW_REPORT.md"))
+# Explicit current-document inventory: historical evidence is excluded.
+current = list(required) + ["AGENT_GUIDE.md", "docs/DEPENDENCIES.md", "docs/PROJECTS.md",
+    "docs/GENERICS.md", "spec/docs/GENERICS.md", "docs/post-v0.7/V08_VALIDATION_REPORT.md",
+    "docs/releases/RELEASE_NOTES-v0.2.0-alpha.1.md", "website/en/guide/generics.md",
+    "website/guide/generics.md", "website/en/guide/projects.md", "website/guide/projects.md"]
+rules = []
+features = catalog["features"]
+if features.get("multipleGenericParameters"):
+    rules += [r"single-parameter (?:user )?generics", r"multiple (?:type )?parameters.{0,20}unsupported"]
+if all(features.get(x) for x in ("localDependencies", "gitDependencies", "lockfile")):
+    rules += [r"there is no [`']?resolve", r"no (?:[`']?sprig.lock|lockfile)",
+              r"dependency resolution/lockfiles.{0,60}incomplete",
+              r"there is no dependency export boundary"]
+if not features.get("mavenDependencies"):
+    rules += [r"Maven (?:dependency )?resolution (?:is )?(?:implemented|complete)",
+              r"Maven.{0,30}管理已完成"]
+for name in current:
+    text = (ROOT / name).read_text()
+    for pattern in rules:
+        assert not re.search(pattern, text, re.I | re.S), (name, "capability drift", pattern)
+assert (ROOT / "docs/GENERICS.md").read_text() == (ROOT / "spec/docs/GENERICS.md").read_text()
+assert "Historical audit" in (ROOT / "REVIEW_REPORT.md").read_text().splitlines()[0]
 quick = (ROOT / "docs" / "QUICK_REFERENCE.md").read_text().split("```sprig\n", 1)[1].split("\n```", 1)[0]
 with tempfile.TemporaryDirectory(prefix="sprig-doc-reference-") as temp:
     source = Path(temp) / "quick.spr"
