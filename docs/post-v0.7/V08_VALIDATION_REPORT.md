@@ -1,18 +1,28 @@
 # Sprig v0.2.0-alpha.1 — validation record
 
+**Sprig v0.2.0-alpha.1 RELEASED.**
+
 Compiler `0.2.0-alpha.1` · language `0.8-dev` · lock schema **2** · JDK **17+**.
 This is the sole current release validation record; capability scope is defined
 by [implemented features](../FEATURE_STATUS_IMPLEMENTED.md) and executable Catalog.
 
 ## Exact source and release gate
 
-Release source is the immutable annotated [v0.2.0-alpha.1 tag](https://github.com/ColinHouse/Sprig/tree/v0.2.0-alpha.1).
-The dereferenced tag SHA identifies the tested release commit; the SDK's
-BUILD_INFO.txt records its full SHA. The [main CI](https://github.com/ColinHouse/Sprig/actions/workflows/ci.yml?query=branch%3Amain)
-checks JDK 17, JDK 26 and documentation on that exact main commit before tagging.
-The [release workflow](https://github.com/ColinHouse/Sprig/actions/workflows/release.yml)
-rebuilds/tests the tag, enforces compiler/tag version equality, packages and
-smoke-tests before creating the [prerelease](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
+Exact tested release commit: **`677429be905750b975d491f8a5c60e29d8ebaee2`**.
+Annotated tag [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/tree/v0.2.0-alpha.1)
+points to that commit. SDK BUILD_INFO.txt records the same full SHA and clean tree.
+[Exact main CI](https://github.com/ColinHouse/Sprig/actions/runs/36258652939)
+(JDK 17/26 + docs) and [site deployment](https://github.com/ColinHouse/Sprig/actions/runs/36258652977)
+passed before tagging. [Release workflow](https://github.com/ColinHouse/Sprig/actions/runs/36259189321)
+passed build/full tests/tag-version equality/package/archive smoke and created the
+[second public prerelease](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
+
+Assets: `sprig-v0.2.0-alpha.1-jdk.zip` and `.zip.sha256`.
+Published ZIP SHA-256: **`66453a482b449969f95ef65dffea45b1f33a4abfdc7d02a163c83e23891b3433`**.
+Both assets were redownloaded; independent SHA-256 matched. Fresh extraction on
+local JDK 17/26 passed version, capabilities JSON, hello check/run (`Hello, Ada!`),
+release metadata and SDK docs-link checks. Maven remains false; language is 0.8-dev.
+This post-release record changes documentation only; the tag/archive are unchanged.
 
 ## Scope
 
@@ -29,9 +39,10 @@ in this documentation/metadata release preparation.
 
 Commands: scripts/build.sh, scripts/test.sh, ANTLR_JAR=tools/antlr-4.13.2-complete.jar
  tools/test-grammar.sh, scripts/check-docs.sh, scripts/package-alpha.sh and
-python3 tools/check-sdk-archive.py. Run from clean source on JDK 17 and 26.
+python3 tools/check-sdk-archive.py. Local checks ran from clean source with the identical release tree on JDK 17/26;
+hosted main and tag workflows tested the exact release commit.
 
-| Evidence | Required result |
+| Evidence | Verified result |
 |---|---|
 | Full suite | 121 top-level checks, no failures |
 | Semantic / numeric / correctness | 54 / 66 / 22 |
@@ -45,10 +56,9 @@ python3 tools/check-sdk-archive.py. Run from clean source on JDK 17 and 26.
 | Archive | offline help/api/doctor/check/run/probe, matching metadata, docs links |
 
 Parser-only evidence is not semantic/runtime evidence. JVM tests run generated
-Java through javac and execution. Release completion additionally requires
-redownloading the published ZIP/checksum, a fresh extract and version/capabilities/
-hello check/run. Exact workflow URLs, final SHA and asset checksum are recorded
-on the GitHub Release and maintenance PR after successful runs.
+Java through javac and execution. The release asset download/smoke above is
+separate from the local and CI-built SDK tests. PR [#12](https://github.com/ColinHouse/Sprig/pull/12)
+contains the preparation changes; Git history retains superseded audit evidence.
 
 ## Repository authority and cleanup
 
@@ -70,5 +80,5 @@ Float/JVM interop and algorithms still require numerical judgment. See
 [KNOWN_LIMITATIONS](../KNOWN_LIMITATIONS.md). These declared Alpha limitations
 are not claims of implementation and are not release blockers.
 
-Release acceptance: all claimed features must pass the exact-SHA CI/archive gates;
-unsupported capabilities must fail explicitly. No full-v0.8 or production guarantee.
+Release acceptance gates passed. Declared Alpha limitations remain explicit;
+this release makes no full-v0.8, self-hosting or production guarantee.
