@@ -1,0 +1,9 @@
+generic T:
+    variant Option:
+        Some:
+            value:T
+        None:
+let items=[Option[Int].Some(value=7),Option[Int].None]
+func count(xs:List[Option[Int]]) -> Int:
+    return xs.size()
+print(count(items.toList()))

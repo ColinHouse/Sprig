@@ -1,0 +1,6 @@
+generic T:
+    variant Option:
+        Some:
+            value:T
+        None:
+let items=[Option[Int].Some(value=7),Option[String].None]

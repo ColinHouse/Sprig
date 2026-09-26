@@ -1,0 +1,8 @@
+variant Choice:
+    Keep(value: Int)
+    Replace(value: Int)
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:

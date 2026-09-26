@@ -36,7 +36,7 @@ public final class CodeDocs {
             Map.entry(Codes.TYPE_NOT_CALLABLE, "The callee is not callable (or a method name was used as a value)."),
             Map.entry(Codes.TYPE_UNIT, "Unit is only valid as a function/method result; it cannot be used as a field, parameter, collection element, or ordinary value."),
             Map.entry(Codes.TYPE_CAPTURE, "A lambda captures a var local; copy it into a let binding first."),
-            Map.entry(Codes.GENERIC_ARITY, "A generic declaration was used with the wrong number of type arguments (v0.8 exposes exactly one)."),
+            Map.entry(Codes.GENERIC_ARITY, "A generic declaration was used with the wrong number of type arguments (supply every parameter in declaration order)."),
             Map.entry(Codes.GENERIC_ARGS_REQUIRED, "A generic function or constructor needs explicit [Type] arguments; Sprig does not infer them."),
             Map.entry(Codes.GENERIC_NULLABLE, "This type parameter is used with '?' in the declaration, so its argument must be non-nullable."),
             Map.entry(Codes.GENERIC_CONSTRAINT, "An unsupported capability was requested; v0.8 implements Equatable only."),

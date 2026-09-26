@@ -1,0 +1,11 @@
+generic T:
+    class Box:
+        var value:T
+        func get() -> T:
+            return value
+        func set(x:T) -> Unit:
+            value=x
+let b=Box[BigInt](value=BigInt.fromInt(42))
+b.set(BigInt.fromInt(42))
+print(b.get())
+print(b.value)

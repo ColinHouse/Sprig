@@ -1,0 +1,5 @@
+generic T:
+    func id(x:T) -> T:
+        let local: List[T?] = []
+        return x
+print(id[String?](null))

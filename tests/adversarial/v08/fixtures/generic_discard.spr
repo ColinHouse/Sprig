@@ -1,0 +1,11 @@
+generic T:
+    func identity(x: T) -> T:
+        print("once")
+        return x
+identity[Int](7)
+generic T:
+    func discard(values: MutableList[List[T]]) -> Unit:
+        values.removeAt(0)
+let values: MutableList[List[Int]] = [[1]]
+discard[Int](values)
+print(values.size())

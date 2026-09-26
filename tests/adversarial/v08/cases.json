@@ -1,0 +1,186 @@
+[
+  {
+    "name": "nested_list",
+    "output": "42\n"
+  },
+  {
+    "name": "nested_map",
+    "output": "42\n"
+  },
+  {
+    "name": "generic_lambda",
+    "output": "[1, 2]\n"
+  },
+  {
+    "name": "generic_nullable_nested",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_nullable_forward",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_map_float",
+    "code": "SPR-NUM-CONVERSION"
+  },
+  {
+    "name": "generic_map_float_nested",
+    "code": "SPR-NUM-CONVERSION"
+  },
+  {
+    "name": "constraint_late",
+    "code": "SPR-GENERIC-CONSTRAINT"
+  },
+  {
+    "name": "constraint_nested",
+    "code": "SPR-GENERIC-CONSTRAINT"
+  },
+  {
+    "name": "constraint_top",
+    "code": "SPR-NAME-UNRESOLVED"
+  },
+  {
+    "name": "wrong_constraint",
+    "code": "SPR-GENERIC-CONSTRAINT"
+  },
+  {
+    "name": "nullable_positions_ok",
+    "output": "true\n"
+  },
+  {
+    "name": "nullable_positions_bad",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "3params",
+    "output": "42\nok\ntrue\n"
+  },
+  {
+    "name": "constraint_float",
+    "output": "true\nfalse\n"
+  },
+  {
+    "name": "generic_no_inference",
+    "code": "SPR-TYPE-GENERIC-ARGS-REQUIRED"
+  },
+  {
+    "name": "ctor_no_inference",
+    "code": "SPR-TYPE-GENERIC-ARGS-REQUIRED"
+  },
+  {
+    "name": "invariant",
+    "code": "SPR-TYPE-ASSIGN"
+  },
+  {
+    "name": "wrong_variant_argument",
+    "code": "SPR-TYPE-ASSIGN"
+  },
+  {
+    "name": "list_index",
+    "output": "3\n"
+  },
+  {
+    "name": "call_index",
+    "output": "2\n"
+  },
+  {
+    "name": "generic_target_variable",
+    "code": "SPR-SYNTAX-ERROR"
+  },
+  {
+    "name": "generic_alias_bracket",
+    "code": "SPR-SYNTAX-ERROR"
+  },
+  {
+    "name": "generic_alias_angle",
+    "code": "SPR-SYNTAX-ERROR"
+  },
+  {
+    "name": "boxing_Int",
+    "output": "42\n42\n"
+  },
+  {
+    "name": "boxing_Int32",
+    "output": "42\n42\n"
+  },
+  {
+    "name": "boxing_Float",
+    "output": "1.5\n1.5\n"
+  },
+  {
+    "name": "boxing_Float32",
+    "output": "1.5\n1.5\n"
+  },
+  {
+    "name": "boxing_Bool",
+    "output": "true\ntrue\n"
+  },
+  {
+    "name": "boxing_BigInt",
+    "output": "42\n42\n"
+  },
+  {
+    "name": "boxing_Decimal",
+    "output": "0.1\n0.1\n"
+  },
+  {
+    "name": "boxing_String",
+    "output": "hi\nhi\n"
+  },
+  {
+    "name": "boxing_Stringnullable",
+    "output": "null\nnull\n"
+  },
+  {
+    "name": "generic_loop_nested",
+    "output": "7\n"
+  },
+  {
+    "name": "generic_loop_box",
+    "output": "7\n"
+  },
+  {
+    "name": "generic_infer_variant_list",
+    "output": "2\n"
+  },
+  {
+    "name": "generic_mixed_variant_list",
+    "code": "SPR-TYPE-MISMATCH"
+  },
+  {
+    "name": "generic_nullable_local",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_nullable_indirect",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_case_corruption",
+    "code": "SPR-TYPE-ASSIGN"
+  },
+  {
+    "name": "module_variant",
+    "output": "42\n7\n"
+  },
+  {
+    "name": "generic_nullable_call",
+    "code": "SPR-TYPE-GENERIC-NULLABLE"
+  },
+  {
+    "name": "generic_recursive_visitor",
+    "output": "2\n"
+  },
+  {
+    "name": "generic_nested_map_value",
+    "output": "42\n"
+  },
+  {
+    "name": "generic_collection_chaining",
+    "output": "5\n"
+  },
+  {
+    "name": "generic_discard",
+    "output": "once\n0\n"
+  }
+]

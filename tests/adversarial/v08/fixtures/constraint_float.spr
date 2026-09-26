@@ -1,0 +1,6 @@
+generic T:
+    func eq(a:T,b:T) -> Bool:
+        requires T: Equatable
+        return a == b
+print(eq[Float](0.0,-0.0))
+print(eq[Float](0.0 / 0.0,0.0 / 0.0))

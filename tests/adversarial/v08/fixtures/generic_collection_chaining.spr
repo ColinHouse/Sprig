@@ -1,0 +1,7 @@
+generic T:
+    func inspect(data: Map[String, T], values: List[T]) -> Int:
+        let key = data.keys().get(0)
+        let nums = values.map(fn(item: T) => 1)
+        return key.length() + nums.get(0)
+let data: Map[String, Int] = {"test": 7}
+print(inspect[Int](data, [1]))

@@ -1,0 +1,5 @@
+generic K,V:
+    class Table:
+        let key: K
+        let value: V?
+let t = Table[String,Int?](key="x",value=null)

@@ -1,0 +1,11 @@
+generic T:
+    class Box:
+        var value:T
+        func get() -> T:
+            return value
+        func set(x:T) -> Unit:
+            value=x
+let b=Box[Decimal](value=Decimal.parse("0.1"))
+b.set(Decimal.parse("0.1"))
+print(b.get())
+print(b.value)

@@ -1,0 +1,2 @@
+generic T:
+    let x:Int = 1

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import sprig.compiler.ast.Decl;
+import sprig.compiler.ast.Expr;
+import sprig.compiler.ast.Stmt;
 import sprig.compiler.ast.Module;
 import sprig.compiler.ast.TypeRef;
 import sprig.compiler.diag.Codes;
@@ -26,6 +28,9 @@ import sprig.compiler.types.VariantType;
  */
 public final class TypeRefResolver {
     private final Diagnostics diagnostics;
+    private final java.util.Map<Decl, List<Expr.Subscript>> applications = new java.util.HashMap<>();
+    private Decl collecting;
+    private final java.util.Set<Decl> validating = new java.util.HashSet<>();
 
     public TypeRefResolver(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
@@ -146,9 +151,7 @@ public final class TypeRefResolver {
     }
 
     /**
-     * Applies type arguments to a user-declared class/variant. v0.8 exposes one
-     * parameter, but the arity check is written against the declaration's
-     * parameter list so multiple parameters remain a data change.
+     * Applies invariant type arguments to a user-declared class/variant.
      */
     private Type instantiateUserType(Module module, TypeRef ref, Symbol symbol,
                                      Map<String, Type> typeParams) {
@@ -218,6 +221,30 @@ public final class TypeRefResolver {
                 return null;
             }
         }
+        // Validate substituted written annotations, including forward declarations
+        // and function locals. Never mutate template TypeRefs with an instantiation.
+        if (validating.add(decl)) {
+            try {
+                Map<String, Type> bindings = new java.util.LinkedHashMap<>();
+                for (int i = 0; i < args.size(); i++) bindings.put(decl.typeParams.get(i), args.get(i));
+                Module owner = decl.symbol != null && decl.symbol.module != null ? decl.symbol.module : module;
+                int before = diagnostics.errorCount();
+                for (TypeRef annotation : declaredRefs(decl)) {
+                    resolveReturn(owner, copyRef(annotation), bindings);
+                }
+                for (Expr.Subscript use : applications.getOrDefault(decl, List.of())) {
+                    Symbol target = applicationSymbol(owner, use.base);
+                    if (target != null && target.decl != null && target.decl.isGeneric()) {
+                        List<TypeRef> copies = new ArrayList<>();
+                        for (TypeRef arg : use.typeArgs) copies.add(copyRef(arg));
+                        resolveArguments(owner, target.decl, copies, bindings, use.span, use.span);
+                    }
+                }
+                if (diagnostics.errorCount() != before) return null;
+            } finally {
+                validating.remove(decl);
+            }
+        }
         return args;
     }
 
@@ -227,50 +254,120 @@ public final class TypeRefResolver {
      * non-nullable argument (v0.8 Practical Strict rule).
      */
     private boolean declaresNullableParameter(Decl decl, String paramName) {
-        for (Type type : declaredTypes(decl)) {
-            if (type instanceof NullableType nullable
-                    && nullable.inner instanceof TypeParameterType parameter
-                    && parameter.owner == decl && parameter.name.equals(paramName)) {
-                return true;
-            }
+        for (TypeRef ref : declaredRefs(decl)) {
+            if (nullableUse(ref, paramName)) return true;
         }
         return false;
     }
 
-    private List<Type> declaredTypes(Decl decl) {
-        List<Type> types = new ArrayList<>();
-        if (decl instanceof Decl.ClassDecl classDecl) {
-            for (Decl.Field field : classDecl.fields) {
-                if (field.type != null) {
-                    types.add(field.type);
-                }
-            }
-            for (Decl.Func method : classDecl.methods) {
-                collectFunctionTypes(method, types);
-            }
-        } else if (decl instanceof Decl.VariantDecl variantDecl) {
-            for (Decl.VariantCase variantCase : variantDecl.cases) {
-                for (Decl.Field field : variantCase.fields) {
-                    if (field.type != null) {
-                        types.add(field.type);
-                    }
-                }
-            }
-        } else if (decl instanceof Decl.Func func) {
-            collectFunctionTypes(func, types);
-        }
-        return types;
+    private boolean nullableUse(TypeRef ref, String name) {
+        if (ref == null) return false;
+        if (ref.nullable && ref.parts.size() == 1 && ref.simpleName().equals(name)) return true;
+        for (TypeRef arg : ref.args) if (nullableUse(arg, name)) return true;
+        return false;
     }
 
-    private void collectFunctionTypes(Decl.Func func, List<Type> types) {
-        for (Decl.Param param : func.params) {
-            if (param.type != null) {
-                types.add(param.type);
+    private TypeRef copyRef(TypeRef ref) {
+        List<TypeRef> args = new ArrayList<>();
+        for (TypeRef arg : ref.args) args.add(copyRef(arg));
+        TypeRef copy = new TypeRef(ref.parts, args, ref.nullable);
+        copy.span = ref.span;
+        return copy;
+    }
+
+    /** Written syntax is available before signature resolution; order cannot affect validity. */
+    private List<TypeRef> declaredRefs(Decl decl) {
+        Decl previous = collecting;
+        collecting = decl;
+        applications.put(decl, new ArrayList<>());
+        List<TypeRef> refs = new ArrayList<>();
+        if (decl instanceof Decl.ClassDecl c) {
+            for (Decl.Field f : c.fields) { refs.add(f.typeRef); collectExpr(f.defaultExpr, refs); }
+            for (Decl.Func f : c.methods) collectFunctionRefs(f, refs);
+        } else if (decl instanceof Decl.VariantDecl v) {
+            for (Decl.VariantCase c : v.cases) for (Decl.Field f : c.fields) refs.add(f.typeRef);
+        } else if (decl instanceof Decl.Func f) collectFunctionRefs(f, refs);
+        collecting = previous;
+        return refs;
+    }
+
+    private void collectFunctionRefs(Decl.Func f, List<TypeRef> refs) {
+        for (Decl.Param p : f.params) refs.add(p.typeRef);
+        refs.add(f.returnTypeRef);
+        refs.addAll(f.throwsRefs);
+        collectStatements(f.body, refs);
+    }
+
+    private void collectStatements(List<Stmt> body, List<TypeRef> refs) {
+        if (body == null) return;
+        for (Stmt stmt : body) {
+            if (stmt instanceof Stmt.VarDecl v) {
+                if (v.typeRef != null) refs.add(v.typeRef);
+                collectExpr(v.init, refs);
+            } else if (stmt instanceof Stmt.Assign a) {
+                collectExpr(a.target, refs); collectExpr(a.value, refs);
+            } else if (stmt instanceof Stmt.ExprStmt e) collectExpr(e.expr, refs);
+            else if (stmt instanceof Stmt.Return r) collectExpr(r.value, refs);
+            else if (stmt instanceof Stmt.Throw t) collectExpr(t.value, refs);
+            else if (stmt instanceof Stmt.IfStmt i) {
+                collectExpr(i.cond, refs); collectStatements(i.thenBody, refs);
+                for (Stmt.IfStmt.Elif e : i.elifs) { collectExpr(e.cond, refs); collectStatements(e.body, refs); }
+                collectStatements(i.elseBody, refs);
+            } else if (stmt instanceof Stmt.WhileStmt w) {
+                collectExpr(w.cond, refs); collectStatements(w.body, refs);
+            } else if (stmt instanceof Stmt.ForStmt f) {
+                collectExpr(f.iterable, refs); collectStatements(f.body, refs);
+            } else if (stmt instanceof Stmt.Try t) {
+                collectStatements(t.body, refs); collectStatements(t.finallyBody, refs);
+                for (Stmt.Try.CatchClause c : t.catches) { refs.add(c.typeRef); collectStatements(c.body, refs); }
+            } else if (stmt instanceof Stmt.Match m) {
+                collectExpr(m.scrutinee, refs);
+                // Case owners are intentionally unapplied, not value type annotations.
+                for (Stmt.Match.Branch b : m.branches) collectStatements(b.body, refs);
             }
         }
-        if (func.returnType != null) {
-            types.add(func.returnType);
+    }
+
+    private void collectExpr(Expr expr, List<TypeRef> refs) {
+        if (expr == null) return;
+        if (expr instanceof Expr.Lambda l) {
+            for (Decl.Param p : l.params) if (p.typeRef != null) refs.add(p.typeRef);
+            collectExpr(l.body, refs);
+        } else if (expr instanceof Expr.Call c) {
+            collectExpr(c.callee, refs);
+            for (Expr.Arg a : c.args) collectExpr(a.value, refs);
+        } else if (expr instanceof Expr.FieldAccess a) collectExpr(a.receiver, refs);
+        else if (expr instanceof Expr.Subscript s) {
+            collectExpr(s.base, refs); collectExpr(s.index, refs);
+            if (collecting != null && s.typeArgs != null)
+                applications.get(collecting).add(s);
+            // Brackets can also be indexing; their arguments are resolved by the
+            // checker after it has established the base symbol's kind.
+        } else if (expr instanceof Expr.Index i) {
+            collectExpr(i.receiver, refs); collectExpr(i.index, refs);
+        } else if (expr instanceof Expr.Unary u) collectExpr(u.operand, refs);
+        else if (expr instanceof Expr.Binary b) { collectExpr(b.left, refs); collectExpr(b.right, refs); }
+        else if (expr instanceof Expr.ListLit l) for (Expr e : l.items) collectExpr(e, refs);
+        else if (expr instanceof Expr.MapLit m) {
+            for (Expr e : m.keys) collectExpr(e, refs);
+            for (Expr e : m.values) collectExpr(e, refs);
         }
+    }
+
+    private Symbol applicationSymbol(Module module, Expr base) {
+        if (base instanceof Expr.Name n) {
+            if (n.symbol != null) return n.symbol;
+            Symbol type = findModuleType(module, n.name);
+            return type != null ? type : module.scope.functions.get(n.name);
+        }
+        if (base instanceof Expr.FieldAccess a && a.receiver instanceof Expr.Name n) {
+            Symbol alias = module.scope.importAliases.get(n.name);
+            if (alias != null && alias.kind == Symbol.Kind.MODULE) {
+                Symbol type = alias.module.scope.types.get(a.name);
+                return type != null ? type : alias.module.scope.functions.get(a.name);
+            }
+        }
+        return null;
     }
 
     private Type resolveBuiltinGeneric(Module module, TypeRef ref, String name,

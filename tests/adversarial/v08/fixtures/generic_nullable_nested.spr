@@ -1,0 +1,4 @@
+generic T:
+    class Maybe:
+        let values: List[T?]
+let x = Maybe[String?](values=[null])

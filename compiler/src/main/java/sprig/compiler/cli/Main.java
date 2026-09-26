@@ -414,6 +414,13 @@ public final class Main {
             if (project == null) {
                 return null;
             }
+            if (!project.dependencies.isEmpty() || !project.jvmDependencies.isEmpty()) {
+                diagnostics.error(Codes.PROJECT_UNSUPPORTED, Phase.CLI,
+                        "Project declares unresolved dependencies; local/Git/Maven resolution is not implemented. "
+                                + "Use an explicit source file and --classpath for manually supplied JVM JARs.",
+                        project.manifest.toUri().toString(), null);
+                return null;
+            }
             if (options.bin != null) {
                 Path entry = project.entryForBin(options.bin);
                 if (entry == null) {
@@ -423,6 +430,12 @@ public final class Main {
                     return null;
                 }
                 return entry;
+            }
+            if (project.bins.size() > 1 && !project.hasExplicitEntry) {
+                diagnostics.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                        "Multiple binaries require --bin or an explicit [project] entry",
+                        project.manifest.toUri().toString(), null);
+                return null;
             }
             Path entry = project.entryPath();
             if (!Files.isRegularFile(entry)) {
@@ -434,9 +447,15 @@ public final class Main {
             return entry;
         } catch (Toml.TomlException e) {
             diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
-                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(), null, null);
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
+                    manifestUri(), sprig.compiler.diag.Span.point(e.line - 1, 0));
             return null;
         }
+    }
+
+    private static String manifestUri() {
+        Path manifest = Project.findManifest(Path.of(""));
+        return manifest == null ? null : manifest.toUri().toString();
     }
 
     private static void printJson(Map<String, Object> data) {
@@ -457,7 +476,7 @@ public final class Main {
         }
         Files.createDirectories(entry.getParent());
         String name = dir.getFileName() == null ? "sprig-app" : dir.getFileName().toString();
-        Files.writeString(manifest, "[project]\nname = \"" + name
+        Files.writeString(manifest, "[project]\nname = \"" + name.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
                 + "\"\nversion = \"0.1.0\"\nlanguage = \"0.8\"\n");
         Files.writeString(entry, "# " + name + " entry point.\n\nfunc main() -> Unit:\n"
                 + "    print(\"Hello, Sprig!\")\n\nmain()\n");
@@ -488,7 +507,8 @@ public final class Main {
             project = Project.discover(Path.of(""));
         } catch (Toml.TomlException e) {
             diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
-                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(), null, null);
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
+                    manifestUri(), sprig.compiler.diag.Span.point(e.line - 1, 0));
             report(diagnostics, options.json, "project", 1, null);
             return 1;
         }
@@ -533,7 +553,8 @@ public final class Main {
             project = Project.discover(Path.of(""));
         } catch (Toml.TomlException e) {
             diagnostics.error(Codes.PROJECT_MANIFEST, Phase.CLI,
-                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(), null, null);
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
+                    manifestUri(), sprig.compiler.diag.Span.point(e.line - 1, 0));
             report(diagnostics, options.json, "deps", 1, null);
             return 1;
         }

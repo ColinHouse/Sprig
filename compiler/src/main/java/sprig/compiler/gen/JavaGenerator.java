@@ -635,7 +635,15 @@ public final class JavaGenerator {
             emitAssign(w, assign);
         } else if (stmt instanceof Stmt.ExprStmt exprStmt) {
             w.map(stmt.span);
-            w.line(emitExpr(exprStmt.expr) + ";");
+            String expression = emitExpr(exprStmt.expr);
+            if (exprStmt.expr.type != NativeType.UNIT) {
+                // Casts/unboxing are value expressions, not legal Java statement
+                // expressions. Preserve evaluation once in an inferred throwaway local; a JVM return type may be
+                // inaccessible by name (e.g. a JDK covariant bridge).
+                expression = (exprStmt.expr.type == NativeType.NULL ? "java.lang.Object" : "var")
+                        + " " + freshTemp("discard") + " = " + expression;
+            }
+            w.line(expression + ";");
         } else if (stmt instanceof Stmt.Return ret) {
             w.map(stmt.span);
             if (ret.value == null) {
@@ -754,12 +762,19 @@ public final class JavaGenerator {
     private void emitFor(JavaWriter w, Stmt.ForStmt forStmt) {
         w.map(forStmt.span);
         String var = localName(forStmt.symbol);
-        String iterable = emitExpr(forStmt.iterable);
+        String iterable = "(" + emitExpr(forStmt.iterable) + ")";
+        boolean erased = containsTypeParameter(forStmt.iterable.type);
+        String values = forStmt.forKind == sprig.compiler.sem.ForKind.MAP_KEYS
+                ? iterable + ".keys()" : iterable;
+        if (erased) {
+            values = "((java.lang.Iterable<" + boxedJavaType(forStmt.symbol.type)
+                    + ">) (java.lang.Iterable<?>) (" + values + "))";
+        }
         switch (forStmt.forKind) {
             case STRING -> w.open("for (char " + var + "$c : " + iterable + ".toCharArray())");
             case MAP_KEYS -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : "
-                    + iterable + ".keys())");
-            default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + iterable + ")");
+                    + values + ")");
+            default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + values + ")");
         }
         if (forStmt.forKind == sprig.compiler.sem.ForKind.STRING) {
             w.line("java.lang.String " + var + " = java.lang.String.valueOf(" + var + "$c);");
@@ -981,7 +996,13 @@ public final class JavaGenerator {
             return "java.lang.String.valueOf(" + emitExpr(receiverExpr)
                     + ".charAt(sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(indexExpr) + ")))";
         }
-        return emitExpr(receiverExpr) + ".get(" + emitExpr(indexExpr) + ")";
+        String code = "(" + emitExpr(receiverExpr) + ").get(" + emitExpr(indexExpr) + ")";
+        if (containsTypeParameter(receiver)) {
+            Type element = receiver instanceof ListType list ? list.element
+                    : receiver instanceof MapType map ? NullableType.of(map.value) : NativeType.ERROR;
+            code = unboxGeneric(code, element);
+        }
+        return code;
     }
 
     private String emitUnary(Expr.Unary unary) {
@@ -1345,7 +1366,7 @@ public final class JavaGenerator {
         if (base == NativeType.DECIMAL) {
             return "((sprig.runtime.SprigDecimal) " + code + ")";
         }
-        return "(" + javaType(concrete) + ") (" + code + ")";
+        return "((" + javaType(concrete) + ") (" + code + "))";
     }
 
     private static boolean containsTypeParameter(Type type) {
@@ -1462,14 +1483,14 @@ public final class JavaGenerator {
     private String emitBuiltinMethod(Expr.Call call, ResolvedCall resolved) {
         String id = resolved.builtinId;
         Expr.FieldAccess access = (Expr.FieldAccess) call.callee;
-        String recv = emitExpr(access.receiver);
+        String recv = "(" + emitExpr(access.receiver) + ")";
         List<Expr> args = new ArrayList<>();
         for (Expr.Arg arg : call.args) {
             args.add(arg.value);
         }
         String a0 = args.isEmpty() ? null : emitExpr(args.get(0));
         String a1 = args.size() < 2 ? null : emitExpr(args.get(1));
-        return switch (id) {
+        String code = switch (id) {
             case "toString" -> "sprig.runtime.SprigRuntime.str(" + recv + ")";
             case "Int.toString" -> "java.lang.Long.toString(" + recv + ")";
             case "Int.toFloat", "Int.toFloatExact" -> "sprig.runtime.NumericOps.toFloatExact(" + recv + ")";
@@ -1575,6 +1596,13 @@ public final class JavaGenerator {
             case "MutableMap.clear" -> recv + ".clear()";
             default -> "null";
         };
+        if (containsTypeParameter(access.receiver.type)
+                && (id.equals("List.get") || id.equals("Map.get")
+                    || id.equals("MutableList.removeAt") || id.equals("MutableMap.remove")
+                    || resolved.returnType instanceof ListType || resolved.returnType instanceof MapType)) {
+            code = unboxGeneric(code, resolved.returnType);
+        }
+        return code;
     }
 
     private String emitJvmMethod(Expr.Call call, ResolvedCall resolved) {

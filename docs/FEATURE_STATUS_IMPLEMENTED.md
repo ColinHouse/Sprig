@@ -1,7 +1,7 @@
 # Sprig v0.8-dev stage-0 — implemented feature status
 
 This table reflects what the compiler in this directory **actually does**, as
-verified by `scripts/test.sh` (113 checks on the v0.8 development tree). It is the implementation-side companion to the
+verified by `scripts/test.sh` (see the independent audit for exact counts). It is the implementation-side companion to the
 design kit's `docs/FEATURE_STATUS.md`.
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |

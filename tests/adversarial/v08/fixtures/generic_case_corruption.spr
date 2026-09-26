@@ -1,0 +1,12 @@
+generic T,E:
+    variant Result:
+        Ok:
+            value:T
+        Err:
+            error:E
+let x:Result[Int,String]=Result[String,Int].Ok(value="x")
+match x:
+    case Result.Ok as p:
+        print(p.value + 1)
+    case Result.Err as p:
+        print(p.error)

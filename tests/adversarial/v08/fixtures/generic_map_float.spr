@@ -1,0 +1,4 @@
+generic K, V:
+    class Table:
+        let entries: Map[K,V]
+let t = Table[Float,Int](entries={})

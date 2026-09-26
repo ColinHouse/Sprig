@@ -66,7 +66,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-TYPE-OPERAND | Operator or method is not defined for this operand type. |
 | SPR-TYPE-RETURN | Returned value does not match the declared return type. |
 | SPR-TYPE-UNIT | Unit is only a function/method result; it cannot be a field, parameter, collection element, or ordinary value. |
-| SPR-TYPE-GENERIC-ARITY | A generic declaration was used with the wrong number of type arguments (v0.8 exposes one). |
+| SPR-TYPE-GENERIC-ARITY | A generic declaration was used with the wrong number of type arguments (supply every parameter in declaration order). |
 | SPR-TYPE-GENERIC-ARGS-REQUIRED | A generic function or constructor needs explicit `[Type]` arguments; Sprig does not infer them. |
 | SPR-TYPE-GENERIC-NULLABLE | This type parameter is used with `?` in the declaration, so its argument must be non-nullable. |
 | SPR-GENERIC-CONSTRAINT | An unsupported capability was requested; v0.8 implements `Equatable` only, not `Comparable`. |

@@ -573,7 +573,9 @@ public final class NameResolver {
                 Symbol baseSymbol = subscript.base instanceof Expr.Name baseName
                         ? baseName.symbol : null;
                 boolean typeLike = baseSymbol != null && (baseSymbol.isType()
-                        || baseSymbol.kind == Symbol.Kind.BUILTIN_TYPE);
+                        || baseSymbol.kind == Symbol.Kind.BUILTIN_TYPE
+                        || (baseSymbol.kind == Symbol.Kind.FUNCTION
+                            && baseSymbol.decl != null && baseSymbol.decl.isGeneric()));
                 if (!typeLike && subscript.base instanceof Expr.FieldAccess member
                         && member.receiver instanceof Expr.Name qualifier
                         && qualifier.symbol != null

@@ -170,6 +170,10 @@ else
   fail "project model regressions"
 fi
 
+echo "== 16. independent v0.8 adversarial generics and manifests =="
+if python3 "$ROOT/tests/adversarial/v08/check_generics.py"; then pass; else fail "v0.8 adversarial generics"; fi
+if python3 "$ROOT/tests/adversarial/v08/check_projects.py"; then pass; else fail "v0.8 adversarial projects"; fi
+
 echo
 echo "== summary: $PASS passed, $FAIL failed =="
 if [[ $FAIL -gt 0 ]]; then

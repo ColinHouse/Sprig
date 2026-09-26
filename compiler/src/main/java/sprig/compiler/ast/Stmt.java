@@ -27,8 +27,8 @@ public abstract class Stmt extends Node {
     /**
      * v0.8 capability clause: {@code requires T: Comparable}. Valid only as
      * the leading clause of a function declared inside a {@code generic T:}
-     * block. Capability checking itself is not implemented in this alpha; the
-     * checker reports {@code SPR-GENERIC-CONSTRAINT} rather than guessing.
+     * block (including its class methods). Equatable grants value equality;
+     * unsupported capabilities report {@code SPR-GENERIC-CONSTRAINT}.
      */
     public static final class Requires extends Stmt {
         public final String parameter;

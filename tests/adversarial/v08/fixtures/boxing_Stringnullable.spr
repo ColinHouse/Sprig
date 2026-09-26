@@ -1,0 +1,11 @@
+generic T:
+    class Box:
+        var value:T
+        func get() -> T:
+            return value
+        func set(x:T) -> Unit:
+            value=x
+let b=Box[String?](value=null)
+b.set(null)
+print(b.get())
+print(b.value)

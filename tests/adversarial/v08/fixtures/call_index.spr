@@ -1,0 +1,5 @@
+generic T:
+    func id(x:List[T]) -> List[T]:
+        return x
+let i = 1
+print(id[Int]([1,2])[i])

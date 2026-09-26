@@ -1,0 +1,7 @@
+generic T:
+    func head(xs: Map[String,List[T]]) -> T?:
+        let row = xs.get("a")
+        if row != null:
+            return row.get(0)
+        return null
+print(head[Int]({"a": [42]}))

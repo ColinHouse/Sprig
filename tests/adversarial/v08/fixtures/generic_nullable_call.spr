@@ -1,0 +1,7 @@
+generic T:
+    class Maybe:
+        let value: T?
+generic T:
+    func wrap() -> Unit:
+        let box = Maybe[T](value=null)
+wrap[String?]()

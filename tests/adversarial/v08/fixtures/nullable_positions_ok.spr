@@ -1,0 +1,6 @@
+generic K,V:
+    class Table:
+        let key: K
+        let value: V?
+let t = Table[String?,Int](key=null,value=null)
+print(t.key == null)

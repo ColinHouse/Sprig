@@ -1,0 +1,4 @@
+generic T:
+    func eq(a: T,b: T) -> Bool:
+        requires T: Fictional
+        return a == b
