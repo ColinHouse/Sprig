@@ -1,0 +1,16 @@
+let a: Int32 = 7
+let b: Int32 = 3
+let values: List[Int] = [Int.min(a,b), Int.max(a,b)]
+print(values)
+let f: Float32 = -1.5
+let magnitudes: List[Float] = [Float.abs(f)]
+print(magnitudes)
+generic T:
+    func identity(x: T) -> T:
+        return x
+print(identity[Int](Int.min(a,b)))
+print(identity[Float](Float.abs(f)))
+let map: Map[String, Int] = {"x": Int.max(a,b)}
+let value = map.get("x")
+if value != null:
+    print(value + 1)

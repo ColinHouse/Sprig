@@ -238,5 +238,9 @@
   {
     "name": "widen_membership",
     "output": "true\ntrue\n2\ntrue\ntrue\ntrue\n"
+  },
+  {
+    "name": "builtin_result_width",
+    "output": "[3, 7]\n[1.5]\n3\n1.5\n8\n"
   }
 ]

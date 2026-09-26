@@ -1515,6 +1515,14 @@ public final class JavaGenerator {
         }
         String a0 = args.isEmpty() ? null : emitExpr(args.get(0));
         String a1 = args.size() < 2 ? null : emitExpr(args.get(1));
+        // Sprig builtins have fixed result widths. Do not let Java choose an
+        // int/float overload from narrower, safely assignable actual arguments.
+        if (id.equals("Int.min") || id.equals("Int.max")) {
+            a0 = convertedExpression(args.get(0), NativeType.INT);
+            a1 = convertedExpression(args.get(1), NativeType.INT);
+        } else if (id.equals("Float.abs")) {
+            a0 = convertedExpression(args.get(0), NativeType.FLOAT);
+        }
         Type receiver = access.receiver.type == null ? null : access.receiver.type.nonNull();
         if (receiver instanceof ListType list) {
             if (Set.of("List.contains", "List.indexOf", "MutableList.append",
