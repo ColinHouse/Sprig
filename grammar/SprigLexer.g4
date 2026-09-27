@@ -73,8 +73,8 @@ INT: DIGIT+;
 STRING: '"' ('\\' ["\\nrt] | ~["\\\r\n])* '"';
 IDENT: [a-zA-Z_] [a-zA-Z_0-9]*;
 NEWLINE: '\r\n' | '\n' | '\r';
-COMMENT: '#' ~[\r\n]* -> skip;
-SPACE: [ ]+ -> skip;
+COMMENT: '#' ~[\r\n]* -> channel(HIDDEN);
+SPACE: [ ]+ -> channel(HIDDEN);
 TAB: '\t'; // LayoutTokenSource rejects tabs, including inline tabs.
 ERROR_CHAR: .; // LayoutTokenSource rejects unknown characters; never silently skip.
 fragment EXP: [eE] [+-]? DIGIT+;

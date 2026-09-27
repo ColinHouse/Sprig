@@ -156,7 +156,7 @@ installed separately; this extension is not yet on Marketplace.
 ## Boundaries and source of truth
 
 Sprig is an Alpha project, not a production migration promise. Publishing,
-registry, LSP, `sprig fmt`, interfaces/traits, generic inference, arrays and
+registry, LSP, interfaces/traits, generic inference, arrays and
 stage-1 self-hosting remain future work. JVM generics and annotations have
 interop limits. Consult the checkout's `capabilities --json` and
 [known limitations](docs/KNOWN_LIMITATIONS.md).

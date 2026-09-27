@@ -7,6 +7,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
 |---|---|---|---|---|
+| Canonical `sprig fmt` | trivia-preserving lexer | parse structure invariant | atomic file replacement, check/JSON modes | formatter fixtures + valid corpus |
 | Functions, typed parameters/returns, recursion | yes | yes | Java static methods | runtime 01/02, visitor |
 | Indentation, blocks, `if`/`elif`/`else`, `while`, `for`, `break`/`continue` | yes | yes | Java control flow | runtime 03/13 |
 | `let`/`var`, local inference, assignment rules | yes | yes (`SPR-NAME-LET-ASSIGN`) | locals/static fields | runtime 16 |

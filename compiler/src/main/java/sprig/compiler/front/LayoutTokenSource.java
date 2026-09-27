@@ -38,7 +38,7 @@ public final class LayoutTokenSource implements TokenSource {
         List<Token> raw = new ArrayList<>();
         while (true) {
             Token t = lexer.nextToken();
-            raw.add(t);
+            if (t.getChannel() == Token.DEFAULT_CHANNEL || t.getType() == Token.EOF) raw.add(t);
             if (t.getType() == Token.EOF) {
                 break;
             }

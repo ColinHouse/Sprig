@@ -44,5 +44,8 @@
   ],
   "feature.multipleGenericParameters": [
     "tests/runtime/19_generics.spr"
+  ],
+  "feature.formatter": [
+    "tests/formatter/check_formatter.py"
   ]
 }

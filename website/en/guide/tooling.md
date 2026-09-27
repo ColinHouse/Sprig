@@ -92,7 +92,7 @@ the child status in JSON `data.programExitCode`.
 The following are **proposed, not implemented**:
 
 - an LSP / IDE language server,
-- `sprig fmt`, `sprig test`,
+- `sprig test`,
 - publishing or a module registry,
 - incremental checking.
 
@@ -115,3 +115,9 @@ behavior, and [JVM interop](/en/reference/JVM_INTEROP) for `api` boundaries.
 checking and writes Java without javac. JSON returns `javaSources`, `mainClass`
 and `javacInvoked=false`. Use explicit `import "@std/files.spr" as files` for
 the SDK bundled standard package. Windows remains experimental.
+
+## Canonical formatting
+
+Use `sprig fmt file.spr` or `sprig fmt --check . --json`. Formatting is
+comment-preserving, deterministic and configless, with no aggressive wrapping.
+See [formatter contract](/en/reference/FORMATTER). Other commands never rewrite source.

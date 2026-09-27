@@ -86,7 +86,7 @@ version
 以下能力都是**提案，尚未实现**：
 
 - LSP / IDE 语言服务器、
-- `sprig fmt`、`sprig test`、
+- `sprig test`、
 - 发布或模块仓库、
 - 增量检查。
 
@@ -108,3 +108,9 @@ version
 Java，不调用 javac。JSON 包含 `javaSources`、`mainClass` 和
 `javacInvoked=false`。通过显式 `import "@std/files.spr" as files` 使用 SDK
 内置标准包。Windows 仍为实验性预览。
+
+## Canonical formatting
+
+Use `sprig fmt file.spr` or `sprig fmt --check . --json`. Formatting is
+comment-preserving, deterministic and configless, with no aggressive wrapping.
+See [formatter contract](/en/reference/FORMATTER). Other commands never rewrite source.
