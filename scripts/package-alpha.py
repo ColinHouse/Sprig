@@ -60,8 +60,10 @@ def main():
                 shutil.copytree(ROOT / tree, package / tree,
                                 ignore=shutil.ignore_patterns('sprig.lock', '*.sqlite', '*.sqlite-*',
                                                              '__pycache__', 'sprig-build'))
-        (package / 'tests/visitor').mkdir(parents=True)
-        shutil.copy2(ROOT / 'tests/visitor/ast_visitor.spr', package / 'tests/visitor')
+        for source in ('tests/visitor/ast_visitor.spr', 'tests/runtime/20_string_codepoints.spr'):
+            destination = package / Path(source).parent
+            destination.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / source, destination)
         docs = ['INSTALL', 'QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']
         (package / 'docs').mkdir()
         for doc in docs:
