@@ -1,0 +1,33 @@
+# URI and JSON request policy used by the public Request wrapper.
+import "@std/json.spr" as jsonlib
+import "@std/text.spr" as strings
+import sprig.runtime.web.HostCodec as HostCodec
+import sprig.runtime.web.BadRequest as BadRequest
+import java.lang.IllegalStateException as ResponseFailure
+
+func required(value: String?) -> String:
+    if value != null:
+        return value
+    throw ResponseFailure("HTTP host returned null")
+
+func decode(value: String, plus: Bool) -> String:
+    return required(HostCodec.decode(value, plus))
+
+func query(raw_query: String?, name: String) -> String?:
+    try:
+        let raw = required(raw_query)
+        for part in strings.split(raw, "&"):
+            let pair = strings.split(part, "=")
+            if decode(pair.get(0), true) == name:
+                if pair.size() == 1:
+                    return ""
+                return decode(part.substring(pair.get(0).length() + 1, part.length()), true)
+        return null
+    catch problem: Error:
+        throw BadRequest("Malformed query")
+
+func parse_json(body: String) -> jsonlib.Value:
+    try:
+        return jsonlib.parse(body)
+    catch problem: Error:
+        throw BadRequest("Malformed JSON")

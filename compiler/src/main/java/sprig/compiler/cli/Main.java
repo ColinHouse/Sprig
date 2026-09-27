@@ -98,6 +98,7 @@ public final class Main {
             case "capabilities" -> capabilities(args);
             case "api" -> api(args);
             case "doctor" -> doctor(args);
+            case "upgrade" -> ManagedSdkUpgrade.run(args);
             default -> {
                 System.err.println("sprig: unknown command '" + args[0] + "'");
                 usage(System.err);
@@ -123,6 +124,7 @@ public final class Main {
         out.println("  resolve [--offline] [--json]               resolve dependencies and write sprig.lock");
         out.println("  project [--json]                            project discovery and manifest metadata");
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
+        out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");
         out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
         out.println("  version");
     }

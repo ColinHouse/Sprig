@@ -43,6 +43,9 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
 | Match on statically inferred variant case | yes | singleton exhaustiveness; impossible other branches rejected | concrete case `instanceof` dispatch | correctness regressions |
 | JSON CLI results | — | includes command/status and structured diagnostics | run output carried as `programOutput` | correctness regressions |
+| Managed Linux/macOS SDK install and upgrade | release ZIP + checksum workflow | managed-install metadata and layout validation | staged installation and atomic `current` pointer switch; older versions retained | installer, upgrade and installed-SDK dogfood suites |
+| SQLite migrations (`@sqlite/migrations.spr`) | Sprig package module | validated `NNN_description.sql` names, sorted ledger and idempotent apply | trusted multi-statement SQL and ledger row share a SQLite batch transaction | migration apply/restart/failure-retry suite |
+| CLI parsing (`@cli/cli.spr`) | Sprig package module | typed option specs, duplicate/unknown/missing checks | deterministic usage, flags/values/aliases/positionals | CLI library and installed `json-select` dogfood |
 
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`

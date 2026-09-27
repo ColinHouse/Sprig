@@ -50,6 +50,12 @@ by the Sprig v0.7 design kit.
   OS locks have no timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after
   validation is outside the cooperative cache model.
+- The managed SDK installer/upgrader is supported only on Linux/macOS and
+  targets public GitHub releases. Published SHA-256 assets detect archive
+  mismatch but do not provide signed provenance. Older SDKs are retained.
+  SQLite migrations record filenames without content digests; changing an
+  applied migration is unsupported by convention, not automatically detected.
+  Migration SQL is trusted project code.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
 - Sprig targets v0.3.0-alpha.1, an experimental Alpha under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.

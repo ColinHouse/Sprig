@@ -10,6 +10,7 @@ const website = resolve(here, '..')
 const repo = resolve(website, '..')
 
 const pages = [
+  ['docs/INSTALL.md', 'generated/en/reference/INSTALL.md'],
   ['docs/NUMERIC_SEMANTICS.md', 'generated/en/reference/NUMERIC_SEMANTICS.md'],
   ['docs/NUMERIC_DESIGN_DECISIONS.md', 'generated/en/reference/NUMERIC_DESIGN_DECISIONS.md'],
   ['docs/DIAGNOSTIC_CODES.md', 'generated/en/reference/DIAGNOSTIC_CODES.md'],

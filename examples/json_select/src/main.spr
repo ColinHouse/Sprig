@@ -1,0 +1,34 @@
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import "@cli/cli.spr" as cli
+import "./command.spr" as command
+import "./transform.spr" as transform
+
+let specs = command.options()
+try:
+    let arguments = cli.parse(process.arguments(), specs)
+    if arguments.flag("help"):
+        print(cli.usage("json-select", "Select one top-level member from a JSON object.", specs))
+    else:
+        let input = arguments.value("input")
+        if input == null:
+            throw Error("required option --input is missing")
+        let key = arguments.value("key")
+        if key == null:
+            throw Error("required option --key is missing")
+        let document = json.parse(files.read_utf8(input))
+        let selected = transform.select_member(document, key)
+        let verbose = arguments.flag("verbose")
+        if verbose:
+            print("Selected member: " + key)
+        let output = json.stringify(selected) + "\n"
+        let destination = arguments.value("output")
+        if destination != null:
+            files.write_utf8(destination, output)
+        else:
+            print(json.stringify(selected))
+catch problem: Error:
+    print("json-select: " + problem.toString())
+    print(cli.usage("json-select", "Select one top-level member from a JSON object.", specs))
+    throw problem

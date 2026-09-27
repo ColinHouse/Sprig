@@ -12,6 +12,7 @@ bin/sprig help match --json
 bin/sprig help generics --json
 bin/sprig help projects --json
 bin/sprig help dependencies --json
+bin/sprig help upgrade --json
 bin/sprig api java.time.LocalDate --json
 bin/sprig check program.spr --json
 bin/sprig explain SPR-CODE --json
@@ -38,6 +39,14 @@ call. `usableFromSprig` means the compiler can bind and emit the erased JVM
 signature; it does not promise generic element safety. `interopLevel` is
 `direct`, `erased-generic`, or `unsupported`. Use `--member NAME` to limit the
 metadata result while preserving overloads. `api` does not initialize classes.
+
+On Linux/macOS, install a managed SDK with `docs/INSTALL.md`; the installer
+verifies the release checksum and `sprig upgrade --check` inspects the current
+installation. Windows remains experimental. Useful library dogfood projects
+include `examples/ledger`, `examples/sqlite_migrations` and
+`examples/json_select`; the package READMEs describe their APIs. SQLite
+migrations are trusted SQL files named `NNN_description.sql`; keep applied
+migration files unchanged.
 
 `check/build/run --json` return one JSON object on stdout with
 `schemaVersion`, `toolVersion`, `command`, `exitCode`, `environment.classpath`,

@@ -62,7 +62,7 @@ def main():
                                                              '__pycache__', 'sprig-build'))
         (package / 'tests/visitor').mkdir(parents=True)
         shutil.copy2(ROOT / 'tests/visitor/ast_visitor.spr', package / 'tests/visitor')
-        docs = ['QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']
+        docs = ['INSTALL', 'QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']
         (package / 'docs').mkdir()
         for doc in docs:
             file = ROOT / 'docs' / (doc + '.md')
@@ -87,10 +87,13 @@ Sprig is Apache-2.0; dependency licenses are in THIRD_PARTY_NOTICES.md and legal
 ''', encoding='utf-8')
         (package / 'INSTALL.md').write_text('''# Install and run
 
-Requires JDK 17 or newer (`java` and `javac`) on PATH. No Maven CLI or Bash
-is required by the Windows experimental preview. Supported: Linux/macOS.
-Windows preview is not a release gate. Extract the ZIP and add its bin directory to PATH.
-On Windows invoke `bin\\sprig.cmd`; on Linux/macOS invoke `bin/sprig`.
+The supported managed installer for Linux/macOS is documented in
+`docs/INSTALL.md`. It verifies the release checksum and keeps versioned SDKs
+under `~/.sprig`. Requires JDK 17 or newer (`java` and `javac`) on PATH.
+Windows is an experimental preview, not a release gate.
+
+This archive can also be extracted manually. Add its `bin` directory to PATH;
+invoke `bin/sprig` on Linux/macOS or `bin\\sprig.cmd` on Windows.
 
 ```text
 sprig version

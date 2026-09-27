@@ -1,0 +1,42 @@
+# Pure OpenAPI 3.0 JSON-object assembly. Route/schema values remain ordinary Sprig values in app.spr.
+import "@std/json.spr" as jsonlib
+
+func schema_type(name: String) -> jsonlib.Value:
+    return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value=name))])
+
+func integer_schema() -> jsonlib.Value:
+    return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="integer")), jsonlib.Member(key="format", value=jsonlib.Value.Text(value="int64"))])
+
+func array_schema(items: jsonlib.Value) -> jsonlib.Value:
+    return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="array")), jsonlib.Member(key="items", value=items)])
+
+func object_schema(properties: jsonlib.Value, required: List[String]) -> jsonlib.Value:
+    let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="type", value=jsonlib.Value.Text(value="object")), jsonlib.Member(key="properties", value=properties)]
+    if required.size() > 0:
+        let fields: MutableList[jsonlib.Value] = []
+        for name in required:
+            fields.append(jsonlib.Value.Text(value=name))
+        members.append(jsonlib.Member(key="required", value=jsonlib.Value.Array(values=fields.toList())))
+    return jsonlib.Value.Object(members=members.toList())
+
+func media(schema: jsonlib.Value) -> jsonlib.Value:
+    return jsonlib.Value.Object(members=[jsonlib.Member(key="application/json", value=jsonlib.Value.Object(members=[jsonlib.Member(key="schema", value=schema)]))])
+
+func request_body(schema: jsonlib.Value) -> jsonlib.Value:
+    return jsonlib.Value.Object(members=[jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=true)), jsonlib.Member(key="content", value=media(schema))])
+
+func response(description: String, schema: jsonlib.Value?) -> jsonlib.Value:
+    let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="description", value=jsonlib.Value.Text(value=description))]
+    if schema != null:
+        members.append(jsonlib.Member(key="content", value=media(schema)))
+    return jsonlib.Value.Object(members=members.toList())
+
+func operation(summary: String, parameters: List[jsonlib.Value], request: jsonlib.Value?, status: String, result: jsonlib.Value) -> jsonlib.Value:
+    let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="summary", value=jsonlib.Value.Text(value=summary)), jsonlib.Member(key="parameters", value=jsonlib.Value.Array(values=parameters))]
+    if request != null:
+        members.append(jsonlib.Member(key="requestBody", value=request))
+    members.append(jsonlib.Member(key="responses", value=jsonlib.Value.Object(members=[jsonlib.Member(key=status, value=result)])))
+    return jsonlib.Value.Object(members=members.toList())
+
+func document(title: String, version: String, paths: jsonlib.Value) -> jsonlib.Value:
+    return jsonlib.Value.Object(members=[jsonlib.Member(key="openapi", value=jsonlib.Value.Text(value="3.0.3")), jsonlib.Member(key="info", value=jsonlib.Value.Object(members=[jsonlib.Member(key="title", value=jsonlib.Value.Text(value=title)), jsonlib.Member(key="version", value=jsonlib.Value.Text(value=version))])), jsonlib.Member(key="paths", value=paths)])

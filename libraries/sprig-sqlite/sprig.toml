@@ -3,7 +3,7 @@ name = "sprig-sqlite"
 version = "0.1.0"
 language = "0.8"
 source = "src"
-exports = ["sqlite.spr"]
+exports = ["sqlite.spr", "migrations.spr"]
 
 [[jvm]]
 group = "org.xerial"
