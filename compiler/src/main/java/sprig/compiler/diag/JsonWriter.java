@@ -83,6 +83,13 @@ public final class JsonWriter {
         if (d.hint != null) {
             sb.append(",\n").append(indent).append("  \"hint\": \"").append(escape(d.hint)).append("\"");
         }
+        if (d.relatedHelp != null) {
+            sb.append(",\n").append(indent).append("  \"relatedHelp\": \"").append(escape(d.relatedHelp)).append("\"");
+        }
+        if (d.repair != null) {
+            sb.append(",\n").append(indent).append("  \"repair\": ")
+              .append(sprig.compiler.tooling.ToolJson.encode(d.repair));
+        }
         if (d.data != null) {
             sb.append(",\n").append(indent).append("  \"data\": ")
               .append(sprig.compiler.tooling.ToolJson.encode(d.data));

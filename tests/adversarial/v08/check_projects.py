@@ -28,8 +28,12 @@ cases={
 'bad-array':'exports=[,"a",,"b"]\n[project]\nname="a"\n',
 }
 
-def invoke(root, command, *args):
+def invoke(root, command, *args, maven_repository=None):
+    env = dict(os.environ)
+    if maven_repository is not None:
+        env['SPRIG_MAVEN_REPOSITORY'] = maven_repository.as_uri()
     p = subprocess.run([str(CLI), command, *map(str, args), '--json'], cwd=root,
+                       env=env,
                        text=True, capture_output=True, timeout=30)
     assert not p.stderr, p.stderr
     data = json.loads(p.stdout)
@@ -42,6 +46,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='sprig-manifest-') as tmp:
         root = Path(tmp)
         (root/'src').mkdir()
+        empty_maven = root/'empty-maven-repository'
+        empty_maven.mkdir()
         source = root/'src/main.spr'
         source.write_text('print("hello")\n')
         unusual = root/'app\nprint("injected")\n#'
@@ -95,7 +101,7 @@ def main():
                     failures.append(kind+'-'+mode)
                     print('FAIL', kind, mode, error)
             try:
-                status, data = invoke(root, 'resolve')
+                status, data = invoke(root, 'resolve', maven_repository=empty_maven)
                 assert status == 1 and expected in [d['code'] for d in data['diagnostics']], data
                 print('pass', kind, 'resolve reports', expected)
             except AssertionError as error:

@@ -3,22 +3,20 @@
 Sprig 是面向 CLI 工具、自动化和可靠应用代码的实验性 JVM 语言。
 安装 **JDK 17+**，确保 `java` 和 `javac` 都在 `PATH`。SDK 不包含 JDK。
 
-## 下载与校验
+## 安装与升级
 
-公开 SDK 为 [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1)。
-从发行页下载 ZIP 与同名 `.sha256`。Linux/macOS：
+Linux/macOS 可使用托管安装器。它会下载官方 SDK ZIP 和 SHA-256 文件，校验后安装到版本目录，并将 `sprig` 放到 `~/.local/bin`：
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.3.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.3.0-alpha.1-jdk.zip
-cd sprig-v0.3.0-alpha.1-jdk
+curl -fsSL https://raw.githubusercontent.com/ColinHouse/Sprig/main/scripts/install-sprig.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+sprig upgrade --check
+sprig upgrade
 ```
 
-Linux 也可用 `sha256sum -c`；校验不符时停止。已发布版本为
-v0.3.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。
-v0.3 SDK 支持本地/Git/Maven 依赖及显式 @std 内置标准包导入。
+如需手工安装，可从[发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/INSTALL)。
+
+已发布版本为 v0.3.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。v0.3 SDK 支持本地/Git/Maven 依赖及显式 @std 内置标准包导入。
 
 ## 初始化、解析、运行
 

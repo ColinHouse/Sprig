@@ -31,6 +31,10 @@
     "tests/runtime/10_lambdas.spr",
     "tests/runtime/18_lambda_zero_arg.spr"
   ],
+  "stringSemantics": [
+    "tests/runtime/20_string_codepoints.spr",
+    "tests/runtime/check_strings.py"
+  ],
   "feature.genericConstraints": [
     "tests/visitor/generic_stack.spr",
     "tests/runtime/19_generics.spr"

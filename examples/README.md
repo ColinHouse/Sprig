@@ -29,6 +29,8 @@ Larger programs written in Sprig live in `../tests/visitor/`:
 - [sqlite](sqlite/README.md): pinned Maven JDBC driver and persisted prepared SQL.
 - [ledger](ledger/README.md): reduced accounts/categories/transactions HTTP backend,
   integer minor units, monthly totals and restart persistence.
+- [sqlite_migrations](sqlite_migrations/README.md): ordered, idempotent SQLite migrations with transactional rollback and retry.
+- [json_select](json_select/README.md): a multi-file JSON CLI using the Sprig option-parsing library.
 
 Run `sprig resolve` from each project before check/run. The web and SQLite
 packages live in `../libraries/`; application READMEs give exact commands.

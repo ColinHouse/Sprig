@@ -1,0 +1,44 @@
+# Sprig has no Char type: a textual element is a non-null String and all
+# position operations use Unicode code points, not UTF-16 code units.
+
+let ascii = "abc"
+print(ascii.length())
+assert(ascii[0] == "a" and ascii[2] == "c", "ascii indexing")
+
+let bmp = "東你"
+print(bmp.length())
+assert(bmp[0] == "東" and bmp.charAt(1) == "你", "bmp elements")
+
+let emoji = "😀"
+print(emoji.length())
+assert(emoji[0] == "😀" and emoji.charAt(0) == "😀", "supplementary element")
+assert(emoji.codeAt(0) == 128512, "supplementary code point")
+assert(String.fromCode(128512) == "😀", "fromCode round trip")
+
+let text = "A😀東"
+print(text.length())
+print(text[1])
+print(text.charAt(1))
+print(text.codeAt(1))
+print(text.substring(1, 2))
+print(text.indexOf("東"))
+for c in text:
+    print(c)
+
+assert(text[0] == "A" and text[2] == "東", "first and last index")
+assert(text.substring(1) == "😀東", "substring to end")
+assert(text.indexOf("😀") == 1, "index counts code points")
+assert(text.indexOf("missing") == -1, "not found stays -1")
+assert("".length() == 0, "empty length")
+assert("".substring(0) == "", "empty substring")
+assert("".indexOf("x") == -1, "empty not found")
+
+let combined = "e" + String.fromCode(769)
+print(combined.length())
+assert(combined[0] == "e" and combined[1] == String.fromCode(769), "combining sequence is two code points")
+
+let empty_parts = "".split("")
+print(empty_parts.size())
+let parts = "A😀".split("")
+print(parts.size())
+print(parts[1])

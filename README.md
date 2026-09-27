@@ -48,8 +48,9 @@ checks. These are implemented contracts; see
 
 Install **JDK 17+** with `java` and `javac` on `PATH`.
 The current published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1).
-Download its ZIP and `.sha256`, verify the checksum, and extract. The SDK
-includes compiler/runtime libraries, **not a JDK**. Supported release platforms:
+On Linux/macOS, install and upgrade it with the [managed installer](docs/INSTALL.md),
+which verifies the release checksum. You can also download its ZIP and `.sha256`,
+verify the checksum, and extract manually. The SDK includes compiler/runtime libraries, **not a JDK**. Supported release platforms:
 **Linux/macOS**. **Windows is experimental**, with a separate non-blocking
 preview workflow. Source checkouts report development metadata; clean tagged
 artifacts report prerelease. See the [validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md) for actual
@@ -122,6 +123,9 @@ JSON and explicit OpenAPI schemas are Sprig; small JVM adapters own HTTP and JDB
 See the [web API](libraries/sprig-web/README.md),
 [SQLite API](libraries/sprig-sqlite/README.md) and
 [engineering evidence](docs/milestones/WEB_SQLITE_ENGINEERING_REPORT.md).
+The current checkout also has transactional SQLite migration support and a CLI
+option parsing library; see [migration example](examples/sqlite_migrations/README.md),
+[JSON CLI example](examples/json_select/README.md) and their library READMEs.
 These additions are development work, not a newly published release.
 
 ## Contribute with your coding agent

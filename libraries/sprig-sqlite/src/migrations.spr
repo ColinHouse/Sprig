@@ -1,0 +1,54 @@
+# Migration policy stays in Sprig; JDBC only executes trusted SQL atomically.
+import "./sqlite.spr" as sqlite
+import "@std/files.spr" as files
+import java.io.IOException as IOException
+
+class Migrations:
+    let database: sqlite.Database
+    let directory: String
+
+    func apply() -> Int throws Error, IOException:
+        database.execute("CREATE TABLE IF NOT EXISTS sprig_schema_migrations (name TEXT PRIMARY KEY NOT NULL)", [])
+        let applied_rows = database.query("SELECT name FROM sprig_schema_migrations ORDER BY name", [])
+        let applied: MutableMap[String, Bool] = {}
+        var row: Int = 0
+        while row < applied_rows.size():
+            applied.set(applied_rows.text(row, "name"), true)
+            row += 1
+
+        let names = files.list(directory)
+        var completed: Int = 0
+        var pending_seen: Bool = false
+        let identifiers: MutableMap[String, Bool] = {}
+        for path in names:
+            let name = files.file_name(path)
+            if not valid_migration_name(name):
+                throw Error("invalid migration filename: " + name + " (expected NNN_name.sql)")
+            let identifier = name.substring(0, 3)
+            if identifiers.containsKey(identifier):
+                throw Error("duplicate migration sequence: " + identifier)
+            identifiers.set(identifier, true)
+            if applied.containsKey(name):
+                if pending_seen:
+                    throw Error("migration order changed: an applied migration follows a pending migration")
+            else:
+                pending_seen = true
+                let sql = files.read_utf8(path)
+                database.batch_script(sql, [sqlite.Statement(sql="INSERT INTO sprig_schema_migrations(name) VALUES (?)", parameters=[sqlite.Parameter.Text(value=name)])])
+                completed += 1
+        return completed
+
+func valid_migration_name(name: String) -> Bool:
+    if name.length() < 9:
+        return false
+    if name.charAt(0) < "0" or name.charAt(0) > "9" or name.charAt(1) < "0" or name.charAt(1) > "9" or name.charAt(2) < "0" or name.charAt(2) > "9":
+        return false
+    if name.charAt(3) != "_" or not name.endsWith(".sql"):
+        return false
+    var index: Int = 4
+    while index < name.length() - 4:
+        let character = name.charAt(index)
+        if not ((character >= "a" and character <= "z") or (character >= "A" and character <= "Z") or (character >= "0" and character <= "9") or character == "_" or character == "-"):
+            return false
+        index += 1
+    return true

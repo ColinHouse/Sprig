@@ -1,0 +1,10 @@
+import "@std/json.spr" as json
+
+func select_member(document: json.Value, name: String) -> json.Value throws Error:
+    match json.find_member(document, name):
+        case json.Lookup.Found as found:
+            return found.value
+        case json.Lookup.Missing:
+            throw Error("JSON object has no member: " + name)
+        case json.Lookup.NotObject:
+            throw Error("JSON input must be an object")

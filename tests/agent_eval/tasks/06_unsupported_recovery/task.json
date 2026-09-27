@@ -1,0 +1,8 @@
+{
+  "id": "06_unsupported_recovery",
+  "title": "Unsupported feature recovery",
+  "objective": "Make both animals speak through one shared helper. Sprig has no inheritance; use composition or ordinary functions instead of asking for new syntax.",
+  "acceptance": "sprig check succeeds and stdout is exactly 'dog says woof\\ncat says meow'.",
+  "forbidden": ["Java imports", "adding unsupported syntax", "renaming the classes"],
+  "expectedInteractions": ["sprig capabilities --json", "sprig help classes --json", "sprig check --json"]
+}

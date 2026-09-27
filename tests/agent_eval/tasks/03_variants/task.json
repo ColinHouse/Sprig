@@ -1,0 +1,8 @@
+{
+  "id": "03_variants",
+  "title": "Exhaustive variant handling",
+  "objective": "Complete the match so area() handles every Shape case.",
+  "acceptance": "sprig check succeeds and stdout is exactly '12\\n9'.",
+  "forbidden": ["wildcard or default match branch", "changing the Shape declaration", "Java imports"],
+  "expectedInteractions": ["sprig check --json", "sprig explain SPR-MATCH-NONEXHAUSTIVE --json"]
+}

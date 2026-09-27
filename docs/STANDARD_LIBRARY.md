@@ -40,10 +40,15 @@ The host is unrestricted local IO under the invoking user's permissions.
 `process.arguments()` contains only arguments after `sprig run --`; the generated
 JVM main copies its argument array before module initialization. An unset
 environment value is `null`, distinct from an empty value. Time is wall-clock UTC,
-not a monotonic duration clock. Text indexes follow Sprig's UTF-16 String contract.
-`lines` accepts CRLF/LF and retains the final empty segment; `split` is literal,
-retains empty segments, and rejects an empty separator. `trim` removes ASCII
-space/tab/CR/LF, without claiming full Unicode whitespace handling.
+not a monotonic duration clock. Sprig has no `Char` type: a textual element is a
+non-null `String`, and `length`, indexing, `charAt`, `codeAt`, `substring`,
+`indexOf`, iteration and empty-separator `String.split` use Unicode code points,
+not UTF-16 code units and not grapheme clusters. For example `"A😀東".length()`
+is 3 and `"A😀東".indexOf("東")` is 2, while `"e" + String.fromCode(769)` has
+length 2. Java `char` interop remains a single UTF-16 code unit at the JVM
+boundary. `lines` accepts CRLF/LF and retains the final empty segment; `split` is
+literal, retains empty segments, and rejects an empty separator. `trim` removes
+ASCII space/tab/CR/LF, without claiming full Unicode whitespace handling.
 
 ## JSON is an ordinary recursive Sprig data model
 

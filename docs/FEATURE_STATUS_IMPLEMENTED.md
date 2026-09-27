@@ -16,6 +16,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | Missing/duplicate/wrong-type cases, enum binder rejection | — | yes (`SPR-MATCH-*`) | — | semantics 11 cases |
 | Nullability `T?`, null checks, narrowing | yes | yes (`SPR-TYPE-NULL/NULLABLE`) | boxed nullable locals | runtime 07 |
 | `List`/`MutableList`/`Map`/`MutableMap`, snapshots, indexing, `in` | yes | yes, distinct mutability | runtime wrappers | runtime 09/16 |
+| String positions: `length`, indexing, `charAt`, `codeAt`, `substring`, `indexOf`, iteration | yes | Unicode code-point indices; one-code-point `String` elements; no `Char` type | `sprig.runtime.StringOps` helpers and code-point iteration | runtime 20 + String semantics suite |
 | Immutable collection mutation rejected | — | yes (`SPR-COLLECTION-IMMUTABLE`) | — | semantics |
 | User generics: `generic K, V:` blocks (one or more parameters) for class/variant/function, explicitly applied as `Entry[String, Int]`, erased and boxed in generated Java | yes | yes (`SPR-TYPE-GENERIC-*`) | raw Java classes + compiler-controlled boxing/unboxing | runtime 19, visitor generic_stack, semantics 8 cases, syntax 08 |
 | Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |
@@ -43,6 +44,16 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
 | Match on statically inferred variant case | yes | singleton exhaustiveness; impossible other branches rejected | concrete case `instanceof` dispatch | correctness regressions |
 | JSON CLI results | — | includes command/status and structured diagnostics | run output carried as `programOutput` | correctness regressions |
+| Managed Linux/macOS SDK install and upgrade | release ZIP + checksum workflow | managed-install metadata and layout validation | staged installation and atomic `current` pointer switch; older versions retained | installer, upgrade and installed-SDK dogfood suites |
+| SQLite migrations (`@sqlite/migrations.spr`) | Sprig package module | validated `NNN_description.sql` names, sorted ledger and idempotent apply | trusted multi-statement SQL and ledger row share a SQLite batch transaction | migration apply/restart/failure-retry suite |
+| CLI parsing (`@cli/cli.spr`) | Sprig package module | typed option specs, duplicate/unknown/missing checks | deterministic usage, flags/values/aliases/positionals | CLI library and installed `json-select` dogfood |
+| Sprig module API (`sprig api module.spr\|@pkg/module.spr`) | resolved checked AST | declaration/field/method/throws/generic metadata; `--member Type.member` | compiler-owned JSON; never executes code | Sprig API suite |
+| Project API inventory (`sprig api .`) | project + lockfile validation | source modules plus each dependency's exported modules | no application execution; stale/unexported targets refused | Sprig API suite and installed SDK dogfood |
+| Structured diagnostic metadata | optional `relatedHelp` and `repair` fields | `machineApplicable` false unless semantics-preserving and unambiguous | stable fields unchanged | agent tooling suite |
+| Capability feature guidance | `featureGuidance` per unsupported feature | alternatives and help topic reflect current compiler only | additive to `features` booleans | agent tooling and Sprig API suites |
+| Operational `explain` | `whyMatters`, `confusedWith`, causes/fixes/examples, `repair`, `relatedHelp` | conservative, compact | same data in text and `--json` | agent tooling suite |
+| Sprig-written agent tools | `examples/agent_tools` (api-report, diag-summary, api-diff) | plain Sprig JSON/file/CLI policy | consume saved compiler JSON | agent tools suite |
+| Agent task pack | deterministic fixtures and runner under `tests/agent_eval` | acceptance is mechanical; no model run claimed | initial states fail, known solutions pass | task-pack gate |
 
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`

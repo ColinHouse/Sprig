@@ -10,6 +10,7 @@ public final class Diagnostics {
     private int errorCount;
 
     public void add(Diagnostic diagnostic) {
+        RepairHints.apply(diagnostic);
         items.add(diagnostic);
         if (diagnostic.isError()) {
             errorCount++;

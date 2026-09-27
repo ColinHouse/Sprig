@@ -1,10 +1,12 @@
 # Sprig owns HTTP application policy; Java owns socket/UTF-8/lifetime mechanics.
 import "@std/json.spr" as jsonlib
 import "@std/text.spr" as strings
+import "request_helpers.spr" as request_helpers
+import "routing_helpers.spr" as routing
+import "openapi_helpers.spr" as openapi_helpers
 import sprig.runtime.web.HostRequest as HostRequest
 import sprig.runtime.web.HostResponse as HostResponse
 import sprig.runtime.web.HostServer as HostServer
-import sprig.runtime.web.HostCodec as HostCodec
 import sprig.runtime.web.BadRequest as BadRequest
 import java.lang.IllegalStateException as ResponseFailure
 import java.lang.RuntimeException as RuntimeException
@@ -45,12 +47,10 @@ class Parameter:
     let value: String
 
 func required(value: String?) -> String:
-    if value != null:
-        return value
-    throw ResponseFailure("HTTP host returned null")
+    return request_helpers.required(value)
 
 func decode(value: String, plus: Bool) -> String:
-    return required(HostCodec.decode(value, plus))
+    return request_helpers.decode(value, plus)
 
 class Request:
     let method: String
@@ -67,27 +67,13 @@ class Request:
 
     # First occurrence wins; absent and empty are different values.
     func query(name: String) -> String?:
-        try:
-            let raw_query = required(raw.rawQuery())
-            for part in strings.split(raw_query, "&"):
-                let pair = strings.split(part, "=")
-                if decode(pair.get(0), true) == name:
-                    if pair.size() == 1:
-                        return ""
-                    # Preserve '=' within values, splitting only at the first one.
-                    return decode(part.substring(pair.get(0).length() + 1, part.length()), true)
-            return null
-        catch problem: Error:
-            throw BadRequest("Malformed query")
+        return request_helpers.query(raw.rawQuery(), name)
 
     func header(name: String) -> String?:
         return raw.header(name)
 
     func json() -> jsonlib.Value:
-        try:
-            return jsonlib.parse(body)
-        catch problem: Error:
-            throw BadRequest("Malformed JSON")
+        return request_helpers.parse_json(body)
 
 class Response:
     let status: Int
@@ -144,20 +130,10 @@ variant MatchResult:
     Matched(parameters: List[Parameter])
 
 func parameter_name(segment: String) -> String?:
-    if segment.length() > 2 and strings.starts_with(segment, "{") and strings.ends_with(segment, "}"):
-        return segment.substring(1, segment.length() - 1)
-    return null
+    return routing.parameter_name(segment)
 
 func template_shape(path: String) -> String throws Error:
-    var shape = ""
-    var separator = ""
-    for segment in strings.split(path, "/"):
-        if parameter_name(segment) != null:
-            shape += separator + "{}"
-        else:
-            shape += separator + segment
-        separator = "/"
-    return shape
+    return routing.template_shape(path)
 
 func match_path(pattern: String, raw_path: String) -> MatchResult throws Error:
     let expected = strings.split(pattern, "/")
@@ -182,30 +158,26 @@ func match_path(pattern: String, raw_path: String) -> MatchResult throws Error:
 func schema_json(schema: Schema) -> jsonlib.Value throws Error:
     match schema.kind:
         case SchemaType.STRING:
-            return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="string"))])
+            return openapi_helpers.schema_type("string")
         case SchemaType.INTEGER:
-            return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="integer")), jsonlib.Member(key="format", value=jsonlib.Value.Text(value="int64"))])
+            return openapi_helpers.integer_schema()
         case SchemaType.BOOLEAN:
-            return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="boolean"))])
+            return openapi_helpers.schema_type("boolean")
         case SchemaType.ARRAY:
             let items = schema.items
             if items != null:
-                return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="array")), jsonlib.Member(key="items", value=schema_json(items))])
+                return openapi_helpers.array_schema(schema_json(items))
             throw Error("array schema requires items")
         case SchemaType.OBJECT:
             let properties: MutableList[jsonlib.Member] = []
-            let required_fields: MutableList[jsonlib.Value] = []
+            let required_fields: MutableList[String] = []
             for field in schema.fields:
                 properties.append(jsonlib.Member(key=field.name, value=schema_json(field.schema)))
                 if field.required:
-                    required_fields.append(jsonlib.Value.Text(value=field.name))
-            let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="type", value=jsonlib.Value.Text(value="object")), jsonlib.Member(key="properties", value=jsonlib.Value.Object(members=properties.toList()))]
-            if required_fields.size() > 0:
-                members.append(jsonlib.Member(key="required", value=jsonlib.Value.Array(values=required_fields.toList())))
-            return jsonlib.Value.Object(members=members.toList())
+                    required_fields.append(field.name)
+            return openapi_helpers.object_schema(jsonlib.Value.Object(members=properties.toList()), required_fields.toList())
 
 func operation_json(route: Route) -> jsonlib.Value throws Error:
-    let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="summary", value=jsonlib.Value.Text(value=route.summary))]
     let parameters: MutableList[jsonlib.Value] = []
     for segment in strings.split(route.path, "/"):
         let name = parameter_name(segment)
@@ -213,16 +185,16 @@ func operation_json(route: Route) -> jsonlib.Value throws Error:
             parameters.append(jsonlib.Value.Object(members=[jsonlib.Member(key="name", value=jsonlib.Value.Text(value=name)), jsonlib.Member(key="in", value=jsonlib.Value.Text(value="path")), jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=true)), jsonlib.Member(key="schema", value=schema_json(Schema(kind=SchemaType.STRING)))]))
     for parameter in route.query_parameters:
         parameters.append(jsonlib.Value.Object(members=[jsonlib.Member(key="name", value=jsonlib.Value.Text(value=parameter.name)), jsonlib.Member(key="in", value=jsonlib.Value.Text(value="query")), jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=parameter.required)), jsonlib.Member(key="schema", value=schema_json(parameter.schema))]))
-    members.append(jsonlib.Member(key="parameters", value=jsonlib.Value.Array(values=parameters.toList())))
+    var request: jsonlib.Value? = null
     let request_schema = route.request_schema
     if request_schema != null:
-        members.append(jsonlib.Member(key="requestBody", value=jsonlib.Value.Object(members=[jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=true)), jsonlib.Member(key="content", value=jsonlib.Value.Object(members=[jsonlib.Member(key="application/json", value=jsonlib.Value.Object(members=[jsonlib.Member(key="schema", value=schema_json(request_schema))]))]))])))
-    let response: MutableList[jsonlib.Member] = [jsonlib.Member(key="description", value=jsonlib.Value.Text(value="Response"))]
+        request = openapi_helpers.request_body(schema_json(request_schema))
+    var response_schema_json: jsonlib.Value? = null
     let response_schema = route.response_schema
     if response_schema != null:
-        response.append(jsonlib.Member(key="content", value=jsonlib.Value.Object(members=[jsonlib.Member(key="application/json", value=jsonlib.Value.Object(members=[jsonlib.Member(key="schema", value=schema_json(response_schema))]))])))
-    members.append(jsonlib.Member(key="responses", value=jsonlib.Value.Object(members=[jsonlib.Member(key=route.response_status.toString(), value=jsonlib.Value.Object(members=response.toList()))])))
-    return jsonlib.Value.Object(members=members.toList())
+        response_schema_json = schema_json(response_schema)
+    let response = openapi_helpers.response("Response", response_schema_json)
+    return openapi_helpers.operation(route.summary, parameters.toList(), request, route.response_status.toString(), response)
 
 class App:
     let title: String
@@ -282,7 +254,7 @@ class App:
                     if candidate.path == route.path:
                         operations.append(jsonlib.Member(key=operation_name(candidate.method), value=operation_json(candidate)))
                 paths.append(jsonlib.Member(key=route.path, value=jsonlib.Value.Object(members=operations.toList())))
-        return jsonlib.Value.Object(members=[jsonlib.Member(key="openapi", value=jsonlib.Value.Text(value="3.0.3")), jsonlib.Member(key="info", value=jsonlib.Value.Object(members=[jsonlib.Member(key="title", value=jsonlib.Value.Text(value=title)), jsonlib.Member(key="version", value=jsonlib.Value.Text(value=version))])), jsonlib.Member(key="paths", value=jsonlib.Value.Object(members=paths.toList()))])
+        return openapi_helpers.document(title, version, jsonlib.Value.Object(members=paths.toList()))
 
     func respond(raw: HostRequest) -> Response throws Error:
         let method = required(raw.method())

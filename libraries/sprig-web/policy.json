@@ -1,0 +1,40 @@
+{
+  "name": "sprig-web",
+  "version": "0.1.0",
+  "status": "local development package",
+  "import": "@web/app.spr",
+  "resolvedSignatures": "sprig api @web/app.spr --json",
+  "behavior": {
+    "handler": "fn(Request) -> Response; synchronous; callable types have no throws clause",
+    "matching": "registration order wins; exact segments or one {name} per segment; encoded slashes stay inside a parameter; trailing slash is significant",
+    "query": "first value wins; null absent; empty distinct; plus-as-space",
+    "request": "read-only method, decoded path and UTF-8 body; path_param/query/header return String?",
+    "response": "Response(status, body, content_type, headers); status 200..599; transport owns framing",
+    "errors": {
+      "malformed_client_input": 400,
+      "missing_route": 404,
+      "handler_failure": 500
+    },
+    "cors": "explicit cors_origin adds allow-origin, GET/POST/DELETE/OPTIONS, Content-Type and Vary headers; OPTIONS 204; no credentials",
+    "openapi": "OpenAPI 3.0.3 at /openapi.json; explicit schema metadata only; no body validation",
+    "schema": "SchemaType STRING/INTEGER/BOOLEAN/OBJECT/ARRAY; ARRAY requires items; OBJECT uses fields; FieldSchema.required defaults true",
+    "host": {
+      "bind": "127.0.0.1",
+      "ephemeral_port": 0,
+      "execution": "serial synchronous"
+    },
+    "swagger": {
+      "assets": "swagger-ui-dist@5.17.14 CDN",
+      "network_required": true
+    },
+    "metadata_validation": [
+      "unique query parameter names per operation",
+      "unique object-schema field names",
+      "equivalent templated paths use identical parameter names across methods"
+    ]
+  },
+  "reserved_routes": [
+    "/openapi.json",
+    "/docs"
+  ]
+}

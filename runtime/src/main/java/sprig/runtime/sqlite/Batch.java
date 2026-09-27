@@ -6,11 +6,15 @@ import java.util.Objects;
 
 /** A batch snapshots each parameter list and executes atomically on one connection. */
 public final class Batch {
-    record Command(String sql, List<Object> parameters) {}
+    record Command(String sql, List<Object> parameters, boolean script) {}
     private final List<Command> commands = new ArrayList<>();
     public Batch() {}
     public void add(String sql, Parameters parameters) {
-        commands.add(new Command(Objects.requireNonNull(sql), parameters.snapshot()));
+        commands.add(new Command(Objects.requireNonNull(sql), parameters.snapshot(), false));
+    }
+    /** Add trusted migration SQL; it is still executed inside batch()'s transaction. */
+    public void addScript(String sql) {
+        commands.add(new Command(Objects.requireNonNull(sql), List.of(), true));
     }
     List<Command> snapshot() { return List.copyOf(commands); }
 }

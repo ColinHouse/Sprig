@@ -40,9 +40,9 @@ public final class Catalog {
     }
 
     public static List<String> topics() {
-        return List.of("language", "types", "functions", "classes", "variants", "match",
+        return List.of("language", "types", "strings", "functions", "classes", "variants", "match",
                 "nullability", "errors", "collections", "numerics", "modules", "jvm",
-                "generics", "projects", "dependencies", "agents");
+                "generics", "projects", "dependencies", "agents", "upgrade");
     }
 
     public static Map<String, Object> help(String topic) {
@@ -83,14 +83,63 @@ public final class Catalog {
         DATA.stringPropertyNames().stream().filter(k -> k.startsWith("feature.")).sorted()
                 .forEach(k -> features.put(k.substring(8), Boolean.parseBoolean(get(k))));
         result.put("features", features);
+        result.put("featureGuidance", featureGuidance());
         result.put("genericCapabilities", list("genericCapabilities"));
         result.put("lambdaMaxArity", Integer.parseInt(get("lambdaMaxArity")));
         result.put("matchBehavior", "statement; exhaustive; no wildcard");
+        Map<String, Object> strings = new LinkedHashMap<>();
+        strings.put("hasCharType", false);
+        strings.put("elementType", "String");
+        strings.put("positionUnit", get("stringPositionUnit"));
+        strings.put("graphemeClusters", false);
+        strings.put("javaCharInterop", get("stringJavaCharInterop"));
+        result.put("stringSemantics", strings);
         result.put("numericSemanticsProfile", get("numericProfile"));
         result.put("jvmInterop", get("jvmProfile"));
         result.put("classpath", get("classpathPolicy"));
         result.put("sourceModules", true);
         result.put("diagnosticSchemaVersion", 1);
         return result;
+    }
+
+    /**
+     * Alternatives for unsupported or limited capabilities. This reflects the
+     * current compiler only; it must never advertise unimplemented syntax.
+     */
+    private static Map<String, Object> featureGuidance() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        guidance(out, "inheritance", "classes", "composition", "narrow Java host adapter");
+        guidance(out, "interfaces", "classes", "composition", "narrow Java adapter with fn(A) -> R or Fn0..Fn3");
+        guidance(out, "arbitraryJavaSam", "jvm", "narrow Java adapter", "Sprig-owned fn(A) -> R and Fn0..Fn3");
+        guidance(out, "genericTypeInference", "generics", "write every explicit Type[Arg] argument");
+        guidance(out, "matchExpression", "match", "exhaustive match statement", "assign through ordinary control flow");
+        guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
+        guidance(out, "arrays", "collections", "List[T]", "MutableList[T]");
+        guidance(out, "varargs", "jvm", "List[T]", "explicit repeated calls");
+        guidance(out, "annotations", "language", "explicit typed metadata", "ordinary functions");
+        guidance(out, "decorators", "language", "ordinary functions and modules");
+        guidance(out, "macros", "language", "ordinary functions and modules");
+        guidance(out, "blockLambdas", "functions", "named function plus expression lambda fn(x: T) => named(x)");
+        guidance(out, "namedFunctionReferences", "functions", "expression lambda forwarding fn(x: T) => named(x)");
+        guidance(out, "reflectionDerivedSchemas", "jvm", "explicit typed schema and JSON construction");
+        guidance(out, "async", "jvm", "synchronous host adapter");
+        guidance(out, "comparableCapability", "generics", "Equatable value equality", "explicit comparison functions");
+        guidance(out, "genericVariance", "generics", "invariant generics", "explicit conversion helpers");
+        guidance(out, "operatorOverloading", "language", "named methods");
+        guidance(out, "pipeline", "language", "ordinary statements");
+        guidance(out, "stringInterpolation", "strings", "+ concatenation");
+        guidance(out, "charType", "strings", "one-code-point String elements via indexing and iteration");
+        guidance(out, "tuples", "language", "classes or variants with named fields");
+        guidance(out, "destructuring", "language", "explicit field access");
+        guidance(out, "centralSprigRegistry", "dependencies", "local path dependencies", "Git dependencies");
+        return out;
+    }
+
+    private static void guidance(Map<String, Object> out, String feature, String helpTopic, String... alternatives) {
+        Map<String, Object> entry = new LinkedHashMap<>();
+        entry.put("supported", false);
+        entry.put("alternatives", List.of(alternatives));
+        entry.put("helpTopic", helpTopic);
+        out.put(feature, entry);
     }
 }

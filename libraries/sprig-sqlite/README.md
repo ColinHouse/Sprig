@@ -82,3 +82,17 @@ See [SQLite example](../../examples/sqlite/README.md) and
 [ledger backend](../../examples/ledger/README.md). Verify with
 `python3 tests/sqlite/check_sqlite.py` (network only in explicit `sprig resolve`),
 or `--offline` after cache warm-up.
+
+## Experimental migrations
+
+Import `@sqlite/migrations.spr` and call
+`Migrations(database=database, directory="migrations").apply()`. Files must be
+named `NNN_description.sql`; they are applied in sorted filename order and
+recorded by name in `sprig_schema_migrations`. Keep applied files immutable.
+The three-digit sequence prefix must be unique; if an applied file sorts after
+a pending file, application stops rather than running migrations out of order.
+Each multi-statement SQL script and its ledger row execute in the same batch
+transaction. A failure rolls both back and can be retried after fixing the
+unapplied migration. The migration directory is trusted project code, and this
+version does not hash applied files to detect edits. See
+[`examples/sqlite_migrations`](../../examples/sqlite_migrations/README.md).

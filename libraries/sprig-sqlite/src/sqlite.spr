@@ -67,6 +67,14 @@ class Database:
             batch.add(statement.sql, bind(statement.parameters))
         return HostDatabase(path).batch(batch)
 
+    # Trusted migration SQL and its ledger entry share one batch transaction.
+    func batch_script(sql: String, statements: List[Statement]) -> Int throws Error:
+        let batch = HostBatch()
+        batch.addScript(sql)
+        for statement in statements:
+            batch.add(statement.sql, bind(statement.parameters))
+        return HostDatabase(path).batch(batch)
+
 func open(path: String) -> Database throws Error:
     HostDatabase(path).initialize()
     return Database(path=path)

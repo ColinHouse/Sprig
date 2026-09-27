@@ -171,6 +171,7 @@ export default defineConfig({
                 { text: 'Generics (v0.8)', link: '/en/guide/generics' },
                 { text: 'Projects (v0.8)', link: '/en/guide/projects' },
                 { text: 'JVM Interoperability', link: '/en/guide/jvm-interop' },
+                { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
                 { text: 'Tooling and JSON', link: '/en/guide/tooling' },
                 { text: 'VS Code Extension', link: '/en/guide/editor' }
@@ -188,6 +189,7 @@ export default defineConfig({
                 { text: 'Generics contract (v0.8)', link: '/en/reference/GENERICS' },
                 { text: 'Quick reference', link: '/en/reference/QUICK_REFERENCE' },
                 { text: 'Numerical semantics', link: '/en/reference/NUMERIC_SEMANTICS' },
+                { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
                 {
                   text: 'Numeric design decisions',
                   link: '/en/reference/NUMERIC_DESIGN_DECISIONS'

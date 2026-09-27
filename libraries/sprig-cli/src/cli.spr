@@ -1,0 +1,155 @@
+# Small deterministic CLI parser. It performs no shell tokenization.
+import "@std/text.spr" as strings
+enum OptionKind:
+    FLAG
+    VALUE
+
+class OptionSpec:
+    let name: String
+    let kind: OptionKind
+    let short_name: String? = null
+    let description: String = ""
+
+variant OptionValue:
+    Flag(value: Bool)
+    Text(value: String)
+
+class Parsed:
+    let options: Map[String, OptionValue]
+    let positionals: List[String]
+
+    func has(name: String) -> Bool:
+        return options.containsKey(name)
+
+    func flag(name: String) -> Bool throws Error:
+        let found = options.get(name)
+        if found != null:
+            match found:
+                case OptionValue.Flag as value:
+                    return value.value
+                case OptionValue.Text:
+                    throw Error("option --" + name + " requires a value")
+        return false
+
+    func value(name: String) -> String? throws Error:
+        let found = options.get(name)
+        if found != null:
+            match found:
+                case OptionValue.Text as value:
+                    return value.value
+                case OptionValue.Flag:
+                    throw Error("option --" + name + " is a flag")
+        return null
+
+func long_option(specs: List[OptionSpec], name: String) -> OptionSpec?:
+    for spec in specs:
+        if spec.name == name:
+            return spec
+    return null
+
+func short_option(specs: List[OptionSpec], name: String) -> OptionSpec?:
+    for spec in specs:
+        if spec.short_name == name:
+            return spec
+    return null
+
+func valid_long_name(name: String) -> Bool:
+    if name.length() == 0:
+        return false
+    var index = 0
+    while index < name.length():
+        let ch = name.charAt(index)
+        if "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".indexOf(ch) < 0:
+            return false
+        index += 1
+    return true
+
+func validate(specs: List[OptionSpec]) -> Unit throws Error:
+    let long_names: MutableMap[String, Bool] = {}
+    let short_names: MutableMap[String, Bool] = {}
+    for spec in specs:
+        if not valid_long_name(spec.name):
+            throw Error("invalid option name: " + spec.name)
+        if long_names.containsKey(spec.name):
+            throw Error("duplicate option specification: --" + spec.name)
+        long_names.set(spec.name, true)
+        let short = spec.short_name
+        if short != null:
+            if short.length() != 1 or short == "-" or not valid_long_name(short):
+                throw Error("short option for --" + spec.name + " must be one ASCII letter or digit")
+            if short_names.containsKey(short):
+                throw Error("duplicate short option specification: -" + short)
+            short_names.set(short, true)
+
+func put(values: MutableMap[String, OptionValue], spec: OptionSpec, value: OptionValue) -> Unit throws Error:
+    if values.containsKey(spec.name):
+        throw Error("duplicate option: --" + spec.name)
+    values.set(spec.name, value)
+
+func parse(arguments: List[String], specs: List[OptionSpec]) -> Parsed throws Error:
+    validate(specs)
+    let values: MutableMap[String, OptionValue] = {}
+    let positionals: MutableList[String] = []
+    var positional_only = false
+    var index = 0
+    while index < arguments.size():
+        let argument = arguments.get(index)
+        if positional_only or argument == "-" or not strings.starts_with(argument, "-"):
+            positionals.append(argument)
+            index += 1
+        elif argument == "--":
+            positional_only = true
+            index += 1
+        elif strings.starts_with(argument, "--"):
+            let body = argument.substring(2, argument.length())
+            let equals = body.indexOf("=")
+            var name = body
+            if equals >= 0:
+                name = body.substring(0, equals)
+            let spec = long_option(specs, name)
+            if spec == null:
+                throw Error("unknown option: --" + name)
+            if spec.kind == OptionKind.FLAG:
+                if equals >= 0:
+                    throw Error("flag --" + name + " does not take a value")
+                put(values, spec, OptionValue.Flag(value=true))
+                index += 1
+            else:
+                if equals >= 0:
+                    put(values, spec, OptionValue.Text(value=body.substring(equals + 1, body.length())))
+                    index += 1
+                else:
+                    if index + 1 >= arguments.size() or arguments.get(index + 1) == "--":
+                        throw Error("missing value for --" + name)
+                    put(values, spec, OptionValue.Text(value=arguments.get(index + 1)))
+                    index += 2
+        else:
+            let short = argument.substring(1, argument.length())
+            if short.length() != 1:
+                throw Error("short options are single-letter only; use -" + short.substring(0, 1))
+            let spec = short_option(specs, short)
+            if spec == null:
+                throw Error("unknown option: -" + short)
+            if spec.kind == OptionKind.FLAG:
+                put(values, spec, OptionValue.Flag(value=true))
+                index += 1
+            else:
+                if index + 1 >= arguments.size() or arguments.get(index + 1) == "--":
+                    throw Error("missing value for -" + short)
+                put(values, spec, OptionValue.Text(value=arguments.get(index + 1)))
+                index += 2
+    return Parsed(options=values.toMap(), positionals=positionals.toList())
+
+func usage(program: String, summary: String, specs: List[OptionSpec]) -> String:
+    var output = "Usage: " + program + " [options] [--] [arguments...]\n"
+    output += summary + "\n\nOptions:\n"
+    for spec in specs:
+        var label = "  --" + spec.name
+        let short = spec.short_name
+        if short != null:
+            label = "  -" + short + ", --" + spec.name
+        if spec.kind == OptionKind.VALUE:
+            label += " <value>"
+        output += label + "\n      " + spec.description + "\n"
+    output += "  --\n      Treat all following arguments as positional.\n"
+    return output

@@ -110,7 +110,9 @@ reflection or automatic class serialization is involved.
 - `examples/ledger`: SQLite application with explicit SQL and schema metadata.
 - `python3 tests/web/check_web.py`: real HTTP on ephemeral ports, cleanup, lifecycle,
   negative registration checks and structural OpenAPI assertions.
-- `api.json`: compact discoverable API inventory.
+- `policy.json`: behavior and routing policy index (not a signature list).
+- Resolved signatures are compiler-owned: `sprig api @web/app.spr --json`
+  (and `sprig api . --json` inside a depending project) after `sprig resolve`.
 
 The first host processes requests serially. Authentication, sessions, middleware,
 async, multipart, production limits and public interface binding are outside this

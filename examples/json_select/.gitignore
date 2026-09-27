@@ -1,0 +1,4 @@
+sprig.lock
+*.sqlite
+*.sqlite-*
+sprig-build/

@@ -1,0 +1,31 @@
+import "@cli/cli.spr" as cli
+import "@std/process.spr" as process
+
+let specs: List[cli.OptionSpec] = [
+    cli.OptionSpec(name="verbose", short_name="v", kind=cli.OptionKind.FLAG, description="Show extra output"),
+    cli.OptionSpec(name="output", short_name="o", kind=cli.OptionKind.VALUE, description="Output file"),
+    cli.OptionSpec(name="empty", kind=cli.OptionKind.VALUE, description="An explicit empty value")
+]
+let arguments = process.arguments()
+if arguments.size() > 0 and arguments.get(0) == "bad-spec":
+    try:
+        cli.parse([], [cli.OptionSpec(name="x", short_name="x", kind=cli.OptionKind.FLAG), cli.OptionSpec(name="extra", short_name="x", kind=cli.OptionKind.FLAG)].toList())
+        print("unexpected-success")
+    catch problem: Error:
+        print("ERR:" + problem.toString())
+else:
+    try:
+        let parsed = cli.parse(arguments, specs)
+        print("verbose=" + parsed.flag("verbose").toString())
+        let output = parsed.value("output")
+        if output != null:
+            print("output=" + output)
+        else:
+            print("output=<absent>")
+        let empty = parsed.value("empty")
+        if empty != null:
+            print("empty=" + empty)
+        print("positionals=" + parsed.positionals.toString())
+        print(cli.usage("probe", "CLI parser contract", specs))
+    catch problem: Error:
+        print("ERR:" + problem.toString())

@@ -1,0 +1,23 @@
+import "@sqlite/sqlite.spr" as sqlite
+import "@sqlite/migrations.spr" as migrations
+import "@std/process.spr" as process
+import java.io.IOException as IOException
+
+func main() -> Unit throws Error, IOException:
+    let args = process.arguments()
+    var database_path = "migrations.sqlite"
+    var migration_path = "migrations"
+    if args.size() > 0:
+        database_path = args.get(0)
+    if args.size() > 1:
+        migration_path = args.get(1)
+    let database = sqlite.open(database_path)
+    let runner = migrations.Migrations(database=database, directory=migration_path)
+    print("applied=" + runner.apply().toString())
+    let rows = database.query("SELECT message FROM messages ORDER BY id", [])
+    var index: Int = 0
+    while index < rows.size():
+        print(rows.text(index, "message"))
+        index += 1
+
+main()

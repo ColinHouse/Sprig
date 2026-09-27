@@ -39,7 +39,8 @@ Found(value)、NotObject 区分缺失、JSON null 和错误对象类型。
 
 OpenAPI 使用普通 Schema/FieldSchema/QueryParameter 元数据，不反射任意类；
 实际请求仍由处理函数验证。重复查询参数和等价路径模板在注册阶段被拒绝。
-仓库 `libraries/sprig-web/README.md` 与 `api.json` 提供明确签名。
+仓库 `libraries/sprig-web/README.md` 说明行为策略；解析后的签名由
+`sprig api @web/app.spr --json` 提供（先运行 `sprig resolve`）。
 
 ## JVM 适配器的边界
 
@@ -49,8 +50,13 @@ Integer/Text/Boolean/Null 参数。结果是脱离 JDBC 资源的快照，连接
 结果集均被关闭；失败的批处理或 RETURNING 快照会回滚。
 没有 ORM、Java 数组语法、隐式 REAL 到 Int 转换、BLOB 或 Decimal 绑定。
 
-这是同步单用户例子，尚无身份认证、会话、迁移、连接池、async 或公开部署
-契约。请求体与结果快照会载入内存；类型安全不保证业务规则或数值稳定性。
+这是同步单用户例子，尚无身份认证、会话、连接池、async 或公开部署
+契约。SQLite migration helper 以排序后的 `NNN_description.sql` 文件为单位，
+将每份受信脚本与账本记录放进同一事务；已应用文件必须保持不变，当前不计算
+内容摘要。请求体与结果快照会载入内存；类型安全不保证业务规则或数值稳定性。
+
+多文件 JSON CLI 的选项解析库和可运行示例见
+[`json_select`](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)。
 
 ```bash
 python3 tests/callables/check_callables.py

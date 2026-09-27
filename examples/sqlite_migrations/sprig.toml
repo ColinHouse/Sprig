@@ -1,0 +1,10 @@
+[project]
+name = "sqlite-migrations-example"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+entry = "src/main.spr"
+
+[[dependency]]
+name = "sqlite"
+path = "../../libraries/sprig-sqlite"

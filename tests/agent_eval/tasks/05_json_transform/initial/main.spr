@@ -1,0 +1,7 @@
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+
+# The input path is the first program argument.
+# TODO: parse the file and print items=<number of members in the top-level array>.
+let document = json.parse(files.read_utf8("input.json"))
+print("items=")

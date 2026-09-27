@@ -7,6 +7,8 @@ public final class Codes {
 
     // CLI
     public static final String CLI_OPTION = "SPR-CLI-OPTION";
+    public static final String API_TARGET = "SPR-API-TARGET";
+    public static final String API_MEMBER = "SPR-API-MEMBER";
 
     // LEX
     public static final String LEX_TAB = "SPR-LEX-TAB";

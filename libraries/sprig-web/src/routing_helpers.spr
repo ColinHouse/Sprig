@@ -1,0 +1,18 @@
+# String-only route template helpers; HTTP method and registration policy stay in app.spr.
+import "@std/text.spr" as strings
+
+func parameter_name(segment: String) -> String?:
+    if segment.length() > 2 and strings.starts_with(segment, "{") and strings.ends_with(segment, "}"):
+        return segment.substring(1, segment.length() - 1)
+    return null
+
+func template_shape(path: String) -> String throws Error:
+    var shape = ""
+    var separator = ""
+    for segment in strings.split(path, "/"):
+        if parameter_name(segment) != null:
+            shape += separator + "{}"
+        else:
+            shape += separator + segment
+        separator = "/"
+    return shape

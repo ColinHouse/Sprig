@@ -1,0 +1,53 @@
+# Render a deterministic Markdown report from saved `sprig api --json` output.
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import "@cli/cli.spr" as cli
+import java.io.IOException as IOException
+import "./meta.spr" as meta
+
+func options() -> List[cli.OptionSpec]:
+    return [
+        cli.OptionSpec(name="help", short_name="h", kind=cli.OptionKind.FLAG, description="Show usage"),
+        cli.OptionSpec(name="output", short_name="o", kind=cli.OptionKind.VALUE, description="Write the report to this file")
+    ]
+
+func report(document: json.Value) -> String throws Error:
+    let kind = meta.or_empty(meta.text_field(document, "kind"))
+    if kind == "sprig-module":
+        let label = meta.or_empty(meta.text_field(document, "module"))
+        return "# API report: " + label + "\n\n" + meta.render_module(label, document)
+    if kind == "sprig-project":
+        let project = meta.member(document, "project")
+        var label = "project"
+        if project != null:
+            label = "project " + meta.or_empty(meta.text_field(project, "name"))
+        var output = "# API report: " + label + "\n\n"
+        for module in meta.array_field(document, "modules"):
+            let name = meta.or_empty(meta.text_field(module, "module"))
+            output += meta.render_module(name, module) + "\n"
+        return output
+    throw Error("unsupported API document kind: " + kind)
+
+func run() -> Unit throws IOException, Error:
+    let specs = options()
+    let arguments = cli.parse(process.arguments(), specs)
+    if arguments.flag("help") or arguments.positionals.size() == 0:
+        print(cli.usage("api-report", "Render a Markdown report from sprig api --json output.", specs))
+        return
+    let document = json.parse(files.read_utf8(arguments.positionals.get(0)))
+    let output = report(document)
+    let destination = arguments.value("output")
+    if destination != null:
+        files.write_utf8(destination, output)
+    else:
+        print(output)
+
+try:
+    run()
+catch problem: IOException:
+    print("api-report: " + problem.toString())
+    throw problem
+catch problem: Error:
+    print("api-report: " + problem.message)
+    throw problem

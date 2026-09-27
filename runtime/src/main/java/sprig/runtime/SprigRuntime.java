@@ -70,6 +70,16 @@ public final class SprigRuntime {
 
     /** {@code String.split} helper returning a Sprig list. */
     public static SprigList<String> stringSplit(String text, String separator) {
+        if (separator.isEmpty()) {
+            // An empty separator enumerates Unicode code points, then the final
+            // empty segment, matching the existing trailing-empty contract.
+            List<String> out = new ArrayList<>();
+            for (String element : StringOps.codePoints(text)) {
+                out.add(element);
+            }
+            out.add("");
+            return new SprigList<>(out);
+        }
         String[] parts = text.split(java.util.regex.Pattern.quote(separator), -1);
         List<String> out = new ArrayList<>(parts.length);
         java.util.Collections.addAll(out, parts);
