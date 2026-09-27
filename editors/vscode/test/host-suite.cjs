@@ -55,9 +55,10 @@ exports.run=async()=>{
  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(terminalSource));
  const terminal=await vscode.commands.executeCommand('sprig.runInTerminal');assert.ok(terminal,'integrated terminal created');
  try {
-  for(let i=0;i<100 && !fs.existsSync(marker);i++)await new Promise(r=>setTimeout(r,100));
-  assert.equal(fs.existsSync(marker),true,'actual terminal JVM must execute the saved source');
-  assert.equal(fs.readFileSync(marker,'utf8'),'terminal execution');
+  const readMarker=()=>{try{return fs.readFileSync(marker,'utf8')}catch{return null}};
+  let content=readMarker();
+  for(let i=0;i<100 && content!=='terminal execution';i++){await new Promise(r=>setTimeout(r,100));content=readMarker();}
+  assert.equal(content,'terminal execution','actual terminal JVM must execute the saved source');
  } finally {terminal.dispose();}
  console.log('Extension Host passed: registered language, check/error repair, actual JVM Run, Java-only view and save diagnostics.');
 };
