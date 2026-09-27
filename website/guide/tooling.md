@@ -1,7 +1,8 @@
 # 工具与 JSON
 
 stage-0 编译器只提供一个可执行文件 `bin/sprig`，由 `scripts/build.sh` 生成。
-没有守护进程、语言服务器或 IDE 集成。
+没有守护进程或语言服务器。[VS Code 预览插件](./editor) 提供高亮、CLI
+诊断、运行和生成 Java 查看。
 
 ## 命令
 

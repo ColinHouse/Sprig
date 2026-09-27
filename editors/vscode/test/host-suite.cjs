@@ -40,6 +40,7 @@ exports.run=async()=>{
  fs.writeFileSync(path.join(project,'sprig.toml'),'[project]\nname = "editor-test"\nversion = "0.1.0"\nlanguage = "0.8"\nsource = "src"\nentry = "src/main.spr"\n');
  const child=path.join(project,'src','child.spr');fs.writeFileSync(child,'let x: Int = "bad"\n');
  const main=path.join(project,'src','main.spr');fs.writeFileSync(main,'import "child.spr" as child\nprint("project")\n');
+ const adapter=require(path.join(ext.extensionPath,'out/compiler.js'));const locked=await adapter.invoke(path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig'),['resolve','--json'],project);assert.equal(locked.json.exitCode,0);
  const mainDoc=await vscode.workspace.openTextDocument(main);await vscode.window.showTextDocument(mainDoc);const projectChecked=await vscode.commands.executeCommand('sprig.check');assert.equal(projectChecked.exitCode,1);
  for(let i=0;i<50 && !vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN');i++)await new Promise(r=>setTimeout(r,100));
  assert.ok(vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN'),JSON.stringify({expectedUri:vscode.Uri.file(child).toString(),result:projectChecked,actual:vscode.languages.getDiagnostics().map(([uri,ds])=>[uri.toString(),ds.map(d=>({code:d.code,message:d.message}))])}));

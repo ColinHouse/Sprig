@@ -1,7 +1,8 @@
 # Tooling and JSON
 
 The stage-0 compiler ships one executable, `bin/sprig`, built by
-`scripts/build.sh`. It has no daemon, language server or IDE integration.
+`scripts/build.sh`. It has no daemon or language server. The [VS Code preview](./editor) integrates
+highlighting, CLI diagnostics, Run and generated Java viewing.
 
 ## Commands
 

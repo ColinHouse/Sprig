@@ -122,7 +122,10 @@ String concatenation, project-entry failures overwritten by a clean unused-file
 result, uncaught JSON-null responses, and selecting a standard-library Java file when the
 entry class name was package-qualified. Hosted clean-checkout packaging also
 exposed a missing dist-directory creation, which was reproduced locally with the
-previous artifacts moved aside and fixed in the package command. Expectations were corrected only for the
+previous artifacts moved aside and fixed in the package command. Cross-platform
+host fixtures now explicitly resolve their project lock before testing types; the
+original CI correctly reported a missing lock. Host startup also handles the newer
+macOS executable rename from Electron to Code. Expectations were corrected only for the
 incorrect language assumption; actual adapter defects were fixed. The official
 host test runner always disables workspace trust, so the Restricted Mode test uses
 an explicit separate launch rather than pretending the normal host test covers it.
