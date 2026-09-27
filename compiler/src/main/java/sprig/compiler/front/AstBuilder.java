@@ -360,6 +360,24 @@ public final class AstBuilder {
     // ---- expressions ----
 
     Expr buildExpression(SprigParser.ExpressionContext ctx) {
+        if (ctx.matchExpression() != null) {
+            var matchCtx = ctx.matchExpression();
+            List<Stmt.Match.Branch> branches = new ArrayList<>();
+            for (var branchCtx : matchCtx.matchExpressionBranch()) {
+                List<String> parts = branchCtx.qualifiedName().IDENT().stream().map(TerminalNode::getText).toList();
+                TypeRef owner = new TypeRef(parts.subList(0,parts.size()-1),List.of(),false);
+                owner.span = span(branchCtx.qualifiedName());
+                Stmt.ExprStmt value = new Stmt.ExprStmt(buildExpression(branchCtx.expression()));
+                value.span = span(branchCtx.expression());
+                branches.add(new Stmt.Match.Branch(owner,parts.get(parts.size()-1),
+                    branchCtx.IDENT() == null ? null : branchCtx.IDENT().getText(),List.of(value)));
+            }
+            Stmt.Match cases = new Stmt.Match(buildExpression(matchCtx.expression()),branches);
+            cases.span = span(matchCtx);
+            Expr.Match expr = new Expr.Match(cases);
+            expr.span = span(ctx);
+            return expr;
+        }
         return buildOr(ctx.orExpression());
     }
 

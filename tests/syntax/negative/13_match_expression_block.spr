@@ -1,0 +1,9 @@
+enum Flag:
+    On
+    Off
+let result = match Flag.On:
+    case Flag.On:
+        let value = 1
+        value
+    case Flag.Off:
+        0

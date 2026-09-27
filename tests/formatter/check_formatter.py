@@ -24,7 +24,7 @@ def main():
         assert invoke('fmt',path).returncode==0 and path.read_text()==expected
         after=invoke('run',path)
         assert (before.returncode,before.stdout,before.stderr)==(after.returncode,after.stdout,after.stderr)
-        for source in ['', '# only\n# second', 'let x = [1,\n  2] # list\n', 'let x = -1 + +2\n', 'let x = "# a  b" # trailing\n', 'class C:\n  # field\n  let x: Int = 1\n  # method\n  func f() -> Int:\n    # nested\n    return x\n# top EOF' ]:
+        for source in ['enum F:\n  A\n  B\nlet x = match F.A: # map\n  # branch\n  case F.A:\n    1 # one\n  case F.B:\n    2\n', '', '# only\n# second', 'let x = [1,\n  2] # list\n', 'let x = -1 + +2\n', 'let x = "# a  b" # trailing\n', 'class C:\n  # field\n  let x: Int = 1\n  # method\n  func f() -> Int:\n    # nested\n    return x\n# top EOF' ]:
             path.write_text(source)
             result=invoke('fmt',path)
             assert result.returncode==0, result.stderr

@@ -8,7 +8,7 @@
     "tests/visitor/nonexhaustive.spr"
   ],
   "feature.matchExpression": [
-    "tests/syntax/negative/05_invalid_match_default.spr"
+    "tests/match_expression/check_match_expression.py"
   ],
   "feature.userGenerics": [
     "tests/runtime/19_generics.spr",

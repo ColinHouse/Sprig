@@ -645,6 +645,8 @@ public final class NameResolver {
             for (Expr value : map.values) {
                 resolveExpr(module, scope, value);
             }
+        } else if (expr instanceof Expr.Match match) {
+            resolveStmt(module,scope,match.cases);
         } else if (expr instanceof Expr.Lambda lambda) {
             Scope lambdaScope = childScope(scope);
             for (Decl.Param param : lambda.params) {

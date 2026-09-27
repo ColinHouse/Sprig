@@ -600,6 +600,10 @@ public final class TypeChecker {
     }
 
     private void checkMatch(Stmt.Match match) {
+        checkMatch(match, branch -> checkSequence(branch.body));
+    }
+
+    private void checkMatch(Stmt.Match match, java.util.function.Consumer<Stmt.Match.Branch> checkBody) {
         Type scrutinee = checkExpr(match.scrutinee, null);
         if (scrutinee.isNullable()) {
             diagnostics.add(Diagnostic.error(Codes.MATCH_SCRUTINEE, Phase.TYPE,
@@ -681,7 +685,7 @@ public final class TypeChecker {
             if (branch.binderSymbol != null && branch.binderType != null) {
                 narrowing.peek().put(branch.binderSymbol, branch.binderType);
             }
-            checkSequence(branch.body);
+            checkBody.accept(branch);
             narrowing.pop();
         }
         if (valid) {
@@ -763,6 +767,8 @@ public final class TypeChecker {
             type = checkListLit(listLit, expected);
         } else if (expr instanceof Expr.MapLit mapLit) {
             type = checkMapLit(mapLit, expected);
+        } else if (expr instanceof Expr.Match match) {
+            type = checkMatchExpression(match, expected);
         } else if (expr instanceof Expr.Lambda lambda) {
             type = checkLambda(lambda, expected);
         } else {
@@ -770,6 +776,34 @@ public final class TypeChecker {
         }
         expr.type = type;
         return type;
+    }
+
+    private Type checkMatchExpression(Expr.Match expr, Type expected) {
+        Type[] candidate = { expected };
+        boolean[] sawNull = { false };
+        checkMatch(expr.cases, branch -> {
+            Expr value = ((Stmt.ExprStmt) branch.body.get(0)).expr;
+            Type actual = checkExpr(value,candidate[0]);
+            if (actual == NativeType.NULL) sawNull[0] = true;
+            if (candidate[0] == null && actual != NativeType.NULL && actual != NativeType.ERROR) candidate[0] = actual;
+            if (candidate[0] != null && actual != NativeType.NULL) {
+                requireAssignable(candidate[0],actual,value.span,Codes.MATCH_RESULT,"match branch result");
+            } else if (expected != null) {
+                requireAssignable(expected,actual,value.span,Codes.MATCH_RESULT,"match branch result");
+            }
+        });
+        Type result = candidate[0];
+        if (result == null) {
+            diagnostics.add(Diagnostic.error(Codes.MATCH_INFERENCE,Phase.TYPE,
+                "Cannot infer match result; write an explicit result type annotation",module.uri,expr.span));
+            return NativeType.ERROR;
+        }
+        if (result == NativeType.UNIT) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT,Phase.TYPE,
+                "Expression match must produce a value; use statement match for side effects",module.uri,expr.span));
+            return NativeType.ERROR;
+        }
+        return expected == null && sawNull[0] ? NullableType.of(result) : result;
     }
 
     private Type checkIntLiteral(Expr.IntLit literal, Type expected) {
@@ -1640,6 +1674,9 @@ public final class TypeChecker {
             for (Expr value : map.values) {
                 collectMutableCaptures(value, out);
             }
+        } else if (expr instanceof Expr.Match match) {
+            collectMutableCaptures(match.cases.scrutinee,out);
+            for (var branch : match.cases.branches) collectMutableCaptures(((Stmt.ExprStmt)branch.body.get(0)).expr,out);
         } else if (expr instanceof Expr.Lambda lambda) {
             collectMutableCaptures(lambda.body, out);
         }

@@ -108,22 +108,22 @@ class Route:
     let query_parameters: List[QueryParameter] = []
 
 func method_name(method: Method) -> String:
-    match method:
+    return match method:
         case Method.GET:
-            return "GET"
+            "GET"
         case Method.POST:
-            return "POST"
+            "POST"
         case Method.DELETE:
-            return "DELETE"
+            "DELETE"
 
 func operation_name(method: Method) -> String:
-    match method:
+    return match method:
         case Method.GET:
-            return "get"
+            "get"
         case Method.POST:
-            return "post"
+            "post"
         case Method.DELETE:
-            return "delete"
+            "delete"
 
 variant MatchResult:
     Missing

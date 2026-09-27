@@ -7,6 +7,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
 |---|---|---|---|---|
+| Expression `match` | one expression per branch | strict contextual/inferred results, shared exhaustive/binder rules | Java 17 switch/yield; no closures; scrutinee once | match expression runtime/generic/null/effect tests |
 | Explicit `export alias.Symbol` | yes | original symbols, collisions, cycles and package boundaries | no wrapper/copy | reexport runtime/API/package suite |
 | Canonical `sprig fmt` | trivia-preserving lexer | parse structure invariant | atomic file replacement, check/JSON modes | formatter fixtures + valid corpus |
 | Functions, typed parameters/returns, recursion | yes | yes | Java static methods | runtime 01/02, visitor |

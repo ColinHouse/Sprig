@@ -69,6 +69,8 @@ public final class CodeDocs {
             Map.entry(Codes.CALL_DUPLICATE_FIELD, "The same named field was provided twice."),
             Map.entry(Codes.MODULE_EXPORT, "Declaration export needs a unique name referring to a public Sprig module declaration."),
             Map.entry(Codes.MODULE_EXPORT_ORDER, "Imports precede exports, which precede local declarations and statements."),
+            Map.entry(Codes.MATCH_RESULT, "Expression match branches must be assignable to the contextual or first inferred non-null result type."),
+            Map.entry(Codes.MATCH_INFERENCE, "All-null or unresolved expression match results require an explicit annotation."),
             Map.entry(Codes.MATCH_NONEXHAUSTIVE, "Every enum/variant case must have a match branch; there is no default."),
             Map.entry(Codes.MATCH_DUPLICATE, "A match branch repeats a case."),
             Map.entry(Codes.MATCH_WRONG_TYPE, "A match branch belongs to a different enum/variant."),

@@ -64,7 +64,7 @@ def main():
             destination = package / Path(source).parent
             destination.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / source, destination)
-        docs = ['MODULE_REEXPORTS', 'FORMATTER', 'INSTALL', 'QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']
+        docs = ['MATCH_EXPRESSIONS', 'MODULE_REEXPORTS', 'FORMATTER', 'INSTALL', 'QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']
         (package / 'docs').mkdir()
         for doc in docs:
             file = ROOT / 'docs' / (doc + '.md')

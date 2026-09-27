@@ -190,6 +190,13 @@ public abstract class Expr extends Node {
         }
     }
 
+    /** Expression branches use the same resolved case/binder plan as statement match.
+     * Each body contains exactly one ExprStmt, enforced by the grammar/builder. */
+    public static final class Match extends Expr {
+        public final Stmt.Match cases;
+        public Match(Stmt.Match cases) { this.cases = cases; }
+    }
+
     public static final class Lambda extends Expr {
         public final List<Decl.Param> params;
         public final Expr body;

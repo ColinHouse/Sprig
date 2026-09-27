@@ -85,6 +85,8 @@ public final class Codes {
     // MATCH
     public static final String MODULE_EXPORT = "SPR-MODULE-EXPORT";
     public static final String MODULE_EXPORT_ORDER = "SPR-MODULE-EXPORT-ORDER";
+    public static final String MATCH_RESULT = "SPR-MATCH-RESULT";
+    public static final String MATCH_INFERENCE = "SPR-MATCH-INFERENCE";
     public static final String MATCH_NONEXHAUSTIVE = "SPR-MATCH-NONEXHAUSTIVE";
     public static final String MATCH_DUPLICATE = "SPR-MATCH-DUPLICATE";
     public static final String MATCH_WRONG_TYPE = "SPR-MATCH-WRONG-TYPE";

@@ -27,7 +27,7 @@ qualifiedName: IDENT (DOT IDENT)*;
 
 classDefinition: CLASS IDENT COLON classSuite;
 classSuite
-    : NEWLINE INDENT (NEWLINE | fieldDeclaration NEWLINE | functionDefinition | PASS NEWLINE)+ DEDENT
+    : NEWLINE INDENT (NEWLINE | fieldDeclaration statementEnd | functionDefinition | PASS NEWLINE)+ DEDENT
     ;
 fieldDeclaration: (VAR | LET) IDENT COLON typeRef (ASSIGN expression)?;
 
@@ -69,9 +69,11 @@ variableDeclaration: (VAR | LET) IDENT typeAnnotation? ASSIGN expression;
 typeAnnotation: COLON typeRef;
 
 statement
-    : simpleStatement NEWLINE
+    : {_input.LA(1) != MATCH}? simpleStatement statementEnd
     | ifStatement | whileStatement | forStatement | tryStatement | matchStatement
     ;
+// A block expression already ends in DEDENT, which closes its physical line.
+statementEnd: NEWLINE | {_input.LT(-1).getType() == DEDENT}?;
 simpleStatement
     : variableDeclaration | assignment | requiresStatement
     | RETURN expression? | BREAK | CONTINUE | PASS | THROW expression
@@ -94,7 +96,7 @@ tryStatement
 catchClause: CATCH IDENT COLON typeRef COLON suite;
 suite: NEWLINE INDENT (NEWLINE | statement)+ DEDENT;
 
-// Match is a STATEMENT, not also an expression. A branch matches exactly one
+// Statement match retains its existing suites. A branch matches exactly one
 // enum case or variant case, with an optional binding of the entire payload.
 // The type checker rejects non-variant/non-enum scrutinees, duplicate branches,
 // missing cases, and bindings on payloadless enum cases. No wildcard/default.
@@ -102,7 +104,9 @@ matchStatement: MATCH expression COLON matchSuite;
 matchSuite: NEWLINE INDENT (NEWLINE | matchBranch)+ DEDENT;
 matchBranch: CASE qualifiedName (AS IDENT)? COLON suite;
 
-expression: orExpression;
+matchExpression: MATCH expression COLON NEWLINE INDENT (NEWLINE | matchExpressionBranch)+ DEDENT;
+matchExpressionBranch: CASE qualifiedName (AS IDENT)? COLON NEWLINE INDENT NEWLINE* expression statementEnd NEWLINE* DEDENT;
+expression: matchExpression | orExpression;
 orExpression: andExpression (OR andExpression)*;
 andExpression: notExpression (AND notExpression)*;
 notExpression: NOT notExpression | comparisonExpression;

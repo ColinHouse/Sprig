@@ -1,0 +1,12 @@
+enum Flag:
+    On
+    Off
+
+func pick(flag: Flag) -> Int:
+    return match flag:
+        case Flag.On:
+            1
+        case Flag.Off:
+            2
+
+print(pick(Flag.On))

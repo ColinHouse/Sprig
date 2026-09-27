@@ -28,8 +28,8 @@ deliberately unsupported features; grammar acceptance alone does not imply
 runtime support. Every function and method declares parameter and result types.
 Top-level statements execute; a named `main` function is not invoked
 automatically. Sprig classes and variant cases use named constructors; ordinary functions and
-Java methods use positional arguments. `match` is an exhaustive statement, not
-an expression. A Java reference result is nullable until checked. `List` and
+Java methods use positional arguments. `match` supports exhaustive statements and value expressions; expression
+branches contain exactly one expression. A Java reference result is nullable until checked. `List` and
 `MutableList` differ. Integer `/` is rejected; use `divTrunc` when truncation is
 intended. No implicit mixed numeric promotion is performed. Sprig has no `Char`
 type: a String element is a non-null `String`, and `length`, indexing, `charAt`,

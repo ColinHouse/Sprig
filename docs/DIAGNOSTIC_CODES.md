@@ -110,3 +110,11 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
 - `SPR-MODULE-EXPORT`: unknown/illegal target or duplicate/colliding visible name; includes origin names.
 - `SPR-MODULE-EXPORT-ORDER`: imports, exports, declarations/statements must appear in that order.
 - Existing `SPR-NAME-IMPORT-CYCLE` also rejects reexport chains containing a cycle.
+
+## Expression match results
+
+- `SPR-MATCH-RESULT`: incompatible branch result; expected/actual types and match repair guidance.
+- `SPR-MATCH-INFERENCE`: no non-null type can be inferred; annotate explicitly.
+- Existing `SPR-MATCH-*`, null/numeric/capture/effect diagnostics also apply.
+- `SPR-SYNTAX-ERROR` rejects empty/multi-statement/declaration branches, with statement-match guidance where the parser retains branch context.
+- `SPR-TYPE-UNIT` rejects side-effect-only expression matches.

@@ -923,10 +923,34 @@ public final class JavaGenerator {
         if (expr instanceof Expr.MapLit mapLit) {
             return emitMapLit(mapLit);
         }
+        if (expr instanceof Expr.Match match) return emitMatchExpression(match);
         if (expr instanceof Expr.Lambda lambda) {
             return emitLambda(lambda);
         }
         return "null";
+    }
+
+    private String emitMatchExpression(Expr.Match expr) {
+        Stmt.Match match = expr.cases;
+        String temp = freshTemp("matchExpr");
+        StringBuilder code = new StringBuilder("((").append(javaType(expr.type)).append(") (switch (0) { default -> { ")
+            .append(javaType(match.scrutinee.type)).append(" ").append(temp).append(" = ").append(emitExpr(match.scrutinee)).append("; ");
+        boolean concrete = match.matchedType instanceof VariantCaseType;
+        for (var branch : match.branches) {
+            if (match.matchedType instanceof EnumType enumType) {
+                code.append("if (").append(temp).append(" == ").append(typeNames.get(enumType.decl)).append(".").append(branch.caseName).append(") { ");
+            } else if (concrete) code.append("{ ");
+            else {
+                code.append("if (").append(temp).append(" instanceof ").append(javaType(branch.binderType));
+                if (branch.binderSymbol != null) code.append(" ").append(localName(branch.binderSymbol));
+                code.append(") { ");
+            }
+            if (concrete && branch.binderSymbol != null) code.append(javaType(branch.binderType)).append(" ").append(localName(branch.binderSymbol)).append(" = ").append(temp).append("; ");
+            Expr value = ((Stmt.ExprStmt)branch.body.get(0)).expr;
+            code.append("yield ").append(convertedExpression(value,expr.type)).append("; } ");
+        }
+        if (!concrete) code.append("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\"); ");
+        return code.append("} }))").toString();
     }
 
     private String emitName(Expr.Name name) {
