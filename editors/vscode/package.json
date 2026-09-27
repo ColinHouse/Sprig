@@ -36,7 +36,7 @@
     "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs",
     "test:host": "npm run compile && node test/run-host.cjs",
     "vscode:prepublish": "npm run compile",
-    "package": "vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
+    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
