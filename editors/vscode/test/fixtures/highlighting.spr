@@ -1,0 +1,19 @@
+# Sprig highlighting preview: strings, numbers, types and exhaustive match.
+import "@std/text.spr" as text
+
+variant Expr:
+    Literal(value: Int)
+    Add(left: Expr, right: Expr)
+
+func evaluate(expr: Expr) -> Int:
+    match expr:
+        case Expr.Literal as literal:
+            return literal.value
+        case Expr.Add as add:
+            return evaluate(add.left) + evaluate(add.right)
+
+let expression = Expr.Add(left=Expr.Literal(value=19), right=Expr.Literal(value=23))
+let samples: List[Float] = [0.1, 2.53e+12, -1e-10]
+let label: String? = null
+print(text.trim("  Sprig # string, not a comment  "))
+print(evaluate(expression))

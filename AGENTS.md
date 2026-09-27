@@ -38,7 +38,7 @@ state with `project --json` and `deps --json` inside a project.
 
 Requires JDK 17+, Python 3.12+, Node.js 20+/npm and Git. It runs portable
 build, full compiler/JVM tests, independent grammar tests, executed docs and
-the VitePress production build. First use downloads pinned tools/libraries.
+the VitePress production build, and editor tokenization/CLI/package checks. First use downloads pinned tools/libraries.
 Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work.
 
 | Focus | Fast command after build | Evidence |
@@ -50,6 +50,7 @@ Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work
 | Projects/dependencies | `python3 tests/project_deps/check_deps.py` | lock/cache/project behavior |
 | Maven graph/cache | `python3 tests/maven/check_resolver.py` | offline effective-model fixtures |
 | Standard modules/showcases | `python3 scripts/test-stdlib.py` / `python3 scripts/test-showcases.py` | real programs on JVM |
+| VS Code editor | `python3 scripts/check-editor.py` | actual TextMate/CLI/JVM and VSIX; host tests run separately |
 | Docs | `python3 scripts/check-docs.py` | snippet JVM + website |
 
 Generated `build/`, `bin/`, `website/.vitepress/dist/` and
@@ -107,3 +108,12 @@ Linux/macOS × JDK17/26 and Docs are required. Windows is an experimental
 non-blocking preview. `@std` is a reserved bundled package; never add a manifest
 dependency named std. `build --emit-java-only` performs the static pipeline and
 writes Java without javac. Do not claim a development catalog is a published SDK.
+
+## VS Code adapter
+
+`editors/vscode/` is a TypeScript desktop extension. Highlighting uses the real
+lexer contract; compiler semantics remain in Java. Keep editor dependencies and
+lockfile separate from the website. Run `npm test` and `npm run package` there;
+`npm run test:host` additionally runs a real isolated VS Code Extension Host.
+Never execute compiler commands in an untrusted workspace. Package locally; do
+not publish Marketplace or change compiler version for an editor-only change.

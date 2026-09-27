@@ -1,0 +1,165 @@
+import * as vscode from 'vscode';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { createHash } from 'node:crypto';
+import { CompilerResult, invoke, projectRoot, resolveCompiler } from './compiler';
+import { mapRange } from './diagnostics';
+
+export function activate(context: vscode.ExtensionContext): void {
+  const output = vscode.window.createOutputChannel('Sprig');
+  const diagnostics = vscode.languages.createDiagnosticCollection('sprig');
+  const jobs = new Map<string, AbortController>();
+  const groups = new Map<string, Map<string, vscode.Diagnostic[]>>();
+  const saved = (doc: vscode.TextDocument) => doc.languageId === 'sprig' && doc.uri.scheme === 'file';
+  const settings = (uri: vscode.Uri) => vscode.workspace.getConfiguration('sprig', uri);
+  context.subscriptions.push(output, diagnostics, {dispose: () => {for(const job of jobs.values()) job.abort();}});
+
+  const publish = async (key: string, results: CompilerResult[], fallback: vscode.Uri, owner: AbortController) => {
+    const entries = new Map<string, vscode.Diagnostic[]>();
+    for(const result of results) for(const d of result.diagnostics ?? []) {
+      const uri = d.uri ? vscode.Uri.parse(d.uri) : fallback;
+      let range = new vscode.Range(0,0,0,0);
+      if(d.range) {
+        // Prefer disk contents: compiler checked saved bytes, not dirty buffers.
+        try {
+          const text = await fs.readFile(uri.fsPath,'utf8');
+          const mapped = mapRange(d.range,text);
+          range = new vscode.Range(mapped.start.line,mapped.start.character,mapped.end.line,mapped.end.character);
+        } catch { range = new vscode.Range(d.range.start.line,d.range.start.character,d.range.end.line,d.range.end.character); }
+      }
+      let message = d.message;
+      if(d.expectedType || d.actualType) message += `\nExpected: ${d.expectedType ?? '?'}; actual: ${d.actualType ?? '?'}.`;
+      if(d.hint) message += `\n${d.hint}`;
+      const item = new vscode.Diagnostic(range,message,d.severity==='warning' ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error);
+      item.source = 'Sprig'; item.code = d.code;
+      const list = entries.get(uri.toString()) ?? [];
+      if(!list.some(x=>x.code===item.code && x.message===item.message && x.range.isEqual(item.range))) list.push(item);
+      entries.set(uri.toString(),list);
+    }
+    if(owner.signal.aborted || jobs.get(key)!==owner) return;
+    groups.set(key,entries);
+    diagnostics.clear();
+    const merged = new Map<string,vscode.Diagnostic[]>();
+    for(const group of groups.values()) for(const [uri,items] of group) merged.set(uri,[...(merged.get(uri)??[]),...items]);
+    for(const [uri,items] of merged) diagnostics.set(vscode.Uri.parse(uri),items);
+  };
+
+  async function execute(command: string, doc: vscode.TextDocument, automatic=false): Promise<CompilerResult | undefined> {
+    if(!vscode.workspace.isTrusted) {
+      if(!automatic) void vscode.window.showWarningMessage('Trust this workspace to invoke the Sprig compiler. Syntax highlighting remains available.');
+      return;
+    }
+    if(!saved(doc)) {if(!automatic) void vscode.window.showWarningMessage('Open and save a local .spr file first.');return;}
+    if(!automatic && doc.isDirty && !await doc.save()) return;
+    // Do not check a graph against unsaved Sprig files in that project.
+    const cwd = projectRoot(doc.uri.fsPath);
+    if(vscode.workspace.textDocuments.some(d=>saved(d) && d.isDirty && projectRoot(d.uri.fsPath)===cwd)) {
+      if(!automatic) void vscode.window.showWarningMessage('Save the Sprig files in this project before checking or running.');
+      return;
+    }
+    const controller = new AbortController(); jobs.get(cwd)?.abort(); jobs.set(cwd,controller);
+    const config = settings(doc.uri);
+    const timeoutMs = Math.max(1,Math.min(3600,config.get<number>('commandTimeoutSeconds',120)))*1000;
+    const call = async (args: string[]) => {
+      const result = await invoke(resolveCompiler(config.get<string>('compilerPath',''),cwd),args,cwd,{signal:controller.signal,timeoutMs});
+      if(result.stderr) output.appendLine(result.stderr);
+      return result.json;
+    };
+    const work = async () => {
+      const results: CompilerResult[] = [];
+      let args: string[];
+      if(command==='check') {
+        // Include entry graph plus current file; unused modules still receive feedback.
+        const project = await fs.stat(path.join(cwd,'sprig.toml')).catch(()=>undefined);
+        if(project) {
+          const metadata = await call(['project','--json']);
+          if(metadata.exitCode!==0) {results.push(metadata);await publish(cwd,results,doc.uri,controller);return metadata;}
+          if(metadata.project?.entry) {
+            const entry = path.resolve(cwd,metadata.project.entry);
+            if(entry !== doc.uri.fsPath) results.push(await call(['check',entry,'--json']));
+          }
+        }
+        args = ['check',doc.uri.fsPath,'--json'];
+      } else if(command==='java' || command==='build') {
+        const id = createHash('sha256').update(doc.uri.toString()).digest('hex').slice(0,16);
+        const dest = path.join(context.globalStorageUri.fsPath,'generated',id);
+        await fs.mkdir(dest,{recursive:true});
+        args = ['build',doc.uri.fsPath,'-d',dest,'--json'];
+        if(command==='java') args.push('--emit-java-only');
+      } else args = ['run',doc.uri.fsPath,'--json'];
+      output.appendLine(`Sprig ${command}: ${doc.uri.fsPath}`);
+      let result = await call(args); results.push(result);
+      if(command==='check' && results.some(r=>r.exitCode!==0)) result={...result,exitCode:1,diagnostics:results.flatMap(r=>r.diagnostics??[])};
+      if(controller.signal.aborted || jobs.get(cwd)!==controller) return;
+      await publish(cwd,results,doc.uri,controller);
+      if(controller.signal.aborted || jobs.get(cwd)!==controller) return;
+      if(command==='run' && result.programOutput!==undefined) {output.append(result.programOutput);output.show(true);}
+      if(!automatic) output.appendLine(`Exit ${result.exitCode}`);
+      if(result.exitCode!==0 && !automatic) {output.show(true);void vscode.commands.executeCommand('workbench.actions.view.problems');}
+      if((command==='java'||command==='build') && result.exitCode===0) {
+        output.appendLine(`Java sources: ${(result.javaSources??[]).join(', ')}`);
+        if(command==='java' && result.javaSources?.length) {
+          const file = result.javaSources.find(f=>path.basename(f)===`${String(result.mainClass).split('.').pop()}.java`) ?? result.javaSources[0];
+          await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(file)),{viewColumn:vscode.ViewColumn.Beside,preview:true});
+        }
+      }
+      return result;
+    };
+    try {
+      if(automatic) return await work();
+      return await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:`Sprig: ${command==='java'?'Show Generated Java':command}`,cancellable:true},async(_,token)=>{
+        const subscription = token.onCancellationRequested(()=>controller.abort());
+        try {return await work();} finally {subscription.dispose();}
+      });
+    } catch(error) {
+      if(!controller.signal.aborted) {
+        const message = error instanceof Error ? error.message : String(error);output.appendLine(message);
+        if(!automatic) void vscode.window.showErrorMessage(message);
+      }
+      return;
+    } finally {if(jobs.get(cwd)===controller) jobs.delete(cwd);}
+  }
+
+  for(const [name,command] of [['check','check'],['run','run'],['build','build'],['showGeneratedJava','java']]) {
+    context.subscriptions.push(vscode.commands.registerCommand(`sprig.${name}`,()=>{
+      const doc = vscode.window.activeTextEditor?.document;
+      if(!doc) {void vscode.window.showWarningMessage('Open a .spr file first.');return;}
+      return execute(command,doc);
+    }));
+  }
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.showCapabilities',async()=>{
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to query the Sprig compiler.');return;}
+    try {
+      const doc = vscode.window.activeTextEditor?.document;
+      const cwd = doc?.uri.scheme==='file'?projectRoot(doc.uri.fsPath):vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if(!cwd) {void vscode.window.showWarningMessage('Open a local file or workspace first.');return;}
+      const executable = resolveCompiler(settings(doc?.uri??vscode.Uri.file(cwd)).get<string>('compilerPath',''),cwd);
+      const result = await invoke(executable,['capabilities','--json'],cwd);
+      output.appendLine(JSON.stringify(result.json,null,2));output.show(true);
+    } catch(e) {void vscode.window.showErrorMessage(String(e));}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.explainDiagnostic',async(code?: string)=>{
+    if(!code) code=await vscode.window.showInputBox({prompt:'Sprig diagnostic code',placeHolder:'SPR-TYPE-ASSIGN'});
+    if(!code)return;
+    if(!vscode.workspace.isTrusted)return;
+    const doc=vscode.window.activeTextEditor?.document;if(!doc||!/^SPR-[A-Z0-9-]+$/.test(code))return;
+    try {
+      const cwd=projectRoot(doc.uri.fsPath);const executable=resolveCompiler(settings(doc.uri).get<string>('compilerPath',''),cwd);
+      const result=await invoke(executable,['explain',code,'--json'],cwd);output.appendLine(JSON.stringify(result.json,null,2));output.show(true);
+    } catch(e) {void vscode.window.showErrorMessage(String(e));}
+  }));
+  context.subscriptions.push(vscode.languages.registerCodeActionsProvider('sprig',{
+    provideCodeActions(_doc,_range,ctx) {
+      return ctx.diagnostics.filter(d=>d.source==='Sprig' && typeof d.code==='string').map(d=>{
+        const action=new vscode.CodeAction(`Explain ${d.code}`,vscode.CodeActionKind.QuickFix);
+        action.command={command:'sprig.explainDiagnostic',title:action.title,arguments:[d.code]};action.diagnostics=[d];return action;
+      });
+    }
+  },{providedCodeActionKinds:[vscode.CodeActionKind.QuickFix]}));
+  context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(doc=>{
+    if(saved(doc)&&settings(doc.uri).get<boolean>('checkOnSave',true)) void execute('check',doc,true);
+  }));
+  context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event=>{
+    if(saved(event.document)) jobs.get(projectRoot(event.document.uri.fsPath))?.abort();
+  }));
+}

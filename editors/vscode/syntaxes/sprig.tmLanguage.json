@@ -1,0 +1,159 @@
+{
+  "name": "Sprig",
+  "scopeName": "source.sprig",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#declarations"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#calls"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.sprig",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.sprig"
+        }
+      },
+      "end": "\"|(?=$)",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.sprig"
+        }
+      },
+      "name": "string.quoted.double.sprig",
+      "patterns": [
+        {
+          "name": "constant.character.escape.sprig",
+          "match": "\\\\[\"\\\\nrt]"
+        },
+        {
+          "name": "invalid.illegal.escape.sprig",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "\\b(func)\\s+([A-Za-z_][A-Za-z_0-9]*)",
+          "captures": {
+            "1": {
+              "name": "storage.type.function.sprig"
+            },
+            "2": {
+              "name": "entity.name.function.sprig"
+            }
+          }
+        },
+        {
+          "match": "\\b(class|enum|variant)\\s+([A-Za-z_][A-Za-z_0-9]*)",
+          "captures": {
+            "1": {
+              "name": "storage.type.sprig"
+            },
+            "2": {
+              "name": "entity.name.type.sprig"
+            }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "constant.language.sprig",
+          "match": "\\b(true|false|null)\\b"
+        },
+        {
+          "name": "keyword.operator.word.sprig",
+          "match": "\\b(and|or|not|in)\\b"
+        },
+        {
+          "name": "storage.type.sprig",
+          "match": "\\b(let|var|func|fn|class|enum|variant|generic)\\b"
+        },
+        {
+          "name": "keyword.control.sprig",
+          "match": "\\b(match|case|if|elif|else|while|for|return|break|continue|pass|import|as|try|catch|finally|throw|throws|requires)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.sprig",
+          "match": "\\b[0-9]+(?:\\.[0-9]+(?:[eE][+-]?[0-9]+)?|[eE][+-]?[0-9]+)\\b"
+        },
+        {
+          "name": "constant.numeric.integer.sprig",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.sprig",
+          "match": "\\b(Int|Int32|BigInt|Float|Float32|Decimal|Bool|String|Unit|List|MutableList|Map|MutableMap|Equatable)\\b"
+        },
+        {
+          "name": "entity.name.type.sprig",
+          "match": "\\b[A-Z][A-Za-z_0-9]*\\b"
+        }
+      ]
+    },
+    "calls": {
+      "patterns": [
+        {
+          "name": "entity.name.function.sprig",
+          "match": "\\b[A-Za-z_][A-Za-z_0-9]*(?=\\s*\\()"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.sprig",
+          "match": "->|=>|==|!=|<=|>=|[+*/%=-]|[<>?]"
+        },
+        {
+          "name": "punctuation.separator.sprig",
+          "match": "[:,.]"
+        },
+        {
+          "name": "punctuation.section.brackets.sprig",
+          "match": "[\\[\\]{}()]"
+        }
+      ]
+    }
+  }
+}

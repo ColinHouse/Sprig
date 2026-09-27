@@ -62,3 +62,46 @@ jobs:
         run: ./scripts/build.sh
       - name: Check snippets, release metadata, and VitePress site
         run: ./scripts/check-docs.sh
+
+  editor:
+    name: VS Code / ${{ matrix.os }} / ${{ matrix.vscode }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        vscode: ['1.95.3', 'stable']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: editors/vscode/package-lock.json
+      - run: python scripts/build.py
+      - run: npm ci
+        working-directory: editors/vscode
+      - run: python scripts/check-editor.py
+      - name: Test actual VS Code Extension Host
+        working-directory: editors/vscode
+        env:
+          VSCODE_VERSION: ${{ matrix.vscode }}
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            xvfb-run -a npm run test:host
+            SPRIG_TEST_RESTRICTED=1 xvfb-run -a npm run test:host
+          else
+            npm run test:host
+            SPRIG_TEST_RESTRICTED=1 npm run test:host
+          fi
+      - uses: actions/upload-artifact@v6
+        with:
+          name: sprig-vscode-${{ matrix.os }}-${{ matrix.vscode }}
+          path: editors/vscode/dist/*.vsix

@@ -1,0 +1,48 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const root=path.resolve(__dirname,'../../..');
+const compiler=path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig');
+function api(){assert.ok(fs.existsSync(path.join(__dirname,'../out/compiler.js')),'CLI adapter must be implemented');return require('../out/compiler.js');}
+function fixture(t){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'Sprig 插件 $; '));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
+test('CLI check, real JVM run and Java-only output with adversarial filename',async t=>{
+ const a=api(),dir=fixture(t),file=path.join(dir,'hello $; 中文.spr');fs.writeFileSync(file,'import "@std/text.spr" as text\nprint(text.trim("  hello VS Code  "))\n');
+ assert.equal((await a.invoke(compiler,['check',file,'--json'],dir)).json.exitCode,0);
+ const run=await a.invoke(compiler,['run',file,'--json'],dir);assert.equal(run.json.exitCode,0);assert.equal(run.json.programOutput.trim(),'hello VS Code');
+ const out=path.join(dir,'generated Java');const built=await a.invoke(compiler,['build',file,'--emit-java-only','-d',out,'--json'],dir);
+ assert.equal(built.json.exitCode,0);assert.equal(built.json.javacInvoked,false);assert.ok(built.json.javaSources.length);for(const f of built.json.javaSources)assert.ok(fs.existsSync(f));assert.ok(!fs.existsSync(path.join(out,'classes')));
+});
+test('static failures return diagnostics instead of transport failure; compiler absent is actionable',async t=>{
+ const a=api(),dir=fixture(t),file=path.join(dir,'bad.spr');fs.writeFileSync(file,'let wrong: Int = "bad"\n');
+ const r=await a.invoke(compiler,['check',file,'--json'],dir);assert.equal(r.json.exitCode,1);assert.ok(r.json.diagnostics.some(d=>d.actualType==='String' && d.expectedType==='Int'));
+ await assert.rejects(a.invoke(path.join(dir,'no compiler'),['check',file,'--json'],dir),/compiler|ENOENT/i);
+});
+test('nearest project root and source SDK discovery, configured path is authoritative',t=>{
+ const a=api(),dir=fixture(t);fs.mkdirSync(path.join(dir,'nested','src'),{recursive:true});fs.writeFileSync(path.join(dir,'sprig.toml'),'');fs.writeFileSync(path.join(dir,'nested','sprig.toml'),'');
+ assert.equal(a.projectRoot(path.join(dir,'nested','src','main.spr')),path.join(dir,'nested'));
+ assert.equal(a.resolveCompiler(compiler,dir),compiler);
+ assert.equal(a.resolveCompiler('missing',dir),path.join(dir,'missing'));
+ const savedPath=process.env.PATH;try{process.env.PATH='';assert.equal(a.resolveCompiler('',path.join(root,'examples')),compiler);}finally{process.env.PATH=savedPath;}
+});
+test('cancel aborts a real process, timeout terminates it, malformed output is diagnosed',async t=>{
+ if(process.platform==='win32')return t.skip('POSIX shell fixture; Windows is preview');
+ const a=api(),dir=fixture(t);const slow=path.join(dir,'slow');fs.writeFileSync(slow,'#!/bin/sh\nsleep 30\n',{mode:0o755});
+ const abort=new AbortController(); const p=a.invoke(slow,[],dir,{signal:abort.signal});setTimeout(()=>abort.abort(),50);await assert.rejects(p,/cancel|abort/i);
+ await assert.rejects(a.invoke(slow,[],dir,{timeoutMs:50}),/timed out/i);
+ const bad=path.join(dir,'bad');fs.writeFileSync(bad,'#!/bin/sh\nprintf "not json"\n',{mode:0o755});await assert.rejects(a.invoke(bad,[],dir),/JSON/);
+});
+test('real Unicode prefix diagnostic points to the ASCII failing operand in UTF-16',async t=>{
+ const a=api(),dir=fixture(t),file=path.join(dir,'unicode.spr');const source='let bad = ["😀", missing]\n';fs.writeFileSync(file,source);
+ const r=await a.invoke(compiler,['check',file,'--json'],dir);assert.ok(r.json.diagnostics.length);
+ const d=r.json.diagnostics.find(d=>d.range.start.character>=source.indexOf(','));assert.ok(d,JSON.stringify(r.json));
+ const mapping=require('../out/diagnostics.js');const range=mapping.mapRange(d.range,source);assert.equal(range.start.character,source.indexOf('missing'));assert.equal(range.end.character,source.indexOf('missing')+7);
+});
+test('tool queries use their actual protocol: capabilities and explain have no exitCode',async()=>{
+ const a=api();for(const args of [['capabilities','--json'],['explain','SPR-TYPE-ASSIGN','--json']]){const r=await a.invoke(compiler,args,root);assert.equal(r.json.exitCode,0);assert.equal(r.json.schemaVersion,1);}
+ const caps=await a.invoke(compiler,['capabilities','--json'],root);assert.equal(caps.json.features.emitJavaOnly,true);
+});
+test('valid JSON with a wrong protocol shape produces a controlled adapter error',async t=>{
+ if(process.platform==='win32')return t.skip('POSIX executable fixture');const a=api(),dir=fixture(t),file=path.join(dir,'null-json');fs.writeFileSync(file,"#!/bin/sh\nprintf 'null'\n",{mode:0o755});await assert.rejects(a.invoke(file,[],dir),/JSON|response/i);
+});
