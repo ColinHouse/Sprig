@@ -58,3 +58,8 @@ test('source function types and lambda syntax retain keyword/type/operator scope
  assert.match(await scope('let handler = fn(x: Int) => x + 1','=>'),/keyword.operator/);
  assert.doesNotMatch(await scope('let fn_handler = 1','fn'),/storage.type/);
 });
+
+test("contextual export highlights facades without reserving old identifiers", async()=>{
+ assert.match(await scope("export app.Request", "export"), /keyword.control/);
+ assert.doesNotMatch(await scope("let export = 1", "export"), /keyword/);
+});

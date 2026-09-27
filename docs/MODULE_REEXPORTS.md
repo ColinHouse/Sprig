@@ -11,6 +11,8 @@ export internal.create
 ```
 
 Imports come first, then exports, then local declarations and statements.
+`export` is contextual in this declaration form; existing identifiers named
+export remain legal in variables, parameters, fields and other expressions.
 Exported names retain their simple name. Classes, enums, variants, functions and
 already-importable top-level values are supported. The underlying declaration
 and symbol retain their identity: a facade does not copy a mutable value,

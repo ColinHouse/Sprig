@@ -90,6 +90,10 @@
     "keywords": {
       "patterns": [
         {
+          "name": "keyword.control.sprig",
+          "match": "^\\s*export(?=\\s+[a-zA-Z_][a-zA-Z_0-9]*\\.[a-zA-Z_][a-zA-Z_0-9]*\\s*(?:#.*)?$)"
+        },
+        {
           "name": "constant.language.sprig",
           "match": "\\b(true|false|null)\\b"
         },
@@ -103,7 +107,7 @@
         },
         {
           "name": "keyword.control.sprig",
-          "match": "\\b(match|case|if|elif|else|while|for|return|break|continue|pass|import|export|as|try|catch|finally|throw|throws|requires)\\b"
+          "match": "\\b(match|case|if|elif|else|while|for|return|break|continue|pass|import|as|try|catch|finally|throw|throws|requires)\\b"
         }
       ]
     },

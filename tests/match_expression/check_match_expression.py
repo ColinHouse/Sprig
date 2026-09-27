@@ -1,8 +1,8 @@
 """Expression match tests assert front-end errors and independent runtime effects."""
-import pathlib, subprocess, tempfile, json
+import pathlib, os, subprocess, tempfile, json
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 def invoke(*args):
-    return subprocess.run([str(ROOT/'bin/sprig'),*map(str,args)],capture_output=True,text=True,timeout=60)
+    return subprocess.run([str(ROOT/'bin'/('sprig.cmd' if os.name=='nt' else 'sprig')),*map(str,args)],capture_output=True,text=True,timeout=60)
 HEADER='''enum Flag:
     On
     Off
@@ -128,6 +128,41 @@ print(via_statement(Flag.Off) == mapped(Flag.Off))
         p.write_text(advanced)
         result=invoke('run',p)
         assert result.returncode==0 and result.stdout=='null\n9\n11\ntrue\ngeneric\n2\n20\n3\nselected\ntrue\n',result.stdout+result.stderr
+        nullable_context = 'import java.lang.System as System\n' + HEADER + '''let absent: Int? = match Flag.On:
+    case Flag.On:
+        null
+    case Flag.Off:
+        null
+print(absent)
+let host: String? = match Flag.On:
+    case Flag.On:
+        System.getProperty("java.version")
+    case Flag.Off:
+        null
+if host != null:
+    print(host.length() > 0)
+class Holder:
+    let value: Int = match Flag.On:
+        case Flag.On:
+            5
+        case Flag.Off:
+            6
+print(Holder().value)
+let payload: Maybe[Int] = Maybe[Int].Some(value=4)
+class BoundDefault:
+    let value: Int = match payload:
+        case Maybe.Some as value:
+            value.value
+        case Maybe.None:
+            0
+print(BoundDefault().value)
+'''
+        p.write_text(nullable_context)
+        result=invoke('run',p)
+        assert result.returncode==0 and result.stdout=='null\ntrue\n5\n4\n',result.stdout+result.stderr
+        assert invoke('fmt',p).returncode==0
+        formatted=invoke('run',p)
+        assert (formatted.returncode,formatted.stdout,formatted.stderr)==(result.returncode,result.stdout,result.stderr)
         p.write_text(advanced.replace('func effect(flag: Flag) -> Int throws Error:', 'func effect(flag: Flag) -> Int:'))
         result=invoke('check',p,'--json')
         assert result.returncode!=0 and 'SPR-FLOW-THROWS' in result.stdout,result.stdout+result.stderr
@@ -144,6 +179,9 @@ print(via_statement(Flag.Off) == mapped(Flag.Off))
             ('SPR-NAME-UNRESOLVED','let m: Maybe[Int] = Maybe[Int].Some(value=1)\nlet x = match m:\n    case Maybe.Some as some:\n        some.value\n    case Maybe.None:\n        0\nprint(some)\n'),
         ]
         negatives += [
+            ('SPR-TYPE-CAPTURE','func capture(flag: Flag) -> Int:\n    var n = 0\n    let values = [10, 20]\n    let f = fn() => match flag:\n        case Flag.On:\n            values[n]\n        case Flag.Off:\n            0\n    n = 1\n    return f()\nprint(capture(Flag.On))\n'),
+            ('SPR-NAME-UNRESOLVED','let field: Int = 99\nclass InvalidDefault:\n    let field: Int = match Flag.On:\n        case Flag.On:\n            field\n        case Flag.Off:\n            0\nprint(InvalidDefault().field)\n'),
+            ('SPR-TYPE-NULL','let x: String = match Flag.On:\n    case Flag.On:\n        "value"\n    case Flag.Off:\n        null\n'),
             ('SPR-MATCH-WRONG-TYPE','enum Other:\n    On\n    Off\nlet x = match Flag.On:\n    case Other.On:\n        1\n    case Flag.Off:\n        2\n'),
             ('SPR-MATCH-SCRUTINEE','let flag: Flag? = null\nlet x = match flag:\n    case Flag.On:\n        1\n    case Flag.Off:\n        2\n'),
             ('SPR-NAME-UNRESOLVED','let m: Maybe[Int] = Maybe[Int].None\nlet x = match m:\n    case Maybe.Some as some:\n        some.value\n    case Maybe.None:\n        some.value\n'),

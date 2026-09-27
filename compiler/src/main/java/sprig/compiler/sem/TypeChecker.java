@@ -1658,6 +1658,10 @@ public final class TypeChecker {
         } else if (expr instanceof Expr.Index index) {
             collectMutableCaptures(index.receiver, out);
             collectMutableCaptures(index.index, out);
+        } else if (expr instanceof Expr.Subscript subscript) {
+            collectMutableCaptures(subscript.base, out);
+            Expr index = subscript.index != null ? subscript.index : subscript.resolvedIndex;
+            if (index != null) collectMutableCaptures(index, out);
         } else if (expr instanceof Expr.Unary unary) {
             collectMutableCaptures(unary.operand, out);
         } else if (expr instanceof Expr.Binary binary) {

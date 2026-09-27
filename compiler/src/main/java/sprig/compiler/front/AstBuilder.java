@@ -44,7 +44,7 @@ public final class AstBuilder {
             } else if (child instanceof SprigParser.ExportStatementContext ctx) {
                 if (sawBody) diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT_ORDER, Phase.NAME,
                     "Declaration exports must precede local declarations/statements", uri, span(ctx)));
-                Module.Export exported = new Module.Export(ctx.IDENT(0).getText(),ctx.IDENT(1).getText());
+                Module.Export exported = new Module.Export(ctx.IDENT(1).getText(),ctx.IDENT(2).getText());
                 exported.span = span(ctx);
                 module.exports.add(exported);
                 sawExport = true;

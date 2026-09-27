@@ -22,7 +22,8 @@ genericSuite
 genericBody: classDefinition | variantDefinition | functionDefinition;
 
 importStatement: IMPORT (qualifiedName | STRING) (AS IDENT)?;
-exportStatement: EXPORT IDENT DOT IDENT;
+// Contextual keyword: existing variables/parameters/fields named export remain legal.
+exportStatement: {"export".equals(_input.LT(1).getText())}? IDENT IDENT DOT IDENT;
 qualifiedName: IDENT (DOT IDENT)*;
 
 classDefinition: CLASS IDENT COLON classSuite;

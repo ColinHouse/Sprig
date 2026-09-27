@@ -35,10 +35,14 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-LEX-UNMATCHED | A closing delimiter has no matching opener. |
 | SPR-MATCH-DUPLICATE | A match branch repeats a case. |
 | SPR-MATCH-ENUM-BINDER | Payloadless enum cases cannot bind 'as name'. |
+| SPR-MATCH-INFERENCE | An expression match needs an explicit result type because its branches establish no non-null type. |
 | SPR-MATCH-NONEXHAUSTIVE | Every enum/variant case must have a match branch; there is no default. |
+| SPR-MATCH-RESULT | An expression-match branch has an incompatible result type. |
 | SPR-MATCH-SCRUTINEE | match requires a non-nullable enum or variant value. |
 | SPR-MATCH-UNKNOWN-CASE | The case name does not exist on the matched type. |
 | SPR-MATCH-WRONG-TYPE | A match branch belongs to a different enum/variant. |
+| SPR-MODULE-EXPORT | A declaration reexport names an unknown or illegal target, or conflicts with a visible name. |
+| SPR-MODULE-EXPORT-ORDER | Imports, declaration reexports and ordinary definitions are out of order. |
 | SPR-NAME-DUPLICATE | Two declarations share one name in one namespace. |
 | SPR-NAME-DUPLICATE-MEMBER | A class/variant declares the same member twice. |
 | SPR-NAME-FIELD-SHADOW | A parameter/local cannot shadow a current-class field. |

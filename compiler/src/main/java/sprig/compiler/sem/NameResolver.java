@@ -666,7 +666,13 @@ public final class NameResolver {
     }
 
     private void resolveName(Module module, Scope scope, Expr.Name name) {
-        if (scope.forbiddenFields.contains(name.name)) {
+        Scope restriction = scope;
+        while (restriction != null && !restriction.forbiddenFields.contains(name.name)) {
+            restriction = restriction.parent;
+        }
+        // Branch and lambda scopes retain initializer restrictions, while an
+        // explicit local binder/parameter may legitimately shadow a field.
+        if (restriction != null && scope.findLocal(name.name) == null) {
             diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                     "Field initializer cannot reference field '" + name.name
                             + "'; fields initialize in declaration order without access to each other",
