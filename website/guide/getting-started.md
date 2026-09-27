@@ -5,20 +5,20 @@ Sprig 是面向 CLI 工具、自动化和可靠应用代码的实验性 JVM 语�
 
 ## 下载与校验
 
-公开 SDK 为 [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1)。
+公开 SDK 为 [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1)。
 从发行页下载 ZIP 与同名 `.sha256`。Linux/macOS：
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.2.0-alpha.1-jdk.zip
-cd sprig-v0.2.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.3.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.3.0-alpha.1-jdk.zip
+cd sprig-v0.3.0-alpha.1-jdk
 ```
 
-Linux 也可用 `sha256sum -c`；校验不符时停止。源代码里程碑目标是
+Linux 也可用 `sha256sum -c`；校验不符时停止。已发布版本为
 v0.3.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。
-v0.2 发行包支持本地/Git 依赖，第三方 JVM 库需显式 classpath。
+v0.3 SDK 支持本地/Git/Maven 依赖及显式 @std 内置标准包导入。
 
 ## 初始化、解析、运行
 

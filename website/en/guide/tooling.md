@@ -8,7 +8,7 @@ The stage-0 compiler ships one executable, `bin/sprig`, built by
 ```text
 check <file.spr> [--json] [--syntax-only]   parse and type-check
 run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
-build <file.spr> [-d dir] [--json]          emit Java sources + .class files
+build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      versioned language reference
 capabilities [--json]                     implemented feature inventory
 api <Java.Class> [--member NAME] [--classpath JAR] [--json] JVM signatures
@@ -109,3 +109,8 @@ behavior, and [JVM interop](/en/reference/JVM_INTEROP) for `api` boundaries.
   program still yields a parseable result.
 - The repository's own quality gates are deliberate: see the
   [AI-assisted development disclosure](/en/project/ai-disclosure).
+
+`sprig build file.spr --emit-java-only -d generated --json` performs static
+checking and writes Java without javac. JSON returns `javaSources`, `mainClass`
+and `javacInvoked=false`. Use explicit `import "@std/files.spr" as files` for
+the SDK bundled standard package. Windows remains experimental.
