@@ -68,6 +68,7 @@ public final class NameResolver {
             }
         }
         collectTopVars(module);
+        declareExports(module);
         for (Decl decl : module.decls) {
             resolveDeclTypes(module, decl);
         }
@@ -75,6 +76,43 @@ public final class NameResolver {
             if (stmt instanceof Stmt.VarDecl varDecl && varDecl.typeRef != null) {
                 typeResolver.resolve(module, varDecl.typeRef);
             }
+        }
+    }
+
+    private void declareExports(Module module) {
+        for (Module.Export exported : module.exports) {
+            Symbol alias = module.scope.importAliases.get(exported.alias);
+            if (alias == null || alias.kind != Symbol.Kind.MODULE || alias.module == null) {
+                diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT, Phase.NAME,
+                    "Export requires a Sprig module alias: '" + exported.alias + "'", module.uri, exported.span));
+                continue;
+            }
+            ModuleScope target = alias.module.scope;
+            Symbol symbol = target.types.get(exported.name);
+            if (symbol == null) symbol = target.functions.get(exported.name);
+            if (symbol == null) symbol = target.topVars.get(exported.name);
+            if (symbol == null || (symbol.decl == null && symbol.kind != Symbol.Kind.TOP_VAR)) {
+                diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT, Phase.NAME,
+                    "Module '" + exported.alias + "' has no exportable declaration '" + exported.name + "'",
+                    module.uri, exported.span));
+                continue;
+            }
+            Symbol clash = module.scope.types.get(exported.name);
+            if (clash == null) clash = module.scope.functions.get(exported.name);
+            if (clash == null) clash = module.scope.topVars.get(exported.name);
+            if (clash == null) clash = module.scope.importAliases.get(exported.name);
+            if (clash != null) {
+                String origin = clash.module == null ? "local/builtin" : clash.module.path.getFileName().toString();
+                diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT, Phase.NAME,
+                    "Export name '" + exported.name + "' from " + symbol.module.path.getFileName()
+                        + " conflicts with " + origin, module.uri, exported.span)
+                        .withRelated("Conflicting declaration", clash.span));
+                continue;
+            }
+            exported.symbol = symbol; // share identity, type and initialization with the defining module
+            if (symbol.isType()) module.scope.types.put(exported.name,symbol);
+            else if (symbol.kind == Symbol.Kind.FUNCTION) module.scope.functions.put(exported.name,symbol);
+            else module.scope.topVars.put(exported.name,symbol);
         }
     }
 

@@ -1,0 +1,6 @@
+import "./implementation.spr" as internal
+export internal.Widget
+export internal.create
+
+func local() -> Int:
+    return 1

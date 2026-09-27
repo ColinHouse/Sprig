@@ -64,6 +64,7 @@ public final class SprigApi {
             item.put("name", symbol.name);
             item.put("type", display(symbol.type));
             item.put("mutable", symbol.mutable);
+            exportOrigin(module,symbol,item);
             out.add(item);
         }
         return out;
@@ -75,7 +76,20 @@ public final class SprigApi {
             Map<String, Object> item = declaration(decl);
             if (item != null) out.add(item);
         }
+        for (Module.Export exported : module.exports) {
+            if (exported.symbol == null || exported.symbol.decl == null) continue;
+            Map<String,Object> item = declaration(exported.symbol.decl);
+            if (item != null) { exportOrigin(module,exported.symbol,item); out.add(item); }
+        }
         return out;
+    }
+
+    private static void exportOrigin(Module module, Symbol symbol, Map<String,Object> item) {
+        if (symbol.module != null && symbol.module != module) {
+            item.put("reexported",true);
+            String origin = module.path.toAbsolutePath().getParent().relativize(symbol.module.path.toAbsolutePath()).toString().replace('\\','/');
+            item.put("originModule",origin.startsWith(".") ? origin : "./" + origin);
+        }
     }
 
     private static Map<String, Object> declaration(Decl decl) {

@@ -67,6 +67,8 @@ public final class CodeDocs {
             Map.entry(Codes.CALL_UNKNOWN_FIELD, "Named argument does not match any field."),
             Map.entry(Codes.CALL_MISSING_FIELD, "A required field was not provided."),
             Map.entry(Codes.CALL_DUPLICATE_FIELD, "The same named field was provided twice."),
+            Map.entry(Codes.MODULE_EXPORT, "Declaration export needs a unique name referring to a public Sprig module declaration."),
+            Map.entry(Codes.MODULE_EXPORT_ORDER, "Imports precede exports, which precede local declarations and statements."),
             Map.entry(Codes.MATCH_NONEXHAUSTIVE, "Every enum/variant case must have a match branch; there is no default."),
             Map.entry(Codes.MATCH_DUPLICATE, "A match branch repeats a case."),
             Map.entry(Codes.MATCH_WRONG_TYPE, "A match branch belongs to a different enum/variant."),

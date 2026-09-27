@@ -47,5 +47,8 @@
   ],
   "feature.formatter": [
     "tests/formatter/check_formatter.py"
+  ],
+  "feature.moduleReexports": [
+    "tests/reexports/check_reexports.py"
   ]
 }

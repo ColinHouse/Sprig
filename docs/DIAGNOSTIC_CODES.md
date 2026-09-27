@@ -104,3 +104,9 @@ and unambiguous. When it is false, treat `repair.kind` as a strategy, not a
 patch: for example a nullable value needs an explicit narrow/handle decision,
 which is business logic the compiler must not invent. `sprig explain <CODE>
 --json` returns the same `repair` object plus causes, safe fixes and examples.
+
+## Declaration facade errors
+
+- `SPR-MODULE-EXPORT`: unknown/illegal target or duplicate/colliding visible name; includes origin names.
+- `SPR-MODULE-EXPORT-ORDER`: imports, exports, declarations/statements must appear in that order.
+- Existing `SPR-NAME-IMPORT-CYCLE` also rejects reexport chains containing a cycle.

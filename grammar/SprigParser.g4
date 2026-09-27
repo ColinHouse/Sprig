@@ -6,8 +6,8 @@ options { tokenVocab=SprigLexer; }
 
 // Imports have one canonical location: at the start of a module.
 program
-    : NEWLINE* (importStatement NEWLINE NEWLINE*)*
-      (NEWLINE | genericDefinition | classDefinition | enumDefinition
+    : NEWLINE* ((importStatement | exportStatement) NEWLINE NEWLINE*)*
+      (NEWLINE | exportStatement NEWLINE | genericDefinition | classDefinition | enumDefinition
       | variantDefinition | functionDefinition | statement)* EOF
     ;
 
@@ -22,6 +22,7 @@ genericSuite
 genericBody: classDefinition | variantDefinition | functionDefinition;
 
 importStatement: IMPORT (qualifiedName | STRING) (AS IDENT)?;
+exportStatement: EXPORT IDENT DOT IDENT;
 qualifiedName: IDENT (DOT IDENT)*;
 
 classDefinition: CLASS IDENT COLON classSuite;

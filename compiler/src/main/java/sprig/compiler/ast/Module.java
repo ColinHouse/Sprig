@@ -15,6 +15,12 @@ public final class Module {
     public final List<Decl.Import> imports;
     public final List<Decl> decls = new ArrayList<>();
     public final List<Stmt> topStatements = new ArrayList<>();
+    public static final class Export extends Node {
+        public final String alias, name;
+        public sprig.compiler.sem.Symbol symbol;
+        public Export(String alias, String name) { this.alias=alias; this.name=name; }
+    }
+    public final List<Export> exports = new ArrayList<>();
     public ModuleScope scope;
     public final Map<String, Module> importedModules = new LinkedHashMap<>();
     public final Map<String, Class<?>> javaImports = new LinkedHashMap<>();

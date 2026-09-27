@@ -117,3 +117,11 @@ reflection or automatic class serialization is involved.
 The first host processes requests serially. Authentication, sessions, middleware,
 async, multipart, production limits and public interface binding are outside this
 small experiment.
+
+## Stable facade
+
+New clients may import `@web/web.spr`: explicit declaration reexports expose
+App, Request, Response, routing/schema types and response constructors. Their
+types and initialization remain those of app.spr. Existing `@web/app.spr`
+imports remain supported. `sprig api @web/web.spr --json` shows signatures and
+origin metadata without executing server code.

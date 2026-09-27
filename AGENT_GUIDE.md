@@ -99,3 +99,7 @@ see `docs/STANDARD_LIBRARY.md` and the three `examples/showcases` projects.
 
 For details, see `docs/QUICK_REFERENCE.md`, `docs/JVM_INTEROP.md`,
 `docs/NUMERIC_SEMANTICS.md`, and `docs/KNOWN_LIMITATIONS.md` in the archive.
+
+Declaration facades use `export alias.Symbol` after imports and before other
+code. Query `sprig api module.spr --json` for exported signatures and origins.
+No wildcard, renaming or implicit reexport exists. See docs/MODULE_REEXPORTS.md.

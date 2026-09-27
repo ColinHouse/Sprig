@@ -25,6 +25,7 @@ BREAK: 'break';
 CONTINUE: 'continue';
 PASS: 'pass';
 IMPORT: 'import';
+EXPORT: 'export';
 AS: 'as';
 TRY: 'try';
 CATCH: 'catch';

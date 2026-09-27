@@ -36,7 +36,19 @@ public final class AstBuilder {
             imports.add(buildImport(ctx));
         }
         Module module = new Module(path, uri, imports);
+        boolean sawExport = false, sawBody = false;
         for (ParseTree child : program.children) {
+            if (child instanceof SprigParser.ImportStatementContext ctx) {
+                if (sawExport) diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT_ORDER, Phase.NAME,
+                    "Imports must precede declaration exports", uri, span(ctx)));
+            } else if (child instanceof SprigParser.ExportStatementContext ctx) {
+                if (sawBody) diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT_ORDER, Phase.NAME,
+                    "Declaration exports must precede local declarations/statements", uri, span(ctx)));
+                Module.Export exported = new Module.Export(ctx.IDENT(0).getText(),ctx.IDENT(1).getText());
+                exported.span = span(ctx);
+                module.exports.add(exported);
+                sawExport = true;
+            } else if (child instanceof org.antlr.v4.runtime.ParserRuleContext) sawBody = true;
             if (child instanceof SprigParser.GenericDefinitionContext ctx) {
                 module.decls.add(buildGeneric(ctx));
             } else if (child instanceof SprigParser.ClassDefinitionContext ctx) {
@@ -82,6 +94,7 @@ public final class AstBuilder {
             result = new Decl.Import(ctx.qualifiedName().getText(), false,
                     ctx.IDENT() == null ? null : ctx.IDENT().getText());
         }
+        result.span = span(ctx);
         return result;
     }
 

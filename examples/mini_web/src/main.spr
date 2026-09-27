@@ -1,4 +1,4 @@
-import "@web/app.spr" as web
+import "@web/web.spr" as web
 import "@std/json.spr" as json
 
 let app = web.App(title="Mini Web", cors_origin="http://localhost:5173")

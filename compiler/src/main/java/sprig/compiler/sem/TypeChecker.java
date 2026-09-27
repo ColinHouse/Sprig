@@ -2296,7 +2296,7 @@ public final class TypeChecker {
         if (function != null) {
             ResolvedField field = new ResolvedField();
             field.kind = ResolvedField.Kind.MODULE_FUNCTION;
-            field.module = target;
+            field.module = function.module;
             field.methodDecl = (Decl.Func) function.decl;
             field.type = function.type;
             field.symbol = function;
@@ -2306,7 +2306,7 @@ public final class TypeChecker {
         if (variable != null) {
             ResolvedField field = new ResolvedField();
             field.kind = ResolvedField.Kind.MODULE_VAR;
-            field.module = target;
+            field.module = variable.module;
             field.symbol = variable;
             field.type = variable.type == null ? NativeType.ERROR : variable.type;
             return field;
@@ -2315,7 +2315,7 @@ public final class TypeChecker {
         if (type != null && type.decl != null) {
             ResolvedField field = new ResolvedField();
             field.kind = ResolvedField.Kind.MODULE_TYPE;
-            field.module = target;
+            field.module = type.module;
             field.symbol = type;
             field.type = type.type;
             if (type.decl instanceof Decl.ClassDecl classDecl) {
