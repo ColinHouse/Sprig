@@ -1,0 +1,41 @@
+import "@web/app.spr" as web
+import "@std/json.spr" as json
+
+let app = web.App(title="Lifecycle")
+let other = web.App(title="Other")
+app.get("/", fn(req: web.Request) => web.text("ok", 200))
+print(app.routes.size())
+print(other.routes.size())
+var duplicate = false
+try:
+    app.get("/", fn(req: web.Request) => web.text("duplicate", 200))
+catch problem: Error:
+    duplicate = true
+print(duplicate)
+var reserved = false
+try:
+    app.get("/docs", fn(req: web.Request) => web.text("reserved", 200))
+catch problem: Error:
+    reserved = true
+print(reserved)
+var invalid = false
+try:
+    app.get("/bad/{id}/{id}", fn(req: web.Request) => web.text("bad", 200))
+catch problem: Error:
+    invalid = true
+print(invalid)
+var schema_error = false
+try:
+    app.route(web.Route(method=web.Method.POST, path="/bad-schema", handler=fn(req: web.Request) => web.text("ok", 200), request_schema=web.Schema(kind=web.SchemaType.ARRAY)))
+catch problem: Error:
+    schema_error = true
+print(schema_error)
+app.run(0)
+print(app.port() > 0)
+app.stop()
+app.stop()
+app.run(0)
+print(app.port() > 0)
+app.stop()
+print(json.stringify(web.schema_json(web.Schema(kind=web.SchemaType.ARRAY, items=web.Schema(kind=web.SchemaType.INTEGER)))))
+print(json.stringify(web.schema_json(web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="enabled", schema=web.Schema(kind=web.SchemaType.BOOLEAN), required=false)]))))

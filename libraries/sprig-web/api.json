@@ -1,0 +1,103 @@
+{
+  "name": "sprig-web",
+  "version": "0.1.0",
+  "status": "local development package",
+  "import": "@web/app.spr",
+  "functions": {
+    "text": "(String, Int) -> Response",
+    "json_response": "(json.Value, Int) -> Response",
+    "schema_json": "(Schema) -> json.Value throws Error"
+  },
+  "App": {
+    "constructor": {
+      "title": "String",
+      "version": "String = 1.0.0",
+      "cors_origin": "String = empty"
+    },
+    "methods": {
+      "get": "(String, fn(Request) -> Response) -> Unit throws Error",
+      "post": "(String, fn(Request) -> Response) -> Unit throws Error",
+      "delete": "(String, fn(Request) -> Response) -> Unit throws Error",
+      "route": "(Route) -> Unit throws Error",
+      "openapi": "() -> json.Value throws Error",
+      "run": "(Int) -> Unit throws Error",
+      "port": "() -> Int throws Error",
+      "stop": "() -> Unit"
+    }
+  },
+  "Request": {
+    "fields": [
+      "method: String",
+      "path: String",
+      "body: String"
+    ],
+    "methods": {
+      "path_param": "(String) -> String?",
+      "query": "(String) -> String?",
+      "header": "(String) -> String?",
+      "json": "() -> json.Value"
+    }
+  },
+  "Response": {
+    "fields": [
+      "status: Int",
+      "body: String",
+      "content_type: String",
+      "headers: List[Header]"
+    ],
+    "methods": {
+      "with_header": "(String, String) -> Response"
+    }
+  },
+  "Route": {
+    "required": [
+      "method: Method",
+      "path: String",
+      "handler: fn(Request) -> Response"
+    ],
+    "optional": [
+      "summary: String",
+      "request_schema: Schema?",
+      "response_schema: Schema?",
+      "response_status: Int",
+      "query_parameters: List[QueryParameter]"
+    ]
+  },
+  "SchemaType": [
+    "STRING",
+    "INTEGER",
+    "BOOLEAN",
+    "OBJECT",
+    "ARRAY"
+  ],
+  "Method": [
+    "GET",
+    "POST",
+    "DELETE"
+  ],
+  "reserved_routes": [
+    "/openapi.json",
+    "/docs"
+  ],
+  "matching": "registration order; /segments/{name}; UTF-8 percent decoding",
+  "query": "first value; null absent; empty distinct; plus-as-space",
+  "errors": {
+    "malformed_client_input": 400,
+    "missing_route": 404,
+    "handler_failure": 500
+  },
+  "host": {
+    "bind": "127.0.0.1",
+    "ephemeral_port": 0,
+    "execution": "serial synchronous"
+  },
+  "swagger": {
+    "assets": "swagger-ui-dist@5.17.14 CDN",
+    "network_required": true
+  },
+  "metadata_validation": [
+    "unique query parameter names per operation",
+    "unique object-schema field names",
+    "equivalent templated paths use identical parameter names across methods"
+  ]
+}

@@ -25,7 +25,7 @@ stdlib compatibility promise or invisible upgrade is made.
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?` |
 | `text` | `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String` |
-| `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)` |
+| `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 
 File text always uses UTF-8. Writes replace existing file content, create a file,
 and require an existing parent; `make_directory` creates missing parents.
@@ -53,6 +53,35 @@ and `Object(members: List[Member])`. `Member` has `key: String` and `value: Valu
 Objects preserve input/member order and reject duplicate keys. Numbers retain
 validated exact JSON lexemes (`12.50`, `-2e3`) without lossy Float conversion;
 applications choose any numeric conversion explicitly. No `Any` is involved.
+
+### Explicit object lookup
+
+`find_member(value: Value, key: String) -> Lookup throws Error` returns a closed
+variant: `Missing`, `Found(value: Value)`, or `NotObject`. A present JSON null
+is `Found(value=Value.Null)`, never `Missing`. False, zero and an empty string
+also remain present values; there is no truthiness or value coercion. Key
+comparison is exact String equality, including Unicode keys. Member order and
+stored values are unchanged.
+
+```sprig
+import "@std/json.spr" as json
+
+let document = json.parse("{\"name\":null}")
+match json.find_member(document, "name"):
+    case json.Lookup.Missing:
+        print("missing")
+    case json.Lookup.Found as member:
+        print(json.stringify(member.value))  # prints null
+    case json.Lookup.NotObject:
+        print("expected an object")
+```
+
+Lookup validates every key in a manually constructed object before returning,
+so duplicate keys after a matching member also raise `Error`. Parsing and
+serialization retain their existing duplicate rejection. Nonobjects return
+`NotObject`; this lookup does not validate unrelated nested values or number
+lexemes. Parsing/serialization perform those validations. Lookup scans the
+ordered members and returns the stored value without a dynamic escape hatch.
 
 Parser/serializer logic, recursive traversal, collections and errors are Sprig.
 The tiny `HostText` boundary only converts UTF-16 hex units and escapes control

@@ -13,6 +13,7 @@ exports.run=async()=>{
   const doc=await vscode.workspace.openTextDocument(file);await vscode.window.showTextDocument(doc);assert.equal(doc.languageId,'sprig');
   assert.equal(await vscode.commands.executeCommand('sprig.check'),undefined);
   assert.equal(await vscode.commands.executeCommand('sprig.run'),undefined);
+  const terminalCount=vscode.window.terminals.length;assert.equal(await vscode.commands.executeCommand('sprig.runInTerminal'),undefined);assert.equal(vscode.window.terminals.length,terminalCount);
   assert.equal(await vscode.commands.executeCommand('sprig.showGeneratedJava'),undefined);
   assert.equal(vscode.languages.getDiagnostics(doc.uri).length,0);
   console.log('Restricted Host passed: highlighting/language registration available; compiler commands blocked.');return;
@@ -47,5 +48,16 @@ exports.run=async()=>{
  assert.ok(vscode.languages.getDiagnostics(doc.uri).length,'independent project diagnostics retained');
  const unused=path.join(project,'src','unused.spr');fs.writeFileSync(unused,'print(\"unused\")\n');await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(unused));
  assert.equal((await vscode.commands.executeCommand('sprig.check')).exitCode,1,'entry graph failure must survive a clean unused-file check');
+ // Actual integrated terminal invokes normal Run without the finite JSON adapter.
+ await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
+ const terminalSource=path.join(folder,'terminal 中文 $;.spr'), marker=path.join(folder,'terminal-marker.txt');
+ fs.writeFileSync(terminalSource,'import "@std/files.spr" as files\nfiles.write_utf8('+JSON.stringify(marker)+', "terminal execution")\n');
+ await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(terminalSource));
+ const terminal=await vscode.commands.executeCommand('sprig.runInTerminal');assert.ok(terminal,'integrated terminal created');
+ try {
+  for(let i=0;i<100 && !fs.existsSync(marker);i++)await new Promise(r=>setTimeout(r,100));
+  assert.equal(fs.existsSync(marker),true,'actual terminal JVM must execute the saved source');
+  assert.equal(fs.readFileSync(marker,'utf8'),'terminal execution');
+ } finally {terminal.dispose();}
  console.log('Extension Host passed: registered language, check/error repair, actual JVM Run, Java-only view and save diagnostics.');
 };

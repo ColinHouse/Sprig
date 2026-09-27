@@ -1,0 +1,9 @@
+class Handler:
+    let callback: fn(String) -> Bool
+func apply(f: fn(Int) -> Int) -> Int:
+    return f(1)
+func factory() -> fn() -> Unit:
+    return fn() => print("ready")
+let nested: fn(fn(Int) -> Int) -> fn(Int) -> Int = fn(f: fn(Int) -> Int) => f
+let nullable: (fn() -> Int)? = null
+let values: List[fn() -> Int] = [fn() => 1]

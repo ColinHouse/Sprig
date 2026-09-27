@@ -156,6 +156,15 @@ public final class AstBuilder {
     }
 
     private TypeRef buildTypeRef(SprigParser.TypeRefContext ctx) {
+        if (ctx.functionType() != null) {
+            List<SprigParser.TypeRefContext> written = ctx.functionType().typeRef();
+            List<TypeRef> params = new ArrayList<>();
+            for (int i = 0; i < written.size() - 1; i++) params.add(buildTypeRef(written.get(i)));
+            TypeRef ref = new TypeRef(List.of("fn"), params, ctx.QUESTION() != null,
+                    buildTypeRef(written.get(written.size() - 1)));
+            ref.span = span(ctx);
+            return ref;
+        }
         List<String> parts = new ArrayList<>();
         for (TerminalNode ident : ctx.qualifiedName().IDENT()) {
             parts.add(ident.getText());

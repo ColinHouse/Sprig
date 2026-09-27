@@ -1,0 +1,3 @@
+let inc: fn(Int) -> Int = fn(x: Int) => x + 1
+print(inc(4))
+let optional: (fn(Int) -> Int)? = null

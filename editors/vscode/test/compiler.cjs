@@ -46,3 +46,14 @@ test('tool queries use their actual protocol: capabilities and explain have no e
 test('valid JSON with a wrong protocol shape produces a controlled adapter error',async t=>{
  if(process.platform==='win32')return t.skip('POSIX executable fixture');const a=api(),dir=fixture(t),file=path.join(dir,'null-json');fs.writeFileSync(file,"#!/bin/sh\nprintf 'null'\n",{mode:0o755});await assert.rejects(a.invoke(file,[],dir),/JSON|response/i);
 });
+
+test('Windows terminal plan invokes the SDK JVM directly and rejects arbitrary batch wrappers',t=>{
+ const a=api(),dir=fixture(t),launcher=path.join(dir,'bin','sprig.cmd');
+ assert.throws(()=>a.compilerCommand(launcher,['run','server $; 中文.spr'],'win32'),/SDK/);
+ fs.mkdirSync(path.join(dir,'build'),{recursive:true});fs.writeFileSync(path.join(dir,'build','sprig-compiler.jar'),'fixture');
+ const command=a.compilerCommand(launcher,['run','server $; 中文.spr'],'win32');
+ assert.equal(command.command,'java');assert.equal(command.args.includes('sprig.compiler.cli.Main'),true);
+ assert.deepEqual(command.args.slice(-2),['run','server $; 中文.spr']);
+ assert.equal(command.args[3].includes(';'),true);
+ assert.equal(command.args.includes('--json'),false);
+});

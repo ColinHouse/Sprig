@@ -53,3 +53,20 @@ by the Sprig v0.7 design kit.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
 - Sprig targets v0.3.0-alpha.1, an experimental Alpha under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.
+
+## Callable boundary
+
+Source function types now use `fn(A) -> R`, arities 0–3. Parameters and results
+are invariant. Callable types carry no recoverable `throws` effects: handle
+those inside named wrappers before placing them in a lambda. Arbitrary Java
+SAM interfaces are not converted. Only concrete Fn0..Fn3 generic signatures
+preserve callable types; raw, wildcard or unresolved type variables are rejected.
+`Character`/`Short`/`Byte` callable slots and arbitrary parameterized Java slots
+are unsupported because they would require additional erased-value adapters.
+Nullable callable values use `(fn(A) -> R)?`; `fn(A) -> R?` means nullable result.
+
+Project discovery currently compares normalized source-root prefixes rather than
+canonicalizing alternate symlink spellings. On macOS an explicit absolute /var
+source while cwd discovers /private/var can be treated as standalone and lose
+package aliases. Use project-relative source paths from the project directory;
+this existing path-alias behavior was reproduced during the SDK web experiment.

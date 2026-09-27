@@ -48,3 +48,13 @@ test('all repository Sprig files tokenize and strings/comments do not leak acros
  function walk(dir){ for(const ent of fs.readdirSync(dir,{withFileTypes:true})){ const f=path.join(dir,ent.name); if(ent.isDirectory()) walk(f); else if(f.endsWith('.spr')) {count++;let state=tm.INITIAL; for(const line of fs.readFileSync(f,'utf8').split(/\r\n|\n|\r/)){ const r=g.tokenizeLine(line,state);assert.ok(!r.stoppedEarly,f);state=r.ruleStack; }}}}
  for(const d of ['std','examples','tests/runtime'])walk(path.join(root,d)); assert.ok(count>30);
 });
+
+test('source function types and lambda syntax retain keyword/type/operator scopes',async()=>{
+ for(const line of ['let handler: fn(String) -> Bool = predicate', 'let nullable: (fn(Int) -> Int)? = null', 'let values: List[fn() -> Int] = []']) {
+  assert.match(await scope(line,'fn'),/storage.type/);
+  assert.match(await scope(line,'->'),/keyword.operator/);
+ }
+ assert.match(await scope('let handler: fn(String) -> Bool = predicate','String'),/support.type/);
+ assert.match(await scope('let handler = fn(x: Int) => x + 1','=>'),/keyword.operator/);
+ assert.doesNotMatch(await scope('let fn_handler = 1','fn'),/storage.type/);
+});

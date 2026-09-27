@@ -22,7 +22,7 @@ public final class NullableType implements Type {
 
     @Override
     public String display() {
-        return inner.display() + "?";
+        return (inner instanceof FunctionType ? "(" + inner.display() + ")" : inner.display()) + "?";
     }
 
     @Override

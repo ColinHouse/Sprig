@@ -1,0 +1,30 @@
+import "@web/app.spr" as web
+import "@std/json.spr" as json
+
+let app = web.App(title="Mini Web", cors_origin="http://localhost:5173")
+
+func root(req: web.Request) -> web.Response:
+    return web.text("Hello, Sprig!", 200).with_header("X-Sprig", "mini-web")
+
+func hello(req: web.Request) -> web.Response:
+    let name = req.path_param("name")
+    let greeting = req.query("greeting")
+    if name != null:
+        if greeting != null:
+            return web.text(greeting + ", " + name + "!", 200)
+        return web.text("Hello, " + name + "!", 200)
+    return web.text("Missing name", 400)
+
+func echo(req: web.Request) -> web.Response:
+    return web.json_response(req.json(), 200)
+
+func fail(req: web.Request) -> web.Response:
+    return web.json_response(json.Value.Number(text="broken"), 200)
+
+app.get("/", fn(req: web.Request) => root(req))
+app.route(web.Route(method=web.Method.GET, path="/hello/{name}", handler=fn(req: web.Request) => hello(req), summary="Greet a name", query_parameters=[web.QueryParameter(name="greeting", schema=web.Schema(kind=web.SchemaType.STRING))]))
+app.route(web.Route(method=web.Method.POST, path="/echo", handler=fn(req: web.Request) => echo(req), summary="Echo JSON", request_schema=web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="message", schema=web.Schema(kind=web.SchemaType.STRING))]), response_schema=web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="message", schema=web.Schema(kind=web.SchemaType.STRING))])))
+app.get("/fail", fn(req: web.Request) => fail(req))
+app.route(web.Route(method=web.Method.DELETE, path="/delete/{id}", handler=fn(req: web.Request) => web.text("deleted", 204), response_status=204))
+app.run(0)
+print("PORT=" + app.port().toString())

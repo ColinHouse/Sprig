@@ -90,6 +90,16 @@ same effect; `SPR-FLOW-THROWS` is reported otherwise. `Error` values expose a
 `message` field. Java checked exceptions can be caught as the imported Java
 exception class.
 
+## Explicit generics
+
+<<< @/snippets/generics.spr
+
+User-defined classes, variants and functions support `generic T:` or
+`generic K, V:` blocks. Every use writes explicit type arguments, such as
+`Box[Int](value=42)`; parameters are invariant and there is no inference.
+Equality on a parameter requires `requires T: Equatable`. See the
+[generics guide](/en/guide/generics) for the implemented contract.
+
 ## Lambdas
 
 <<< @/snippets/lambdas.spr
@@ -98,6 +108,36 @@ Lambdas are expressions: `fn(x: Int) => expression`. Arities 0 through 3 are
 supported, bodies are single expressions, and a lambda cannot declare
 `throws`. A lambda that captures a `var` local is rejected
 (`SPR-TYPE-CAPTURE`); copy it into a `let` binding first.
+
+## JSON object lookup
+
+<<< @/snippets/json_lookup.spr
+
+`json.find_member` distinguishes `Missing`, `Found(value: json.Value)` and
+`NotObject`. Present JSON null, false, zero and empty strings remain found
+values. Duplicate object keys still raise `Error`; the object member order is
+preserved. The [standard-layer contract](https://github.com/ColinHouse/Sprig/blob/main/docs/STANDARD_LIBRARY.md)
+explains parsing, lookup and serialization boundaries.
+
+## Function types
+
+A function type spells parameter types and result types:
+
+<<< @/snippets/function_types.spr
+
+`fn(Int) -> Int` is a **type**; `fn(x: Int) => x + 1` is a **value expression**.
+Arity is 0–3. Parameters and results are invariant: there is no function
+subtyping, implicit conversion or untyped fallback. Use parentheses for outer
+nullability, `(fn(Int) -> Int)?`; `fn(Int) -> Int?` has a nullable result.
+Ordinary null narrowing applies before invoking a nullable function value.
+Function types may annotate locals, fields, parameters and results, or occur in
+explicit generic arguments. Function types cannot declare `throws`; checked
+errors must be handled inside a non-throwing callable.
+
+The JVM bridge accepts corresponding Sprig-owned `sprig.runtime.Fn0`–`Fn3`
+formal signatures with supported concrete type arguments. It does not convert
+functions to arbitrary Java `Function`, `Consumer`, `Runnable` or interfaces.
+Ask `sprig api <Class> --json` about the actual formal signature.
 
 ## Modules
 
@@ -113,8 +153,8 @@ classes uses the same syntax with a qualified class name:
 
 ## What is not in the language
 
-User-defined generics, inheritance and interfaces, `match` expressions,
-`%=`, tuples/destructuring, arrays, varargs, string interpolation and function
-types in source are **not implemented**. See
+Generic inference, variance, inheritance and interfaces, `match` expressions,
+`%=`, tuples/destructuring, arrays, varargs and string interpolation are
+**not implemented**. See
 [Known limitations](/en/reference/KNOWN_LIMITATIONS) for the full list, and the
 [stage-1 roadmap](/en/reference/STAGE1_ROADMAP) for what comes next.

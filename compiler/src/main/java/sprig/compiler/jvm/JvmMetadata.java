@@ -51,13 +51,16 @@ public final class JvmMetadata {
         out.put("static", Modifier.isStatic(executable.getModifiers()));
         out.put("varargs", executable.isVarArgs());
         out.put("javaParameterTypes", Arrays.stream(executable.getParameterTypes()).map(Class::getTypeName).toList());
-        out.put("sprigParameterTypes", Arrays.stream(executable.getParameterTypes())
-                .map(c -> JavaTypes.map(c).display()).toList());
+        List<String> parameterTypes = new ArrayList<>();
+        for (int i = 0; i < executable.getParameterCount(); i++)
+            parameterTypes.add(JavaTypes.mapFormal(executable.getGenericParameterTypes()[i],
+                    executable.getParameterTypes()[i]).display());
+        out.put("sprigParameterTypes", parameterTypes);
         out.put("genericParameterTypes", Arrays.stream(executable.getGenericParameterTypes())
                 .map(Type::getTypeName).toList());
         if (executable instanceof Method method) {
             out.put("javaReturnType", method.getReturnType().getTypeName());
-            out.put("sprigReturnType", JavaTypes.mapValue(method.getReturnType()).display());
+            out.put("sprigReturnType", JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
             out.put("genericReturnType", method.getGenericReturnType().getTypeName());
             out.put("nullableResult", !method.getReturnType().isPrimitive());
         } else {
@@ -72,11 +75,15 @@ public final class JvmMetadata {
         out.put("usableFromSprig", unusable == null);
         out.put("signatureSupported", unusable == null);
         out.put("interopLevel", unusable != null ? "unsupported"
-                : genericBoundary(executable) ? "erased-generic" : "direct");
+                : erasedGenericBoundary(executable) ? "erased-generic"
+                : callableBoundary(executable) ? "sprig-callable" : "direct");
         out.put("unusableReason", unusable);
         out.put("genericBoundary", genericBoundary(executable));
         List<String> interopNotes = new ArrayList<>();
-        if (genericBoundary(executable)) interopNotes.add(
+        boolean callableBoundary = callableBoundary(executable);
+        out.put("sprigCallableBoundary", callableBoundary);
+        if (callableBoundary) interopNotes.add("Concrete Fn0..Fn3 arguments preserve invariant source function types; Java callback parameters/results must be non-null, except Void denotes Unit.");
+        if (erasedGenericBoundary(executable)) interopNotes.add(
                 "Generic type arguments are erased at the Sprig boundary; no List[T] or Map[K,V] guarantee is inferred.");
         if (Arrays.stream(executable.getParameterTypes())
                 .anyMatch(c -> c == char.class || c == Character.class)) interopNotes.add(
@@ -112,15 +119,24 @@ public final class JvmMetadata {
         Class<?>[] params = executable.getParameterTypes();
         for (int i = 0; i < params.length; i++) {
             if (i > 0) out.append(", ");
-            out.append(JavaTypes.map(params[i]).display());
+            out.append(JavaTypes.mapFormal(executable.getGenericParameterTypes()[i], params[i]).display());
         }
         out.append(')');
-        if (executable instanceof Method method) out.append(" -> ").append(JavaTypes.mapValue(method.getReturnType()).display());
+        if (executable instanceof Method method) out.append(" -> ").append(JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
         return out.toString();
     }
 
     public static String unsupportedReason(Executable executable) {
         if (executable.isVarArgs()) return "Java varargs are not supported";
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        Class<?>[] raw = executable.getParameterTypes();
+        for (int i = 0; i < raw.length; i++) {
+            if (JavaTypes.isCallableClass(raw[i]) && JavaTypes.callable(generic[i]) == null)
+                return "Sprig callable boundary requires concrete invariant Fn0..Fn3 type arguments";
+        }
+        if (executable instanceof Method method && JavaTypes.isCallableClass(method.getReturnType())
+                && JavaTypes.callable(method.getGenericReturnType()) == null)
+            return "Sprig callable result requires concrete invariant Fn0..Fn3 type arguments";
         for (Class<?> param : executable.getParameterTypes()) {
             if (param.isArray()) return "Java array parameter has no Sprig source type or adapter";
         }
@@ -128,6 +144,21 @@ public final class JvmMetadata {
             return "Java array result has no Sprig source type or adapter";
         }
         return null;
+    }
+
+    private static boolean callableBoundary(Executable executable) {
+        return Arrays.stream(executable.getParameterTypes()).anyMatch(JavaTypes::isCallableClass)
+                || executable instanceof Method m && JavaTypes.isCallableClass(m.getReturnType());
+    }
+
+    private static boolean erasedGenericBoundary(Executable executable) {
+        if (executable instanceof Method method && method.getGenericReturnType() != method.getReturnType()
+                && !JavaTypes.isCallableClass(method.getReturnType())) return true;
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        Class<?>[] raw = executable.getParameterTypes();
+        for (int i = 0; i < raw.length; i++)
+            if (generic[i] != raw[i] && !JavaTypes.isCallableClass(raw[i])) return true;
+        return false;
     }
 
     private static boolean genericBoundary(Executable executable) {

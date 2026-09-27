@@ -9,9 +9,39 @@ variant Value:
     Array(values: List[Value])
     Object(members: List[Member])
 
+# Explicit lookup: a present JSON Null is Found(value=Value.Null).
+variant Lookup:
+    Missing
+    Found(value: Value)
+    NotObject
+
 class Member:
     let key: String
     let value: Value
+
+# Validate the complete object before returning, including duplicates after a match.
+func find_member(value: Value, key: String) -> Lookup throws Error:
+    match value:
+        case Value.Null:
+            return Lookup.NotObject
+        case Value.Boolean as node:
+            return Lookup.NotObject
+        case Value.Number as node:
+            return Lookup.NotObject
+        case Value.Text as node:
+            return Lookup.NotObject
+        case Value.Array as node:
+            return Lookup.NotObject
+        case Value.Object as node:
+            let keys: MutableList[String] = []
+            var result: Lookup = Lookup.Missing
+            for member in node.members:
+                if keys.contains(member.key):
+                    throw Error("duplicate object key: " + member.key)
+                keys.append(member.key)
+                if member.key == key:
+                    result = Lookup.Found(value=member.value)
+            return result
 
 func unicode_unit(hex: String) -> String throws Error:
     let value = HostText.unicodeUnit(hex)

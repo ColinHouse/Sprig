@@ -69,9 +69,17 @@ assert not list(ROOT.glob("docs/**/REVIEW_REPORT.md"))
 current = list(required) + ["AGENT_GUIDE.md", "docs/DEPENDENCIES.md", "docs/PROJECTS.md",
     "docs/GENERICS.md", "docs/RELEASE_VALIDATION.md",
  "website/en/guide/generics.md",
-    "website/guide/generics.md", "website/en/guide/projects.md", "website/guide/projects.md"]
+    "website/guide/generics.md", "website/en/guide/projects.md", "website/guide/projects.md",
+    "website/en/guide/language-tour.md", "website/guide/language-tour.md",
+    "website/reference/implementation-status.md", "website/reference/known-limitations.md"]
 rules = []
 features = catalog["features"]
+if features.get("userGenerics"):
+    rules += [r"User-defined generics[^.]*not implemented",
+              r"用户自定义泛型.{0,150}尚未实现"]
+if features.get("sourceFunctionTypes"):
+    rules += [r"function types in source[^.]*not implemented",
+              r"源码中的函数类型.{0,100}尚未实现"]
 if features.get("multipleGenericParameters"):
     rules += [r"single-parameter (?:user )?generics", r"multiple (?:type )?parameters.{0,20}unsupported"]
     rules += [r"single.parameter only", r"multiple type parameters and inference are rejected",

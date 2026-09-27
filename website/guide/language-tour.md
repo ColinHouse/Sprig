@@ -71,6 +71,15 @@ Map 的键，因为 IEEE 相等与哈希在 `NaN` 和有符号零上不一致。
 处理，或者声明同样的效果，否则会得到 `SPR-FLOW-THROWS`。`Error` 提供 `message`
 字段。Java 受检异常可以作为导入的 Java 异常类被捕获。
 
+## 显式泛型
+
+<<< @/snippets/generics.spr
+
+用户自定义类、variant 与函数支持 `generic T:` 或 `generic K, V:` 块。
+每次使用须写显式类型参数，如 `Box[Int](value=42)`；参数不变、没有泛型推断。
+类型参数上的相等比较需要 `requires T: Equatable`。
+完整约定见[泛型指南](/guide/generics)。
+
 ## Lambda
 
 <<< @/snippets/lambdas.spr
@@ -78,6 +87,31 @@ Map 的键，因为 IEEE 相等与哈希在 `NaN` 和有符号零上不一致。
 Lambda 是表达式：`fn(x: Int) => expression`，支持 0 到 3 个参数，函数体是单个表达式，
 不能声明 `throws`。捕获 `var` 局部变量会被拒绝（`SPR-TYPE-CAPTURE`），请先复制到
 `let` 绑定。
+
+## JSON 对象查找
+
+<<< @/snippets/json_lookup.spr
+
+`json.find_member` 区分 `Missing`、`Found(value: json.Value)` 与 `NotObject`。
+已存在的 JSON null、false、零和空字符串均是 Found；对象重复键仍抛出 `Error`，
+成员顺序保持不变。完整解析、查找与序列化边界见
+[标准层约定（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/STANDARD_LIBRARY.md)。
+
+## 函数类型
+
+函数类型显式写出参数类型与返回类型：
+
+<<< @/snippets/function_types.spr
+
+`fn(Int) -> Int` 是**类型**，`fn(x: Int) => x + 1` 是**值表达式**。
+支持 0–3 个参数；参数与返回类型保持不变性，没有函数子类型、隐式转换或无类型逃生口。
+外层可空须写 `(fn(Int) -> Int)?`；`fn(Int) -> Int?` 表示返回值可空。
+调用可空函数值前，须按普通规则判空收窄。函数类型可用于局部注解、字段、参数、返回类型
+与显式泛型参数。函数类型不能声明 `throws`；非抛错 callable 内须处理受检错误。
+
+JVM 桥接仅针对对应的 Sprig 自有 `sprig.runtime.Fn0`–`Fn3` 形参签名及受支持的
+具体类型参数；不会把函数转换为任意 Java `Function`、`Consumer`、`Runnable` 或接口。
+用 `sprig api <Class> --json` 查询实际签名。
 
 ## 模块
 
@@ -91,7 +125,7 @@ Lambda 是表达式：`fn(x: Int) => expression`，支持 0 到 3 个参数，�
 
 ## 尚未实现
 
-用户自定义泛型、继承与接口、`match` 表达式、`%=`、元组与解构、数组、变长参数、
-字符串插值、源码中的函数类型都**尚未实现**。完整列表见
+泛型推断、variance、继承与接口、`match` 表达式、`%=`、元组与解构、数组、变长参数、
+字符串插值都**尚未实现**。完整列表见
 [已知限制](/reference/known-limitations)，后续规划见
 [Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。

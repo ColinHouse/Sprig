@@ -1,0 +1,7 @@
+[project]
+name = "sprig-web"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+entry = "src/app.spr"
+exports = ["app.spr"]

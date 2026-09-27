@@ -97,6 +97,7 @@ export default defineConfig({
                 { text: '泛型（v0.8）', link: '/guide/generics' },
                 { text: '项目（v0.8）', link: '/guide/projects' },
                 { text: 'JVM 互操作', link: '/guide/jvm-interop' },
+                { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
                 { text: '工具与 JSON', link: '/guide/tooling' },
                 { text: 'VS Code 插件', link: '/guide/editor' }
               ]
@@ -170,6 +171,7 @@ export default defineConfig({
                 { text: 'Generics (v0.8)', link: '/en/guide/generics' },
                 { text: 'Projects (v0.8)', link: '/en/guide/projects' },
                 { text: 'JVM Interoperability', link: '/en/guide/jvm-interop' },
+                { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
                 { text: 'Tooling and JSON', link: '/en/guide/tooling' },
                 { text: 'VS Code Extension', link: '/en/guide/editor' }
               ]

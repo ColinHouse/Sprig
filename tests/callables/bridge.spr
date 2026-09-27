@@ -1,0 +1,21 @@
+import fixture.CallableFixture as Fixture
+import java.lang.StringBuilder as Builder
+print(Fixture.zero(fn() => 42))
+let message = Fixture.one(fn(x: Int) => x.toString())
+if message != null:
+    print(message)
+print(Fixture.two(fn(x: Int, y: Int) => x + y))
+print(Fixture.three(fn(x: Int, y: Int, z: Int) => x + y + z))
+let reference = Fixture.reference(fn(b: Builder) => b)
+if reference != null:
+    print(reference.toString())
+let increment = Fixture.returned()
+if increment != null:
+    print(increment(10))
+Fixture.unit(fn() => print("jvm-unit"))
+let instance = Fixture(fn() => 21)
+print(instance.invoke())
+print(Fixture.int32(fn(x: Int32) => x + x))
+print(Fixture.floating(fn(x: Float) => x + x))
+print(Fixture.booleanValue(fn(x: Bool) => not x))
+print(Fixture.nested(fn(f: fn() -> Int) => f()))

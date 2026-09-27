@@ -2,7 +2,7 @@
 
 > 本页是中文摘要；权威英文文档为
 > [Implemented features](/en/reference/FEATURE_STATUS_IMPLEMENTED)，它随验证用的测试
-> 一起维护。两者不一致时以英文文档和实际测试结果为准。当前 prerelease：`0.2.0-alpha.1`；语言：`v0.8-dev`。
+> 一起维护。两者不一致时以英文文档和实际测试结果为准。当前 prerelease：`0.3.0-alpha.1`；语言：`v0.8-dev`。
 
 下表描述仓库内 Java stage-0 编译器**实际做到**的事情。
 
@@ -20,6 +20,8 @@
 | 可空类型 `T?`、判空与流分析收窄 | 装箱的可空局部变量。 |
 | `List`/`MutableList`/`Map`/`MutableMap`、快照、索引、`in` | 运行时包装类，可变性类型分离。 |
 | Lambda `fn(...) => expr`，参数 0–3 个，`map`/`filter`/`forEach` | `Fn0`–`Fn3` 匿名类。 |
+| 源码函数类型 `fn(A) -> R` | 参数/结果不变；外层可空用 `(fn(A) -> R)?`；不支持 throws。 |
+| Sprig-owned callable JVM 桥接 | 仅对应的 `sprig.runtime.Fn0`–`Fn3` 与受支持具体类型参数；不接受任意 Java SAM。 |
 | `throw`/`throws`/`try`/`catch`/`finally` | Java 异常；`Error.message`。 |
 | 函数必须有返回值、不可达代码检查 | `SPR-FLOW-*`。 |
 | 模块：文件导入、别名访问、只初始化一次、环检测 | 每个模块一个静态 `$init()`。 |
@@ -27,16 +29,19 @@
 | 受检 `Int`/`Int32`、显式整数除法、字面量范围 | `NumericOps` 运行时检查。 |
 | `BigInt`、`Decimal`、IEEE `Float`/`Float32` 与显式转换 | 见[数值语义（英文）](/en/reference/NUMERIC_SEMANTICS)。 |
 | `check`/`build`/`run`/`explain`/`codes`/`help`/`capabilities`/`api`/`doctor`、`--json`、`--syntax-only` | 单一 `bin/sprig` 可执行文件；所有命令包含在当前 SDK 中。 |
-| 显式本地 `--classpath` | `api`/`check`/`build`/`run` 使用同一 JAR 或目录路径；没有自动下载。 |
-
+| 显式本地 `--classpath` | `api`/`check`/`build`/`run` 使用同一 JAR 或目录路径；与锁定 Maven classpath 显式合并。 |
 | 多参数显式泛型、Equatable | 不变泛型；无推断。 |
 | sprig.toml、本地/Git 依赖、schema-3 lock、exports、离线构建 | 已实现；Maven 有效 POM/传递依赖、统一 classpath。 |
 
+| 保留的 `@std` 包 | UTF-8 文件、进程参数/环境、文本、时间和封闭 JSON 模型；无隐式导入。 |
+| `build --emit-java-only` | 静态检查并输出 Java，不执行 javac。 |
+| VS Code 桌面适配器 | 词法高亮、静态诊断、有限程序运行与 Java 视图；不是 LSP。 |
+
 ## 尚未实现
 
-泛型推断、variance、Comparable、继承与接口、`match` 表达式、嵌套/位置模式、源码中的函数类型、
-`%=`、元组与解构、数组/变长参数、完整的 Java 泛型与注解互操作、文件 IO 库、
-发布/registry、LSP/IDE 集成、增量检查、自举（stage-1）。
+泛型推断、variance、Comparable、继承与接口、`match` 表达式、嵌套/位置模式、任意 Java SAM 转换、
+`%=`、元组与解构、数组/变长参数、完整的 Java 泛型与注解互操作、
+发布/registry、LSP、增量检查、自举（stage-1）。
 
 完整边界与原因见[已知限制](/reference/known-limitations)和英文的
 [Known limitations](/en/reference/KNOWN_LIMITATIONS)。

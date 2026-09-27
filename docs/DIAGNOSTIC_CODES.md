@@ -56,6 +56,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-PROGRAM-EXIT | The Sprig program exited with a non-zero process status. |
 | SPR-SYNTAX-ERROR | The token sequence does not match the Sprig grammar. |
 | SPR-TYPE-ASSIGN | Assignment value does not match the target type. |
+| SPR-TYPE-FUNCTION-ARITY | Function types and lambdas support zero to three explicitly typed parameters. |
 | SPR-TYPE-CAPTURE | A lambda captures a var local; copy it into a let binding first. |
 | SPR-TYPE-CONDITION | Conditions must be Bool; Sprig has no truthiness. |
 | SPR-TYPE-INFER | The type cannot be inferred without an annotation. |

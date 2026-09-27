@@ -1,0 +1,65 @@
+import "@std/json.spr" as json
+
+func describe(value: json.Lookup) -> String throws Error:
+    match value:
+        case json.Lookup.Missing:
+            return "Missing"
+        case json.Lookup.Found as node:
+            return "Found:" + json.stringify(node.value)
+        case json.Lookup.NotObject:
+            return "NotObject"
+
+func wrong_kind(value: json.Value) -> Bool throws Error:
+    match json.find_member(value, "name"):
+        case json.Lookup.Missing:
+            return false
+        case json.Lookup.Found as node:
+            return false
+        case json.Lookup.NotObject:
+            return true
+
+let value = json.parse("{\"null\":null,\"false\":false,\"zero\":0,\"empty\":\"\",\"nested\":{\"x\":1},\"名字\":\"值\"}")
+let before = json.stringify(value)
+print(describe(json.find_member(value, "missing")))
+print(describe(json.find_member(value, "null")))
+print(describe(json.find_member(value, "false")))
+print(describe(json.find_member(value, "zero")))
+print(describe(json.find_member(value, "empty")))
+print(describe(json.find_member(value, "nested")))
+print(describe(json.find_member(value, "名字")))
+print(describe(json.find_member(json.parse("{}"), "empty")))
+if json.stringify(value) != before:
+    throw Error("lookup changed object ordering or values")
+print("object unchanged")
+
+let wrong: List[json.Value] = [json.Value.Null, json.Value.Boolean(value=false), json.Value.Number(text="0"), json.Value.Text(value=""), json.Value.Array(values=[])]
+var rejected: Int = 0
+for item in wrong:
+    if not wrong_kind(item):
+        throw Error("nonobject lookup confused with missing or found")
+    rejected += 1
+print("wrong-kind=" + rejected.toString())
+
+# A found first member must not hide a duplicate later in the object.
+let duplicates: List[json.Member] = [json.Member(key="wanted", value=json.Value.Null), json.Member(key="later", value=json.Value.Number(text="1")), json.Member(key="later", value=json.Value.Number(text="2"))]
+let invalid = json.Value.Object(members=duplicates)
+var duplicate_errors: Int = 0
+for key in ["wanted", "missing"]:
+    try:
+        json.find_member(invalid, key)
+    catch problem: Error:
+        if not problem.message.startsWith("duplicate object key:"):
+            throw Error("unexpected duplicate lookup error")
+        duplicate_errors += 1
+if duplicate_errors != 2:
+    throw Error("lookup accepted duplicate constructed object")
+print("duplicate lookup rejected=2")
+
+var parser_rejected = false
+try:
+    json.parse("{\"x\":null,\"x\":false}")
+catch problem: Error:
+    parser_rejected = true
+if not parser_rejected:
+    throw Error("lookup addition weakened parser duplicate policy")
+print("parser duplicates unchanged")

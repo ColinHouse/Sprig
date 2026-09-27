@@ -463,7 +463,7 @@ public final class Main {
                     return 1;
                 }
                 JavaRunner.Result result = JavaRunner.run(classesDir, output.mainClass,
-                        options.programArgs, work);
+                        options.programArgs, work, !options.json);
                 if (!options.json) {
                     System.out.print(result.stdout);
                     System.out.flush();

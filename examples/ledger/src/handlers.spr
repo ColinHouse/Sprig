@@ -1,0 +1,114 @@
+import sprig.runtime.sqlite.SqliteError as SqliteError
+import "@web/app.spr" as web
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/json.spr" as json
+import "./values.spr" as values
+import "./store.spr" as store
+
+class Ledger:
+    let database: sqlite.Database
+
+    func accounts(req: web.Request) -> web.Response:
+        try:
+            return web.json_response(store.named_list(database.query("SELECT id,name FROM accounts ORDER BY id", [])), 200)
+        catch problem: Error:
+            return web.text("Internal database error", 500)
+
+    func categories(req: web.Request) -> web.Response:
+        try:
+            return web.json_response(store.named_list(database.query("SELECT id,name FROM categories ORDER BY id", [])), 200)
+        catch problem: Error:
+            return web.text("Internal database error", 500)
+
+    func create_account(req: web.Request) -> web.Response:
+        try:
+            let name = values.string_field(req.json(), "name")
+            if name.length() == 0 or name.length() > 120:
+                return web.text("name must contain 1..120 UTF-16 units", 400)
+            let rows = database.query("INSERT INTO accounts(name) VALUES (?) RETURNING id,name", [sqlite.Parameter.Text(value=name)])
+            return web.json_response(store.named_row(rows, 0), 201)
+        catch problem: SqliteError:
+            if problem.constraint():
+                return web.text("Invalid account request", 400)
+            return web.text("Internal database error", 500)
+        catch problem: Error:
+            return web.text("Invalid account request", 400)
+
+    func create_category(req: web.Request) -> web.Response:
+        try:
+            let name = values.string_field(req.json(), "name")
+            if name.length() == 0 or name.length() > 120:
+                return web.text("name must contain 1..120 UTF-16 units", 400)
+            let rows = database.query("INSERT INTO categories(name) VALUES (?) RETURNING id,name", [sqlite.Parameter.Text(value=name)])
+            return web.json_response(store.named_row(rows, 0), 201)
+        catch problem: SqliteError:
+            if problem.constraint():
+                return web.text("Invalid category request", 400)
+            return web.text("Internal database error", 500)
+        catch problem: Error:
+            return web.text("Invalid category request", 400)
+
+    func transactions(req: web.Request) -> web.Response:
+        try:
+            let rows = database.query("SELECT id,account_id,category_id,amount_minor,occurred_on,memo FROM transactions ORDER BY id", [])
+            return web.json_response(store.transaction_list(rows), 200)
+        catch problem: Error:
+            return web.text("Internal database error", 500)
+
+    func create_transaction(req: web.Request) -> web.Response:
+        try:
+            let body = req.json()
+            let account = values.integer_field(body, "account_id")
+            let category = values.integer_field(body, "category_id")
+            let amount = values.integer_field(body, "amount_minor")
+            let date = values.string_field(body, "occurred_on")
+            let memo = values.string_field(body, "memo")
+            if account <= 0 or category <= 0 or amount == 0 or not values.valid_date(date) or memo.length() > 2000:
+                return web.text("Invalid transaction fields", 400)
+            let rows = database.query("INSERT INTO transactions(account_id,category_id,amount_minor,occurred_on,memo) VALUES (?,?,?,?,?) RETURNING id,account_id,category_id,amount_minor,occurred_on,memo", [
+                sqlite.Parameter.Integer(value=account),
+                sqlite.Parameter.Integer(value=category),
+                sqlite.Parameter.Integer(value=amount),
+                sqlite.Parameter.Text(value=date),
+                sqlite.Parameter.Text(value=memo)
+            ])
+            return web.json_response(store.transaction_row(rows, 0), 201)
+        catch problem: SqliteError:
+            if problem.constraint():
+                return web.text("Invalid transaction request or relationship", 400)
+            return web.text("Internal database error", 500)
+        catch problem: Error:
+            return web.text("Invalid transaction request or relationship", 400)
+
+    func delete_transaction(req: web.Request) -> web.Response:
+        try:
+            let value = req.path_param("id")
+            if value != null:
+                let id = value.toIntOrNull()
+                if id != null:
+                    if id > 0:
+                        let changed = database.execute("DELETE FROM transactions WHERE id=?", [sqlite.Parameter.Integer(value=id)])
+                        if changed == 1:
+                            return web.text("", 204)
+                        return web.text("Transaction not found", 404)
+            return web.text("Expected positive transaction id", 400)
+        catch problem: Error:
+            return web.text("Internal database error", 500)
+
+    func monthly(req: web.Request) -> web.Response:
+        try:
+            let month = req.query("month")
+            if month != null:
+                if month.length() == 7 and values.valid_date(month + "-01"):
+                    let rows = database.query("SELECT COUNT(*) AS count, COALESCE(SUM(amount_minor),0) AS net_minor, COALESCE(SUM(CASE WHEN amount_minor>0 THEN amount_minor ELSE 0 END),0) AS income_minor, COALESCE(SUM(CASE WHEN amount_minor<0 THEN amount_minor ELSE 0 END),0) AS expense_minor FROM transactions WHERE substr(occurred_on,1,7)=?", [sqlite.Parameter.Text(value=month)])
+                    let document = json.Value.Object(members=[
+                        json.Member(key="month", value=values.text(month)),
+                        json.Member(key="count", value=values.number(rows.integer(0, "count"))),
+                        json.Member(key="net_minor", value=values.number(rows.integer(0, "net_minor"))),
+                        json.Member(key="income_minor", value=values.number(rows.integer(0, "income_minor"))),
+                        json.Member(key="expense_minor", value=values.number(rows.integer(0, "expense_minor")))
+                    ])
+                    return web.json_response(document, 200)
+            return web.text("Expected month query YYYY-MM", 400)
+        catch problem: Error:
+            return web.text("Internal database error", 500)

@@ -1196,6 +1196,10 @@ public final class JavaGenerator {
             sb.append(boxedJavaType(param.type)).append(' ').append(localName(param.symbol));
         }
         sb.append(") {").append('\n');
+        for (Decl.Param param : lambda.params) {
+            if (!param.type.isNullable() && !(param.type instanceof TypeParameterType)) sb.append("        java.util.Objects.requireNonNull(")
+                    .append(localName(param.symbol)).append(", \"non-null callable argument\");\n");
+        }
         if (functionType != null && functionType.result != NativeType.UNIT) {
             sb.append("        return ").append(convertedExpression(lambda.body, functionType.result)).append(";\n");
         } else {
@@ -1247,8 +1251,14 @@ public final class JavaGenerator {
                 }
                 return sb.append(')').toString();
             }
-            case FUNCTION_VALUE:
-                return emitExpr(call.callee) + ".apply(" + positionalArgs(call) + ")";
+            case FUNCTION_VALUE: {
+                String invocation = emitExpr(call.callee) + ".apply(" + positionalArgs(call) + ")";
+                // Java-produced callbacks may violate the Sprig-owned non-null ABI.
+                return resolved.returnType != NativeType.UNIT && !resolved.returnType.isNullable()
+                        && !(resolved.returnType instanceof TypeParameterType)
+                        ? "java.util.Objects.requireNonNull(" + invocation + ", \"non-null callable result\")"
+                        : invocation;
+            }
             case BUILTIN:
                 return emitBuiltinFunction(resolved.builtinId, call);
             case BUILTIN_METHOD:
