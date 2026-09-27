@@ -20,7 +20,7 @@ generic signatures, and `usableFromSprig`/`unusableReason`. Use
 `--member of` to return only that member's overloads. Metadata also includes
 `signatureSupported` and `interopLevel`: `direct` means the signature has a
 direct core type mapping; `erased-generic` means the raw signature can be
-bound but its generic arguments are not enforced; `unsupported` means the
+bound but its generic arguments are not enforced; `sprig-callable` means concrete Sprig Fn slots are checked invariantly; `unsupported` means the
 current compiler cannot bind/emit it. The legacy `usableFromSprig` field means
 only that binding/emission is possible, not that a generic contract is safe.
 Java reference and
@@ -69,3 +69,25 @@ checked Java exception uncaught; it then aborts the program at runtime. This
 top-level rule is provisional, as described in `KNOWN_LIMITATIONS.md`. Java
 library arithmetic and nullability are not magically upgraded to Sprig's
 checked numeric or non-null contracts.
+
+## Sprig-owned callable ABI
+
+A source `fn(A) -> R` can be passed to a Java formal `sprig.runtime.Fn1<A,R>`
+(and Fn0/Fn2/Fn3) only when its concrete boxed parameter/result types agree
+invariantly. `Long` maps to Int, Integer to Int32, Double to Float, Float to
+Float32, Boolean to Bool, String to String; other concrete Java references retain
+their Java type. `Void` is permitted only as a Unit result. Character/Short/Byte,
+arrays, raw Fn types, wildcard/type-variable slots and general parameterized
+Java slots are rejected. There is no arbitrary SAM conversion.
+
+Java callback results remain nullable **function values** and must be narrowed
+before invocation. Fn generic slots contractually hold non-null values, except
+Void as Unit. Generated lambdas reject null incoming arguments and invocation
+rejects a null result when the source result type is non-null. Java libraries
+can still throw unchecked exceptions; these are runtime failures, not proof of
+successful interop. Callable types cannot carry checked effects in this version.
+`sprig api` reports source callable signatures and `sprigCallableBoundary`.
+
+Text `sprig run` streams program stdout and inherits stdin. JSON run captures
+output until termination to retain one structured result. The CLI stops its
+child JVM when it exits, which supports persistent servers in editor terminals.

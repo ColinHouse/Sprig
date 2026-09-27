@@ -3,7 +3,7 @@ package sprig.compiler.types;
 import java.util.List;
 import java.util.StringJoiner;
 
-/** Type of a lambda or other first-class function value (not writable in source). */
+/** Type of a lambda or other first-class function value (written as fn(A) -> R). */
 public final class FunctionType implements Type {
     public final List<Type> params;
     public final Type result;
@@ -15,7 +15,7 @@ public final class FunctionType implements Type {
 
     @Override
     public String display() {
-        StringJoiner joiner = new StringJoiner(", ", "(", ")");
+        StringJoiner joiner = new StringJoiner(", ", "fn(", ")");
         for (Type param : params) {
             joiner.add(param.display());
         }

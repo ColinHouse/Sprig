@@ -1,7 +1,7 @@
 {
   "name": "sprig-language",
   "displayName": "Sprig",
-  "description": "Sprig syntax highlighting, compiler diagnostics, Run and generated Java.",
+  "description": "Sprig syntax highlighting, compiler diagnostics, Run, terminal execution and generated Java.",
   "version": "0.1.0",
   "publisher": "ColinHouse",
   "license": "Apache-2.0",
@@ -33,7 +33,7 @@
   "scripts": {
     "compile": "tsc -p .",
     "test:grammar": "node --test test/grammar.cjs",
-    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs",
+    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs",
     "test:host": "npm run compile && node test/run-host.cjs",
     "vscode:prepublish": "npm run compile",
     "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
@@ -79,6 +79,10 @@
       {
         "command": "sprig.run",
         "title": "Sprig: Run"
+      },
+      {
+        "command": "sprig.runInTerminal",
+        "title": "Sprig: Run in Terminal"
       },
       {
         "command": "sprig.build",
@@ -140,9 +144,14 @@
           "group": "sprig@2"
         },
         {
-          "command": "sprig.showGeneratedJava",
+          "command": "sprig.runInTerminal",
           "when": "editorLangId == sprig",
           "group": "sprig@3"
+        },
+        {
+          "command": "sprig.showGeneratedJava",
+          "when": "editorLangId == sprig",
+          "group": "sprig@4"
         }
       ]
     }

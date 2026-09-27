@@ -58,7 +58,12 @@ parameter: IDENT COLON typeRef;
 
 // Named functions/methods have explicit parameter and return types.
 // Local bindings can infer their type from their initializer.
-typeRef: qualifiedName (LBRACK typeRef (COMMA typeRef)* RBRACK)? QUESTION?;
+typeRef
+    : qualifiedName (LBRACK typeRef (COMMA typeRef)* RBRACK)? QUESTION?
+    | functionType
+    | LPAREN functionType RPAREN QUESTION
+    ;
+functionType: FN LPAREN (typeRef (COMMA typeRef)*)? RPAREN ARROW typeRef;
 variableDeclaration: (VAR | LET) IDENT typeAnnotation? ASSIGN expression;
 typeAnnotation: COLON typeRef;
 

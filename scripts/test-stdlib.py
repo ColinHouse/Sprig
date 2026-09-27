@@ -33,6 +33,13 @@ def main():
     import json
     assert json.loads(lines[2]) == '\b\f\t\r\n\x00/\\"'
     assert lines[3:] == ['true', 'serializer rejected invalid number', 'serializer rejected duplicate keys']
+    lookup = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json_lookup.spr')], cwd=ROOT,
+                            text=True, encoding='utf-8', capture_output=True)
+    assert lookup.returncode == 0, (lookup.stdout, lookup.stderr)
+    assert lookup.stdout.splitlines() == [
+        'Missing', 'Found:null', 'Found:false', 'Found:0', 'Found:""',
+        'Found:{"x":1}', 'Found:"值"', 'Missing', 'object unchanged',
+        'wrong-kind=5', 'duplicate lookup rejected=2', 'parser duplicates unchanged']
     print('stdlib: UTF-8/path/list/args/environment/text/time and recursive JSON JVM contracts passed')
 
 if __name__ == '__main__':

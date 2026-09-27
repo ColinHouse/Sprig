@@ -55,9 +55,11 @@ def main():
             shutil.copy2(file, package / 'lib')
         shutil.copytree(ROOT / 'tools/resolver/legal', package / 'legal/resolver')
         shutil.copy2(ROOT / 'tools/resolver-libraries.json', package / 'legal/resolver-libraries.json')
-        for tree in ('runtime/src/main/java', 'examples', 'website/snippets', 'std'):
+        for tree in ('runtime/src/main/java', 'examples', 'website/snippets', 'std', 'libraries'):
             if (ROOT / tree).is_dir():
-                shutil.copytree(ROOT / tree, package / tree)
+                shutil.copytree(ROOT / tree, package / tree,
+                                ignore=shutil.ignore_patterns('sprig.lock', '*.sqlite', '*.sqlite-*',
+                                                             '__pycache__', 'sprig-build'))
         (package / 'tests/visitor').mkdir(parents=True)
         shutil.copy2(ROOT / 'tests/visitor/ast_visitor.spr', package / 'tests/visitor')
         docs = ['QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']

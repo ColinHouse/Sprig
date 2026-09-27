@@ -1,0 +1,15 @@
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/process.spr" as process
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var path = "example.sqlite"
+    if args.size() > 0:
+        path = args.get(0)
+    let database = sqlite.open(path)
+    database.execute("CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL)", [])
+    database.execute("INSERT INTO notes(body) VALUES (?)", [sqlite.Parameter.Text(value="Sprig's SQLite; user text stays data")])
+    let rows = database.query("SELECT COUNT(*) AS total FROM notes", [])
+    print("persisted notes=" + rows.integer(0, "total").toString())
+
+main()

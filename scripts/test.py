@@ -64,7 +64,7 @@ def main():
               "tests/project/check_project.py", "tests/project_deps/check_deps.py",
               "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
               "tests/adversarial/v08/check_projects.py"]
-    suites += ["tests/maven/check_resolver.py", "scripts/test-stdlib.py",
+    suites += ["tests/callables/check_callables.py", "tests/web/check_web.py", "tests/sqlite/check_sqlite.py", "tests/maven/check_resolver.py", "scripts/test-stdlib.py",
                "scripts/test-showcases.py", "tests/release_hardening/check_hardening.py"]
     for suite in suites:
         print(f"== {suite} ==", flush=True)

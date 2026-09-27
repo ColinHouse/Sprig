@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { CompilerResult, invoke, projectRoot, resolveCompiler } from './compiler';
+import { CompilerResult, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
 import { mapRange } from './diagnostics';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext): void {
     for(const [uri,items] of merged) diagnostics.set(vscode.Uri.parse(uri),items);
   };
 
-  async function execute(command: string, doc: vscode.TextDocument, automatic=false): Promise<CompilerResult | undefined> {
+  async function executionDirectory(doc: vscode.TextDocument, automatic=false): Promise<string | undefined> {
     if(!vscode.workspace.isTrusted) {
       if(!automatic) void vscode.window.showWarningMessage('Trust this workspace to invoke the Sprig compiler. Syntax highlighting remains available.');
       return;
@@ -57,6 +57,12 @@ export function activate(context: vscode.ExtensionContext): void {
       if(!automatic) void vscode.window.showWarningMessage('Save the Sprig files in this project before checking or running.');
       return;
     }
+    return cwd;
+  }
+
+  async function execute(command: string, doc: vscode.TextDocument, automatic=false): Promise<CompilerResult | undefined> {
+    const cwd = await executionDirectory(doc, automatic);
+    if(!cwd) return;
     const controller = new AbortController(); jobs.get(cwd)?.abort(); jobs.set(cwd,controller);
     const config = settings(doc.uri);
     const timeoutMs = Math.max(1,Math.min(3600,config.get<number>('commandTimeoutSeconds',120)))*1000;
@@ -127,6 +133,24 @@ export function activate(context: vscode.ExtensionContext): void {
       return execute(command,doc);
     }));
   }
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.runInTerminal',async()=>{
+    const doc = vscode.window.activeTextEditor?.document;
+    if(!doc) {void vscode.window.showWarningMessage('Open a .spr file first.');return;}
+    const cwd = await executionDirectory(doc);
+    if(!cwd) return;
+    try {
+      const executable = resolveCompiler(settings(doc.uri).get<string>('compilerPath',''),cwd);
+      const command = compilerCommand(executable,['run',doc.uri.fsPath]);
+      // Launch a process directly: paths and file names never become shell command text.
+      const terminal = vscode.window.createTerminal({name:`Sprig: ${path.basename(doc.uri.fsPath)}`,
+        cwd, shellPath:command.command, shellArgs:command.args});
+      terminal.show();
+      return terminal;
+    } catch(error) {
+      void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+      return;
+    }
+  }));
   context.subscriptions.push(vscode.commands.registerCommand('sprig.showCapabilities',async()=>{
     if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to query the Sprig compiler.');return;}
     try {

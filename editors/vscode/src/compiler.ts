@@ -40,24 +40,29 @@ export function resolveCompiler(configured: string, cwd: string): string {
   throw new Error('Sprig compiler not found. Install the SDK and set sprig.compilerPath to its bin/sprig launcher.');
 }
 
+/** Shared direct-process plan for finite JSON commands and integrated terminals. */
+export function compilerCommand(executable: string, args: string[],
+  platform: NodeJS.Platform = process.platform): { command: string; args: string[] } {
+  if (platform === 'win32' && /\.(cmd|bat)$/i.test(executable)) {
+    const home = path.dirname(path.dirname(executable));
+    if (!fs.existsSync(path.join(home, 'build', 'sprig-compiler.jar'))) {
+      throw new Error('Windows preview requires the SDK bin/sprig.cmd launcher; arbitrary batch wrappers are unsupported.');
+    }
+    return {command: 'java', args: ['-Dfile.encoding=UTF-8', '-cp', [path.join(home,'build','sprig-compiler.jar'),
+      path.join(home,'tools','antlr-4.13.2-complete.jar'), path.join(home,'tools','resolver','*')].join(';'),
+      `-Dsprig.home=${home}`, 'sprig.compiler.cli.Main', ...args]};
+  }
+  return {command: executable, args};
+}
+
 export function invoke(executable: string, args: string[], cwd: string,
   options: { signal?: AbortSignal; timeoutMs?: number; maxOutput?: number } = {}): Promise<Invocation> {
   if (options.signal?.aborted) return Promise.reject(new Error('Sprig command canceled.'));
-  let command = executable;
-  let commandArgs = args;
-  // Avoid shell quoting/injection for native SDK batch launchers as well.
-  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(executable)) {
-    const home = path.dirname(path.dirname(executable));
-    if (!fs.existsSync(path.join(home, 'build', 'sprig-compiler.jar'))) {
-      return Promise.reject(new Error('Windows preview requires the SDK bin/sprig.cmd launcher; arbitrary batch wrappers are unsupported.'));
-    }
-    command = 'java';
-    commandArgs = ['-Dfile.encoding=UTF-8', '-cp', [path.join(home,'build','sprig-compiler.jar'),
-      path.join(home,'tools','antlr-4.13.2-complete.jar'), path.join(home,'tools','resolver','*')].join(path.delimiter),
-      `-Dsprig.home=${home}`, 'sprig.compiler.cli.Main', ...args];
-  }
+  let invocation: ReturnType<typeof compilerCommand>;
+  try { invocation = compilerCommand(executable, args); }
+  catch (error) { return Promise.reject(error); }
   return new Promise((resolve, reject) => {
-    const child = spawn(command, commandArgs, {cwd, shell: false, windowsHide: true, detached: process.platform !== 'win32'});
+    const child = spawn(invocation.command, invocation.args, {cwd, shell: false, windowsHide: true, detached: process.platform !== 'win32'});
     child.stdin.end(); // Finite non-interactive Run: never wait for hidden input.
     let stdout = '', stderr = '', size = 0, failure: Error | undefined;
     const stop = (error: Error) => {

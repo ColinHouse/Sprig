@@ -1,0 +1,344 @@
+# Sprig owns HTTP application policy; Java owns socket/UTF-8/lifetime mechanics.
+import "@std/json.spr" as jsonlib
+import "@std/text.spr" as strings
+import sprig.runtime.web.HostRequest as HostRequest
+import sprig.runtime.web.HostResponse as HostResponse
+import sprig.runtime.web.HostServer as HostServer
+import sprig.runtime.web.HostCodec as HostCodec
+import sprig.runtime.web.BadRequest as BadRequest
+import java.lang.IllegalStateException as ResponseFailure
+import java.lang.RuntimeException as RuntimeException
+
+enum Method:
+    GET
+    POST
+    DELETE
+
+enum SchemaType:
+    STRING
+    INTEGER
+    BOOLEAN
+    OBJECT
+    ARRAY
+
+class FieldSchema:
+    let name: String
+    let schema: Schema
+    let required: Bool = true
+
+class Schema:
+    let kind: SchemaType
+    let fields: List[FieldSchema] = []
+    let items: Schema? = null
+
+class QueryParameter:
+    let name: String
+    let schema: Schema
+    let required: Bool = false
+
+class Header:
+    let name: String
+    let value: String
+
+class Parameter:
+    let name: String
+    let value: String
+
+func required(value: String?) -> String:
+    if value != null:
+        return value
+    throw ResponseFailure("HTTP host returned null")
+
+func decode(value: String, plus: Bool) -> String:
+    return required(HostCodec.decode(value, plus))
+
+class Request:
+    let method: String
+    let path: String
+    let body: String
+    let raw: HostRequest
+    let parameters: List[Parameter] = []
+
+    func path_param(name: String) -> String?:
+        for parameter in parameters:
+            if parameter.name == name:
+                return parameter.value
+        return null
+
+    # First occurrence wins; absent and empty are different values.
+    func query(name: String) -> String?:
+        try:
+            let raw_query = required(raw.rawQuery())
+            for part in strings.split(raw_query, "&"):
+                let pair = strings.split(part, "=")
+                if decode(pair.get(0), true) == name:
+                    if pair.size() == 1:
+                        return ""
+                    # Preserve '=' within values, splitting only at the first one.
+                    return decode(part.substring(pair.get(0).length() + 1, part.length()), true)
+            return null
+        catch problem: Error:
+            throw BadRequest("Malformed query")
+
+    func header(name: String) -> String?:
+        return raw.header(name)
+
+    func json() -> jsonlib.Value:
+        try:
+            return jsonlib.parse(body)
+        catch problem: Error:
+            throw BadRequest("Malformed JSON")
+
+class Response:
+    let status: Int
+    let body: String
+    let content_type: String = "text/plain; charset=utf-8"
+    let headers: List[Header] = []
+
+    func with_header(name: String, value: String) -> Response:
+        let output: MutableList[Header] = []
+        for header in headers:
+            output.append(header)
+        output.append(Header(name=name, value=value))
+        return Response(status=status, body=body, content_type=content_type, headers=output.toList())
+
+func text(body: String, status: Int) -> Response:
+    return Response(status=status, body=body)
+
+func json_response(value: jsonlib.Value, status: Int) -> Response:
+    try:
+        return Response(status=status, body=jsonlib.stringify(value), content_type="application/json; charset=utf-8")
+    catch problem: Error:
+        throw ResponseFailure("Invalid JSON response")
+
+class Route:
+    let method: Method
+    let path: String
+    let handler: fn(Request) -> Response
+    let summary: String = ""
+    let request_schema: Schema? = null
+    let response_schema: Schema? = null
+    let response_status: Int = 200
+    let query_parameters: List[QueryParameter] = []
+
+func method_name(method: Method) -> String:
+    match method:
+        case Method.GET:
+            return "GET"
+        case Method.POST:
+            return "POST"
+        case Method.DELETE:
+            return "DELETE"
+
+func operation_name(method: Method) -> String:
+    match method:
+        case Method.GET:
+            return "get"
+        case Method.POST:
+            return "post"
+        case Method.DELETE:
+            return "delete"
+
+variant MatchResult:
+    Missing
+    Matched(parameters: List[Parameter])
+
+func parameter_name(segment: String) -> String?:
+    if segment.length() > 2 and strings.starts_with(segment, "{") and strings.ends_with(segment, "}"):
+        return segment.substring(1, segment.length() - 1)
+    return null
+
+func template_shape(path: String) -> String throws Error:
+    var shape = ""
+    var separator = ""
+    for segment in strings.split(path, "/"):
+        if parameter_name(segment) != null:
+            shape += separator + "{}"
+        else:
+            shape += separator + segment
+        separator = "/"
+    return shape
+
+func match_path(pattern: String, raw_path: String) -> MatchResult throws Error:
+    let expected = strings.split(pattern, "/")
+    let actual = strings.split(raw_path, "/")
+    if expected.size() != actual.size():
+        return MatchResult.Missing
+    let parameters: MutableList[Parameter] = []
+    var index: Int = 0
+    while index < expected.size():
+        let part = expected.get(index)
+        let value = decode(actual.get(index), false)
+        let name = parameter_name(part)
+        if name != null:
+            if value == "":
+                return MatchResult.Missing
+            parameters.append(Parameter(name=name, value=value))
+        elif part != value:
+            return MatchResult.Missing
+        index += 1
+    return MatchResult.Matched(parameters=parameters.toList())
+
+func schema_json(schema: Schema) -> jsonlib.Value throws Error:
+    match schema.kind:
+        case SchemaType.STRING:
+            return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="string"))])
+        case SchemaType.INTEGER:
+            return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="integer")), jsonlib.Member(key="format", value=jsonlib.Value.Text(value="int64"))])
+        case SchemaType.BOOLEAN:
+            return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="boolean"))])
+        case SchemaType.ARRAY:
+            let items = schema.items
+            if items != null:
+                return jsonlib.Value.Object(members=[jsonlib.Member(key="type", value=jsonlib.Value.Text(value="array")), jsonlib.Member(key="items", value=schema_json(items))])
+            throw Error("array schema requires items")
+        case SchemaType.OBJECT:
+            let properties: MutableList[jsonlib.Member] = []
+            let required_fields: MutableList[jsonlib.Value] = []
+            for field in schema.fields:
+                properties.append(jsonlib.Member(key=field.name, value=schema_json(field.schema)))
+                if field.required:
+                    required_fields.append(jsonlib.Value.Text(value=field.name))
+            let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="type", value=jsonlib.Value.Text(value="object")), jsonlib.Member(key="properties", value=jsonlib.Value.Object(members=properties.toList()))]
+            if required_fields.size() > 0:
+                members.append(jsonlib.Member(key="required", value=jsonlib.Value.Array(values=required_fields.toList())))
+            return jsonlib.Value.Object(members=members.toList())
+
+func operation_json(route: Route) -> jsonlib.Value throws Error:
+    let members: MutableList[jsonlib.Member] = [jsonlib.Member(key="summary", value=jsonlib.Value.Text(value=route.summary))]
+    let parameters: MutableList[jsonlib.Value] = []
+    for segment in strings.split(route.path, "/"):
+        let name = parameter_name(segment)
+        if name != null:
+            parameters.append(jsonlib.Value.Object(members=[jsonlib.Member(key="name", value=jsonlib.Value.Text(value=name)), jsonlib.Member(key="in", value=jsonlib.Value.Text(value="path")), jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=true)), jsonlib.Member(key="schema", value=schema_json(Schema(kind=SchemaType.STRING)))]))
+    for parameter in route.query_parameters:
+        parameters.append(jsonlib.Value.Object(members=[jsonlib.Member(key="name", value=jsonlib.Value.Text(value=parameter.name)), jsonlib.Member(key="in", value=jsonlib.Value.Text(value="query")), jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=parameter.required)), jsonlib.Member(key="schema", value=schema_json(parameter.schema))]))
+    members.append(jsonlib.Member(key="parameters", value=jsonlib.Value.Array(values=parameters.toList())))
+    let request_schema = route.request_schema
+    if request_schema != null:
+        members.append(jsonlib.Member(key="requestBody", value=jsonlib.Value.Object(members=[jsonlib.Member(key="required", value=jsonlib.Value.Boolean(value=true)), jsonlib.Member(key="content", value=jsonlib.Value.Object(members=[jsonlib.Member(key="application/json", value=jsonlib.Value.Object(members=[jsonlib.Member(key="schema", value=schema_json(request_schema))]))]))])))
+    let response: MutableList[jsonlib.Member] = [jsonlib.Member(key="description", value=jsonlib.Value.Text(value="Response"))]
+    let response_schema = route.response_schema
+    if response_schema != null:
+        response.append(jsonlib.Member(key="content", value=jsonlib.Value.Object(members=[jsonlib.Member(key="application/json", value=jsonlib.Value.Object(members=[jsonlib.Member(key="schema", value=schema_json(response_schema))]))])))
+    members.append(jsonlib.Member(key="responses", value=jsonlib.Value.Object(members=[jsonlib.Member(key=route.response_status.toString(), value=jsonlib.Value.Object(members=response.toList()))])))
+    return jsonlib.Value.Object(members=members.toList())
+
+class App:
+    let title: String
+    let version: String = "1.0.0"
+    let cors_origin: String = ""
+    let routes: MutableList[Route] = []
+    var server: HostServer? = null
+
+    func route(route: Route) -> Unit throws Error:
+        if not strings.starts_with(route.path, "/"):
+            throw Error("route path must begin with /")
+        if route.path == "/openapi.json" or route.path == "/docs":
+            throw Error("reserved documentation route")
+        let shape = template_shape(route.path)
+        for previous in routes:
+            if previous.path == route.path and previous.method == route.method:
+                throw Error("duplicate route")
+            if previous.path != route.path and template_shape(previous.path) == shape:
+                throw Error("equivalent templated paths must use identical parameter names")
+        let names: MutableList[String] = []
+        for segment in strings.split(route.path, "/"):
+            let name = parameter_name(segment)
+            if name != null:
+                if names.contains(name):
+                    throw Error("duplicate path parameter")
+                names.append(name)
+            elif strings.starts_with(segment, "{") or strings.ends_with(segment, "}"):
+                throw Error("path parameter must occupy one segment: {name}")
+        let query_names: MutableList[String] = []
+        for parameter in route.query_parameters:
+            if query_names.contains(parameter.name):
+                throw Error("duplicate query parameter metadata: " + parameter.name)
+            query_names.append(parameter.name)
+        if route.response_status < 200 or route.response_status > 599:
+            throw Error("response metadata status must be 200..599")
+        # Validate schema metadata before server startup; this is not body validation.
+        jsonlib.stringify(operation_json(route))
+        routes.append(route)
+
+    func get(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+        route(Route(method=Method.GET, path=path, handler=handler))
+
+    func post(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+        route(Route(method=Method.POST, path=path, handler=handler))
+
+    func delete(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+        route(Route(method=Method.DELETE, path=path, handler=handler))
+
+    func openapi() -> jsonlib.Value throws Error:
+        let paths: MutableList[jsonlib.Member] = []
+        let visited: MutableList[String] = []
+        for route in routes:
+            if not visited.contains(route.path):
+                visited.append(route.path)
+                let operations: MutableList[jsonlib.Member] = []
+                for candidate in routes:
+                    if candidate.path == route.path:
+                        operations.append(jsonlib.Member(key=operation_name(candidate.method), value=operation_json(candidate)))
+                paths.append(jsonlib.Member(key=route.path, value=jsonlib.Value.Object(members=operations.toList())))
+        return jsonlib.Value.Object(members=[jsonlib.Member(key="openapi", value=jsonlib.Value.Text(value="3.0.3")), jsonlib.Member(key="info", value=jsonlib.Value.Object(members=[jsonlib.Member(key="title", value=jsonlib.Value.Text(value=title)), jsonlib.Member(key="version", value=jsonlib.Value.Text(value=version))])), jsonlib.Member(key="paths", value=jsonlib.Value.Object(members=paths.toList()))])
+
+    func respond(raw: HostRequest) -> Response throws Error:
+        let method = required(raw.method())
+        let path = required(raw.rawPath())
+        # Validate URI bytes before matching, including unmatched routes.
+        decode(path, false)
+        decode(required(raw.rawQuery()), true)
+        if method == "OPTIONS" and cors_origin != "":
+            return text("", 204)
+        if method == "GET" and path == "/openapi.json":
+            return json_response(openapi(), 200)
+        if method == "GET" and path == "/docs":
+            return Response(status=200, content_type="text/html; charset=utf-8", body="<!doctype html><html><head><meta charset=\"utf-8\"><title>Sprig API</title><link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css\"></head><body><div id=\"swagger-ui\"></div><script src=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js\"></script><script>SwaggerUIBundle({url:'/openapi.json',dom_id:'#swagger-ui'});</script></body></html>")
+        for route in routes:
+            if method_name(route.method) == method:
+                match match_path(route.path, path):
+                    case MatchResult.Missing:
+                        pass
+                    case MatchResult.Matched as matched:
+                        let request = Request(method=method, path=decode(path, false), body=required(raw.body()), raw=raw, parameters=matched.parameters)
+                        return route.handler(request)
+        return text("Not found", 404)
+
+    func dispatch(raw: HostRequest) -> HostResponse:
+        var response = text("Internal server error", 500)
+        try:
+            response = respond(raw)
+        catch problem: BadRequest:
+            response = text("Bad request", 400)
+        catch problem: Error:
+            response = text("Internal server error", 500)
+        catch problem: RuntimeException:
+            response = text("Internal server error", 500)
+        if cors_origin != "":
+            response = response.with_header("Access-Control-Allow-Origin", cors_origin)
+            response = response.with_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+            response = response.with_header("Access-Control-Allow-Headers", "Content-Type")
+            response = response.with_header("Vary", "Origin")
+        let host = HostResponse(response.status, response.body, response.content_type)
+        for header in response.headers:
+            host.header(header.name, header.value)
+        return host
+
+    func run(port: Int) -> Unit throws Error:
+        if server != null:
+            throw Error("server already started")
+        server = HostServer(port, fn(raw: HostRequest) => dispatch(raw))
+
+    func port() -> Int throws Error:
+        let active = server
+        if active != null:
+            return active.port()
+        throw Error("server is not running")
+
+    func stop() -> Unit:
+        let active = server
+        if active != null:
+            active.stop()
+            server = null

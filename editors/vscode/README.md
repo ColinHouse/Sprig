@@ -39,7 +39,8 @@ Open a `.spr` file. Use the Command Palette or the editor context menu:
 | Command | Behavior |
 |---|---|
 | **Sprig: Check** | Static check; display file-specific errors in Problems |
-| **Sprig: Run** | Compile and execute; show output in the Sprig Output channel |
+| **Sprig: Run** | Compile finite non-interactive programs; show output in Sprig Output |
+| **Sprig: Run in Terminal** | Execute the saved file in an integrated terminal for servers or interactive programs |
 | **Sprig: Build** | Generate Java and compile with javac |
 | **Sprig: Show Generated Java** | Static check, emit Java without javac, open Java beside Sprig |
 | **Sprig: Show Capabilities** | Display the installed compiler's capability JSON |
@@ -60,13 +61,20 @@ not fed back into Sprig. Java output is opened using compiler-provided paths.
 Run currently supports finite **non-interactive** programs. stdin is closed,
 output is displayed on completion, the default limit is 120 seconds and 8 MB.
 Cancel the progress notification to stop the process group on Linux/macOS;
-Windows preview cancellation may not stop child JVM processes. Interactive
-programs and persistent servers should run in a terminal using the SDK.
+Windows preview cancellation may not stop child JVM processes. For persistent servers or interactive programs, select **Sprig: Run in Terminal**.
+It starts normal `sprig run <saved-file>` with the nearest project root as cwd;
+output and stdin belong to the integrated terminal. There is no JSON buffering,
+120-second command limit or 8 MB adapter cap. Use Ctrl+C or close the terminal
+to stop the program. This command checks workspace trust and saved files before
+launching, and never resolves dependencies automatically. Each invocation opens
+one terminal. Linux/macOS launch the SDK directly; Windows preview uses its JVM
+entrypoint, with the same custom-batch restriction as finite Run.
 
 ### Highlighting
 
 TextMate scopes cover implemented lexer keywords, functions/declarations,
-capitalized type names, built-in and generic/nullable types, numeric exponents,
+capitalized type names, built-in and generic/nullable types, source `fn(A) -> R` types and
+`fn(x: A) => expr` lambdas, numeric exponents,
 double-quoted strings and escapes, `#` comments, variant/match, and operators.
 Single quotes, Python keywords and Java syntax are not added to Sprig.
 Colors follow the user's theme. This is lexical highlighting, not semantic name
@@ -107,7 +115,9 @@ VSCODE_EXECUTABLE_PATH="/Applications/Visual Studio Code.app/Contents/MacOS/Code
 SPRIG_TEST_RESTRICTED=1 VSCODE_EXECUTABLE_PATH="/Applications/Visual Studio Code.app/Contents/MacOS/Code" npm run test:host
 ```
 
-Tests use actual TextMate/Oniguruma, Sprig CLI/JVM and VS Code Extension Host.
+Tests use actual TextMate/Oniguruma, Sprig CLI/JVM, terminal command unit checks,
+and VS Code Extension Host. Host coverage includes the real integrated-terminal
+process path; unit checks cover trust, dirty files and argument boundaries.
 The host tests use isolated temporary profiles; they do not install into or change
 your usual VS Code settings. `npm run package` writes `dist/sprig-language-0.1.0.vsix`.
 See the repository validation report for actual tested versions and limitations.

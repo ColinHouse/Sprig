@@ -1,0 +1,35 @@
+import "@web/app.spr" as web
+import "@std/json.spr" as json
+
+let app = web.App(title="Registration")
+let string_schema = web.Schema(kind=web.SchemaType.STRING)
+let query = web.QueryParameter(name="q", schema=string_schema)
+var duplicate_query = false
+try:
+    app.route(web.Route(method=web.Method.GET, path="/query", handler=fn(req: web.Request) => web.text("ok", 200), query_parameters=[query, web.QueryParameter(name="q", schema=web.Schema(kind=web.SchemaType.INTEGER))]))
+catch problem: Error:
+    duplicate_query = true
+print(duplicate_query)
+app.get("/items/{id}", fn(req: web.Request) => web.text("ok", 200))
+var conflicting_template = false
+try:
+    app.post("/items/{name}", fn(req: web.Request) => web.text("ok", 200))
+catch problem: Error:
+    conflicting_template = true
+print(conflicting_template)
+app.post("/items/{id}", fn(req: web.Request) => web.text("ok", 200))
+app.get("/nested/{id}/children/{child}", fn(req: web.Request) => web.text("ok", 200))
+var nested_template = false
+try:
+    app.delete("/nested/{name}/children/{item}", fn(req: web.Request) => web.text("ok", 200))
+catch problem: Error:
+    nested_template = true
+print(nested_template)
+var duplicate_field = false
+try:
+    app.route(web.Route(method=web.Method.POST, path="/fields", handler=fn(req: web.Request) => web.text("ok", 200), request_schema=web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="value", schema=string_schema), web.FieldSchema(name="value", schema=string_schema, required=false)])))
+catch problem: Error:
+    duplicate_field = true
+print(duplicate_field)
+print(app.routes.size())
+print(json.stringify(app.openapi()))

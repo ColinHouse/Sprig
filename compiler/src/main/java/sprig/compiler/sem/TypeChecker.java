@@ -952,7 +952,7 @@ public final class TypeChecker {
             return null;
         }
         sprig.compiler.ast.TypeRef ref = typeArgs.get(0);
-        if (ref.nullable || !ref.args.isEmpty() || ref.parts.isEmpty()) {
+        if (ref.functionResult != null || ref.nullable || !ref.args.isEmpty() || ref.parts.isEmpty()) {
             return null;
         }
         Expr current = new Expr.Name(ref.parts.get(0));
@@ -1572,6 +1572,10 @@ public final class TypeChecker {
     }
 
     private Type checkLambda(Expr.Lambda lambda, Type expected) {
+        if (lambda.params.size() > 3) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_FUNCTION_ARITY, Phase.TYPE,
+                    "Lambdas support zero to three parameters", module.uri, lambda.span));
+        }
         List<Type> params = new ArrayList<>();
         for (Decl.Param param : lambda.params) {
             params.add(param.type == null ? NativeType.ERROR : param.type);
@@ -1579,7 +1583,8 @@ public final class TypeChecker {
         lambdaDepth++;
         Type bodyType;
         try {
-            bodyType = checkExpr(lambda.body, null);
+            bodyType = checkExpr(lambda.body, expected != null && expected.nonNull() instanceof FunctionType fn
+                    ? fn.result : null);
         } finally {
             lambdaDepth--;
         }
@@ -1590,7 +1595,13 @@ public final class TypeChecker {
                     "Lambda captures mutable local '" + capture.name + "'", module.uri, lambda.span)
                     .withHint("Copy it into a 'let' binding before the lambda, or use a class field."));
         }
-        FunctionType functionType = new FunctionType(params, bodyType);
+        // A written target supplies the result type while constructing a lambda;
+        // already-created function values remain invariant.
+        Type resultType = bodyType;
+        if (expected != null && expected.nonNull() instanceof FunctionType fn
+                && fn.params.equals(params) && Semantics.isAssignable(fn.result, bodyType))
+            resultType = fn.result;
+        FunctionType functionType = new FunctionType(params, resultType);
         if (expected != null && expected.nonNull() instanceof FunctionType expectedFunction) {
             requireAssignable(expectedFunction, functionType, lambda.span, Codes.TYPE_MISMATCH, "lambda");
         }
@@ -1683,6 +1694,7 @@ public final class TypeChecker {
                         checkFunctionValueCall(functionType, call);
                         return functionType.result;
                     }
+                    if (rejectNullableCallable(type, call)) return NativeType.ERROR;
                     diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                             "'" + name.name + "' is not callable", module.uri, call.span)
                             .withTypes("function value", type.display()));
@@ -1817,6 +1829,7 @@ public final class TypeChecker {
                         checkFunctionValueCall(functionType, call);
                         return functionType.result;
                     }
+                    if (rejectNullableCallable(type, call)) return NativeType.ERROR;
                     diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                             "'" + access.name + "' is not callable", module.uri, call.span)
                             .withTypes("function value", type == null ? "?" : type.display()));
@@ -1844,6 +1857,7 @@ public final class TypeChecker {
             checkFunctionValueCall(functionType, call);
             return functionType.result;
         }
+        if (rejectNullableCallable(calleeType, call)) return NativeType.ERROR;
         if (calleeType != NativeType.ERROR) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                     "Expression is not callable", module.uri, call.span)
@@ -1898,6 +1912,15 @@ public final class TypeChecker {
             checkExpr(args.get(i).value, null);
         }
         requireHandled(func.throwsTypes, call.span);
+    }
+
+    private boolean rejectNullableCallable(Type type, Expr.Call call) {
+        if (type == null || !type.isNullable() || !(type.nonNull() instanceof FunctionType)) return false;
+        diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
+                "Cannot invoke a nullable function value; check for null first", module.uri, call.span)
+                .withTypes(type.nonNull().display(), type.display()));
+        checkArgsUnchecked(call);
+        return true;
     }
 
     private void checkFunctionValueCall(FunctionType functionType, Expr.Call call) {
@@ -3097,7 +3120,7 @@ public final class TypeChecker {
         boolean ambiguous = false;
         for (Constructor<?> constructor : javaType.clazz.getConstructors()) {
             if (JvmMetadata.unsupportedReason(constructor) != null) continue;
-            int score = scoreCandidate(constructor.getParameterTypes(), argTypes, call.args);
+            int score = scoreCandidate(constructor, argTypes, call.args);
             if (score < 0) {
                 continue;
             }
@@ -3133,8 +3156,8 @@ public final class TypeChecker {
         member.name = "<init>";
         member.executable = best;
         member.paramTypes = new ArrayList<>();
-        for (Class<?> param : best.getParameterTypes()) {
-            member.paramTypes.add(JavaTypes.map(param));
+        for (int i = 0; i < best.getParameterCount(); i++) {
+            member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i], best.getParameterTypes()[i]));
         }
         member.returnType = javaType;
         resolved.jvm = member;
@@ -3168,7 +3191,7 @@ public final class TypeChecker {
                 continue;
             }
             if (JvmMetadata.unsupportedReason(method) != null) continue;
-            int score = scoreCandidate(method.getParameterTypes(), argTypes, call.args);
+            int score = scoreCandidate(method, argTypes, call.args);
             if (score < 0) {
                 continue;
             }
@@ -3216,10 +3239,10 @@ public final class TypeChecker {
         member.name = best.getName();
         member.executable = best;
         member.paramTypes = new ArrayList<>();
-        for (Class<?> param : best.getParameterTypes()) {
-            member.paramTypes.add(JavaTypes.map(param));
+        for (int i = 0; i < best.getParameterCount(); i++) {
+            member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i], best.getParameterTypes()[i]));
         }
-        member.returnType = JavaTypes.mapValue(best.getReturnType());
+        member.returnType = JavaTypes.mapValue(best.getGenericReturnType(), best.getReturnType());
         field.jvm = member;
         requireHandled(jvmExceptions(best.getExceptionTypes()), call.span);
         return member.returnType;
@@ -3233,6 +3256,28 @@ public final class TypeChecker {
 
     private static boolean sameSignature(Method a, Method b) {
         return a != null && b != null && java.util.Arrays.equals(a.getParameterTypes(), b.getParameterTypes());
+    }
+
+    private static int scoreCandidate(java.lang.reflect.Executable executable, List<Type> args,
+                                      List<Expr.Arg> writtenArgs) {
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        if (raw.length != args.size()) return -1;
+        int score = 0;
+        for (int i = 0; i < raw.length; i++) {
+            Type arg = args.get(i);
+            if (arg == NativeType.ERROR) continue;
+            if (JavaTypes.isCallableClass(raw[i])) {
+                FunctionType expected = JavaTypes.callable(generic[i]);
+                if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
+                score += 4;
+            } else {
+                int next = scoreArgument(raw[i], arg, writtenArgs.get(i).value);
+                if (next < 0) return -1;
+                score += next;
+            }
+        }
+        return score;
     }
 
     private static int scoreCandidate(Class<?>[] params, List<Type> args, List<Expr.Arg> writtenArgs) {
@@ -3357,12 +3402,12 @@ public final class TypeChecker {
         for (Executable candidate : candidates) {
             Class<?>[] params = candidate.getParameterTypes();
             if (params.length == argTypes.size()
-                    && scoreCandidate(params, projected, call.args) >= 0) {
+                    && scoreCandidate(candidate, projected, call.args) >= 0) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
                         "Nullable value is not accepted by Java parameter " + (nullableIndex + 1)
                                 + " of " + memberLabel + "; Java parameters are treated as non-null",
                         module.uri, call.args.get(nullableIndex).value.span)
-                        .withTypes(JavaTypes.map(params[nullableIndex]).display(),
+                        .withTypes(JavaTypes.mapFormal(candidate.getGenericParameterTypes()[nullableIndex], params[nullableIndex]).display(),
                                 argTypes.get(nullableIndex).display())
                         .withHint("Check for null first (if x != null), or handle the absent case in Sprig.")
                         .withData(jvmDiagnosticData(candidate.getDeclaringClass(), memberLabel,

@@ -22,3 +22,13 @@ Larger programs written in Sprig live in `../tests/visitor/`:
   i.e. a bootstrap-feasibility slice.
 * `nonexhaustive.spr` — the variant-evolution regression: adding a case
   without updating a match is a compile error.
+
+## Application projects
+
+- [mini_web](mini_web/README.md): typed routes, JSON, explicit OpenAPI and Swagger UI.
+- [sqlite](sqlite/README.md): pinned Maven JDBC driver and persisted prepared SQL.
+- [ledger](ledger/README.md): reduced accounts/categories/transactions HTTP backend,
+  integer minor units, monthly totals and restart persistence.
+
+Run `sprig resolve` from each project before check/run. The web and SQLite
+packages live in `../libraries/`; application READMEs give exact commands.

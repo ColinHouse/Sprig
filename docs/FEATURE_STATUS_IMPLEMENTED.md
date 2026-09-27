@@ -25,6 +25,8 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver suite |
 | Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` verified detached checkouts | dependency resolver |
 | Maven/JVM dependency resolution | exact direct release coordinates | Apache Resolver effective POM + transitive mediation, schema-3 hashes/graph | shared locked check/build/run/api/doctor classpath | Maven fixtures + real commons-text showcase |
+| Source callable types `fn(A) -> R`, nullable `(fn(A) -> R)?`, invariant, arities 0–3 | yes | signatures/fields/locals/collections/generics, no callable effects | existing Fn0..Fn3 representation | tests/callables |
+| JVM callable ABI with concrete `sprig.runtime.Fn0..Fn3` signatures | yes | boxed invariant parameters/results, non-null arguments | direct calls, nullable returned callable and runtime contract guards | tests/callables |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
 | Flow: definite return, unreachable code | — | yes (`SPR-FLOW-*`) | — | semantics |
@@ -44,7 +46,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`
-expressions, nested/positional patterns, function types in source, `%=`,
+expressions, nested/positional patterns, `%=`,
 tuples/destructuring, varargs/arrays/annotations in interop,
 LSP, publishing/registry, incremental checking,
 self-hosting.

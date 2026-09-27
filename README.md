@@ -113,6 +113,17 @@ the published SDK; exact artifact and platform evidence is in the validation
 record. Smaller [examples](examples/README.md) and
 [language tour](website/en/guide/language-tour.md) teach individual constructs.
 
+### Web + SQLite development examples
+
+The current checkout adds [mini-web](examples/mini_web/README.md),
+[persistent SQLite](examples/sqlite/README.md), and a
+[reduced ledger backend](examples/ledger/README.md). Routing, typed handlers,
+JSON and explicit OpenAPI schemas are Sprig; small JVM adapters own HTTP and JDBC.
+See the [web API](libraries/sprig-web/README.md),
+[SQLite API](libraries/sprig-sqlite/README.md) and
+[engineering evidence](docs/milestones/WEB_SQLITE_ENGINEERING_REPORT.md).
+These additions are development work, not a newly published release.
+
 ## Contribute with your coding agent
 
 **Want to contribute with Codex / Claude / ChatGPT?** Pick a scoped

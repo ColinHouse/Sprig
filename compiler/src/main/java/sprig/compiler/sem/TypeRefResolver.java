@@ -107,6 +107,17 @@ public final class TypeRefResolver {
     }
 
     private Type resolveBase(Module module, TypeRef ref, Map<String, Type> typeParams) {
+        if (ref.functionResult != null) {
+            if (ref.args.size() > 3) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_FUNCTION_ARITY, Phase.TYPE,
+                        "Function types support zero to three parameters", module.uri, ref.span));
+                return NativeType.ERROR;
+            }
+            List<Type> params = new ArrayList<>();
+            for (TypeRef param : ref.args) params.add(resolve(module, param, typeParams, false));
+            Type result = resolve(module, ref.functionResult, typeParams, true);
+            return new sprig.compiler.types.FunctionType(params, result);
+        }
         String last = ref.simpleName();
         if (ref.parts.size() == 1) {
             Type parameter = typeParams.get(last);
@@ -264,13 +275,14 @@ public final class TypeRefResolver {
         if (ref == null) return false;
         if (ref.nullable && ref.parts.size() == 1 && ref.simpleName().equals(name)) return true;
         for (TypeRef arg : ref.args) if (nullableUse(arg, name)) return true;
-        return false;
+        return nullableUse(ref.functionResult, name);
     }
 
     private TypeRef copyRef(TypeRef ref) {
         List<TypeRef> args = new ArrayList<>();
         for (TypeRef arg : ref.args) args.add(copyRef(arg));
-        TypeRef copy = new TypeRef(ref.parts, args, ref.nullable);
+        TypeRef copy = new TypeRef(ref.parts, args, ref.nullable,
+                ref.functionResult == null ? null : copyRef(ref.functionResult));
         copy.span = ref.span;
         return copy;
     }

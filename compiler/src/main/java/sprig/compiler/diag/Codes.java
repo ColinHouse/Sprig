@@ -43,6 +43,7 @@ public final class Codes {
     public static final String TYPE_INFER = "SPR-TYPE-INFER";
     public static final String TYPE_NOT_CALLABLE = "SPR-TYPE-NOT-CALLABLE";
     public static final String TYPE_UNIT = "SPR-TYPE-UNIT";
+    public static final String TYPE_FUNCTION_ARITY = "SPR-TYPE-FUNCTION-ARITY";
     public static final String TYPE_CAPTURE = "SPR-TYPE-CAPTURE";
     public static final String NUM_RANGE = "SPR-NUM-RANGE";
     public static final String NUM_CONVERSION = "SPR-NUM-CONVERSION";

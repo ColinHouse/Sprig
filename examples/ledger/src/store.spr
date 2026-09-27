@@ -1,0 +1,43 @@
+# SQL, relationships and transaction boundaries are visible in Sprig.
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/json.spr" as json
+import "./values.spr" as values
+
+func initialize(database: sqlite.Database) -> Unit throws Error:
+    database.batch([
+        sqlite.Statement(sql="CREATE TABLE IF NOT EXISTS accounts (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE CHECK(length(name)>0))", parameters=[]),
+        sqlite.Statement(sql="CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE CHECK(length(name)>0))", parameters=[]),
+        sqlite.Statement(sql="CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id), category_id INTEGER NOT NULL REFERENCES categories(id), amount_minor INTEGER NOT NULL CHECK(amount_minor<>0), occurred_on TEXT NOT NULL, memo TEXT NOT NULL)", parameters=[])
+    ])
+
+func named_row(rows: sqlite.Rows, index: Int) -> json.Value throws Error:
+    return json.Value.Object(members=[
+        json.Member(key="id", value=values.number(rows.integer(index, "id"))),
+        json.Member(key="name", value=values.text(rows.text(index, "name")))
+    ])
+
+func named_list(rows: sqlite.Rows) -> json.Value throws Error:
+    let result: MutableList[json.Value] = []
+    var index: Int = 0
+    while index < rows.size():
+        result.append(named_row(rows, index))
+        index += 1
+    return json.Value.Array(values=result.toList())
+
+func transaction_row(rows: sqlite.Rows, index: Int) -> json.Value throws Error:
+    return json.Value.Object(members=[
+        json.Member(key="id", value=values.number(rows.integer(index, "id"))),
+        json.Member(key="account_id", value=values.number(rows.integer(index, "account_id"))),
+        json.Member(key="category_id", value=values.number(rows.integer(index, "category_id"))),
+        json.Member(key="amount_minor", value=values.number(rows.integer(index, "amount_minor"))),
+        json.Member(key="occurred_on", value=values.text(rows.text(index, "occurred_on"))),
+        json.Member(key="memo", value=values.text(rows.text(index, "memo")))
+    ])
+
+func transaction_list(rows: sqlite.Rows) -> json.Value throws Error:
+    let result: MutableList[json.Value] = []
+    var index: Int = 0
+    while index < rows.size():
+        result.append(transaction_row(rows, index))
+        index += 1
+    return json.Value.Array(values=result.toList())

@@ -1,0 +1,10 @@
+import "@std/json.spr" as json
+
+let document = json.parse("{\"name\":null}")
+match json.find_member(document, "name"):
+    case json.Lookup.Missing:
+        print("missing")
+    case json.Lookup.Found as member:
+        print(json.stringify(member.value))  # prints null
+    case json.Lookup.NotObject:
+        print("expected an object")

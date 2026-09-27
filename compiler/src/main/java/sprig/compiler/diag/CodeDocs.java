@@ -35,6 +35,7 @@ public final class CodeDocs {
             Map.entry(Codes.TYPE_INFER, "The type cannot be inferred without an annotation."),
             Map.entry(Codes.TYPE_NOT_CALLABLE, "The callee is not callable (or a method name was used as a value)."),
             Map.entry(Codes.TYPE_UNIT, "Unit is only valid as a function/method result; it cannot be used as a field, parameter, collection element, or ordinary value."),
+            Map.entry(Codes.TYPE_FUNCTION_ARITY, "Function types and lambdas support zero to three explicitly typed parameters."),
             Map.entry(Codes.TYPE_CAPTURE, "A lambda captures a var local; copy it into a let binding first."),
             Map.entry(Codes.GENERIC_ARITY, "A generic declaration was used with the wrong number of type arguments (supply every parameter in declaration order)."),
             Map.entry(Codes.GENERIC_ARGS_REQUIRED, "A generic function or constructor needs explicit [Type] arguments; Sprig does not infer them."),

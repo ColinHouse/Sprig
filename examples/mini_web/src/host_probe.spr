@@ -1,0 +1,25 @@
+# Phase-5 bounded host experiment: routing remains ordinary Sprig.
+import sprig.runtime.web.HostServer as HostServer
+import sprig.runtime.web.HostRequest as HostRequest
+import sprig.runtime.web.HostResponse as HostResponse
+import sprig.runtime.web.HostCodec as HostCodec
+import "@std/text.spr" as text
+
+func handle(req: HostRequest) -> HostResponse:
+    let method = req.method()
+    let path = req.rawPath()
+    if method == "GET" and path == "/":
+        return HostResponse(200, "Hello host", "text/plain; charset=utf-8")
+    if path != null:
+        if method == "GET" and text.starts_with(path, "/hello/"):
+            let name = HostCodec.decode(path.substring(7, path.length()), false)
+            if name != null:
+                return HostResponse(200, "Hello, " + name, "text/plain; charset=utf-8")
+        if method == "POST" and path == "/echo":
+            let body = req.body()
+            if body != null:
+                return HostResponse(200, body, "text/plain; charset=utf-8")
+    return HostResponse(404, "Not found", "text/plain; charset=utf-8")
+
+let server = HostServer(0, fn(req: HostRequest) => handle(req))
+print("PORT=" + server.port().toString())

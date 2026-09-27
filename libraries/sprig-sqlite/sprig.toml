@@ -1,0 +1,11 @@
+[project]
+name = "sprig-sqlite"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+exports = ["sqlite.spr"]
+
+[[jvm]]
+group = "org.xerial"
+artifact = "sqlite-jdbc"
+version = "3.46.1.0"

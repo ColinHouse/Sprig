@@ -1,0 +1,72 @@
+# SQL remains application code; JDBC only owns binding and resource lifetimes.
+import sprig.runtime.sqlite.Database as HostDatabase
+import sprig.runtime.sqlite.Parameters as HostParameters
+import sprig.runtime.sqlite.Rows as HostRows
+import sprig.runtime.sqlite.Batch as HostBatch
+
+variant Parameter:
+    Integer(value: Int)
+    Text(value: String)
+    Boolean(value: Bool)
+    Null
+
+class Statement:
+    let sql: String
+    let parameters: List[Parameter]
+
+func bind(values: List[Parameter]) -> HostParameters:
+    let result = HostParameters()
+    for value in values:
+        match value:
+            case Parameter.Integer as node:
+                result.integer(node.value)
+            case Parameter.Text as node:
+                result.text(node.value)
+            case Parameter.Boolean as node:
+                result.bool(node.value)
+            case Parameter.Null:
+                result.nil()
+    return result
+
+class Rows:
+    let host: HostRows
+
+    func size() -> Int:
+        return host.size()
+
+    func is_null(row: Int, column: String) -> Bool:
+        return host.isNull(row, column)
+
+    func integer(row: Int, column: String) -> Int throws Error:
+        return host.integer(row, column)
+
+    func text(row: Int, column: String) -> String throws Error:
+        let value = host.text(row, column)
+        if value != null:
+            return value
+        throw Error("SQLite text unexpectedly returned null")
+
+    func boolean(row: Int, column: String) -> Bool throws Error:
+        return host.bool(row, column)
+
+class Database:
+    let path: String
+
+    func execute(sql: String, parameters: List[Parameter]) -> Int throws Error:
+        return HostDatabase(path).execute(sql, bind(parameters))
+
+    func query(sql: String, parameters: List[Parameter]) -> Rows throws Error:
+        let value = HostDatabase(path).query(sql, bind(parameters))
+        if value != null:
+            return Rows(host=value)
+        throw Error("SQLite query unexpectedly returned null")
+
+    func batch(statements: List[Statement]) -> Int throws Error:
+        let batch = HostBatch()
+        for statement in statements:
+            batch.add(statement.sql, bind(statement.parameters))
+        return HostDatabase(path).batch(batch)
+
+func open(path: String) -> Database throws Error:
+    HostDatabase(path).initialize()
+    return Database(path=path)

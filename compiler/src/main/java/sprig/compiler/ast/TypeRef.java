@@ -13,14 +13,26 @@ public final class TypeRef extends Node {
     public final List<TypeRef> args;
     public final boolean nullable;
     public Type resolved;
+    /** Non-null for source callable types; args then hold the parameter types. */
+    public final TypeRef functionResult;
 
     public TypeRef(List<String> parts, List<TypeRef> args, boolean nullable) {
+        this(parts, args, nullable, null);
+    }
+
+    public TypeRef(List<String> parts, List<TypeRef> args, boolean nullable, TypeRef functionResult) {
+        this.functionResult = functionResult;
         this.parts = List.copyOf(parts);
         this.args = List.copyOf(args);
         this.nullable = nullable;
     }
 
     public String display() {
+        if (functionResult != null) {
+            String text = "fn(" + String.join(", ", args.stream().map(TypeRef::display).toList())
+                    + ") -> " + functionResult.display();
+            return nullable ? "(" + text + ")?" : text;
+        }
         StringBuilder sb = new StringBuilder(String.join(".", parts));
         if (!args.isEmpty()) {
             sb.append('[');

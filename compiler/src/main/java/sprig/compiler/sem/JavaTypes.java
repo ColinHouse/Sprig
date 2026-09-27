@@ -57,6 +57,58 @@ public final class JavaTypes {
         return new JavaType(clazz, java.util.List.of(), true);
     }
 
+    /** Only Sprig-owned Fn0..Fn3 carry a source callable contract. No Java SAM inference. */
+    public static boolean isCallableClass(Class<?> clazz) {
+        return clazz == sprig.runtime.Fn0.class || clazz == sprig.runtime.Fn1.class
+                || clazz == sprig.runtime.Fn2.class || clazz == sprig.runtime.Fn3.class;
+    }
+
+    public static Class<?> rawClass(java.lang.reflect.Type type) {
+        if (type instanceof Class<?> clazz) return clazz;
+        if (type instanceof java.lang.reflect.ParameterizedType p && p.getRawType() instanceof Class<?> clazz)
+            return clazz;
+        return null;
+    }
+
+    /** Concrete invariant boxed signature, or null when unresolved/raw/wildcard/unsupported. */
+    public static sprig.compiler.types.FunctionType callable(java.lang.reflect.Type type) {
+        if (!(type instanceof java.lang.reflect.ParameterizedType p)
+                || !(p.getRawType() instanceof Class<?> raw) || !isCallableClass(raw)) return null;
+        java.lang.reflect.Type[] written = p.getActualTypeArguments();
+        if (written.length != raw.getTypeParameters().length) return null;
+        java.util.List<Type> params = new java.util.ArrayList<>();
+        Type result = null;
+        for (int i = 0; i < written.length; i++) {
+            Type mapped;
+            if (written[i] instanceof Class<?> clazz) {
+                // Character/Short/Byte need value adapters; an erased Fn cannot perform those implicitly.
+                if (clazz.isArray() || clazz.isPrimitive() || isCallableClass(clazz)
+                        || clazz == Character.class || clazz == Short.class || clazz == Byte.class)
+                    return null;
+                mapped = map(clazz);
+            } else {
+                mapped = callable(written[i]);
+                if (mapped == null) return null;
+            }
+            if (i == written.length - 1) result = mapped;
+            else {
+                if (mapped == NativeType.UNIT) return null;
+                params.add(mapped);
+            }
+        }
+        return new sprig.compiler.types.FunctionType(params, result);
+    }
+
+    public static Type mapFormal(java.lang.reflect.Type generic, Class<?> raw) {
+        sprig.compiler.types.FunctionType fn = callable(generic);
+        return fn != null ? fn : map(raw);
+    }
+
+    public static Type mapValue(java.lang.reflect.Type generic, Class<?> raw) {
+        sprig.compiler.types.FunctionType fn = callable(generic);
+        return fn != null ? NullableType.of(fn) : mapValue(raw);
+    }
+
     /** JVM values whose source representation differs from the mapped Sprig value. */
     public static boolean needsValueAdapter(Class<?> clazz) {
         return clazz == char.class || clazz == Character.class

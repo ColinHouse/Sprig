@@ -20,6 +20,12 @@ public final class JavaRunner {
 
     public static Result run(Path classesDir, String mainClass, List<String> args, Path workDir)
             throws IOException, InterruptedException {
+        return run(classesDir, mainClass, args, workDir, false);
+    }
+
+    /** Text CLI output streams immediately; JSON mode retains a complete captured envelope. */
+    public static Result run(Path classesDir, String mainClass, List<String> args, Path workDir,
+                             boolean streamOutput) throws IOException, InterruptedException {
         Path outFile = workDir.resolve("program.out");
         Path errFile = workDir.resolve("program.err");
         List<String> command = new ArrayList<>();
@@ -31,12 +37,21 @@ public final class JavaRunner {
         command.add(mainClass);
         command.addAll(args);
         ProcessBuilder builder = new ProcessBuilder(command);
-        builder.redirectOutput(outFile.toFile());
+        if (streamOutput) {
+            builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            builder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+        } else builder.redirectOutput(outFile.toFile());
         builder.redirectError(errFile.toFile());
         Process process = builder.start();
         Result result = new Result();
-        result.exitCode = process.waitFor();
-        if (Files.exists(outFile)) {
+        Thread cleanup = new Thread(process::destroy, "sprig-child-cleanup");
+        Runtime.getRuntime().addShutdownHook(cleanup);
+        try { result.exitCode = process.waitFor(); }
+        finally {
+            process.destroy();
+            Runtime.getRuntime().removeShutdownHook(cleanup);
+        }
+        if (!streamOutput && Files.exists(outFile)) {
             result.stdout = Files.readString(outFile, StandardCharsets.UTF_8);
         }
         if (Files.exists(errFile)) {

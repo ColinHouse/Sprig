@@ -1,0 +1,36 @@
+class Holder:
+    let handler: fn(Int) -> Int
+func invoke(f: fn(Int) -> Int, n: Int) -> Int:
+    return f(n)
+func make() -> fn(Int) -> Int:
+    return fn(x: Int) => x + 1
+generic T:
+    class Box:
+        let value: T
+let inc: fn(Int) -> Int = fn(x: Int) => x + 1
+print(invoke(inc, 4))
+let h = Holder(handler=inc)
+print(h.handler(5))
+let b = Box[fn(Int) -> Int](value=make())
+print(b.value(6))
+let functions: List[fn(Int) -> Int] = [inc]
+let f = functions[0]
+print(f(7))
+let maybe: (fn(Int) -> Int)? = inc
+if maybe != null:
+    print(maybe(8))
+let absent: String? = null
+let returns_null: fn() -> String? = fn() => null
+print(returns_null() == null)
+let no_op: fn() -> Unit = fn() => print("unit")
+no_op()
+generic T:
+    func nullable_identity() -> fn(T) -> T:
+        return fn(value: T) => value
+generic T:
+    func apply_unknown(f: fn() -> T) -> T:
+        return f()
+let identity = nullable_identity[String?]()
+print(identity(null) == null)
+let missing: String? = null
+print(apply_unknown[String?](fn() => missing) == null)

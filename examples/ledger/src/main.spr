@@ -1,0 +1,45 @@
+import "@web/app.spr" as web
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/process.spr" as process
+import "./store.spr" as store
+import "./handlers.spr" as handlers
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var file = "ledger.sqlite"
+    var port: Int = 8080
+    if args.size() > 0:
+        file = args.get(0)
+    if args.size() > 1:
+        let parsed = args.get(1).toIntOrNull()
+        if parsed != null:
+            port = parsed
+        else:
+            throw Error("port must be an integer")
+    let database = sqlite.open(file)
+    store.initialize(database)
+    let ledger = handlers.Ledger(database=database)
+    let app = web.App(title="Sprig SQLite Ledger", cors_origin="http://localhost:5173")
+    let string_schema = web.Schema(kind=web.SchemaType.STRING)
+    let integer_schema = web.Schema(kind=web.SchemaType.INTEGER)
+    let named_input = web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="name", schema=string_schema)])
+    let named_output = web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="id", schema=integer_schema), web.FieldSchema(name="name", schema=string_schema)])
+    let transaction_input = web.Schema(kind=web.SchemaType.OBJECT, fields=[
+        web.FieldSchema(name="account_id", schema=integer_schema),
+        web.FieldSchema(name="category_id", schema=integer_schema),
+        web.FieldSchema(name="amount_minor", schema=integer_schema),
+        web.FieldSchema(name="occurred_on", schema=string_schema),
+        web.FieldSchema(name="memo", schema=string_schema)
+    ])
+    app.route(web.Route(method=web.Method.GET, path="/api/accounts", handler=fn(req: web.Request) => ledger.accounts(req), summary="List accounts", response_schema=web.Schema(kind=web.SchemaType.ARRAY, items=named_output)))
+    app.route(web.Route(method=web.Method.POST, path="/api/accounts", handler=fn(req: web.Request) => ledger.create_account(req), summary="Create account", request_schema=named_input, response_schema=named_output, response_status=201))
+    app.route(web.Route(method=web.Method.GET, path="/api/categories", handler=fn(req: web.Request) => ledger.categories(req), summary="List categories", response_schema=web.Schema(kind=web.SchemaType.ARRAY, items=named_output)))
+    app.route(web.Route(method=web.Method.POST, path="/api/categories", handler=fn(req: web.Request) => ledger.create_category(req), summary="Create category", request_schema=named_input, response_schema=named_output, response_status=201))
+    app.route(web.Route(method=web.Method.GET, path="/api/transactions", handler=fn(req: web.Request) => ledger.transactions(req), summary="List transactions"))
+    app.route(web.Route(method=web.Method.POST, path="/api/transactions", handler=fn(req: web.Request) => ledger.create_transaction(req), summary="Create transaction", request_schema=transaction_input, response_status=201))
+    app.route(web.Route(method=web.Method.DELETE, path="/api/transactions/{id}", handler=fn(req: web.Request) => ledger.delete_transaction(req), summary="Delete transaction", response_status=204))
+    app.route(web.Route(method=web.Method.GET, path="/api/statistics/monthly", handler=fn(req: web.Request) => ledger.monthly(req), summary="Monthly minor-unit totals", query_parameters=[web.QueryParameter(name="month", schema=string_schema, required=true)]))
+    app.run(port)
+    print("LEDGER_READY " + app.port().toString())
+
+main()
