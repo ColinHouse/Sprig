@@ -1,5 +1,5 @@
-import "../../../../std/files.spr" as files
-import "../../../../std/process.spr" as process
+import "@std/files.spr" as files
+import "@std/process.spr" as process
 import "./frontend.spr" as frontend
 import "./outline.spr" as outline
 import java.io.IOException as IOException

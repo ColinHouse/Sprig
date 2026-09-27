@@ -65,7 +65,7 @@ def main():
               "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
               "tests/adversarial/v08/check_projects.py"]
     suites += ["tests/maven/check_resolver.py", "scripts/test-stdlib.py",
-               "scripts/test-showcases.py"]
+               "scripts/test-showcases.py", "tests/release_hardening/check_hardening.py"]
     for suite in suites:
         print(f"== {suite} ==", flush=True)
         command = [sys.executable, str(ROOT / suite)]

@@ -51,7 +51,9 @@ The current published SDK is
 [`v0.2.0-alpha.1`](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
 Download its ZIP and `.sha256`, verify the checksum, and extract; the SDK
 includes compiler/runtime libraries, **not a JDK**. The source milestone is
-`v0.3.0-alpha.1`; its Maven, Windows and showcase work is subject to release gates.
+`v0.3.0-alpha.1`; its Maven and showcase work is subject to release gates.
+Supported release platforms: **Linux/macOS**. **Windows is experimental**,
+with a separate non-blocking preview workflow.
 Use the release page to distinguish a published archive from a source checkout.
 
 Linux/macOS, inside the extracted SDK:
@@ -78,8 +80,8 @@ python3 scripts/build.py
 ./bin/sprig version
 ```
 
-On **Windows PowerShell**, use the portable source build until a Windows SDK
-is published. Native Windows launchers are included in the source milestone:
+On **Windows PowerShell**, the native launcher is an **experimental preview**;
+Windows is not currently a supported release platform:
 
 ```powershell
 py -3 scripts/build.py

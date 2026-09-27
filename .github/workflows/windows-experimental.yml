@@ -1,0 +1,32 @@
+name: Windows experimental
+on:
+  push:
+  pull_request:
+env:
+  PYTHONUTF8: "1"
+permissions:
+  contents: read
+jobs:
+  preview:
+    name: Windows preview / JDK ${{ matrix.java }}
+    runs-on: windows-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '26']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python scripts/build.py
+      - run: python scripts/test.py
+      - run: python tools/test-grammar.py
+      - run: |
+          python scripts/package-alpha.py --skip-build
+          python tools/check-sdk-archive.py

@@ -39,8 +39,8 @@ by the Sprig v0.7 design kit.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
-- Compiler classes use `javac --release 17`. CI defines Linux/macOS/Windows
-  with JDK 17 and 26; definitions are not execution evidence. The current
+- Compiler classes use `javac --release 17`. Supported release platforms are Linux/macOS
+  with JDK 17 and 26; Windows is an experimental, non-blocking preview; definitions are not execution evidence. The current
   release validation report records which exact source/archive gates ran.
   No production or architecture-wide portability guarantee is made.
 - Local dependency locks contain canonical absolute paths and are not portable.
@@ -49,5 +49,5 @@ by the Sprig v0.7 design kit.
   require Git and a complete verified cache. Concurrent hostile mutation after
   validation is outside the cooperative cache model.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig v0.3.0-alpha.1 is a prerelease under Apache-2.0 (`LICENSE`, `NOTICE`),
+- Sprig targets v0.3.0-alpha.1, an experimental Alpha under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.

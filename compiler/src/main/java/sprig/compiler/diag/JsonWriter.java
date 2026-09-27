@@ -13,6 +13,12 @@ public final class JsonWriter {
 
     public static String result(List<Diagnostic> diagnostics, String uriForNulls,
                                 String command, Integer exitCode, String programOutput) {
+        return result(diagnostics, uriForNulls, command, exitCode, programOutput, java.util.Map.of());
+    }
+
+    public static String result(List<Diagnostic> diagnostics, String uriForNulls,
+                                String command, Integer exitCode, String programOutput,
+                                java.util.Map<String, Object> details) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
         sb.append("  \"schemaVersion\": 1,\n");
@@ -25,6 +31,10 @@ public final class JsonWriter {
         }
         if (programOutput != null) {
             sb.append("  \"programOutput\": \"").append(escape(programOutput)).append("\",\n");
+        }
+        for (var entry : details.entrySet()) {
+            sb.append("  \"").append(escape(entry.getKey())).append("\": ")
+              .append(sprig.compiler.tooling.ToolJson.encode(entry.getValue())).append(",\n");
         }
         sb.append("  \"environment\": {\"classpath\": ")
           .append(sprig.compiler.tooling.ToolJson.encode(

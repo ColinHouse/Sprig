@@ -206,6 +206,7 @@ public final class DependencyResolver {
         lock.lockVersion = Lockfile.VERSION;
         lock.language = project.language;
         lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
+        StdLibrary.record(lock);
         Package root = build(project, "root", "", "root", null, null, null, lock, offline, true, new ArrayDeque<>());
         lock.sprig.addAll(new Result(root, lock).entries());
         return new Result(root, lock);
@@ -213,6 +214,7 @@ public final class DependencyResolver {
 
     /** Build mode: uses the existing lockfile and never queries a moving ref. */
     public static Result load(Project project, Lockfile lock, boolean offline) {
+        StdLibrary.verify(lock);
         String digest;
         try {
             digest = Lockfile.digest(project.manifest);

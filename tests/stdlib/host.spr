@@ -1,7 +1,7 @@
-import "../../std/files.spr" as files
-import "../../std/process.spr" as process
-import "../../std/text.spr" as text
-import "../../std/time.spr" as time
+import "@std/files.spr" as files
+import "@std/process.spr" as process
+import "@std/text.spr" as text
+import "@std/time.spr" as time
 import java.io.IOException as IOException
 
 try:

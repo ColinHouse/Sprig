@@ -64,7 +64,9 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     assert command("version").strip().endswith(version)
     capabilities = json.loads(command("capabilities", "--json"))
     assert capabilities["compilerVersion"] == version
-    assert capabilities["releaseStatus"] == "prerelease; v" + version
+    assert capabilities["releaseStatus"] == "prerelease; v" + version or capabilities["releaseStatus"].startswith("development; target v" + version + "; latest published v")
+    if args.archive:
+        assert capabilities["releaseStatus"] == "prerelease; v" + version, "release ZIP must originate from a clean exact-tag build"
     assert capabilities["features"]["mavenDependencies"]
     assert json.loads(command("doctor", "--json"))["antlrAvailable"]
     assert json.loads(command("api", "java.time.LocalDate", "--json"))["className"] == "java.time.LocalDate"
@@ -74,6 +76,14 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
                 assert (sdk / example).is_file(), (topic, example)
     assert json.loads(command("check", "examples/hello.spr", "--json"))["diagnostics"] == []
     assert json.loads(command("run", "examples/hello.spr", "--json"))["programOutput"] == "Hello, Ada!\n"
+    independent = Path(temp) / "standalone std user"
+    independent.mkdir()
+    source = independent / "main.spr"
+    source.write_text('import "@std/text.spr" as text\nprint(text.trim("  installed std  "))\n', encoding="utf-8")
+    assert json.loads(command("run", str(source), "--json", cwd=independent))["programOutput"] == "installed std\n"
+    generated = json.loads(command("build", str(source), "--emit-java-only", "-d", str(independent / "output"), "--json", cwd=independent))
+    assert generated["javacInvoked"] is False and generated["javaSources"]
+    assert not list((independent / "output").rglob("*.class"))
     probe = json.loads(command("run", "examples/stage1_frontend_probe/frontend.spr", "--json"))
     assert "PROBE-LEX 3:1 [22,24)" in probe["programOutput"]
     project = Path(temp) / "fresh project with spaces"

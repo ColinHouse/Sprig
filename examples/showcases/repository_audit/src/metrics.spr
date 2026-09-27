@@ -1,4 +1,4 @@
-import "../../../../std/text.spr" as text
+import "@std/text.spr" as text
 import "./model.spr" as model
 
 func extension(name: String) -> String:

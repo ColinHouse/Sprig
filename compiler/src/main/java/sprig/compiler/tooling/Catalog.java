@@ -74,6 +74,8 @@ public final class Catalog {
         result.put("jdk", Map.of("minimum", MINIMUM_JDK));
         result.put("license", get("license"));
         result.put("releaseStatus", get("releaseStatus"));
+        result.put("supportedPlatforms", list("supportedPlatforms"));
+        result.put("experimentalPlatforms", list("experimentalPlatforms"));
         for (String key : List.of("commands", "nativeTypes", "collectionTypes", "supportedSyntax", "unsupportedSyntax")) {
             result.put(key, list(key));
         }

@@ -1,8 +1,8 @@
 # Release validation — v0.3 developer attraction milestone
 
 Source candidate: compiler **0.3.0-alpha.1**, language **0.8-dev**, JDK17+,
-Apache-2.0. Public latest remains v0.2.0-alpha.1. No v0.3 publication or hosted
-Windows pass is claimed yet. This is the sole current validation authority.
+Apache-2.0. Public latest remains v0.2.0-alpha.1. No v0.3 publication is claimed yet. Linux/macOS are release-supported;
+Windows is an experimental, non-blocking preview. This is the sole current validation authority.
 
 ## Baseline and local gates (2026-09-27)
 
@@ -75,14 +75,60 @@ Type safety does not certify numerical stability or application correctness.
 
 ## Remaining release gates
 
-- Hosted Linux/macOS/Windows × JDK17/26 on the exact source SHA.
+- Hosted Linux/macOS × JDK17/26 and Docs on the hardening source SHA.
+  Windows preview runs separately and is not required.
 - Fourteen real public issue contracts were seeded as issues #13–26, with eight
-  consistent labels and scope/non-goal/test constraints. Fresh blind contributor
-  trials and measured failures/iterations/patch review are pending. No human
-  feedback is invented.
-- Clean exact-tag package, six hosted tests of that same downloaded ZIP,
+  consistent labels and scope/non-goal/test constraints. One fresh docs Agent produced an isolated recipe and reported focused SDK
+  checks, but its final turn hit an account usage limit before a complete final
+  review record. Extra fresh Agents hit a tool thread limit; independent CLI
+  sessions failed (sampling timeout, then unsupported configured model for the
+  CLI account). These are incomplete trials, not contributor success or human
+  feedback. Evidence/patches remain isolated locally; they are not merged.
+- Clean exact-tag package, four supported-platform hosted tests of that same downloaded ZIP,
   publication and final downloaded asset checksum/source verification.
 
 Public v0.2 tag target: `677429be905750b975d491f8a5c60e29d8ebaee2`;
 ZIP SHA256: `66453a482b449969f95ef65dffea45b1f33a4abfdc7d02a163c83e23891b3433`.
 Historical scope stays in release notes/Git history rather than a competing report.
+
+## Release-hardening follow-up (2026-09-27)
+
+Owner feedback narrowed this round to release hygiene, explicit bundled std,
+Java-source visibility and supported-platform gates; VS Code, Web, formatter
+and self-hosting remain later work. PR #27 was merged by the owner into
+`c434d1fe30f4e01971c0ce3e190b163bf3774920`. Its actual
+[CI run](https://github.com/ColinHouse/Sprig/actions/runs/36265068458) passed
+Linux/macOS × JDK17/26 and Docs; both Windows jobs failed. Logs show CRLF probe
+inputs, native output encoding and several fixture/path/cache failures. They
+are retained as preview limitations, not asserted to be repaired.
+
+New independently written temporary-directory regression first reproduced
+missing @std resolution, then passed installed-module execution, invalid-path
+rejection, reserved alias rejection, independent std SHA256/reference comparison,
+stale std lock rejection, Java-only output, static type errors before generation
+and build-only option validation. New checks run in the normal test inventory
+and actual extracted SDK smoke. Existing showcase imports now use @std and their
+locks were explicitly re-resolved. Schema3 retains parse compatibility; older
+locks lacking std metadata need resolve before consumers use them.
+
+The quick/JVM document titles were stale and DESIGN_PRESSURE contained third-party
+notices. They are corrected; a content guard now rejects that drift. The design
+report counts eleven showcase std imports and thirteen explicit JVM null guards
+(std eleven plus Maven two), instead of speculative syntax proposals.
+
+Main protection was applied and read back through GitHub: PR required, strict
+up-to-date checks for four supported OS/JDK combinations plus Docs, admins
+enforced, force pushes/deletions disabled, review conversations resolved. Approval
+count is zero; no independent human approval is claimed. Source catalogs report
+development; only a clean exact matching release-tag build labels its artifact
+prerelease. Hosted hardening/package/release evidence will replace the pending
+entries after the actual gates run.
+
+Hardening local archive gate passed: development SDK extracted outside the repo
+with spaces, standalone @std run, Java-only metadata/no-class assertion, existing
+probe/init/resolve/help/api/doctor and all three showcase projects. Release-mode
+packaging additionally requires a clean matching tag and prerelease-built JAR;
+`--archive` smoke rejects a development-status artifact.
+
+A deliberate release-mode package attempt from the dirty untagged development
+checkout failed with the expected clean exact-tag build requirement.

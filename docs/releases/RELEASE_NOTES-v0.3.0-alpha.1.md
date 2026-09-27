@@ -15,7 +15,11 @@ help, API metadata, doctor and structured errors guide a query/check/repair loop
   compile/runtime JARs. Manifest exact versions, SHA-256 locks and offline reuse
   feed one classpath for check/build/run/api/doctor. No Maven CLI/plugins.
 - Relocatable Unix and Windows `sprig.cmd` launchers require a JDK, no Bash/WSL
-  for ordinary Windows SDK usage. CI/release gates target all three OSs.
+  for preview Windows SDK usage. Linux/macOS × JDK17/26 are supported release
+  gates; Windows remains experimental and non-blocking.
+- Explicit reserved `@std/module.spr` imports work outside the checkout and
+  lock the bundled std version/digest. `build --emit-java-only` exposes checked
+  generated Java without javac.
 - Ordinary Sprig `std` modules supply UTF-8 IO/path, arguments/environment,
   text/time and a recursive closed JSON variant with exact numeric text.
 - Three real projects ship: repository auditor, Maven-backed HTML utility,

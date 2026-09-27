@@ -1,4 +1,4 @@
-import "../../std/json.spr" as json
+import "@std/json.spr" as json
 
 let value = json.parse("{\"ok\":true,\"nested\":[null,12.50,\"a\\nb\",{\"x\":-2e3}]}")
 print(json.stringify(value))

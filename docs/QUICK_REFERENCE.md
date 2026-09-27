@@ -1,4 +1,4 @@
-# Implemented quick reference (v0.2.0-alpha.1)
+# Implemented quick reference (v0.3.0-alpha.1 source candidate)
 
 `sprig help <topic> --json` is the versioned machine-readable reference.
 `sprig capabilities --json` is the implemented feature inventory. This page
@@ -45,3 +45,15 @@ See `sprig help numerics` for syntax and `NUMERIC_SEMANTICS.md` for details.
 The v0.7 design kit in `spec/` includes unimplemented targets. Check
 `FEATURE_STATUS_IMPLEMENTED.md` and `KNOWN_LIMITATIONS.md` before relying on
 an advanced feature.
+
+## Observe generated Java
+
+```text
+sprig build src/main.spr --emit-java-only -d generated --json
+```
+
+Loads imports and performs ordinary static checking, writes `generated/java/`,
+then stops before javac. JSON includes `javaSources`, `mainClass` and
+`javacInvoked=false`; invalid sources still fail with normal diagnostics.
+Normal `build` additionally compiles classes; `run --keep` retains temporary
+Java for execution debugging. No extra transpile command is introduced.

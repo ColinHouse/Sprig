@@ -1,99 +1,27 @@
-# Third-party notices
+# Design pressure from the v0.3 showcases
 
-This file records third-party components and material rights that affect the
-Sprig repository, the runtime archives and the documentation site. It is a
-notice list, not the project license. Sprig itself is licensed under
-Apache-2.0 (see `LICENSE` and `LICENSE_STATUS.md`).
+This record measures current source; it does not authorize a language redesign.
+The three projects are repository_audit (232 lines, five modules), maven_slug
+(53 lines, Commons Text/Lang) and source_analyzer (636 lines, including the
+existing 541-line frontend probe). They use ordinary checking and JVM execution.
 
-## ANTLR 4.13.2 (build and runtime archive)
+| Pressure | Concrete evidence | Smallest response |
+|---|---|---|
+| Standard-library discovery | 11 relative std imports in the three showcase projects | Reserved `@std` package imports; no grammar change |
+| Conservative JVM nullability | 11 explicit non-null guards in std and two in maven_slug | Keep guards and typed wrappers; no hidden non-null assumption |
+| Java generic collection boundary | One directory-list indexed snapshot copied into a typed Sprig list in files.list | Small host adapter; retain explicit copy cost |
+| Generics | Auditor uses explicit Bucket/String and FileStats abstractions | Working expressiveness; no evidence requiring inference/variance |
+| AST traversal | Recursive variants and exhaustive match in the copied frontend plus analyzer driver | Useful today; probe remains a subset, not self-hosting |
+| IO/effects | Filesystem wrappers expose java.io.IOException; command drivers declare/handle effects | Document actual boundaries before any effect redesign |
 
-Sprig's build uses the official ANTLR 4.13.2 complete JAR from Maven Central.
-The build script pins its SHA-256 digest. ANTLR is distributed under the BSD
-license shown on the [official ANTLR license page](https://www.antlr.org/license.html).
-The dependency is fetched during build and is **not** committed to this
-repository; the local candidate package (`scripts/package-alpha.sh`) copies it
-and includes this notice.
+No showcase needs a user-supplied callback, shared behavioral interface,
+async contract, matrix/array syntax, or a match expression to complete its task.
+This is absence of evidence in these programs, not proof such abstractions are
+unnecessary. A later mixed Java/Sprig mini-web experiment should measure SAM
+callbacks, JVM generics and effects before proposing syntax. A small VS Code
+extension is the next adoption project after release; formatter and stage-1
+remain separate work. Do not add DSL routes, interfaces or inference in this gate.
 
-Copyright (c) 2012 Terence Parr and Sam Harwell. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-3. Neither the name of the author nor the names of its contributors may be used
-   to endorse or promote products derived from this software without specific
-   prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-## Documentation site toolchain (`website/`)
-
-The site is built with VitePress and its default theme. The production build
-redistributes JavaScript bundles and the Inter webfont. These components keep
-their own licenses; they are development/build dependencies, not part of the
-compiler or runtime:
-
-| Component | License |
-|---|---|
-| VitePress | MIT |
-| Vue.js | MIT |
-| Shiki | MIT |
-| MiniSearch (local search) | MIT |
-| Inter font (shipped by the theme) | SIL Open Font License 1.1 |
-
-No dependency listed here is modified by this repository.
-
-## Project icon and mascot (`assets/brand/icon-source.png`)
-
-The artwork was supplied by the project owner, who approved its use for this
-project. `assets/brand/generate.py` derives the README image, site logo,
-favicons, Apple touch icon and social preview image by **cropping, masking and
-resizing only**; the character was not redesigned or recolored. A separate
-"S" monogram is generated for 16–32px favicons because the detailed
-illustration is not legible at that size.
-
-Recorded caveat: the artwork's origin is not independently documented in this
-repository, and the cat silhouette on the laptop and mug resembles GitHub's
-Octocat mark. The owner should keep a note of the artwork's source, and if the
-resemblance is intentional, confirm that the reference is acceptable; a
-third-party mark used to identify this project could be confusing. No claim of
-original or unrestricted licensing is made for the artwork beyond the owner's
-approval.
-
-## Content and fonts in this repository
-
-All prose, compiler source, tests and examples were written for this project
-(or generated with AI assistance as described in `AI_DISCLOSURE.md`). No
-third-party fonts, images or datasets are committed beyond
-`assets/brand/icon-source.png` and the site assets derived from it. The
-documentation references JDK classes by name but does not redistribute JDK
-code.
-
-## Apache Maven Resolver / effective-model provider
-
-The SDK bundles Apache Maven Resolver 1.9.24, Maven model provider/model builder
-3.9.11 and the small required support-library closure. The build fetches the
-pinned Apache Maven 3.9.11 ZIP, verifies SHA-512 and extracts selected libraries;
-no Maven CLI/plugins/build hooks execute. `tools/resolver-libraries.json` records
-exact filenames and SHA-256. SLF4J's no-op binding 1.7.36 is separately pinned.
-
-The SDK's `legal/resolver/LICENSE`, `NOTICE`, and component `.license` files
-preserve the distribution's license texts (Apache-2.0 and support licenses,
-including SLF4J MIT). `legal/resolver-libraries.json` maps bundled JARs to hashes.
-These libraries are not committed to the source repository. Compiler-library
-classes are isolated from the user's application classpath. User-declared Maven
-libraries have their own licensing obligations; their download is not a Sprig
-license grant.
+The actual usability failure was moving a showcase outside the repository:
+relative paths depended on repository depth. Installed `@std` fixes that boundary
+and a standalone temporary-directory regression verifies it.

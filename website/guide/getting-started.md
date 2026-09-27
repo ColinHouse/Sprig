@@ -39,7 +39,7 @@ cd my-tool
 
 ## Windows 与源码构建
 
-Windows SDK 发布前可用原生源码构建；需要 Git、JDK 17+、Python 3.12+，
+Windows 为实验性预览，不是当前支持的发行平台；可用原生源码构建进行测试；需要 Git、JDK 17+、Python 3.12+，
 不需要 Bash 或 Maven CLI。PowerShell：
 
 ```powershell
