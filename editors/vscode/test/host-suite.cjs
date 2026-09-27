@@ -41,7 +41,8 @@ exports.run=async()=>{
  const child=path.join(project,'src','child.spr');fs.writeFileSync(child,'let x: Int = "bad"\n');
  const main=path.join(project,'src','main.spr');fs.writeFileSync(main,'import "child.spr" as child\nprint("project")\n');
  const mainDoc=await vscode.workspace.openTextDocument(main);await vscode.window.showTextDocument(mainDoc);const projectChecked=await vscode.commands.executeCommand('sprig.check');assert.equal(projectChecked.exitCode,1);
- assert.ok(vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN'),'diagnostic must target imported file');
+ for(let i=0;i<50 && !vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN');i++)await new Promise(r=>setTimeout(r,100));
+ assert.ok(vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN'),JSON.stringify({expectedUri:vscode.Uri.file(child).toString(),result:projectChecked,actual:vscode.languages.getDiagnostics().map(([uri,ds])=>[uri.toString(),ds.map(d=>({code:d.code,message:d.message}))])}));
  assert.ok(vscode.languages.getDiagnostics(doc.uri).length,'independent project diagnostics retained');
  const unused=path.join(project,'src','unused.spr');fs.writeFileSync(unused,'print(\"unused\")\n');await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(unused));
  assert.equal((await vscode.commands.executeCommand('sprig.check')).exitCode,1,'entry graph failure must survive a clean unused-file check');
