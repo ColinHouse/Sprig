@@ -40,7 +40,7 @@ public final class Catalog {
     }
 
     public static List<String> topics() {
-        return List.of("language", "types", "functions", "classes", "variants", "match",
+        return List.of("language", "types", "strings", "functions", "classes", "variants", "match",
                 "nullability", "errors", "collections", "numerics", "modules", "jvm",
                 "generics", "projects", "dependencies", "agents", "upgrade");
     }
@@ -86,6 +86,13 @@ public final class Catalog {
         result.put("genericCapabilities", list("genericCapabilities"));
         result.put("lambdaMaxArity", Integer.parseInt(get("lambdaMaxArity")));
         result.put("matchBehavior", "statement; exhaustive; no wildcard");
+        Map<String, Object> strings = new LinkedHashMap<>();
+        strings.put("hasCharType", false);
+        strings.put("elementType", "String");
+        strings.put("positionUnit", get("stringPositionUnit"));
+        strings.put("graphemeClusters", false);
+        strings.put("javaCharInterop", get("stringJavaCharInterop"));
+        result.put("stringSemantics", strings);
         result.put("numericSemanticsProfile", get("numericProfile"));
         result.put("jvmInterop", get("jvmProfile"));
         result.put("classpath", get("classpathPolicy"));

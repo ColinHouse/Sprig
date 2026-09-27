@@ -24,7 +24,7 @@ using explicit generics, snapshots, recursive walking, checked Int aggregation,
 closed findings/match, and recursive JSON. It counts recognized text extensions,
 skips generated/dependency directories and symlinks, caps directory depth at 64,
 and propagates IO failures. Comment counting is a line-based heuristic rather
-than a parser; `characters` counts UTF-16 code units. Output paths are relative
+than a parser; `characters` counts Unicode code points. Output paths are relative
 with `/` separators for portable reports. Exit failure means IO/usage failure;
 findings are advisory rather than a CI policy engine.
 

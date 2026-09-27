@@ -8,6 +8,7 @@ bin/sprig version
 bin/sprig doctor --json
 bin/sprig capabilities --json
 bin/sprig help language --json
+bin/sprig help strings --json
 bin/sprig help match --json
 bin/sprig help generics --json
 bin/sprig help projects --json
@@ -27,7 +28,12 @@ automatically. Sprig classes and variant cases use named constructors; ordinary 
 Java methods use positional arguments. `match` is an exhaustive statement, not
 an expression. A Java reference result is nullable until checked. `List` and
 `MutableList` differ. Integer `/` is rejected; use `divTrunc` when truncation is
-intended. No implicit mixed numeric promotion is performed.
+intended. No implicit mixed numeric promotion is performed. Sprig has no `Char`
+type: a String element is a non-null `String`, and `length`, indexing, `charAt`,
+`codeAt`, `substring`, `indexOf` and `for` iteration use Unicode code points, not
+UTF-16 code units and not grapheme clusters (`"A😀東".length()` is 3). Java `char`
+interop remains a single UTF-16 code unit at the JVM boundary; run
+`sprig help strings --json`.
 
 For a Maven library, declare exact release coordinates in `[[jvm]]` and run
 `sprig resolve`; `api/check/build/run/doctor` then share the locked classpath.

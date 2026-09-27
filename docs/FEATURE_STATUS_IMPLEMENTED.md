@@ -16,6 +16,7 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | Missing/duplicate/wrong-type cases, enum binder rejection | — | yes (`SPR-MATCH-*`) | — | semantics 11 cases |
 | Nullability `T?`, null checks, narrowing | yes | yes (`SPR-TYPE-NULL/NULLABLE`) | boxed nullable locals | runtime 07 |
 | `List`/`MutableList`/`Map`/`MutableMap`, snapshots, indexing, `in` | yes | yes, distinct mutability | runtime wrappers | runtime 09/16 |
+| String positions: `length`, indexing, `charAt`, `codeAt`, `substring`, `indexOf`, iteration | yes | Unicode code-point indices; one-code-point `String` elements; no `Char` type | `sprig.runtime.StringOps` helpers and code-point iteration | runtime 20 + String semantics suite |
 | Immutable collection mutation rejected | — | yes (`SPR-COLLECTION-IMMUTABLE`) | — | semantics |
 | User generics: `generic K, V:` blocks (one or more parameters) for class/variant/function, explicitly applied as `Entry[String, Int]`, erased and boxed in generated Java | yes | yes (`SPR-TYPE-GENERIC-*`) | raw Java classes + compiler-controlled boxing/unboxing | runtime 19, visitor generic_stack, semantics 8 cases, syntax 08 |
 | Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |

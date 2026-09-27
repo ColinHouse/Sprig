@@ -781,13 +781,11 @@ public final class JavaGenerator {
                     + ">) (java.lang.Iterable<?>) (" + values + "))";
         }
         switch (forStmt.forKind) {
-            case STRING -> w.open("for (char " + var + "$c : " + iterable + ".toCharArray())");
+            case STRING -> w.open("for (java.lang.String " + var
+                    + " : sprig.runtime.StringOps.codePoints(" + iterable + "))");
             case MAP_KEYS -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : "
                     + values + ")");
             default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + values + ")");
-        }
-        if (forStmt.forKind == sprig.compiler.sem.ForKind.STRING) {
-            w.line("java.lang.String " + var + " = java.lang.String.valueOf(" + var + "$c);");
         }
         for (Stmt child : forStmt.body) {
             emitStmt(w, child);
@@ -1003,8 +1001,8 @@ public final class JavaGenerator {
     private String emitIndexOn(Expr receiverExpr, Expr indexExpr) {
         Type receiver = receiverExpr.type == null ? null : receiverExpr.type.nonNull();
         if (receiver == NativeType.STRING) {
-            return "java.lang.String.valueOf(" + emitExpr(receiverExpr)
-                    + ".charAt(sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(indexExpr) + ")))";
+            return "sprig.runtime.StringOps.elementAt(" + emitExpr(receiverExpr)
+                    + ", sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(indexExpr) + "))";
         }
         Type keyType = receiver instanceof MapType map ? map.key : NativeType.INT;
         String code = "(" + emitExpr(receiverExpr) + ").get(" + convertedExpression(indexExpr, keyType) + ")";
@@ -1602,15 +1600,19 @@ public final class JavaGenerator {
             case "BigInt.toDecimal" -> recv + ".toDecimal()";
             case "BigInt.toJava" -> recv + ".toJava()";
             case "Bool.toString" -> "java.lang.Boolean.toString(" + recv + ")";
-            case "String.length" -> "((long) " + recv + ".length())";
+            case "String.length" -> "sprig.runtime.StringOps.length(" + recv + ")";
             case "String.isEmpty" -> recv + ".isEmpty()";
-            case "String.charAt" -> "java.lang.String.valueOf(" + recv + ".charAt(sprig.runtime.NumericOps.toInt32Exact(" + a0 + ")))";
-            case "String.codeAt" -> "((long) " + recv + ".codePointAt(sprig.runtime.NumericOps.toInt32Exact(" + a0 + ")))";
+            case "String.charAt" -> "sprig.runtime.StringOps.elementAt(" + recv
+                    + ", sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))";
+            case "String.codeAt" -> "sprig.runtime.StringOps.codePointAt(" + recv
+                    + ", sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))";
             case "String.substring" -> a1 == null
-                    ? recv + ".substring(sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))"
-                    : recv + ".substring(sprig.runtime.NumericOps.toInt32Exact(" + a0
+                    ? "sprig.runtime.StringOps.substring(" + recv
+                        + ", sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))"
+                    : "sprig.runtime.StringOps.substring(" + recv
+                        + ", sprig.runtime.NumericOps.toInt32Exact(" + a0
                         + "), sprig.runtime.NumericOps.toInt32Exact(" + a1 + "))";
-            case "String.indexOf" -> "((long) " + recv + ".indexOf(" + a0 + "))";
+            case "String.indexOf" -> "sprig.runtime.StringOps.indexOf(" + recv + ", " + a0 + ")";
             case "String.contains" -> recv + ".contains(" + a0 + ")";
             case "String.startsWith" -> recv + ".startsWith(" + a0 + ")";
             case "String.endsWith" -> recv + ".endsWith(" + a0 + ")";

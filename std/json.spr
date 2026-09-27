@@ -60,7 +60,7 @@ class Reader:
     var offset: Int = 0
 
     func fail(message: String) -> Unit throws Error:
-        throw Error("JSON at UTF-16 offset " + offset.toString() + ": " + message)
+        throw Error("JSON at code point offset " + offset.toString() + ": " + message)
 
     func current() -> String:
         if offset >= source.length():

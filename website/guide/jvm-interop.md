@@ -44,6 +44,11 @@ Java 引用形式参数保守地视为非空，因此 `T?` 实参必须先收窄
 `Object` 形式参数是文档中说明的例外。编译器不读取 type-use 可空性注解，这套规则
 不依赖注解。
 
+`char`/`Character` 参数只接受恰好一个 UTF-16 代码单元的 String 字面量，因此
+`"a"` 合法而 `"ab"` 和 `"😀"` 会被拒绝：一个 Java `char` 无法表示补充平面码点
+U+1F600。这与 Sprig 普通 String 的位置语义不同——后者使用 Unicode 码点
+（见 `sprig help strings --json`）。
+
 ## 受检异常
 
 Java 受检异常可以出现在 Sprig 的 `throws` 子句中并被捕获：
