@@ -15,6 +15,9 @@ bin/sprig help projects --json
 bin/sprig help dependencies --json
 bin/sprig help upgrade --json
 bin/sprig api java.time.LocalDate --json
+bin/sprig api src/main.spr --json
+bin/sprig api @pkg/module.spr --member Type.member --json
+bin/sprig api . --json
 bin/sprig check program.spr --json
 bin/sprig explain SPR-CODE --json
 bin/sprig run program.spr --json
@@ -46,6 +49,14 @@ signature; it does not promise generic element safety. `interopLevel` is
 `direct`, `erased-generic`, or `unsupported`. Use `--member NAME` to limit the
 metadata result while preserving overloads. `api` does not initialize classes.
 
+`api` also accepts a `.spr` module path, `@package/module.spr`, or a project
+directory. It returns resolved declarations after normal checking: function
+parameters/result/throws, class fields and methods, enums, variants and generic
+parameters; `--member Type.member` narrows module results. A project directory
+returns the checked inventory of project source modules plus each dependency's
+exported modules. Stale/missing locks and unexported modules are refused, and
+no application code is executed.
+
 On Linux/macOS, install a managed SDK with `docs/INSTALL.md`; the installer
 verifies the release checksum and `sprig upgrade --check` inspects the current
 installation. Windows remains experimental. Useful library dogfood projects
@@ -57,7 +68,11 @@ migration files unchanged.
 `check/build/run --json` return one JSON object on stdout with
 `schemaVersion`, `toolVersion`, `command`, `exitCode`, `environment.classpath`,
 and `diagnostics`. Each diagnostic has a stable code, phase, severity, URI,
-zero-based range, message, and optional types/hint/data. `CLI` is the phase for
+zero-based range, message, and optional types/hint/data. Diagnostics may also
+carry `relatedHelp` (a help topic) and `repair`
+(`{"kind": ..., "machineApplicable": bool}`); `machineApplicable` is false when
+the fix needs a semantic decision. `capabilities --json` includes
+`featureGuidance` with alternatives for unsupported features. `CLI` is the phase for
 option errors. JVM overload failures
 include candidate signatures in `data.candidates`. CLI tooling errors use 2;
 source and runtime failures normally use 1. `run` forwards the Sprig process

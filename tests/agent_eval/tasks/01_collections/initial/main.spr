@@ -1,0 +1,6 @@
+let values = [3, -1, 4, 2, -5]
+
+# TODO: compute the total and the number of positive values, then print
+# total=<sum> and positive=<count>.
+print("total=")
+print("positive=")

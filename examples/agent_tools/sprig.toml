@@ -1,0 +1,21 @@
+[project]
+name = "agent-tools"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+
+[[bin]]
+name = "api-report"
+entry = "src/api_report.spr"
+
+[[bin]]
+name = "diag-summary"
+entry = "src/diag_summary.spr"
+
+[[bin]]
+name = "api-diff"
+entry = "src/api_diff.spr"
+
+[[dependency]]
+name = "cli"
+path = "../../libraries/sprig-cli"

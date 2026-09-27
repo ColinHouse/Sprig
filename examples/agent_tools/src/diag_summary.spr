@@ -1,0 +1,70 @@
+# Group saved JSON diagnostics by severity, phase and stable code.
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import "@cli/cli.spr" as cli
+import java.io.IOException as IOException
+import "./meta.spr" as meta
+
+func options() -> List[cli.OptionSpec]:
+    return [
+        cli.OptionSpec(name="help", short_name="h", kind=cli.OptionKind.FLAG, description="Show usage"),
+        cli.OptionSpec(name="output", short_name="o", kind=cli.OptionKind.VALUE, description="Write the summary to this file")
+    ]
+
+func summarize(document: json.Value) -> String throws Error:
+    let items = meta.array_field(document, "diagnostics")
+    var errors: Int = 0
+    var warnings: Int = 0
+    let phases: MutableMap[String, Int] = {}
+    let codes: MutableMap[String, Int] = {}
+    for item in items:
+        let severity = meta.or_empty(meta.text_field(item, "severity"))
+        if severity == "error":
+            errors += 1
+        elif severity == "warning":
+            warnings += 1
+        meta.bump(phases, meta.or_empty(meta.text_field(item, "phase")))
+        meta.bump(codes, meta.or_empty(meta.text_field(item, "code")))
+    var output = "diagnostics: " + items.size().toString() + " (" + errors.toString()
+    output += " error, " + warnings.toString() + " warning)\n"
+    output += "\nby phase:\n"
+    for key in meta.sort_strings(phases.keys()):
+        output += "  " + key + ": " + meta.or_zero(phases.get(key)).toString() + "\n"
+    output += "\nby code:\n"
+    for key in meta.sort_strings(codes.keys()):
+        output += "  " + key + ": " + meta.or_zero(codes.get(key)).toString() + "\n"
+    output += "\ndetails:\n"
+    for item in items:
+        let code = meta.or_empty(meta.text_field(item, "code"))
+        let phase = meta.or_empty(meta.text_field(item, "phase"))
+        let uri = meta.short_uri(meta.or_empty(meta.text_field(item, "uri")))
+        let message = meta.or_empty(meta.text_field(item, "message"))
+        var line = "  " + code + " [" + phase + "]"
+        if uri != "":
+            line += " " + uri
+        output += line + ": " + message + "\n"
+    return output
+
+func run() -> Unit throws IOException, Error:
+    let specs = options()
+    let arguments = cli.parse(process.arguments(), specs)
+    if arguments.flag("help") or arguments.positionals.size() == 0:
+        print(cli.usage("diag-summary", "Group saved check/build/run --json diagnostics by phase and code.", specs))
+        return
+    let document = json.parse(files.read_utf8(arguments.positionals.get(0)))
+    let output = summarize(document)
+    let destination = arguments.value("output")
+    if destination != null:
+        files.write_utf8(destination, output)
+    else:
+        print(output)
+
+try:
+    run()
+catch problem: IOException:
+    print("diag-summary: " + problem.toString())
+    throw problem
+catch problem: Error:
+    print("diag-summary: " + problem.message)
+    throw problem

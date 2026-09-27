@@ -47,6 +47,13 @@ The historical v0.7 design kit describes target semantics rather than current ca
 | Managed Linux/macOS SDK install and upgrade | release ZIP + checksum workflow | managed-install metadata and layout validation | staged installation and atomic `current` pointer switch; older versions retained | installer, upgrade and installed-SDK dogfood suites |
 | SQLite migrations (`@sqlite/migrations.spr`) | Sprig package module | validated `NNN_description.sql` names, sorted ledger and idempotent apply | trusted multi-statement SQL and ledger row share a SQLite batch transaction | migration apply/restart/failure-retry suite |
 | CLI parsing (`@cli/cli.spr`) | Sprig package module | typed option specs, duplicate/unknown/missing checks | deterministic usage, flags/values/aliases/positionals | CLI library and installed `json-select` dogfood |
+| Sprig module API (`sprig api module.spr\|@pkg/module.spr`) | resolved checked AST | declaration/field/method/throws/generic metadata; `--member Type.member` | compiler-owned JSON; never executes code | Sprig API suite |
+| Project API inventory (`sprig api .`) | project + lockfile validation | source modules plus each dependency's exported modules | no application execution; stale/unexported targets refused | Sprig API suite and installed SDK dogfood |
+| Structured diagnostic metadata | optional `relatedHelp` and `repair` fields | `machineApplicable` false unless semantics-preserving and unambiguous | stable fields unchanged | agent tooling suite |
+| Capability feature guidance | `featureGuidance` per unsupported feature | alternatives and help topic reflect current compiler only | additive to `features` booleans | agent tooling and Sprig API suites |
+| Operational `explain` | `whyMatters`, `confusedWith`, causes/fixes/examples, `repair`, `relatedHelp` | conservative, compact | same data in text and `--json` | agent tooling suite |
+| Sprig-written agent tools | `examples/agent_tools` (api-report, diag-summary, api-diff) | plain Sprig JSON/file/CLI policy | consume saved compiler JSON | agent tools suite |
+| Agent task pack | deterministic fixtures and runner under `tests/agent_eval` | acceptance is mechanical; no model run claimed | initial states fail, known solutions pass | task-pack gate |
 
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`

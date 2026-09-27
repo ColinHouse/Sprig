@@ -34,6 +34,7 @@ import sprig.compiler.jvm.JavacRunner;
 import sprig.compiler.jvm.JvmClasspath;
 import sprig.compiler.jvm.JvmMetadata;
 import sprig.compiler.tooling.Catalog;
+import sprig.compiler.tooling.SprigApi;
 import sprig.compiler.tooling.ToolJson;
 
 /**
@@ -119,6 +120,7 @@ public final class Main {
                 + String.join(", ", Catalog.topics()) + ")");
         out.println("  capabilities [--json]                      implemented feature inventory");
         out.println("  api <Java.Class> [--member NAME] [--classpath PATH] [--json] inspect JVM signatures");
+        out.println("  api <module.spr|@pkg/module.spr|.> [--member NAME] [--json]   inspect checked Sprig API");
         out.println("  doctor [--classpath PATH] [--json]          inspect compiler environment");
         out.println("  init [dir]                                  create sprig.toml and src/main.spr");
         out.println("  resolve [--offline] [--json]               resolve dependencies and write sprig.lock");
@@ -179,12 +181,22 @@ public final class Main {
         return 0;
     }
 
-    private static int api(String[] args) {
+    private static int api(String[] args) throws IOException {
         Options options = Options.parse(args, 1);
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "api");
         if (prepared != 0) return prepared;
-        if (options.file == null) return commandError("api", "Missing Java class name", options.json);
+        if (options.file == null) {
+            return commandError("api", "Missing Sprig module path, @package/module.spr, project directory, or Java class name", options.json);
+        }
+        String raw = options.file.toString().replace('\\', '/');
+        if (raw.startsWith("@") || raw.endsWith(".spr") || Files.isDirectory(options.file)) {
+            return sprigApi(options, diagnostics, raw);
+        }
+        return javaApi(options, diagnostics);
+    }
+
+    private static int javaApi(Options options, Diagnostics diagnostics) {
         Class<?> clazz = Compiler.loadJavaClass(options.file.toString());
         if (clazz == null) {
             diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
@@ -228,6 +240,274 @@ public final class Main {
             }
         }
         return 0;
+    }
+
+    /**
+     * Sprig module or project API inspection. It runs the normal project and
+     * dependency pipeline, never executes application code, and never loads
+     * arbitrary Java classes for a Sprig target.
+     */
+    private static int sprigApi(Options options, Diagnostics diagnostics, String raw) throws IOException {
+        if (Files.isDirectory(options.file)) {
+            return sprigProjectApi(options, diagnostics);
+        }
+        Project project = null;
+        DependencyResolver.Result graph = null;
+        Path source;
+        if (raw.startsWith("@")) {
+            try {
+                project = Project.discover(Path.of(""));
+            } catch (Toml.TomlException e) {
+                diagnostics.add(Diagnostic.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                        "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
+                        manifestUri(), Span.point(Math.max(0, e.line - 1), 0)));
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+            if (project == null) {
+                diagnostics.add(Diagnostic.error(Codes.API_TARGET, Phase.CLI,
+                        "Package module '" + raw + "' requires a sprig.toml project", null, null)
+                        .withHint("Run sprig api from inside a project or pass a .spr path."));
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+            try {
+                graph = loadProjectGraph(project, options);
+            } catch (DepError e) {
+                diagnostics.add(depDiagnostic(e));
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+            Path from = project.entryPath();
+            if (!Files.isRegularFile(from)) {
+                from = project.root.resolve(project.source).resolve("__api__.spr");
+            }
+            source = graph.resolve(from, raw, diagnostics, project.manifest.toUri().toString(), null);
+            if (source == null || diagnostics.hasErrors()) {
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+        } else {
+            Prepared sourcePrep = prepareSource(options, diagnostics, "api");
+            if (diagnostics.hasErrors()) {
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+            source = sourcePrep.source;
+            graph = sourcePrep.graph;
+            if (source == null) {
+                return commandError("api", "Missing Sprig module path", options.json);
+            }
+        }
+        if (!Files.isRegularFile(source)) {
+            diagnostics.add(Diagnostic.error(Codes.API_TARGET, Phase.CLI,
+                    "Sprig module not found: " + raw, null, null)
+                    .withHint("Pass an existing .spr path, @package/module.spr, or a project directory."));
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        Map<String, Object> data = checkedSprigModule(graph, source, raw, diagnostics);
+        if (data == null) {
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        if (options.memberFilter != null) {
+            int count = SprigApi.filterMembers(data, options.memberFilter);
+            data.put("memberFilter", options.memberFilter);
+            data.put("memberCount", Math.max(0, count));
+            if (count <= 0) {
+                String message = options.memberFilter.contains(".")
+                        ? "No Sprig member '" + options.memberFilter + "' in module " + raw
+                        : "No Sprig declaration named '" + options.memberFilter + "' in module " + raw;
+                diagnostics.add(Diagnostic.error(Codes.API_MEMBER, Phase.CLI, message, null, null)
+                        .withHint("Run sprig api " + raw + " --json to list resolved declarations."));
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+        }
+        if (options.json) System.out.println(ToolJson.encode(data));
+        else printSprigModule(data);
+        return 0;
+    }
+
+    private static int sprigProjectApi(Options options, Diagnostics diagnostics) throws IOException {
+        if (options.memberFilter != null) {
+            return commandError("api", "--member requires a single module target", options.json);
+        }
+        Project project;
+        try {
+            project = Project.discover(options.file.toAbsolutePath().normalize());
+        } catch (Toml.TomlException e) {
+            diagnostics.add(Diagnostic.error(Codes.PROJECT_MANIFEST, Phase.CLI,
+                    "Invalid sprig.toml (line " + e.line + "): " + e.getMessage(),
+                    manifestUri(), Span.point(Math.max(0, e.line - 1), 0)));
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        if (project == null) {
+            diagnostics.add(Diagnostic.error(Codes.API_TARGET, Phase.CLI,
+                    "No sprig.toml found for directory API target '" + options.file + "'", null, null)
+                    .withHint("Run sprig api . from a project, or pass a .spr module path."));
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        DependencyResolver.Result graph;
+        try {
+            graph = loadProjectGraph(project, options);
+        } catch (DepError e) {
+            diagnostics.add(depDiagnostic(e));
+            report(diagnostics, options.json, "api", 1, null);
+            return 1;
+        }
+        Path sourceRoot = project.root.resolve(project.source).normalize().toAbsolutePath();
+        List<Map<String, Object>> modules = new ArrayList<>();
+        for (Path file : listSprigFiles(sourceRoot)) {
+            Map<String, Object> metadata = checkedSprigModule(graph, file,
+                    SprigApi.relativeLabel(sourceRoot, file), diagnostics);
+            if (metadata == null) {
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+            metadata.put("origin", "source");
+            modules.add(metadata);
+        }
+        for (DependencyResolver.Package pkg : graph.packages) {
+            if ("root".equals(pkg.kind)) continue;
+            for (String exported : pkg.exports) {
+                Path file = pkg.sourceRoot.resolve(exported).normalize().toAbsolutePath();
+                if (!Files.isRegularFile(file)) {
+                    diagnostics.add(Diagnostic.error(Codes.DEP_NOT_FOUND, Phase.CLI,
+                            "Dependency '" + pkg.alias + "' exports a missing module '" + exported + "'", null, null));
+                    report(diagnostics, options.json, "api", 1, null);
+                    return 1;
+                }
+                Map<String, Object> metadata = checkedSprigModule(graph, file,
+                        "@" + pkg.alias + "/" + exported, diagnostics);
+                if (metadata == null) {
+                    report(diagnostics, options.json, "api", 1, null);
+                    return 1;
+                }
+                metadata.put("origin", "dependency");
+                metadata.put("dependency", pkg.alias);
+                metadata.put("exported", true);
+                modules.add(metadata);
+            }
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("schemaVersion", 1);
+        data.put("kind", "sprig-project");
+        data.put("compilerVersion", Catalog.COMPILER_VERSION);
+        data.put("languageVersion", Catalog.LANGUAGE_VERSION);
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("name", project.name);
+        info.put("version", project.version);
+        info.put("language", project.language);
+        info.put("root", project.root.toString());
+        info.put("source", project.source);
+        info.put("entry", project.defaultEntry);
+        info.put("lockStatus", lockState(project));
+        data.put("project", info);
+        data.put("modules", modules);
+        if (options.json) System.out.println(ToolJson.encode(data));
+        else {
+            System.out.println("Sprig project API: " + project.name);
+            for (Map<String, Object> module : modules) {
+                System.out.println("  " + module.get("module") + " [" + module.get("origin") + "]");
+                for (Map<String, Object> declaration : (List<Map<String, Object>>) module.get("declarations")) {
+                    System.out.println("    " + declaration.get("kind") + " " + declaration.get("name"));
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static Map<String, Object> checkedSprigModule(DependencyResolver.Result graph, Path source,
+                                                          String label, Diagnostics diagnostics) throws IOException {
+        Compiler compiler = new Compiler(diagnostics);
+        if (graph != null) {
+            compiler.setImportResolver(graph);
+        }
+        Compilation compilation = compiler.compile(source);
+        if (diagnostics.hasErrors() || compilation.main == null) {
+            return null;
+        }
+        return SprigApi.module(compilation.main, label);
+    }
+
+    private static List<Path> listSprigFiles(Path sourceRoot) throws IOException {
+        if (!Files.isDirectory(sourceRoot)) return List.of();
+        try (Stream<Path> stream = Files.walk(sourceRoot)) {
+            return stream.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".spr"))
+                    .sorted(Comparator.comparing(Path::toString))
+                    .toList();
+        }
+    }
+
+    private static void printSprigModule(Map<String, Object> data) {
+        System.out.println("Sprig module: " + data.get("module"));
+        System.out.println("path: " + data.get("path"));
+        List<Map<String, Object>> variables = (List<Map<String, Object>>) data.get("variables");
+        if (!variables.isEmpty()) {
+            System.out.println("variables:");
+            for (Map<String, Object> variable : variables) {
+                System.out.println("  " + (Boolean.TRUE.equals(variable.get("mutable")) ? "var " : "let ")
+                        + variable.get("name") + ": " + variable.get("type"));
+            }
+        }
+        System.out.println("declarations:");
+        for (Map<String, Object> declaration : (List<Map<String, Object>>) data.get("declarations")) {
+            System.out.println("  " + declaration.get("kind") + " " + declaration.get("name"));
+            if (declaration.get("fields") instanceof List<?> fields) {
+                for (Object field : fields) {
+                    Map<String, Object> entry = (Map<String, Object>) field;
+                    System.out.println("    field " + entry.get("name") + ": " + entry.get("type")
+                            + (Boolean.TRUE.equals(entry.get("required")) ? "" : " = default"));
+                }
+            }
+            if (declaration.get("methods") instanceof List<?> methods) {
+                for (Object method : methods) {
+                    Map<String, Object> entry = (Map<String, Object>) method;
+                    System.out.println("    method " + signature(entry));
+                }
+            }
+            if (declaration.get("cases") instanceof List<?> cases) {
+                for (Object item : cases) {
+                    if (item instanceof Map<?, ?> variantCase) {
+                        System.out.println("    case " + variantCase.get("name") + "("
+                                + payload((List<Map<String, Object>>) variantCase.get("fields")) + ")");
+                    } else {
+                        System.out.println("    case " + item);
+                    }
+                }
+            }
+            if (declaration.get("kind").equals("function")) {
+                System.out.println("    " + signature(declaration));
+            }
+        }
+    }
+
+    private static String signature(Map<String, Object> function) {
+        StringBuilder sb = new StringBuilder(function.get("name").toString()).append('(');
+        List<Map<String, Object>> parameters = (List<Map<String, Object>>) function.get("parameters");
+        for (int i = 0; i < parameters.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(parameters.get(i).get("name")).append(": ").append(parameters.get(i).get("type"));
+        }
+        sb.append("): ").append(function.get("result"));
+        List<String> throwsTypes = (List<String>) function.get("throws");
+        if (throwsTypes != null && !throwsTypes.isEmpty()) sb.append(" throws ").append(String.join(", ", throwsTypes));
+        return sb.toString();
+    }
+
+    private static String payload(List<Map<String, Object>> fields) {
+        List<String> parts = new ArrayList<>();
+        if (fields != null) {
+            for (Map<String, Object> field : fields) {
+                parts.add(field.get("name") + ": " + field.get("type"));
+            }
+        }
+        return String.join(", ", parts);
     }
 
     private static int doctor(String[] args) {

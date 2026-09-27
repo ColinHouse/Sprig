@@ -1,0 +1,8 @@
+{
+  "id": "04_generics",
+  "title": "Explicit generics",
+  "objective": "Use the generic Box correctly so the program compiles and prints 42.",
+  "acceptance": "sprig check succeeds and stdout is exactly '42'.",
+  "forbidden": ["removing the generic declaration", "replacing T with a concrete field type", "Java imports"],
+  "expectedInteractions": ["sprig check --json", "sprig explain SPR-TYPE-GENERIC-ARGS-REQUIRED --json"]
+}

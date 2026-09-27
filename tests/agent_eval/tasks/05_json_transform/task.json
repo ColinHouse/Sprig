@@ -1,0 +1,8 @@
+{
+  "id": "05_json_transform",
+  "title": "JSON transformation",
+  "objective": "Read the JSON file named by the first program argument and print how many elements the top-level 'items' array has as 'items=<N>'.",
+  "acceptance": "sprig check succeeds and running with a fixture file prints exactly 'items=3'.",
+  "forbidden": ["hardcoding the count", "reading files outside the argument path", "Java imports"],
+  "expectedInteractions": ["sprig check --json", "sprig run -- <file>", "sprig api @std/json.spr --json"]
+}

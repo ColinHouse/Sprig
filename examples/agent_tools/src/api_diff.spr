@@ -1,0 +1,79 @@
+# Deliberately simple compatibility check between two saved `sprig api --json` snapshots.
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import "@cli/cli.spr" as cli
+import java.io.IOException as IOException
+import "./meta.spr" as meta
+
+func options() -> List[cli.OptionSpec]:
+    return [
+        cli.OptionSpec(name="help", short_name="h", kind=cli.OptionKind.FLAG, description="Show usage"),
+        cli.OptionSpec(name="output", short_name="o", kind=cli.OptionKind.VALUE, description="Write the diff to this file")
+    ]
+
+func flatten(document: json.Value) -> Map[String, String] throws Error:
+    let output: MutableMap[String, String] = {}
+    let kind = meta.or_empty(meta.text_field(document, "kind"))
+    if kind == "sprig-module":
+        let label = meta.or_empty(meta.text_field(document, "module"))
+        for surface in meta.signatures(document):
+            output.set(label + "|" + surface.key, surface.value)
+        return output.toMap()
+    if kind == "sprig-project":
+        for module in meta.array_field(document, "modules"):
+            let label = meta.or_empty(meta.text_field(module, "module"))
+            for surface in meta.signatures(module):
+                output.set(label + "|" + surface.key, surface.value)
+        return output.toMap()
+    throw Error("unsupported API document kind: " + kind)
+
+func compare(old: Map[String, String], new: Map[String, String]) -> String:
+    let added: MutableList[String] = []
+    let removed: MutableList[String] = []
+    let changed: MutableList[String] = []
+    for key in new.keys():
+        let before = old.get(key)
+        let after = meta.or_empty(new.get(key))
+        if before == null:
+            added.append(key + " = " + after)
+        else:
+            if before != after:
+                changed.append(key + ": " + before + " => " + after)
+    for key in old.keys():
+        if not new.containsKey(key):
+            removed.append(key + " = " + meta.or_empty(old.get(key)))
+    var output = "api diff: added=" + added.size().toString()
+    output += " removed=" + removed.size().toString()
+    output += " changed=" + changed.size().toString() + "\n"
+    for item in meta.sort_strings(added.toList()):
+        output += "+ " + item + "\n"
+    for item in meta.sort_strings(removed.toList()):
+        output += "- " + item + "\n"
+    for item in meta.sort_strings(changed.toList()):
+        output += "~ " + item + "\n"
+    return output
+
+func run() -> Unit throws IOException, Error:
+    let specs = options()
+    let arguments = cli.parse(process.arguments(), specs)
+    if arguments.flag("help") or arguments.positionals.size() < 2:
+        print(cli.usage("api-diff", "Compare two saved sprig api --json snapshots.", specs))
+        return
+    let old = flatten(json.parse(files.read_utf8(arguments.positionals.get(0))))
+    let new = flatten(json.parse(files.read_utf8(arguments.positionals.get(1))))
+    let output = compare(old, new)
+    let destination = arguments.value("output")
+    if destination != null:
+        files.write_utf8(destination, output)
+    else:
+        print(output)
+
+try:
+    run()
+catch problem: IOException:
+    print("api-diff: " + problem.toString())
+    throw problem
+catch problem: Error:
+    print("api-diff: " + problem.message)
+    throw problem

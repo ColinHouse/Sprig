@@ -18,6 +18,8 @@ public final class Diagnostic {
     public String expectedType;
     public String actualType;
     public String hint;
+    public String relatedHelp;
+    public Map<String, Object> repair;
     public Map<String, Object> data;
 
     public Diagnostic(String code, Phase phase, Severity severity, String message, String uri, Span span) {
@@ -41,6 +43,24 @@ public final class Diagnostic {
 
     public Diagnostic withHint(String hint) {
         this.hint = hint;
+        return this;
+    }
+
+    public Diagnostic withRelatedHelp(String topic) {
+        this.relatedHelp = topic;
+        return this;
+    }
+
+    /**
+     * A repair strategy is guidance, not permission to invent semantics.
+     * {@code machineApplicable} is true only for a semantics-preserving,
+     * unambiguous source edit.
+     */
+    public Diagnostic withRepair(String kind, boolean machineApplicable) {
+        java.util.LinkedHashMap<String, Object> value = new java.util.LinkedHashMap<>();
+        value.put("kind", kind);
+        value.put("machineApplicable", machineApplicable);
+        this.repair = value;
         return this;
     }
 

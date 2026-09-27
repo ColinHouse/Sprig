@@ -39,7 +39,8 @@ Found(value)、NotObject 区分缺失、JSON null 和错误对象类型。
 
 OpenAPI 使用普通 Schema/FieldSchema/QueryParameter 元数据，不反射任意类；
 实际请求仍由处理函数验证。重复查询参数和等价路径模板在注册阶段被拒绝。
-仓库 `libraries/sprig-web/README.md` 与 `api.json` 提供明确签名。
+仓库 `libraries/sprig-web/README.md` 说明行为策略；解析后的签名由
+`sprig api @web/app.spr --json` 提供（先运行 `sprig resolve`）。
 
 ## JVM 适配器的边界
 

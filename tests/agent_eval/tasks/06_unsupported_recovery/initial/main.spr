@@ -1,0 +1,11 @@
+# Both classes must share one speaking helper. Sprig has no inheritance and
+# no interfaces, so choose a composition design with ordinary Sprig values.
+class Dog:
+    func speak() -> String:
+        return "dog says woof"
+
+class Cat:
+    func speak() -> String:
+        return "cat says meow"
+
+print("TODO")

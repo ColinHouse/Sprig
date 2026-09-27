@@ -44,7 +44,8 @@ Missing, Found(value) and NotObject without truthiness or Any.
 Schemas use explicit Schema/FieldSchema/QueryParameter values, not arbitrary
 class reflection. They describe the API; handlers still validate request values.
 Registration rejects duplicate query metadata and conflicting template paths.
-See the repository `libraries/sprig-web/README.md` and `api.json` for signatures.
+See the repository `libraries/sprig-web/README.md` for behavior policy; resolved
+signatures come from `sprig api @web/app.spr --json` after `sprig resolve`.
 
 ## SQL stays visible
 

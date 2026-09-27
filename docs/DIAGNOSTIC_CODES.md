@@ -6,6 +6,8 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | Code | Meaning |
 |---|---|
 | SPR-CLI-OPTION | A CLI command is missing a required argument or has an unknown option. |
+| SPR-API-TARGET | The requested Sprig module or project API target cannot be resolved. |
+| SPR-API-MEMBER | The requested `--member` does not exist on the inspected Sprig declaration. |
 | SPR-CALL-ARITY | Wrong number of arguments. |
 | SPR-CALL-DUPLICATE-FIELD | The same named field was provided twice. |
 | SPR-CALL-MISSING-FIELD | A required field was not provided. |
@@ -84,3 +86,21 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-DEP-OFFLINE | A required dependency resource is missing from the cache in offline mode. |
 | SPR-DEP-CHECKSUM | Locked dependency bytes do not match SHA-256; corrupted cache is rejected. |
 | SPR-DEP-MAVEN | A JVM (Maven) dependency operation failed. |
+
+## Optional structured fields
+
+Diagnostic JSON keeps the stable fields (`code`, `phase`, `severity`, `uri`,
+`range`, `message`, `related`, `suggestedEdits`) and may add optional fields:
+
+| Field | Meaning |
+|---|---|
+| `expectedType` / `actualType` | Rendered types involved in a mismatch. |
+| `hint` | One short human instruction. |
+| `relatedHelp` | Help topic accepted by `sprig help <topic>`. |
+| `repair` | `{ "kind": ..., "machineApplicable": bool }` repair strategy. |
+
+`machineApplicable` is true only for a correction that is semantics-preserving
+and unambiguous. When it is false, treat `repair.kind` as a strategy, not a
+patch: for example a nullable value needs an explicit narrow/handle decision,
+which is business logic the compiler must not invent. `sprig explain <CODE>
+--json` returns the same `repair` object plus causes, safe fixes and examples.

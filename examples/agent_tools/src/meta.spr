@@ -1,0 +1,189 @@
+# Shared, explicit helpers for compiler-owned JSON metadata.
+import "@std/json.spr" as json
+
+class Surface:
+    let key: String
+    let value: String
+
+func member(value: json.Value, key: String) -> json.Value? throws Error:
+    match json.find_member(value, key):
+        case json.Lookup.Found as found:
+            return found.value
+        case json.Lookup.Missing:
+            return null
+        case json.Lookup.NotObject:
+            return null
+
+func text(value: json.Value?) -> String?:
+    let found = value
+    if found == null:
+        return null
+    match found:
+        case json.Value.Text as node:
+            return node.value
+        case json.Value.Number as node:
+            return node.text
+        case json.Value.Boolean as node:
+            if node.value:
+                return "true"
+            return "false"
+        case json.Value.Null:
+            return "null"
+        case json.Value.Array:
+            return null
+        case json.Value.Object:
+            return null
+
+func text_field(value: json.Value, key: String) -> String? throws Error:
+    return text(member(value, key))
+
+func or_empty(value: String?) -> String:
+    if value == null:
+        return ""
+    return value
+
+func or_zero(value: Int?) -> Int:
+    if value == null:
+        return 0
+    return value
+
+func array_field(value: json.Value, key: String) -> List[json.Value] throws Error:
+    return array_of(member(value, key))
+
+func array_of(value: json.Value?) -> List[json.Value]:
+    let found = value
+    if found == null:
+        return []
+    match found:
+        case json.Value.Array as node:
+            return node.values
+        case json.Value.Text:
+            return []
+        case json.Value.Number:
+            return []
+        case json.Value.Boolean:
+            return []
+        case json.Value.Null:
+            return []
+        case json.Value.Object:
+            return []
+
+func join(values: List[String], separator: String) -> String:
+    var output = ""
+    var first = true
+    for value in values:
+        if not first:
+            output += separator
+        first = false
+        output += value
+    return output
+
+func sort_strings(values: List[String]) -> List[String]:
+    let items: MutableList[String] = []
+    for value in values:
+        items.append(value)
+    var index: Int = 1
+    while index < items.size():
+        let current = items.get(index)
+        var position = index - 1
+        while position >= 0 and items.get(position) > current:
+            items.set(position + 1, items.get(position))
+            position -= 1
+        items.set(position + 1, current)
+        index += 1
+    return items.toList()
+
+func bump(counts: MutableMap[String, Int], key: String) -> Unit:
+    let current = counts.get(key)
+    if current == null:
+        counts.set(key, 1)
+    else:
+        counts.set(key, current + 1)
+
+func short_uri(uri: String) -> String:
+    var index = uri.length() - 1
+    while index >= 0:
+        if uri.charAt(index) == "/":
+            return uri.substring(index + 1, uri.length())
+        index -= 1
+    return uri
+
+func generic_suffix(declaration: json.Value) -> String throws Error:
+    let names: MutableList[String] = []
+    for item in array_field(declaration, "genericParameters"):
+        names.append(or_empty(text(item)))
+    if names.size() == 0:
+        return ""
+    return "[" + join(names.toList(), ", ") + "]"
+
+func parameter_list(declaration: json.Value) -> String throws Error:
+    let parts: MutableList[String] = []
+    for item in array_field(declaration, "parameters"):
+        parts.append(or_empty(text_field(item, "name")) + ": " + or_empty(text_field(item, "type")))
+    return "(" + join(parts.toList(), ", ") + ")"
+
+func throws_suffix(declaration: json.Value) -> String throws Error:
+    let parts: MutableList[String] = []
+    for item in array_field(declaration, "throws"):
+        parts.append(or_empty(text(item)))
+    if parts.size() == 0:
+        return ""
+    return " throws " + join(parts.toList(), ", ")
+
+func signatures(module: json.Value) -> List[Surface] throws Error:
+    let output: MutableList[Surface] = []
+    for variable in array_field(module, "variables"):
+        let name = or_empty(text_field(variable, "name"))
+        var keyword = "let "
+        if text_field(variable, "mutable") == "true":
+            keyword = "var "
+        output.append(Surface(key="variable " + name,
+                value=keyword + name + ": " + or_empty(text_field(variable, "type"))))
+    for declaration in array_field(module, "declarations"):
+        let kind = or_empty(text_field(declaration, "kind"))
+        let name = or_empty(text_field(declaration, "name"))
+        let generics = generic_suffix(declaration)
+        if kind == "function":
+            output.append(Surface(key="function " + name,
+                    value="function " + name + generics + parameter_list(declaration) + " -> "
+                            + or_empty(text_field(declaration, "result")) + throws_suffix(declaration)))
+        elif kind == "class":
+            output.append(Surface(key="class " + name, value="class " + name + generics))
+            for field in array_field(declaration, "fields"):
+                let field_name = or_empty(text_field(field, "name"))
+                var required = " defaulted"
+                if text_field(field, "required") == "true":
+                    required = " required"
+                output.append(Surface(key="class " + name + ".field " + field_name,
+                        value="field " + field_name + ": " + or_empty(text_field(field, "type")) + required))
+            for method in array_field(declaration, "methods"):
+                let method_name = or_empty(text_field(method, "name"))
+                output.append(Surface(key="class " + name + ".method " + method_name,
+                        value="method " + method_name + parameter_list(method) + " -> "
+                                + or_empty(text_field(method, "result")) + throws_suffix(method)))
+        elif kind == "enum":
+            let cases: MutableList[String] = []
+            for item in array_field(declaration, "cases"):
+                cases.append(or_empty(text(item)))
+            output.append(Surface(key="enum " + name,
+                    value="enum " + name + " = " + join(cases.toList(), ", ")))
+        elif kind == "variant":
+            output.append(Surface(key="variant " + name, value="variant " + name + generics))
+            for item in array_field(declaration, "cases"):
+                let case_name = or_empty(text_field(item, "name"))
+                let fields: MutableList[String] = []
+                for field in array_field(item, "fields"):
+                    fields.append(or_empty(text_field(field, "name")) + ": "
+                            + or_empty(text_field(field, "type")))
+                output.append(Surface(key="variant " + name + "." + case_name,
+                        value="case " + case_name + "(" + join(fields.toList(), ", ") + ")"))
+    return output.toList()
+
+func render_module(label: String, module: json.Value) -> String throws Error:
+    var output = "## " + label + "\n\n"
+    let values = signatures(module)
+    if values.size() == 0:
+        return output + "(no public declarations)\n"
+    for item in values:
+        output += "- " + item.value + "\n"
+    return output

@@ -1,0 +1,6 @@
+generic T:
+    class Box:
+        let value: T
+
+let box = Box(value=41)
+print(box.value + 1)

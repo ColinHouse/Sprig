@@ -1,0 +1,11 @@
+variant Shape:
+    Circle(radius: Int)
+    Square(side: Int)
+
+func area(shape: Shape) -> Int:
+    match shape:
+        case Shape.Circle as circle:
+            return circle.radius * circle.radius * 3
+
+print(area(Shape.Circle(radius=2)))
+print(area(Shape.Square(side=3)))

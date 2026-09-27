@@ -1,0 +1,8 @@
+{
+  "id": "02_nullability",
+  "title": "Nullability repair",
+  "objective": "Handle the nullable result of first() explicitly without changing its contract.",
+  "acceptance": "sprig check succeeds and stdout is exactly 'sprig'.",
+  "forbidden": ["changing first() to return a non-null value", "non-null assertion", "Java imports"],
+  "expectedInteractions": ["sprig check --json", "sprig explain SPR-TYPE-NULLABLE --json"]
+}

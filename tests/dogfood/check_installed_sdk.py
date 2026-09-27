@@ -132,8 +132,17 @@ def main():
             assert '0.3.0-alpha.1' in version.stdout
             capabilities = json.loads(installed('capabilities', '--json', cwd=work, env=env).stdout)
             assert capabilities.get('compilerVersion') or capabilities.get('version')
+            assert capabilities['stringSemantics']['positionUnit'] == 'unicode-code-point'
+            assert capabilities['stringSemantics']['hasCharType'] is False
+            assert capabilities['featureGuidance']['inheritance']['supported'] is False
             check = installed('check', 'examples/hello.spr', cwd=sdk_home / 'current', env=env)
             assert check.returncode == 0
+
+            explained = json.loads(installed('explain', 'SPR-TYPE-NULLABLE', '--json', cwd=work, env=env).stdout)
+            assert explained['relatedHelp'] == 'nullability'
+            assert explained['repair'] == {'kind': 'narrow-before-use', 'machineApplicable': False}
+            agents_help = json.loads(installed('help', 'agents', '--json', cwd=work, env=env).stdout)
+            assert any('api' in line for line in agents_help['syntax'])
 
             ledger = sdk_home / 'current/examples/ledger'
             installed('resolve', '--offline', cwd=ledger, env=env)
@@ -171,12 +180,42 @@ def main():
                       cwd=json_select, env=env)
             assert json.loads(output.read_text(encoding='utf-8')) is None
 
+            # Module and project introspection must work through the installed SDK.
+            module = json.loads(installed('api', '@web/app.spr', '--json', cwd=ledger, env=env).stdout)
+            assert module['kind'] == 'sprig-module' and any(d['name'] == 'App' for d in module['declarations'])
+            member = json.loads(installed('api', '@web/app.spr', '--member', 'App.get', '--json',
+                                          cwd=ledger, env=env).stdout)
+            assert member['memberCount'] == 1
+            inventory = json.loads(installed('api', '.', '--json', cwd=ledger, env=env).stdout)
+            assert inventory['kind'] == 'sprig-project'
+            labels = {item['module'] for item in inventory['modules']}
+            assert 'main.spr' in labels and '@web/app.spr' in labels
+            assert '@web/openapi_helpers.spr' not in labels
+
+            # Sprig-written tools consume installed-SDK metadata end to end.
+            tools = sdk_home / 'current/examples/agent_tools'
+            installed('resolve', '--offline', cwd=tools, env=env)
+            snapshot = work / 'installed_api.json'
+            snapshot.write_text(installed('api', '@web/app.spr', '--json', cwd=ledger, env=env).stdout,
+                                encoding='utf-8')
+            report = installed('run', '--offline', '--bin', 'api-report', '--', snapshot, cwd=tools, env=env)
+            assert '# API report:' in report.stdout and 'method get(' in report.stdout
+            bad = work / 'installed_bad.spr'
+            bad.write_text('let value: String? = null\nprint(value.length())\n', encoding='utf-8')
+            diagnostics = installed('check', bad, '--json', cwd=work, env=env, ok=False)
+            diagnostics_file = work / 'installed_diagnostics.json'
+            diagnostics_file.write_text(diagnostics.stdout, encoding='utf-8')
+            summary = installed('run', '--offline', '--bin', 'diag-summary', '--', diagnostics_file,
+                                cwd=tools, env=env)
+            assert 'SPR-TYPE-NULLABLE: 1' in summary.stdout
+
             installed('upgrade', '--check', cwd=work, env=env)
         finally:
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)
-    print('installed SDK PATH-only acceptance: install, capabilities, check, ledger HTTP, SQLite migrations, json-select and upgrade --check passed')
+    print('installed SDK PATH-only acceptance: install, capabilities, check, api module/project, agent tools, '
+          'ledger HTTP, SQLite migrations, json-select and upgrade --check passed')
 
 
 if __name__ == '__main__':

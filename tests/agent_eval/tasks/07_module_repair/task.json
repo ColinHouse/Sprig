@@ -1,0 +1,8 @@
+{
+  "id": "07_module_repair",
+  "title": "Repair an unfamiliar multi-module project",
+  "objective": "Fix the import usage so the project checks and prints 16.",
+  "acceptance": "sprig resolve --offline and sprig check succeed; stdout is exactly '16'.",
+  "forbidden": ["deleting math.spr", "inlining square() into main.spr", "Java imports"],
+  "expectedInteractions": ["sprig project --json", "sprig check --json", "sprig run"]
+}
