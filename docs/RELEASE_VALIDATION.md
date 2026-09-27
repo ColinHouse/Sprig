@@ -130,8 +130,10 @@ incorrect language assumption; actual adapter defects were fixed. The official
 host test runner always disables workspace trust, so the Restricted Mode test uses
 an explicit separate launch rather than pretending the normal host test covers it.
 
-Linux/macOS Extension Host CI is configured for VS Code1.95.3 and current stable;
-that matrix is distinct from the local host evidence above. Windows is unverified
+Linux/macOS × VS Code1.95.3/current stable Extension Host CI passed all four
+jobs on implementation `78e9e8d868d38814a6bf4c09def93e8b301e19d8`: [CI run](https://github.com/ColinHouse/Sprig/actions/runs/36308328496). Each job ran
+real normal and Restricted Mode hosts, CLI/JVM checks and VSIX packaging. This
+platform evidence is distinct from the local host evidence above. Windows is unverified
 preview. No interactive terminal/debugger, formatter, completion, navigation,
 semantic tokens or LSP is provided. Run is bounded (120s / 8 MB by default), shows
 output at completion and uses the active saved file. Save all dirty project files
