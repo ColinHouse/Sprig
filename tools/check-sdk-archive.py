@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import re
 import os
 import sys
 import zipfile
@@ -64,7 +65,7 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     assert command("version").strip().endswith(version)
     capabilities = json.loads(command("capabilities", "--json"))
     assert capabilities["compilerVersion"] == version
-    assert capabilities["releaseStatus"] == "prerelease; v" + version or capabilities["releaseStatus"].startswith("development; target v" + version + "; latest published v")
+    assert capabilities["releaseStatus"] == "prerelease; v" + version or re.fullmatch(r"development; (?:target|based on) v" + re.escape(version) + r"; latest published v[0-9A-Za-z.+-]+", capabilities["releaseStatus"])
     if args.archive:
         assert capabilities["releaseStatus"] == "prerelease; v" + version, "release ZIP must originate from a clean exact-tag build"
     assert capabilities["features"]["mavenDependencies"]

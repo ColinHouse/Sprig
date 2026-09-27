@@ -47,14 +47,13 @@ checks. These are implemented contracts; see
 ## Five-minute first project
 
 Install **JDK 17+** with `java` and `javac` on `PATH`.
-The current published SDK is
-[`v0.2.0-alpha.1`](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
-Download its ZIP and `.sha256`, verify the checksum, and extract; the SDK
-includes compiler/runtime libraries, **not a JDK**. The source milestone is
-`v0.3.0-alpha.1`; its Maven and showcase work is subject to release gates.
-Supported release platforms: **Linux/macOS**. **Windows is experimental**,
-with a separate non-blocking preview workflow.
-Use the release page to distinguish a published archive from a source checkout.
+The current published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1).
+Download its ZIP and `.sha256`, verify the checksum, and extract. The SDK
+includes compiler/runtime libraries, **not a JDK**. Supported release platforms:
+**Linux/macOS**. **Windows is experimental**, with a separate non-blocking
+preview workflow. Source checkouts report development metadata; clean tagged
+artifacts report prerelease. See the [validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md) for actual
+source/archive evidence.
 
 Linux/macOS, inside the extracted SDK:
 
@@ -69,7 +68,8 @@ cd my-tool
 
 Expected program output: `Hello, Sprig!`. You now have `sprig.toml`,
 `src/main.spr` and a generated `sprig.lock`. Edit the source, check it, run it.
-The published v0.2 archive supports local/Git packages and explicit JVM classpaths.
+The v0.3 SDK supports local/Git and Maven dependencies, explicit @std imports
+and three tested showcase projects.
 
 For the current source milestone (JDK 17+, Python 3.12+, Git):
 
@@ -99,7 +99,7 @@ downloads pinned ANTLR and Maven Resolver libraries; Maven CLI is not required.
 
 ## Build something useful
 
-The source milestone includes three project-oriented showcases:
+The SDK includes three project-oriented showcases:
 
 - **[Repository auditor](examples/showcases/repository_audit/README.md)** — a
   multi-module CLI that walks a tree, counts source/text files and writes JSON.
@@ -108,9 +108,9 @@ The source milestone includes three project-oriented showcases:
 - **[Source analyzer](examples/showcases/source_analyzer/README.md)** —
   Sprig frontend tooling with variants and exhaustive traversal.
 
-Their READMEs specify real inputs and commands. Release validation exercises
-them from the extracted SDK; source availability does not establish a published
-archive's contents or validation. Smaller [examples](examples/README.md) and
+Their READMEs specify real inputs and commands. All three were executed from
+the published SDK; exact artifact and platform evidence is in the validation
+record. Smaller [examples](examples/README.md) and
 [language tour](website/en/guide/language-tour.md) teach individual constructs.
 
 ## Contribute with your coding agent

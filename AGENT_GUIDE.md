@@ -62,7 +62,9 @@ exports and offline cache validation. Run `sprig resolve` before project builds.
 Use `import "@alias/module.spr" as module` for an exported dependency module.
 Project compilation refuses missing/stale locks or missing/corrupt locked JARs.
 An explicit file outside the project source root bypasses the project graph;
-use local `--classpath` there. `std/` provides ordinary typed IO/JSON modules;
+use local `--classpath` there. Import the installed bundled standard package
+with `import "@std/files.spr" as files`; no copied std or dependency declaration
+is needed. `build --emit-java-only --json` returns checked Java paths before javac;
 see `docs/STANDARD_LIBRARY.md` and the three `examples/showcases` projects.
 
 For details, see `docs/QUICK_REFERENCE.md`, `docs/JVM_INTEROP.md`,

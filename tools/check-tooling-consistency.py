@@ -25,7 +25,8 @@ assert catalog["languageVersion"] == "0.8-dev"
 assert catalog["jdk"]["minimum"] == 17
 assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
-assert catalog["releaseStatus"] == "prerelease; v" + version or catalog["releaseStatus"].startswith("development; target v" + version + "; latest published v")
+source_status = next(line.split("=", 1)[1] for line in (ROOT / "compiler/src/main/resources/sprig/compiler/tooling/catalog.properties").read_text().splitlines() if line.startswith("releaseStatus="))
+assert catalog["releaseStatus"] in (source_status, "prerelease; v" + version)
 assert catalog["features"]["mavenDependencies"]
 assert catalog["features"]["projectAwareClasspath"]
 assert catalog["supportedPlatforms"] == ["Linux", "macOS"]

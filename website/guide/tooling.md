@@ -8,7 +8,7 @@ stage-0 编译器只提供一个可执行文件 `bin/sprig`，由 `scripts/build
 ```text
 check <file.spr> [--json] [--syntax-only]   parse and type-check
 run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
-build <file.spr> [-d dir] [--json]          emit Java sources + .class files
+build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      带版本的语言参考
 capabilities [--json]                     已实现能力清单
 api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
@@ -102,3 +102,8 @@ version
 - `run --json` 把程序输出与诊断分开，程序失败时仍能得到可解析的结果。
 - 仓库的质量门槛是有意设计的，见
   [AI 辅助开发声明（英文）](/en/project/ai-disclosure)。
+
+`sprig build file.spr --emit-java-only -d generated --json` 完成静态检查后写出
+Java，不调用 javac。JSON 包含 `javaSources`、`mainClass` 和
+`javacInvoked=false`。通过显式 `import "@std/files.spr" as files` 使用 SDK
+内置标准包。Windows 仍为实验性预览。

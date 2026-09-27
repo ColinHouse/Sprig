@@ -1,6 +1,8 @@
 # Design pressure from the v0.3 showcases
 
-This record measures current source; it does not authorize a language redesign.
+This record measures the showcases and std on baseline c434d1f before the
+canonical-import repair; null-guard/copy counts still describe current source.
+It does not authorize a language redesign.
 The three projects are repository_audit (232 lines, five modules), maven_slug
 (53 lines, Commons Text/Lang) and source_analyzer (636 lines, including the
 existing 541-line frontend probe). They use ordinary checking and JVM execution.

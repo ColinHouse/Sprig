@@ -6,21 +6,21 @@ The SDK contains the compiler/runtime libraries and launcher, not a JDK.
 
 ## Download and verify
 
-The published SDK is [v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
+The published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1).
 Download the ZIP and its `.sha256` from that release. On Linux/macOS:
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.2.0-alpha.1/sprig-v0.2.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.2.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.2.0-alpha.1-jdk.zip
-cd sprig-v0.2.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.3.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.3.0-alpha.1-jdk.zip
+cd sprig-v0.3.0-alpha.1-jdk
 ```
 
 On Linux, `sha256sum -c` is also available. Stop if the checksum differs.
-The source milestone is v0.3.0-alpha.1; use the release assets and capability
-output to check which features your SDK actually includes. The v0.2 archive
-supports local/Git dependencies and explicit JVM classpaths.
+The published SDK is v0.3.0-alpha.1; use the release assets and capability
+output to check which features your SDK actually includes. The v0.3 SDK
+supports local/Git/Maven dependencies and explicit bundled @std imports.
 
 ## Initialize, resolve, run
 

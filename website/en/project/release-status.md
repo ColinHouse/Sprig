@@ -1,20 +1,15 @@
 # Release status
 
-**Source candidate:** compiler `v0.3.0-alpha.1`, language `v0.8-dev`, JDK 17+,
-Apache-2.0. **Current public SDK:**
-[v0.2.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.2.0-alpha.1).
+**Published SDK:** [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1), compiler `0.3.0-alpha.1`, language
+`0.8-dev`, JDK17+, Apache-2.0. Experimental Alpha, not production-ready.
 
-The v0.3 source milestone adds Apache Maven Resolver, one locked project JVM
-classpath, Unix/Windows launchers, a small typed IO/JSON layer, three tooling
-showcases and the contributor workflow. This page distinguishes source capability
-from a published archive. It is experimental Alpha, not production-ready.
+Linux/macOS × JDK17/26 passed source and the same actual tagged SDK ZIP gates.
+Windows is an experimental, non-blocking preview. The SDK includes Maven
+Resolver, locked project classpaths, explicit `@std` IO/JSON modules and three
+showcases. `build --emit-java-only` exposes checked generated Java before javac.
 
-Supported release gates are Linux/macOS × JDK17/26; Windows is experimental and non-blocking. A release workflow builds one exact
-clean tagged ZIP and all four supported-platform jobs smoke-test that same archive before publication.
-Definitions alone are not evidence: consult the
-[sole validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md)
-for exact commits, executed gates and remaining blockers. No JDK is bundled.
-
-Publishing/registry, inference, variance, interfaces/traits, LSP/IDE and self-hosting
-remain absent. The stage-1 frontend is a probe. Type safety does not certify
-numerical stability. See [limitations](/en/reference/KNOWN_LIMITATIONS).
+See the [single validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md) for source SHA, archive SHA256,
+commands, actual CI links and limits. Untagged source builds report development,
+based on the published release; clean matching tagged builds report prerelease.
+No JDK is bundled. Formatter, Java SAM/arrays/general generic adapters, LSP/IDE
+and self-hosting remain future work. Types do not prove numerical stability.
