@@ -30,3 +30,11 @@ venv/
 .env
 .env.*
 !.env.example
+
+# Sprig VS Code extension
+/editors/vscode/node_modules/
+/editors/vscode/out/
+/editors/vscode/dist/
+/editors/vscode/.vscode-test/
+!/editors/vscode/.vscode/
+!/editors/vscode/.vscode/*.json

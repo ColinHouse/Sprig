@@ -1,0 +1,96 @@
+import { spawn } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+export interface Point { line: number; character: number }
+export interface SourceRange { start: Point; end: Point }
+export interface CompilerDiagnostic {
+  code: string; severity: string; message: string; uri: string | null;
+  range: SourceRange | null; expectedType?: string; actualType?: string; hint?: string;
+}
+export interface CompilerResult {
+  schemaVersion: number; exitCode: number; diagnostics?: CompilerDiagnostic[];
+  programOutput?: string; javaSources?: string[]; javacInvoked?: boolean;
+  project?: { root: string; entry: string };
+  [key: string]: unknown;
+}
+export interface Invocation { json: CompilerResult; stderr: string }
+
+export function projectRoot(file: string): string {
+  for (let dir = path.dirname(file); ; dir = path.dirname(dir)) {
+    if (fs.existsSync(path.join(dir, 'sprig.toml'))) return dir;
+    if (path.dirname(dir) === dir) return path.dirname(file);
+  }
+}
+
+/** A configured launcher wins; otherwise PATH, then a built source ancestor. */
+export function resolveCompiler(configured: string, cwd: string): string {
+  if (configured.trim()) return path.resolve(cwd, configured.trim());
+  const name = process.platform === 'win32' ? 'sprig.cmd' : 'sprig';
+  for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
+    if (!dir) continue;
+    const candidate = path.join(dir, name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  for (let dir = cwd; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, 'bin', name);
+    if (fs.existsSync(candidate)) return candidate;
+    if (dir === path.dirname(dir)) break;
+  }
+  throw new Error('Sprig compiler not found. Install the SDK and set sprig.compilerPath to its bin/sprig launcher.');
+}
+
+export function invoke(executable: string, args: string[], cwd: string,
+  options: { signal?: AbortSignal; timeoutMs?: number; maxOutput?: number } = {}): Promise<Invocation> {
+  if (options.signal?.aborted) return Promise.reject(new Error('Sprig command canceled.'));
+  let command = executable;
+  let commandArgs = args;
+  // Avoid shell quoting/injection for native SDK batch launchers as well.
+  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(executable)) {
+    const home = path.dirname(path.dirname(executable));
+    if (!fs.existsSync(path.join(home, 'build', 'sprig-compiler.jar'))) {
+      return Promise.reject(new Error('Windows preview requires the SDK bin/sprig.cmd launcher; arbitrary batch wrappers are unsupported.'));
+    }
+    command = 'java';
+    commandArgs = ['-Dfile.encoding=UTF-8', '-cp', [path.join(home,'build','sprig-compiler.jar'),
+      path.join(home,'tools','antlr-4.13.2-complete.jar'), path.join(home,'tools','resolver','*')].join(path.delimiter),
+      `-Dsprig.home=${home}`, 'sprig.compiler.cli.Main', ...args];
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, commandArgs, {cwd, shell: false, windowsHide: true, detached: process.platform !== 'win32'});
+    child.stdin.end(); // Finite non-interactive Run: never wait for hidden input.
+    let stdout = '', stderr = '', size = 0, failure: Error | undefined;
+    const stop = (error: Error) => {
+      failure ??= error;
+      if (child.pid) {
+        try { if (process.platform === 'win32') child.kill(); else process.kill(-child.pid, 'SIGKILL'); } catch { /* exited */ }
+      }
+    };
+    const abort = () => stop(new Error('Sprig command canceled.'));
+    options.signal?.addEventListener('abort', abort, {once:true});
+    const timer = setTimeout(() => stop(new Error('Sprig command timed out. Adjust sprig.commandTimeoutSeconds if needed.')), options.timeoutMs ?? 120000);
+    child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (s: string) => {stdout += s; size += Buffer.byteLength(s); if(size > (options.maxOutput ?? 8*1024*1024)) stop(new Error('Sprig output exceeded the 8 MB limit.'));});
+    child.stderr.on('data', (s: string) => {stderr += s; size += Buffer.byteLength(s); if(size > (options.maxOutput ?? 8*1024*1024)) stop(new Error('Sprig output exceeded the 8 MB limit.'));});
+    const cleanup = () => {clearTimeout(timer); options.signal?.removeEventListener('abort', abort);};
+    child.on('error', error => {cleanup(); reject(new Error(`Cannot start Sprig compiler (${executable}): ${error.message}`));});
+    child.on('close', (code, signal) => {
+      cleanup();
+      if(failure) return reject(failure);
+      if(signal) return reject(new Error(`Sprig compiler terminated by ${signal}.`));
+      let json: CompilerResult;
+      try { json = JSON.parse(stdout); } catch {
+        return reject(new Error(`Sprig did not return JSON (exit ${code}). ${stderr || stdout}`.slice(0,2000)));
+      }
+      if(!json || typeof json !== 'object' || Array.isArray(json)) return reject(new Error('Invalid Sprig JSON response: expected an object.'));
+      if(json.exitCode === undefined && ['capabilities','explain'].includes(args[0]) && Number.isInteger(code)) json.exitCode = code!;
+      if(json.schemaVersion !== 1 || !Number.isInteger(json.exitCode) || json.exitCode !== code) {
+        return reject(new Error('Unsupported or inconsistent Sprig JSON response; compiler 0.3.0-alpha.1+ is required.'));
+      }
+      if(json.diagnostics !== undefined && !Array.isArray(json.diagnostics)) return reject(new Error('Invalid Sprig diagnostics response.'));
+      resolve({json,stderr});
+    });
+    // Handle an abort racing with spawn/listener registration.
+    if(options.signal?.aborted) abort();
+  });
+}

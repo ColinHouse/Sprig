@@ -83,10 +83,61 @@ Their patches are preserved locally and are not merged. External human/project
 adoption remains unmeasured.
 
 Direct Maven relocation, non-JAR runtime artifacts, authentication/package registry/
-package publishing, complete Java generic/array/varargs/SAM adapters, formatter, LSP/IDE
+package publishing, complete Java generic/array/varargs/SAM adapters, formatter, full LSP/IDE services
 and self-hosting remain absent. Cache locks are cooperative and lack a timeout;
 local locks contain absolute paths. Effective POM activation can depend on the
 resolving JVM/OS, then is frozen by the lock. Types do not prove algorithmic
-correctness or numerical stability. The next adoption project is a small VS Code
-extension; mixed Java/Sprig Web pressure testing and stage-1 follow later, without
-language redesign by unrelated PR. See DESIGN_PRESSURE and known limitations.
+correctness or numerical stability. A local VS Code extension preview follows SDK publication (see below); mixed
+Java/Sprig Web pressure testing and stage-1 remain later projects, without language
+redesign by unrelated PR. See DESIGN_PRESSURE and known limitations.
+
+
+## VS Code extension — local preview 0.1.0 (2026-09-27)
+
+`editors/vscode/` contains a separate TypeScript desktop extension; compiler and
+language versions are unchanged. The v0.3 SDK ZIP is unchanged and does not include
+this extension. No Marketplace publication or publisher ownership is claimed.
+
+Delivered scope: lexer-based TextMate highlighting and four-space editing defaults,
+saved-file/entry-graph checks with Problems and expected/actual types, error-code
+explanation, explicit finite JVM Run, Build and side-by-side Java-only viewing.
+Compiler processes use argument arrays without a shell; workspace trust gates
+execution, stale checks are canceled, and outputs use extension storage.
+
+Actual local evidence: macOS, Node24.16.0, TypeScript5.9.3, JDK26.0.1, VS Code1.139.0.
+
+| Check | Actual result |
+|---|---|
+| `npm test` in `editors/vscode/` | 11 passed, zero failures: actual TextMate/Oniguruma + real CLI/JVM |
+| `VSCODE_EXECUTABLE_PATH=... npm run test:host` | Real host activation, .spr registration, static error/repair, on-save error/repair, JVM Run, Java view, imported-file diagnostics, entry failure aggregation and project isolation passed |
+| `SPRIG_TEST_RESTRICTED=1 ... npm run test:host` | Real Restricted Mode keeps language/highlighting and blocks compiler commands |
+| `npm run package` + VSIX ZIP inspection | Packaged manifest, compiled JS, grammar/config, README and Apache license; no node_modules/source/tests/maps |
+| VS Code CLI `--install-extension` with isolated profile | Installation succeeded; `--list-extensions --show-versions` returned `colinhouse.sprig-language@0.1.0` |
+| Host with `SPRIG_EXTENSION_PATH` pointing to installed VSIX files | The same actual check/run/Java-view integration passed using packaged code |
+| `python3 scripts/verify.py` | 72 original gates, 24 grammar cases, 18 snippets, docs/site checks and editor test/package gates passed |
+| Highlighting preview program | Recursive variant/match Visitor ran and printed 42 |
+
+Tests first exposed missing implementations, a wrong test assumption about allowed
+String concatenation, project-entry failures overwritten by a clean unused-file
+result, uncaught JSON-null responses, and selecting a standard-library Java file when the
+entry class name was package-qualified. Hosted clean-checkout packaging also
+exposed a missing dist-directory creation, which was reproduced locally with the
+previous artifacts moved aside and fixed in the package command. Cross-platform
+host fixtures now explicitly resolve their project lock before testing types; the
+original CI correctly reported a missing lock. Host startup also handles the newer
+macOS executable rename from Electron to Code. Expectations were corrected only for the
+incorrect language assumption; actual adapter defects were fixed. The official
+host test runner always disables workspace trust, so the Restricted Mode test uses
+an explicit separate launch rather than pretending the normal host test covers it.
+
+Linux/macOS × VS Code1.95.3/current stable Extension Host CI passed all four
+jobs on implementation `78e9e8d868d38814a6bf4c09def93e8b301e19d8`: [CI run](https://github.com/ColinHouse/Sprig/actions/runs/36308328496). Each job ran
+real normal and Restricted Mode hosts, CLI/JVM checks and VSIX packaging. This
+platform evidence is distinct from the local host evidence above. Windows is unverified
+preview. No interactive terminal/debugger, formatter, completion, navigation,
+semantic tokens or LSP is provided. Run is bounded (120s / 8 MB by default), shows
+output at completion and uses the active saved file. Save all dirty project files
+first. Windows preview cannot guarantee child-process cancellation. Compiler
+Unicode starts map to UTF-16; ends inside astral-character tokens may remain
+approximate because the compiler mixes start/length units, explicitly documented
+without changing the compiler in this editor milestone.

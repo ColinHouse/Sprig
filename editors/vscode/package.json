@@ -1,0 +1,150 @@
+{
+  "name": "sprig-language",
+  "displayName": "Sprig",
+  "description": "Sprig syntax highlighting, compiler diagnostics, Run and generated Java.",
+  "version": "0.1.0",
+  "publisher": "ColinHouse",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ColinHouse/Sprig.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Highlighting is available; compiler processes require workspace trust.",
+      "restrictedConfigurations": [
+        "sprig.compilerPath"
+      ]
+    },
+    "virtualWorkspaces": false
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "test:grammar": "node --test test/grammar.cjs",
+    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs",
+    "test:host": "npm run compile && node test/run-host.cjs",
+    "vscode:prepublish": "npm run compile",
+    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "1.95.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.9.3",
+    "vscode-textmate": "^9.3.0",
+    "vscode-oniguruma": "^2.0.1"
+  },
+  "activationEvents": [
+    "onLanguage:sprig"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sprig",
+        "aliases": [
+          "Sprig",
+          "sprig"
+        ],
+        "extensions": [
+          ".spr"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sprig",
+        "scopeName": "source.sprig",
+        "path": "./syntaxes/sprig.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "sprig.check",
+        "title": "Sprig: Check"
+      },
+      {
+        "command": "sprig.run",
+        "title": "Sprig: Run"
+      },
+      {
+        "command": "sprig.build",
+        "title": "Sprig: Build"
+      },
+      {
+        "command": "sprig.showGeneratedJava",
+        "title": "Sprig: Show Generated Java"
+      },
+      {
+        "command": "sprig.showCapabilities",
+        "title": "Sprig: Show Capabilities"
+      },
+      {
+        "command": "sprig.explainDiagnostic",
+        "title": "Sprig: Explain Diagnostic"
+      }
+    ],
+    "configuration": {
+      "title": "Sprig",
+      "properties": {
+        "sprig.compilerPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Path to SDK bin/sprig (bin/sprig.cmd on Windows preview). Relative paths resolve against the project root. Empty searches PATH, then ancestor source bin/."
+        },
+        "sprig.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check saved Sprig files and their project entry graph."
+        },
+        "sprig.commandTimeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 1,
+          "maximum": 3600,
+          "description": "Time limit for compiler commands and non-interactive runs."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[sprig]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.detectIndentation": false
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "sprig.check",
+          "when": "editorLangId == sprig",
+          "group": "sprig@1"
+        },
+        {
+          "command": "sprig.run",
+          "when": "editorLangId == sprig",
+          "group": "sprig@2"
+        },
+        {
+          "command": "sprig.showGeneratedJava",
+          "when": "editorLangId == sprig",
+          "group": "sprig@3"
+        }
+      ]
+    }
+  }
+}

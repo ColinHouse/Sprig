@@ -22,7 +22,9 @@ by the Sprig v0.7 design kit.
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
   text/time and a typed JSON model. It is intentionally experimental; there is
   no giant library, HTTP server abstraction or stable package registry.
-  LSP, IDE/debugger integration and incremental compilation are absent.
+  LSP, debugger integration and incremental compilation are absent. The local
+  VS Code preview offers lexical highlighting, CLI checks/run and Java viewing;
+  see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java generic signatures, type-use
   nullability annotations, arrays, varargs, and collection adapters are limited

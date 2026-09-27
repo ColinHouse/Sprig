@@ -126,10 +126,17 @@ Compiler expertise is useful; docs, regression fixtures and tooling also matter.
 ```
 
 This is the normal contributor gate (JDK/Python/Node/npm/Git): build, full
-compiler/JVM tests, independent grammar tests, executed docs and website build.
+compiler/JVM tests, independent grammar tests, executed docs, website build and editor checks.
 [CONTRIBUTING.md](CONTRIBUTING.md) explains scoped checks and release gates.
 AI assistance is welcome; the submitter owns review, tests, licensing and
 correctness. See [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
+
+## VS Code extension (local preview)
+
+[Sprig for VS Code](editors/vscode/README.md) provides `.spr` syntax highlighting,
+saved-file diagnostics, Run and Show Generated Java. Build a locally installable
+VSIX with `npm ci && npm run package` in `editors/vscode/`. The SDK/JDK are
+installed separately; this extension is not yet on Marketplace.
 
 ## Boundaries and source of truth
 

@@ -29,7 +29,8 @@ understanding the change, tests, licensing and correctness.
 
    `python3 scripts/verify.py` is equivalent on Linux/macOS. This builds the
    compiler, runs all compiler/JVM regressions and the independent grammar
-   harness, executes documentation snippets, and builds/checks the website.
+   harness, executes documentation snippets, builds/checks the website, and runs
+   VS Code tokenization/CLI/package checks.
    First use downloads pinned build libraries and npm dependencies.
 6. Review the diff yourself. Keep regression evidence, remove unrelated
    edits, and explain which commands actually passed.
@@ -55,7 +56,8 @@ Report disagreements with a reproducer. Do not improvise a language feature.
 ## Focused checks and release checks
 
 During an edit, use the subsystem commands in `AGENTS.md`; before opening a
-PR, run `verify`. State separately whether evidence is parser acceptance,
+PR, run `verify`. For editor changes, also run `npm run test:host` in
+`editors/vscode/`; see its README for isolated real-host testing. State separately whether evidence is parser acceptance,
 static checking, generated Java compilation, or JVM runtime behavior.
 Never change a golden output or weaken an assertion merely to remove a failure.
 
