@@ -1,4 +1,4 @@
-import "../../std/json.spr" as json
+import "@std/json.spr" as json
 
 func rejected(source: String) -> Bool:
     try:

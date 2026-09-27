@@ -111,7 +111,9 @@ public final class Compiler {
             String alias = sprig.compiler.sem.ImportNames.aliasFor(imp);
             if (imp.fileImport) {
                 Path dependency;
-                if (importResolver != null) {
+                if (imp.pathOrClass.startsWith("@std/")) {
+                    dependency = sprig.compiler.project.StdLibrary.resolve(imp.pathOrClass, diagnostics, module.uri, imp.span);
+                } else if (importResolver != null) {
                     dependency = importResolver.resolve(abs, imp.pathOrClass, diagnostics,
                             module.uri, imp.span);
                 } else {

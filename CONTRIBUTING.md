@@ -61,7 +61,7 @@ Never change a golden output or weaken an assertion merely to remove a failure.
 
 Release validation additionally packages the SDK, verifies checksums/legal
 notices, extracts and exercises each showcase from the archive, and runs the
-Linux/macOS/Windows × supported-JDK hosted matrix. Maintainers record those
+Linux/macOS × JDK17/26 hosted matrix; Windows preview runs separately and is non-blocking. Maintainers record those
 results in the milestone validation record. A local contributor gate does
 not establish release or platform validation.
 
@@ -83,3 +83,12 @@ See [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) for review responsibilities and
 [`docs/contributing/TRIAL.md`](docs/contributing/TRIAL.md) for the concise
 contributor evaluation protocol. Neither a model's confidence nor passing
 compilation replaces review of user-visible behavior.
+
+## Protected main
+
+Main requires a PR, an up-to-date branch, resolved review conversations and
+Linux/macOS × JDK17/26 plus Documentation site checks. Rules also apply to
+administrators; force pushes and deletion are disabled. Required approval count
+is currently zero for this small maintainer team; this does not replace patch
+review or the submitter's AI-disclosure responsibility. Windows preview is not
+a required status check. Submit semantic changes for design review explicitly.

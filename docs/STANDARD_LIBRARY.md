@@ -1,9 +1,23 @@
 # Small practical standard layer
 
-The SDK ships `std/*.spr` as ordinary modules. Import them by relative path;
-for the bundled showcases that is `import "../../../../std/files.spr" as files`.
-Copy the `std` directory beside a standalone project and adjust the import path.
-There are no implicit imports or special standard-library syntax.
+The SDK supplies a reserved bundled package. Use the existing explicit package
+import syntax from any directory, without a manifest dependency or a copied std:
+
+```sprig
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+```
+
+`@std` belongs to the installed SDK; dependency aliases cannot override it.
+Only the bundled flat `.spr` modules are exported; traversal and symlinks are
+rejected. There are no implicit imports or new grammar forms. Standalone files
+use their installed SDK directly. `sprig resolve` records `stdlib-version` and
+`stdlib-sha256` in schema-3 locks; project consumers fail on mismatch, including
+older locks missing these fields, and require explicit re-resolution.
+The digest is SHA256 of each sorted module filename, NUL, exact UTF-8 file bytes,
+NUL concatenated in filename order. LF/CRLF bytes are intentionally distinct.
+The std version follows the compiler/SDK release during Alpha; no independent
+stdlib compatibility promise or invisible upgrade is made.
 
 | Module | Public operations |
 |---|---|

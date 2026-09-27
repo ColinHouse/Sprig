@@ -1,9 +1,9 @@
 # Maven supplies mature text behavior. Sprig owns the typed command/data flow.
 import org.apache.commons.text.WordUtils as WordUtils
 import org.apache.commons.text.StringEscapeUtils as StringEscapeUtils
-import "../../../../std/process.spr" as process
-import "../../../../std/files.spr" as files
-import "../../../../std/text.spr" as text
+import "@std/process.spr" as process
+import "@std/files.spr" as files
+import "@std/text.spr" as text
 import java.io.IOException as IOException
 
 func slug(value: String) -> String:

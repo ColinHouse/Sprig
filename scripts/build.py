@@ -71,6 +71,18 @@ def main():
     resources = ROOT / 'compiler/src/main/resources'
     if resources.is_dir():
         shutil.copytree(resources, build / 'classes', dirs_exist_ok=True)
+    # Only an exact clean release tag labels its artifact as a prerelease.
+    catalog_file = build / 'classes/sprig/compiler/tooling/catalog.properties'
+    catalog = catalog_file.read_text(encoding='utf-8')
+    version = next(line.split('=', 1)[1] for line in catalog.splitlines() if line.startswith('compilerVersion='))
+    try:
+        tag = subprocess.check_output(['git', 'describe', '--exact-match', '--tags', 'HEAD'], cwd=ROOT, stderr=subprocess.DEVNULL, text=True).strip()
+        clean = not subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        tag, clean = '', False
+    if tag == 'v' + version and clean:
+        catalog = '\n'.join('releaseStatus=prerelease; ' + tag if line.startswith('releaseStatus=') else line for line in catalog.splitlines()) + '\n'
+        catalog_file.write_text(catalog, encoding='utf-8')
     run('jar', '--create', '--file', build / 'sprig-compiler.jar', '-C', build / 'classes', '.')
     write_launchers(ROOT)
     cli = ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')

@@ -96,3 +96,11 @@ JDK/OS; the lock freezes the chosen result, not an environment-independent model
 Verification: `python3 tests/maven/check_resolver.py` creates independent local
 parent/BOM/conflict/scope fixtures and exercises all classpath consumers/cache
 failures. `examples/showcases/maven_slug` supplies a separate real Central example.
+
+## Bundled standard package
+
+`import "@std/files.spr" as files` uses the installed SDK without a manifest
+dependency. `std` is a reserved alias. Resolve records the compiler-coupled std
+version and exact module-byte digest; consumers reject missing/different metadata
+with `SPR-PROJECT-LOCK-STALE`. Re-run resolve explicitly after upgrading an SDK
+or migrating an older schema-3 lock. See [standard library](STANDARD_LIBRARY.md).

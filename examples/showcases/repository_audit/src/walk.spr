@@ -1,4 +1,4 @@
-import "../../../../std/files.spr" as files
+import "@std/files.spr" as files
 import "./model.spr" as model
 import "./metrics.spr" as metrics
 import java.io.IOException as IOException

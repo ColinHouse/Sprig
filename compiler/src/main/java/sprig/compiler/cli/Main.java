@@ -111,7 +111,7 @@ public final class Main {
         out.println();
         out.println("  check <file.spr> [--json] [--syntax-only]   parse and type-check");
         out.println("  run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM");
-        out.println("  build <file.spr> [-d dir] [--json]          emit Java sources + .class files");
+        out.println("  build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
         out.println("  help [topic] [--json]                       language reference (topics: "
@@ -382,6 +382,23 @@ public final class Main {
         deleteRecursively(javaDir);
         deleteRecursively(classesDir);
         writeSources(output, javaDir);
+        if (options.emitJavaOnly) {
+            if (diagnostics.hasErrors()) {
+                report(diagnostics, options.json, "build", 1, null);
+                return 1;
+            }
+            Map<String, Object> details = new java.util.LinkedHashMap<>();
+            details.put("javaSources", output.sources.keySet().stream().map(f -> javaDir.resolve(f).toAbsolutePath().toString()).toList());
+            details.put("mainClass", output.mainClass);
+            details.put("javacInvoked", false);
+            if (options.json) System.out.print(JsonWriter.result(diagnostics.all(), null, "build", 0, null, details));
+            else report(diagnostics, false, "build", 0, null);
+            if (!options.json) {
+                System.out.println("Java sources: " + javaDir.toAbsolutePath());
+                System.out.println("Main class: " + output.mainClass);
+            }
+            return 0;
+        }
         Map<Path, Map<Integer, Span>> lineMaps = new HashMap<>();
         Map<Path, String> uris = new HashMap<>();
         for (String file : output.sources.keySet()) {
@@ -1133,6 +1150,7 @@ public final class Main {
         boolean keep;
         Path outDir;
         boolean outDirSpecified;
+        boolean emitJavaOnly;
         boolean separatorProvided;
         String memberFilter;
         String bin;
@@ -1151,6 +1169,7 @@ public final class Main {
                     case "--offline" -> options.offline = true;
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
+                    case "--emit-java-only" -> options.emitJavaOnly = true;
                     case "--bin" -> {
                         if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.bin = args[++i];
                         else options.optionError = "--bin requires a binary name";
@@ -1192,6 +1211,7 @@ public final class Main {
 
         String violation(String command) {
             if (syntaxOnly && !command.equals("check")) return "--syntax-only is only valid with check";
+            if (emitJavaOnly && !command.equals("build")) return "--emit-java-only is only valid with build";
             if (keep && !command.equals("run")) return "--keep is only valid with run";
             if (outDirSpecified && !command.equals("build")) return "-d/--out is only valid with build";
             if (memberFilter != null && !command.equals("api")) return "--member is only valid with api";

@@ -1,4 +1,4 @@
-# Implemented JVM interop (v0.2.0-alpha.1)
+# Implemented JVM interop (v0.3.0-alpha.1 source candidate)
 
 Import a public class with an alias, then call public constructors, static
 methods, instance methods, or fields. Java calls use positional arguments.

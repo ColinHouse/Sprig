@@ -1,4 +1,4 @@
-import "../../../../std/json.spr" as json
+import "@std/json.spr" as json
 import "./model.spr" as model
 
 func number(value: Int) -> json.Value:

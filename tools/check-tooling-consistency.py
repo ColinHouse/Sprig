@@ -25,9 +25,15 @@ assert catalog["languageVersion"] == "0.8-dev"
 assert catalog["jdk"]["minimum"] == 17
 assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
-assert catalog["releaseStatus"] == "prerelease; v" + version
+assert catalog["releaseStatus"] == "prerelease; v" + version or catalog["releaseStatus"].startswith("development; target v" + version + "; latest published v")
 assert catalog["features"]["mavenDependencies"]
 assert catalog["features"]["projectAwareClasspath"]
+assert catalog["supportedPlatforms"] == ["Linux", "macOS"]
+assert catalog["experimentalPlatforms"] == ["Windows"]
+assert catalog["features"]["bundledStd"] and catalog["features"]["emitJavaOnly"]
+assert version in (ROOT / "docs/QUICK_REFERENCE.md").read_text().splitlines()[0]
+assert version in (ROOT / "docs/JVM_INTEROP.md").read_text().splitlines()[0]
+assert (ROOT / "docs/milestones/DESIGN_PRESSURE.md").read_text().startswith("# Design pressure")
 
 help_index = json.loads(invoke("help", "--json"))
 assert set(help_index["commands"]) == set(catalog["commands"])

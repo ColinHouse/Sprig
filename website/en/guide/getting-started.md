@@ -49,7 +49,7 @@ lock; manifest/dependency changes require `resolve` again.
 
 ## Windows and source builds
 
-Use the portable source build until a Windows SDK is published. Requires Git,
+Windows is an experimental preview, not a supported release platform. The portable source build is available for testing. Requires Git,
 JDK 17+ and Python 3.12+; Maven CLI and Bash are not required. PowerShell:
 
 ```powershell

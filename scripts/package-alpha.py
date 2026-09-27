@@ -30,6 +30,12 @@ def main():
     expected = os.environ.get('SPRIG_PACKAGE_VERSION')
     if expected and expected != tag:
         raise RuntimeError(f'Tag {expected} does not match compiler {tag}')
+    if expected:
+        capabilities = json.loads(output(launcher, 'capabilities', '--json'))
+        if capabilities['releaseStatus'] != 'prerelease; ' + tag:
+            raise RuntimeError('Release packaging requires a compiler built from its clean exact tag')
+        if output('git', 'describe', '--exact-match', '--tags', 'HEAD') != tag or output('git', 'status', '--porcelain'):
+            raise RuntimeError('Release packaging requires the clean matching tagged source checkout')
     name = 'sprig-' + tag + '-jdk'
     dist = ROOT / 'dist'
     dist.mkdir(exist_ok=True)
@@ -67,7 +73,8 @@ def main():
             shutil.copy2(ROOT / file, package)
         (package / 'README.md').write_text(f'''# Sprig {tag} SDK
 
-Experimental, Alpha, JDK 17+, language v0.8-dev. Sprig is a small, explicit
+Experimental, Alpha, JDK 17+, language v0.8-dev. Supported: Linux/macOS.
+Windows is an experimental preview, not a release-supported platform. Sprig is a small, explicit
 JVM language for tools, automation and reliable application code. The SDK
 contains the stage-0 compiler/runtime, ANTLR and pinned Maven Resolver libraries.
 It compiles Sprig to Java, invokes javac, and runs on the JVM.
@@ -79,7 +86,8 @@ Sprig is Apache-2.0; dependency licenses are in THIRD_PARTY_NOTICES.md and legal
         (package / 'INSTALL.md').write_text('''# Install and run
 
 Requires JDK 17 or newer (`java` and `javac`) on PATH. No Maven CLI or Bash
-is required on Windows. Extract the ZIP and add its bin directory to PATH.
+is required by the Windows experimental preview. Supported: Linux/macOS.
+Windows preview is not a release gate. Extract the ZIP and add its bin directory to PATH.
 On Windows invoke `bin\\sprig.cmd`; on Linux/macOS invoke `bin/sprig`.
 
 ```text

@@ -9,8 +9,8 @@ classpath, Unix/Windows launchers, a small typed IO/JSON layer, three tooling
 showcases and the contributor workflow. This page distinguishes source capability
 from a published archive. It is experimental Alpha, not production-ready.
 
-CI defines Linux/macOS/Windows × JDK17/26. A release workflow builds one exact
-clean tagged ZIP and all six jobs smoke-test that same archive before publication.
+Supported release gates are Linux/macOS × JDK17/26; Windows is experimental and non-blocking. A release workflow builds one exact
+clean tagged ZIP and all four supported-platform jobs smoke-test that same archive before publication.
 Definitions alone are not evidence: consult the
 [sole validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md)
 for exact commits, executed gates and remaining blockers. No JDK is bundled.

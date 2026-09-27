@@ -13,3 +13,6 @@
 *.png binary
 *.jar binary
 *.zip binary
+
+# Bundled std digest is byte-defined and portable across source checkouts.
+std/*.spr text eol=lf
