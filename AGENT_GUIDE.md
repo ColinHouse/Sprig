@@ -18,6 +18,8 @@ bin/sprig api java.time.LocalDate --json
 bin/sprig api src/main.spr --json
 bin/sprig api @pkg/module.spr --member Type.member --json
 bin/sprig api . --json
+bin/sprig project --json
+bin/sprig deps --json
 bin/sprig check program.spr --json
 bin/sprig explain SPR-CODE --json
 bin/sprig run program.spr --json
@@ -26,7 +28,8 @@ bin/sprig fmt program.spr --check --json
 
 Use `help` topics before writing unfamiliar constructs. `capabilities` lists
 deliberately unsupported features; grammar acceptance alone does not imply
-runtime support. Every function and method declares parameter and result types.
+runtime support. `explain` returns structured causes and safe fixes for every
+stable diagnostic, so prefer it over guessing when `check` reports a code. Every function and method declares parameter and result types.
 Top-level statements execute; a named `main` function is not invoked
 automatically. Sprig classes and variant cases use named constructors; ordinary functions and
 Java methods use positional arguments. `match` supports exhaustive statements and value expressions; expression

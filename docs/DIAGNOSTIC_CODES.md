@@ -79,7 +79,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-GENERIC-CONSTRAINT | An unsupported capability was requested; the implementation supports `Equatable` only, not `Comparable`. |
 | SPR-PROJECT-MANIFEST | `sprig.toml` is missing, malformed, or lacks a required field. |
 | SPR-PROJECT-ENTRY | The project entry point is missing or the named `--bin` is unknown. |
-| SPR-PROJECT-UNSUPPORTED | The operation needs unimplemented project features (dependency resolution, lockfiles). |
+| SPR-PROJECT-UNSUPPORTED | The project or a dependency needs project features or a language version this compiler does not support. |
 | SPR-PROJECT-LOCK-MISSING | This project has no `sprig.lock`; run `sprig resolve`. |
 | SPR-PROJECT-LOCK-STALE | `sprig.toml` or a dependency manifest changed after `sprig.lock` was written; run `sprig resolve`. |
 | SPR-PROJECT-LOCK-SCHEMA | The lockfile schema version is not supported. |
