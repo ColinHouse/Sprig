@@ -107,6 +107,28 @@ def main():
     arrays = [m for m in files["staticMethods"] if m["name"] == "readAllBytes"]
     check("api-array-boundary", arrays and not arrays[0]["usableFromSprig"])
 
+    with tempfile.TemporaryDirectory(prefix="sprig-field-order-") as tmp:
+        directory = Path(tmp)
+        source = directory / "src" / "probe" / "FieldFixture.java"
+        source.parent.mkdir(parents=True)
+        source.write_text('''package probe;
+public class FieldFixture {
+    public static class Parent { public int shared; }
+    public static class Child extends Parent { public String shared; }
+}''', encoding="utf-8")
+        classes = directory / "classes"
+        classes.mkdir()
+        subprocess.run(["javac", "-d", str(classes), str(source)], check=True)
+        jar = directory / "fields.jar"
+        subprocess.run(["jar", "--create", "--file", str(jar), "-C", str(classes), "."], check=True)
+        first = obj(run("api", "probe.FieldFixture$Child", "--classpath", jar, "--json"))
+        second = obj(run("api", "probe.FieldFixture$Child", "--classpath", jar, "--json"))
+        signatures = [field["javaSignature"] for field in first["fields"]]
+        expected = ["public int probe.FieldFixture$Parent.shared",
+                    "public java.lang.String probe.FieldFixture$Child.shared"]
+        check("api-hidden-fields-total-order", signatures == expected
+              and [field["javaSignature"] for field in second["fields"]] == expected)
+
     with tempfile.TemporaryDirectory(prefix="sprig-agent-tooling-") as tmp:
         directory = Path(tmp)
         source = directory / "src" / "probe" / "Widget.java"
