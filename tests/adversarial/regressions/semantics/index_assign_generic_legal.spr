@@ -1,0 +1,6 @@
+generic K, V:
+    func put(map: MutableMap[K, V], key: K, value: V) -> Unit:
+        map[key] = value
+let m: MutableMap[String, Int] = {"a": 1}
+put[String, Int](m, "b", 2)
+print(m["b"])

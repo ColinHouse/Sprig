@@ -1,0 +1,4 @@
+let m: MutableMap[Int, Int] = {1: 2}
+let key: Int32 = 1
+m[key] = 4
+print(m[1])

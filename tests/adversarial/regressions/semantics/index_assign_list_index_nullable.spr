@@ -1,0 +1,3 @@
+let xs: MutableList[Int] = [1]
+let i: Int? = null
+xs[i] = 2
