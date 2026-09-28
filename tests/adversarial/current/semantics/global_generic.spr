@@ -1,0 +1,7 @@
+generic T:
+    class Box:
+        let value: T
+let box = Box[String](value="bad")
+func f() -> Box[Int]:
+    return box
+print(f().value + 1)

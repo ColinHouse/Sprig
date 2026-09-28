@@ -1,0 +1,8 @@
+func f() -> Int:
+    for x in [1, 2]:
+        try:
+            return 1
+        finally:
+            continue
+    return 42
+print(f())

@@ -1,0 +1,6 @@
+class A:
+    let callback: fn() -> B = fn() => B()
+class B:
+    let x: Int = fail()
+func fail() -> Int throws Error:
+    throw Error("bad")

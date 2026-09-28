@@ -1,0 +1,3 @@
+class A:
+    let x: fn() -> Int = fn() => y
+    let y: Int = 2

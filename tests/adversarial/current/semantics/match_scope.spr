@@ -1,0 +1,9 @@
+variant V:
+    A(value: Int)
+    B
+let x = match V.A(value=1):
+    case V.A as a:
+        a.value
+    case V.B:
+        0
+print(a.value)

@@ -1,0 +1,4 @@
+let input = "bad"
+func f() -> Int:
+    return input
+print(f())

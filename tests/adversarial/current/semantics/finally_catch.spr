@@ -1,0 +1,8 @@
+func f() -> Int:
+    try:
+        throw Error("bad")
+    catch error: Error:
+        return 42
+    finally:
+        print("cleanup")
+print(f())

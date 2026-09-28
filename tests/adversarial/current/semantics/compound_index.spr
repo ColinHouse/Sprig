@@ -1,0 +1,8 @@
+var count: Int = 0
+func index() -> Int:
+    count += 1
+    return 0
+let items: MutableList[Int] = [1]
+items[index()] += 2
+print(count)
+print(items[0])

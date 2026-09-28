@@ -1,0 +1,54 @@
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import "@std/text.spr" as text
+import "@std/time.spr" as time
+import "@cli/cli.spr" as cli
+import "@sqlite/sqlite.spr" as sqlite
+import "@web/web.spr" as web
+
+func integer(value: json.Value) -> Int throws Error:
+    match value:
+        case json.Value.Number as n:
+            return n.text.toInt()
+        case json.Value.Null:
+            throw Error("expected integer")
+        case json.Value.Boolean:
+            throw Error("expected integer")
+        case json.Value.Text:
+            throw Error("expected integer")
+        case json.Value.Array:
+            throw Error("expected integer")
+        case json.Value.Object:
+            throw Error("expected integer")
+
+func total(value: json.Value) -> Int throws Error:
+    match value:
+        case json.Value.Array as a:
+            var sum: Int = 0
+            for item in a.values:
+                sum += integer(item)
+            return sum
+        case json.Value.Null:
+            throw Error("expected array")
+        case json.Value.Boolean:
+            throw Error("expected array")
+        case json.Value.Number:
+            throw Error("expected array")
+        case json.Value.Text:
+            throw Error("expected array")
+        case json.Value.Object:
+            throw Error("expected array")
+
+let parsed = cli.parse(process.arguments(), [])
+let input = text.trim(files.read_utf8(parsed.positionals[0]))
+let sum = total(json.parse(input))
+let database = sqlite.open("audit.db")
+database.execute("CREATE TABLE IF NOT EXISTS totals (value INTEGER NOT NULL)", [])
+database.execute("INSERT INTO totals(value) VALUES (?)", [sqlite.Parameter.Integer(value=sum)])
+let rows = database.query("SELECT value FROM totals ORDER BY rowid DESC LIMIT 1", [])
+let response = web.json_response(json.Value.Number(text=rows.integer(0, "value").toString()), 200)
+files.write_utf8("result.json", response.body)
+assert(time.epoch_millis() > 0, "clock must be positive")
+print(response.status)
+print(response.body)

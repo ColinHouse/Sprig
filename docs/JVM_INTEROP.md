@@ -1,7 +1,11 @@
 # Implemented JVM interop (v0.3.0-alpha.1)
 
 Import a public class with an alias, then call public constructors, static
-methods, instance methods, or fields. Java calls use positional arguments.
+methods, instance methods, or fields. The class must live in a named package:
+generated Sprig classes are emitted into `sprig.user`, and Java cannot reference
+a type from the unnamed package there, so importing such a class is rejected
+with `SPR-JVM-CLASS` instead of failing later inside `javac`. Java calls use
+positional arguments.
 The compiler resolves overloads before Java generation; generated code calls
 Java directly. It never initializes a class while `sprig api` or `sprig check`
 indexes its metadata.

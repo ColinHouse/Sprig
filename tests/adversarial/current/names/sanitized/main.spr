@@ -1,0 +1,4 @@
+import "./a-b.spr" as a
+import "./a_b.spr" as b
+print(a.value())
+print(b.value())

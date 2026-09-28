@@ -1,0 +1,5 @@
+generic T:
+    func wrap(x: T) -> fn() -> T:
+        return fn() => x
+let f = wrap[Int](42)
+print(f())

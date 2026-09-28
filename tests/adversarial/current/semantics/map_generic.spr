@@ -1,0 +1,7 @@
+generic T:
+    func get(m: Map[String, T]) -> T?:
+        return m.get("x")
+let m: Map[String, Int] = {"x": 42}
+let v = get[Int](m)
+if v != null:
+    print(v + 1)

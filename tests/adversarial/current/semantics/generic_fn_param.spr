@@ -1,0 +1,4 @@
+generic T:
+    func apply(f: fn(T) -> T, x: T) -> T:
+        return f(x)
+print(apply[Int](fn(x: Int) => x + 1, 41))

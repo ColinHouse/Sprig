@@ -72,7 +72,12 @@ FLOAT: DIGIT+ '.' DIGIT+ EXP? | DIGIT+ EXP;
 INT: DIGIT+;
 STRING: '"' ('\\' ["\\nrt] | ~["\\\r\n])* '"';
 IDENT: [a-zA-Z_] [a-zA-Z_0-9]*;
-NEWLINE: '\r\n' | '\n' | '\r';
+NEWLINE: '\r\n' | '\n' | '\r' {
+    // ANTLR advances physical line/column state only for LF. Bare CR is also
+    // a Sprig newline, so keep subsequent token positions consistent with it.
+    setLine(getLine() + 1);
+    setCharPositionInLine(0);
+};
 COMMENT: '#' ~[\r\n]* -> channel(HIDDEN);
 SPACE: [ ]+ -> channel(HIDDEN);
 TAB: '\t'; // LayoutTokenSource rejects tabs, including inline tabs.

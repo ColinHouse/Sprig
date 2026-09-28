@@ -1,0 +1,4 @@
+class Item:
+    let value: Int
+func value() -> Int:
+    return Item(value=4).value

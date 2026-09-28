@@ -74,8 +74,8 @@ public final class JavaGenerator {
     }
 
     public Output generate() {
-        assignTypeNames();
         assignModuleNames();
+        assignTypeNames();
         for (Module module : compilation.modules) {
             currentModule = module;
             generateModule(module);
@@ -100,6 +100,9 @@ public final class JavaGenerator {
     // ------------------------------------------------------------------
 
     private void assignTypeNames() {
+        // All emitted classes share one Java package, including module holders
+        // and the binary names of nested variant cases.
+        Set<String> usedNames = new java.util.HashSet<>(moduleClassNames.values());
         Map<String, List<Decl>> byName = new LinkedHashMap<>();
         for (Module module : compilation.modules) {
             for (Decl decl : module.decls) {
@@ -111,11 +114,36 @@ public final class JavaGenerator {
         for (Map.Entry<String, List<Decl>> entry : byName.entrySet()) {
             List<Decl> decls = entry.getValue();
             for (Decl decl : decls) {
-                String name = decls.size() == 1 ? "$" + entry.getKey()
+                String base = decls.size() == 1 ? "$" + entry.getKey()
                         : "$" + sanitize(findModule(decl).name) + "_" + entry.getKey();
+                String name = base;
+                int suffix = 2;
+                while (!typeNameAvailable(name, decl, usedNames)) {
+                    name = base + "$" + suffix++;
+                }
+                usedNames.add(name);
+                if (decl instanceof Decl.VariantDecl variant) {
+                    for (Decl.VariantCase variantCase : variant.cases) {
+                        usedNames.add(name + "$" + variantCase.name);
+                    }
+                }
                 typeNames.put(decl, PACKAGE + "." + name);
             }
         }
+    }
+
+    private boolean typeNameAvailable(String name, Decl decl, Set<String> usedNames) {
+        if (usedNames.contains(name)) {
+            return false;
+        }
+        if (decl instanceof Decl.VariantDecl variant) {
+            for (Decl.VariantCase variantCase : variant.cases) {
+                if (usedNames.contains(name + "$" + variantCase.name)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private Module findModule(Decl decl) {
@@ -129,10 +157,16 @@ public final class JavaGenerator {
 
     private void assignModuleNames() {
         Map<String, Integer> counts = new LinkedHashMap<>();
+        Set<String> usedNames = new java.util.HashSet<>();
         for (Module module : compilation.modules) {
             String base = "$M_" + sanitize(module.name);
-            int count = counts.merge(base, 1, Integer::sum);
-            moduleClassNames.put(module, count == 1 ? base : base + "$" + count);
+            int count = counts.getOrDefault(base, 0) + 1;
+            String name = count == 1 ? base : base + "$" + count;
+            while (!usedNames.add(name)) {
+                name = base + "$" + ++count;
+            }
+            counts.put(base, count);
+            moduleClassNames.put(module, name);
         }
     }
 

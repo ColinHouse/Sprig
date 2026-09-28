@@ -1,0 +1,4 @@
+class Box:
+    let value: Int
+func value() -> Int:
+    return Box(value=5).value

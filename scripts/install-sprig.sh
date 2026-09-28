@@ -118,6 +118,12 @@ actual=$(hash_file "$work/$archive")
 [ "$actual" = "$expected" ] || fail "SHA-256 mismatch for $archive"
 
 entries=$(unzip -Z1 "$work/$archive") || fail 'cannot inspect SDK ZIP entries'
+# Reject links before extraction: even a correctly checksummed ZIP could make
+# a later entry or our installation metadata write follow a link outside staging.
+entry_modes=$(unzip -Z -l "$work/$archive") || fail 'cannot inspect SDK ZIP entry types'
+if printf '%s\n' "$entry_modes" | grep -Eq '^l[^[:space:]]{9}[[:space:]]'; then
+    fail 'SDK ZIP contains a symbolic link'
+fi
 prefix=sprig-$tag-jdk/
 root_entry=sprig-$tag-jdk
 expanded=$(unzip -l "$work/$archive" | awk '$1 ~ /^[0-9]+$/ { total += $1 } END { print total + 0 }')
@@ -129,14 +135,20 @@ while IFS= read -r entry; do
         *) fail "SDK ZIP contains an unexpected top-level path: $entry" ;;
     esac
     case "/$entry/" in
-        *"/../"*|*"//"*) fail "SDK ZIP contains an unsafe path: $entry" ;;
+        *"/../"*|*"/./"*|*"//"*|*'\'*) fail "SDK ZIP contains an unsafe path: $entry" ;;
     esac
 done <<EOF
 $entries
 EOF
+printf '%s\n' "$entries" | awk '{ sub(/\/$/, ""); if (seen[$0]++) exit 1 }' \
+    || fail 'SDK ZIP contains a duplicate path'
 
 mkdir "$work/extracted"
 unzip -q "$work/$archive" -d "$work/extracted" || fail 'SDK ZIP extraction failed'
+# Defense in depth before running the SDK or writing any metadata. Do not follow
+# links while walking the extracted tree, including a linked root directory.
+extracted_links=$(find "$work/extracted" -type l -print) || fail 'cannot inspect extracted SDK'
+[ -z "$extracted_links" ] || fail 'extracted SDK contains a symbolic link'
 candidate=$work/extracted/sprig-$tag-jdk
 [ -x "$candidate/bin/sprig" ] || fail 'release archive does not contain bin/sprig'
 reported=$("$candidate/bin/sprig" version 2>&1) || fail "new SDK smoke test failed: $reported"

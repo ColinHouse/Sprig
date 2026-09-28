@@ -1,0 +1,4 @@
+import "./a/model.spr" as a
+import "./b/model.spr" as b
+print(a.make().value)
+print(b.make().value)

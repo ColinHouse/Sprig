@@ -1,0 +1,3 @@
+import java.lang.System as System
+let x = System.getProperty("sprig.missing.test")
+print(x.length())

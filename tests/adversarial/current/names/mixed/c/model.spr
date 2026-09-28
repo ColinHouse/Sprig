@@ -1,0 +1,8 @@
+variant Item:
+    Payload:
+        value: String
+func value() -> String:
+    let item = Item.Payload(value="variant")
+    match item:
+        case Item.Payload as payload:
+            return payload.value

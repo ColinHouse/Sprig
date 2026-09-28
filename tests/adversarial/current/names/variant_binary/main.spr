@@ -1,0 +1,5 @@
+import "./Foo$Case.spr" as helper
+variant M_Foo:
+    Case:
+print(M_Foo.Case)
+print(helper.value())

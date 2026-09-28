@@ -127,6 +127,8 @@ public final class JvmMetadata {
     }
 
     public static String unsupportedReason(Executable executable) {
+        if (executable instanceof Method method && supersededBridge(method))
+            return "Java compiler bridge is superseded by its source method";
         if (executable.isVarArgs()) return "Java varargs are not supported";
         java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         Class<?>[] raw = executable.getParameterTypes();
@@ -144,6 +146,62 @@ public final class JvmMetadata {
             return "Java array result has no Sprig source type or adapter";
         }
         return null;
+    }
+
+    private static boolean supersededBridge(Method bridge) {
+        if (!bridge.isBridge()) return false;
+        Class<?> owner = bridge.getDeclaringClass();
+        for (Method target : owner.getDeclaredMethods()) {
+            if (target.isBridge() || !Modifier.isPublic(target.getModifiers())
+                    || !target.getName().equals(bridge.getName())
+                    || !bridge.getReturnType().isAssignableFrom(target.getReturnType())) continue;
+            if (Arrays.equals(bridge.getParameterTypes(), target.getParameterTypes())) return true;
+            // Public access bridges can forward an inherited method from a
+            // nonpublic base. A narrower overload alone does not supersede one:
+            // the target must override the inherited, substituted signature.
+            if (overridesBridgeSource(owner, Map.of(), bridge, target)) return true;
+        }
+        return false;
+    }
+
+    private static boolean overridesBridgeSource(Class<?> owner,
+            Map<java.lang.reflect.TypeVariable<?>, Class<?>> bindings, Method bridge, Method target) {
+        List<Type> parents = new ArrayList<>(List.of(owner.getGenericInterfaces()));
+        if (owner.getGenericSuperclass() != null) parents.add(owner.getGenericSuperclass());
+        for (Type parent : parents) {
+            Class<?> raw = erasedType(parent, bindings);
+            Map<java.lang.reflect.TypeVariable<?>, Class<?>> inherited = new LinkedHashMap<>();
+            if (parent instanceof java.lang.reflect.ParameterizedType applied) {
+                java.lang.reflect.TypeVariable<?>[] variables = raw.getTypeParameters();
+                Type[] arguments = applied.getActualTypeArguments();
+                for (int i = 0; i < variables.length; i++)
+                    inherited.put(variables[i], erasedType(arguments[i], bindings));
+            }
+            for (Method original : raw.getDeclaredMethods()) {
+                if (original.isBridge() || !original.getName().equals(bridge.getName())
+                        || !Arrays.equals(original.getParameterTypes(), bridge.getParameterTypes())) continue;
+                Class<?>[] parameters = Arrays.stream(original.getGenericParameterTypes())
+                        .map(type -> erasedType(type, inherited)).toArray(Class<?>[]::new);
+                if (Arrays.equals(parameters, target.getParameterTypes())) return true;
+            }
+            if (overridesBridgeSource(raw, inherited, bridge, target)) return true;
+        }
+        return false;
+    }
+
+    private static Class<?> erasedType(Type type,
+            Map<java.lang.reflect.TypeVariable<?>, Class<?>> bindings) {
+        if (type instanceof Class<?> clazz) return clazz;
+        if (type instanceof java.lang.reflect.ParameterizedType applied)
+            return (Class<?>) applied.getRawType();
+        if (type instanceof java.lang.reflect.TypeVariable<?> variable) {
+            Class<?> bound = bindings.get(variable);
+            return bound != null ? bound : erasedType(variable.getBounds()[0], bindings);
+        }
+        if (type instanceof java.lang.reflect.GenericArrayType array)
+            return java.lang.reflect.Array.newInstance(erasedType(array.getGenericComponentType(), bindings), 0)
+                    .getClass();
+        return Object.class;
     }
 
     private static boolean callableBoundary(Executable executable) {
