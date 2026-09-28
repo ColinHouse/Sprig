@@ -32,6 +32,9 @@ direct core type mapping; `erased-generic` means the raw signature can be
 bound but its generic arguments are not enforced; `sprig-callable` means concrete Sprig Fn slots are checked invariantly; `unsupported` means the
 current compiler cannot bind/emit it. The legacy `usableFromSprig` field means
 only that binding/emission is possible, not that a generic contract is safe.
+Reflected public fields are ordered by field name and then full Java signature;
+inherited fields hidden by a same-named declaration remain visible as distinct
+rows in that deterministic order.
 Java reference and
 boxed return values are conservatively nullable. Java reference parameters,
 including `Object`, require a non-null Sprig argument because the compiler
