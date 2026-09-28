@@ -42,7 +42,7 @@ public final class Catalog {
     public static List<String> topics() {
         return List.of("language", "types", "strings", "functions", "classes", "variants", "match",
                 "nullability", "errors", "collections", "numerics", "modules", "jvm",
-                "generics", "projects", "dependencies", "agents", "upgrade");
+                "generics", "projects", "dependencies", "agents", "upgrade", "fmt");
     }
 
     public static Map<String, Object> help(String topic) {
@@ -86,7 +86,7 @@ public final class Catalog {
         result.put("featureGuidance", featureGuidance());
         result.put("genericCapabilities", list("genericCapabilities"));
         result.put("lambdaMaxArity", Integer.parseInt(get("lambdaMaxArity")));
-        result.put("matchBehavior", "statement; exhaustive; no wildcard");
+        result.put("matchBehavior", "statement and expression; exhaustive; no wildcard; expression branches contain one expression");
         Map<String, Object> strings = new LinkedHashMap<>();
         strings.put("hasCharType", false);
         strings.put("elementType", "String");
@@ -112,7 +112,8 @@ public final class Catalog {
         guidance(out, "interfaces", "classes", "composition", "narrow Java adapter with fn(A) -> R or Fn0..Fn3");
         guidance(out, "arbitraryJavaSam", "jvm", "narrow Java adapter", "Sprig-owned fn(A) -> R and Fn0..Fn3");
         guidance(out, "genericTypeInference", "generics", "write every explicit Type[Arg] argument");
-        guidance(out, "matchExpression", "match", "exhaustive match statement", "assign through ordinary control flow");
+        out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
+                "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
         guidance(out, "arrays", "collections", "List[T]", "MutableList[T]");
         guidance(out, "varargs", "jvm", "List[T]", "explicit repeated calls");

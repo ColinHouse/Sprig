@@ -92,7 +92,7 @@ change touches, as applicable:
   credentials or personal configuration.
 - `sprig api`, `capabilities`, `doctor`, and topic help are available; query
   `capabilities --json` for the checkout's dependency and feature support.
-  Publishing/registry, LSP and `sprig fmt` remain future work.
+  Publishing/registry, LSP remains future work.
 - This milestone does not authorize grammar, type, numeric, nullability,
   generic or effect redesign. Open a `design-required` issue with a motivating
   program before changing those contracts.

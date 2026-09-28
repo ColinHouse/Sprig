@@ -50,11 +50,9 @@ by the Sprig v0.7 design kit.
   OS locks have no timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after
   validation is outside the cooperative cache model.
-- There is no `sprig fmt`. The lexer discards comments and spacing
-  (`COMMENT ... -> skip` in `grammar/SprigLexer.g4`) and the layout adapter
-  consumes the skipped stream, so no tool can currently round-trip source
-  trivia. A safe formatter requires a trivia-preserving lexer/AST first; see
-  `docs/milestones/AGENT_API_TOOLING_REPORT.md`.
+- `sprig fmt` is canonical and comment-preserving, without configuration or
+  aggressive wrapping. See [formatter](FORMATTER.md) for file safety and
+  comment indentation policy. LSP integration remains future work.
 - `tests/agent_eval` provides deterministic fixtures and scoring only. No LLM
   run has been performed, and no model performance is claimed.
 - The managed SDK installer/upgrader is supported only on Linux/macOS and

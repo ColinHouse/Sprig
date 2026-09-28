@@ -51,8 +51,15 @@ public final class ParserFrontend {
                 } else if (offendingSymbol instanceof org.antlr.v4.runtime.Token token) {
                     pretty = message(msg, "unexpected '" + token.getText().replace("\n", "\\n") + "'");
                 }
-                diagnostics.add(Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX, pretty, uri,
-                        new Span(line - 1, charPositionInLine, line - 1, charPositionInLine + 1, -1, -1)));
+                Diagnostic diagnostic = Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX, pretty, uri,
+                        new Span(line - 1, charPositionInLine, line - 1, charPositionInLine + 1, -1, -1));
+                for (var context = parser.getContext(); context != null; context = context.getParent()) {
+                    if (context instanceof SprigParser.MatchExpressionBranchContext) {
+                        diagnostic.withHint("Expression-match branches contain exactly one expression; use statement match for multi-statement branches.");
+                        break;
+                    }
+                }
+                diagnostics.add(diagnostic);
             }
         });
         return parser.program();

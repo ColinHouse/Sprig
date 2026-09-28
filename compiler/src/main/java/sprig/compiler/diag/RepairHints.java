@@ -15,6 +15,8 @@ final class RepairHints {
             Map.entry(Codes.NUM_CONVERSION, new Hint("numerics", "make-numeric-conversion-explicit")),
             Map.entry(Codes.NUM_MIXED, new Hint("numerics", "make-numeric-conversion-explicit")),
             Map.entry(Codes.COLLECTION_IMMUTABLE, new Hint("collections", "convert-with-toMutableList-or-toMutableMap")),
+            Map.entry(Codes.MATCH_RESULT, new Hint("match", "make-branch-results-assignable-without-lossy-conversions")),
+            Map.entry(Codes.MATCH_INFERENCE, new Hint("match", "write-explicit-match-result-type")),
             Map.entry(Codes.MATCH_NONEXHAUSTIVE, new Hint("match", "add-explicit-case-for-every-missing-case")),
             Map.entry(Codes.GENERIC_ARGS_REQUIRED, new Hint("generics", "write-explicit-type-arguments")),
             Map.entry(Codes.GENERIC_CONSTRAINT, new Hint("generics", "remove-unsupported-capability")),

@@ -20,3 +20,6 @@ only the Java transport boundary. `/echo` in the raw probe returns UTF-8 body te
 The Swagger page uses pinned CDN assets and requires network access. API tests
 run without fetching them. See `libraries/sprig-web/README.md` for the precise
 source API and callback error-handling rules.
+
+The example imports the explicit `@web/web.spr` facade; implementation helpers
+remain outside that facade while App/Request/Response keep their original types.

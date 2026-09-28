@@ -1,0 +1,16 @@
+# Stable declaration facade; implementation helpers stay in app.spr.
+import "./app.spr" as app
+
+export app.Method
+export app.SchemaType
+export app.FieldSchema
+export app.Schema
+export app.QueryParameter
+export app.Header
+export app.Parameter
+export app.Request
+export app.Response
+export app.Route
+export app.App
+export app.text
+export app.json_response

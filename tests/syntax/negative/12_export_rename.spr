@@ -1,0 +1,2 @@
+import "./implementation.spr" as internal
+export internal.Widget as PublicWidget

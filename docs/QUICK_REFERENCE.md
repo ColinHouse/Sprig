@@ -57,3 +57,12 @@ then stops before javac. JSON includes `javaSources`, `mainClass` and
 `javacInvoked=false`; invalid sources still fail with normal diagnostics.
 Normal `build` additionally compiles classes; `run --keep` retains temporary
 Java for execution debugging. No extra transpile command is introduced.
+
+Explicit facades: `import "./internal.spr" as internal`, then
+`export internal.Widget`. Imports, exports, ordinary declarations/statements
+appear in that order. See [module reexports](MODULE_REEXPORTS.md).
+
+Expression `match` may initialize a binding or be returned directly. Every
+case contains exactly one expression; results use explicit context or the
+first non-null inferred type. Use statement match for multi-statement branches.
+See [expression matches](MATCH_EXPRESSIONS.md).

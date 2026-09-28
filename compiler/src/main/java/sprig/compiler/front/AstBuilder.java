@@ -36,7 +36,19 @@ public final class AstBuilder {
             imports.add(buildImport(ctx));
         }
         Module module = new Module(path, uri, imports);
+        boolean sawExport = false, sawBody = false;
         for (ParseTree child : program.children) {
+            if (child instanceof SprigParser.ImportStatementContext ctx) {
+                if (sawExport) diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT_ORDER, Phase.NAME,
+                    "Imports must precede declaration exports", uri, span(ctx)));
+            } else if (child instanceof SprigParser.ExportStatementContext ctx) {
+                if (sawBody) diagnostics.add(Diagnostic.error(Codes.MODULE_EXPORT_ORDER, Phase.NAME,
+                    "Declaration exports must precede local declarations/statements", uri, span(ctx)));
+                Module.Export exported = new Module.Export(ctx.IDENT(1).getText(),ctx.IDENT(2).getText());
+                exported.span = span(ctx);
+                module.exports.add(exported);
+                sawExport = true;
+            } else if (child instanceof org.antlr.v4.runtime.ParserRuleContext) sawBody = true;
             if (child instanceof SprigParser.GenericDefinitionContext ctx) {
                 module.decls.add(buildGeneric(ctx));
             } else if (child instanceof SprigParser.ClassDefinitionContext ctx) {
@@ -82,6 +94,7 @@ public final class AstBuilder {
             result = new Decl.Import(ctx.qualifiedName().getText(), false,
                     ctx.IDENT() == null ? null : ctx.IDENT().getText());
         }
+        result.span = span(ctx);
         return result;
     }
 
@@ -347,6 +360,24 @@ public final class AstBuilder {
     // ---- expressions ----
 
     Expr buildExpression(SprigParser.ExpressionContext ctx) {
+        if (ctx.matchExpression() != null) {
+            var matchCtx = ctx.matchExpression();
+            List<Stmt.Match.Branch> branches = new ArrayList<>();
+            for (var branchCtx : matchCtx.matchExpressionBranch()) {
+                List<String> parts = branchCtx.qualifiedName().IDENT().stream().map(TerminalNode::getText).toList();
+                TypeRef owner = new TypeRef(parts.subList(0,parts.size()-1),List.of(),false);
+                owner.span = span(branchCtx.qualifiedName());
+                Stmt.ExprStmt value = new Stmt.ExprStmt(buildExpression(branchCtx.expression()));
+                value.span = span(branchCtx.expression());
+                branches.add(new Stmt.Match.Branch(owner,parts.get(parts.size()-1),
+                    branchCtx.IDENT() == null ? null : branchCtx.IDENT().getText(),List.of(value)));
+            }
+            Stmt.Match cases = new Stmt.Match(buildExpression(matchCtx.expression()),branches);
+            cases.span = span(matchCtx);
+            Expr.Match expr = new Expr.Match(cases);
+            expr.span = span(ctx);
+            return expr;
+        }
         return buildOr(ctx.orExpression());
     }
 

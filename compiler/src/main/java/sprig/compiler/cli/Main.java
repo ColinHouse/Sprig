@@ -87,6 +87,7 @@ public final class Main {
             return 0;
         }
         return switch (args[0]) {
+            case "fmt" -> FormatCommand.run(args);
             case "check" -> check(args);
             case "run" -> run(args);
             case "build" -> build(args);
@@ -128,6 +129,7 @@ public final class Main {
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");
         out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
+        out.println("  fmt <file.spr|directory> [--check] [--json] canonical comment-preserving formatting");
         out.println("  version");
     }
 

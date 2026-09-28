@@ -55,9 +55,11 @@ with tempfile.TemporaryDirectory(prefix="sprig-agent-tools-") as temp:
     verify("api-report usage", usage.returncode == 0 and "Usage: api-report" in usage.stdout, usage.stdout)
 
     ledger = ROOT / "examples/ledger"
-    if not (ledger / "sprig.lock").is_file():
-        run(ledger, "resolve", "--offline")
+    # Ignored local locks may predate a dependency manifest change. Refresh
+    # fixture state explicitly; API/check/run must continue refusing stale locks.
+    prepared = run(ledger, "resolve", "--offline")
     if (ledger / "sprig.lock").is_file():
+        assert prepared.returncode == 0, prepared.stdout + prepared.stderr
         project_snapshot = snapshot(ledger, ".", work / "project.json")
         project = json.loads(project_snapshot.read_text(encoding="utf-8"))
         if project.get("kind") == "sprig-project":

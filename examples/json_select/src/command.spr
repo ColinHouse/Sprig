@@ -2,9 +2,9 @@ import "@cli/cli.spr" as cli
 
 func options() -> List[cli.OptionSpec]:
     return [
-        cli.OptionSpec(name="input", short_name="i", kind=cli.OptionKind.VALUE, description="JSON input file"),
-        cli.OptionSpec(name="key", short_name="k", kind=cli.OptionKind.VALUE, description="Top-level object member to select"),
-        cli.OptionSpec(name="output", short_name="o", kind=cli.OptionKind.VALUE, description="Write selected JSON to this file"),
-        cli.OptionSpec(name="verbose", short_name="v", kind=cli.OptionKind.FLAG, description="Print the selected member name"),
-        cli.OptionSpec(name="help", short_name="h", kind=cli.OptionKind.FLAG, description="Show usage")
+        cli.OptionSpec(name = "input", short_name = "i", kind = cli.OptionKind.VALUE, description = "JSON input file"),
+        cli.OptionSpec(name = "key", short_name = "k", kind = cli.OptionKind.VALUE, description = "Top-level object member to select"),
+        cli.OptionSpec(name = "output", short_name = "o", kind = cli.OptionKind.VALUE, description = "Write selected JSON to this file"),
+        cli.OptionSpec(name = "verbose", short_name = "v", kind = cli.OptionKind.FLAG, description = "Print the selected member name"),
+        cli.OptionSpec(name = "help", short_name = "h", kind = cli.OptionKind.FLAG, description = "Show usage")
     ]

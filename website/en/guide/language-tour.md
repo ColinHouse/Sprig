@@ -49,7 +49,8 @@ shadow a field.
 <<< @/snippets/variants.spr
 
 `enum` cases carry no payload. `variant` declares a sealed sum type whose
-cases have immutable named fields. `match` is a **statement**: each case names
+cases have immutable named fields. Statement `match` allows multi-statement suites; expression `match` produces a
+value with exactly one expression per branch. Each case names
 one enum or variant case, optionally binding the payload with `as node`.
 Missing, duplicate, wrong-type and unreachable branches are compile errors;
 there is no `default` or wildcard, and no fallthrough. Because the match is
@@ -158,3 +159,10 @@ Generic inference, variance, inheritance and interfaces, `match` expressions,
 **not implemented**. See
 [Known limitations](/en/reference/KNOWN_LIMITATIONS) for the full list, and the
 [stage-1 roadmap](/en/reference/STAGE1_ROADMAP) for what comes next.
+
+## Conservative ergonomics
+
+Use [explicit declaration facades](/en/reference/MODULE_REEXPORTS),
+[value-producing matches](/en/reference/MATCH_EXPRESSIONS) and
+[canonical comment-preserving formatting](/en/reference/FORMATTER).
+These add no wildcard exports, block expressions or formatter configuration.

@@ -40,7 +40,8 @@
 <<< @/snippets/variants.spr
 
 `enum` 的 case 不携带负载。`variant` 声明封闭的 sum type，case 的字段具名且不可变。
-`match` 是**语句**：每个分支写一个 enum 或 variant case，可以用 `as node` 绑定负载。
+语句 `match` 支持多语句分支；表达式 `match` 每个分支只包含一个表达式并产生结果。
+每个分支写一个 enum 或 variant case，可以用 `as node` 绑定负载。
 缺失、重复、类型错误和不可达的分支都会报错；没有 `default` 或通配分支，也没有
 fallthrough。穷尽性由编译器保证，因此给 variant 增加 case 时，所有漏掉它的 visitor
 都会编译失败——仓库里的 AST visitor 实验正依赖这一点。
@@ -129,3 +130,11 @@ JVM 桥接仅针对对应的 Sprig 自有 `sprig.runtime.Fn0`–`Fn3` 形参签�
 字符串插值都**尚未实现**。完整列表见
 [已知限制](/reference/known-limitations)，后续规划见
 [Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。
+
+## 保守的易用性改进
+
+`sprig fmt` 提供确定性、保留注释、无配置的格式化。模块可用
+`export alias.Symbol` 显式重导出声明，且不绕过包的模块导出边界。
+表达式 `match` 每个分支只允许一个表达式；多语句分支继续使用语句 match。
+参见 [格式化](/en/reference/FORMATTER)、[重导出](/en/reference/MODULE_REEXPORTS)
+和 [match 表达式](/en/reference/MATCH_EXPRESSIONS)。不提供通配导出或通用块表达式。
