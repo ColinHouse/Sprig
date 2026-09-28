@@ -67,6 +67,13 @@ def main():
               "tests/project/check_project.py", "tests/project_deps/check_deps.py",
               "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
               "tests/adversarial/v08/check_projects.py"]
+    suites += ["tests/adversarial/current/check_semantics.py",
+               "tests/adversarial/current/check_type_names.py",
+               "tests/adversarial/current/check_layout_lines.py",
+               "tests/adversarial/current/check_jvm_bridges.py",
+               "tests/adversarial/current/check_properties.py",
+               "tests/adversarial/current/check_install_failures.py",
+               "tests/adversarial/current/check_sdk_composition.py"]
     suites += ["tests/callables/check_callables.py", "tests/installer/check_installer.py", "tests/upgrade/check_upgrade.py",
                "tests/cli_library/check_cli_library.py", "tests/web/check_web.py", "tests/sqlite/check_sqlite.py", "tests/sqlite/check_migrations.py", "tests/dogfood/check_installed_sdk.py", "tests/maven/check_resolver.py", "scripts/test-stdlib.py",
                "scripts/test-showcases.py", "tests/release_hardening/check_hardening.py"]
