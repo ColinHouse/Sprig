@@ -166,6 +166,22 @@ public final class SprigRuntime {
     }
 
     /** Deep structural equality used by Sprig {@code ==} on reference values. */
+    /**
+     * {@code in} helpers. Arguments are evaluated left-to-right, so the element
+     * expression runs before the container expression exactly as written.
+     */
+    public static boolean listContains(Object element, SprigList<?> list) {
+        return list.contains(element);
+    }
+
+    public static boolean mapContainsKey(Object key, SprigMap<?, ?> map) {
+        return map.containsKeyObject(key);
+    }
+
+    public static boolean stringContains(String needle, String haystack) {
+        return haystack.contains(needle);
+    }
+
     public static boolean equalsValue(Object a, Object b) {
         if (a instanceof Double x && b instanceof Double y) return x.doubleValue() == y.doubleValue();
         if (a instanceof Float x && b instanceof Float y) return x.floatValue() == y.floatValue();

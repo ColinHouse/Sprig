@@ -1,0 +1,2 @@
+func put(m: MutableMap[Int, Int], key: String) -> Unit:
+    m[key] = 5

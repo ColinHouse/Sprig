@@ -38,6 +38,12 @@ positional arguments. `match` lists every case and has no wildcard.
 
 Use `T?` for expected absence and narrow with `if value != null` before use.
 `List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
+`==`/`!=` compare values; nullable `Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?`
+comparisons are null-safe and widen to the common type (`Int32?` → `Int?`,
+`Float32?` → `Float?`). Binary operands evaluate left to right, each exactly
+once, so `needle in haystack` evaluates `needle` first. Map indexing reads
+return `V?`; `m[key] += x` requires an existing `key` and raises a catchable
+`Error` when it is missing.
 `Int` is checked signed 64-bit, `Int32` checked signed 32-bit, `Float` is IEEE
 binary64, and `Float32` binary32. No implicit lossy numeric conversion occurs.
 See `sprig help numerics` for syntax and `NUMERIC_SEMANTICS.md` for details.

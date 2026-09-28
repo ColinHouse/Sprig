@@ -162,6 +162,7 @@ public abstract class Expr extends Node {
         public final Expr right;
         public boolean stringConcat;
         public boolean valueEquality; // use equals() instead of ==
+        public Type comparisonType; // null-safe scalar equality target decided by the checker
 
         public Binary(String op, Expr left, Expr right) {
             this.op = op;

@@ -32,6 +32,11 @@ public class SprigMap<K, V> {
         return entries.containsKey(key);
     }
 
+    /** Erased containment check used by generated code with wildcard key types. */
+    public boolean containsKeyObject(Object key) {
+        return entries.containsKey(key);
+    }
+
     public SprigList<K> keys() {
         return new SprigList<>(new ArrayList<>(entries.keySet()));
     }

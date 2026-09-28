@@ -455,7 +455,8 @@ public final class TypeChecker {
                 receiver = receiver.nonNull();
             }
             if (receiver instanceof ListType list) {
-                checkExpr(index.index, NativeType.INT);
+                Type idx = checkExpr(index.index, NativeType.INT);
+                requireAssignable(NativeType.INT, idx, index.index.span, Codes.TYPE_MISMATCH, "list index");
                 if (!list.mutable) {
                     diagnostics.add(Diagnostic.error(Codes.COLLECTION_IMMUTABLE, Phase.TYPE,
                             "Cannot mutate List[" + list.element.display() + "]; convert it with toMutableList()",
@@ -463,7 +464,8 @@ public final class TypeChecker {
                 }
                 targetType = list.element;
             } else if (receiver instanceof MapType map) {
-                checkExpr(index.index, map.key);
+                Type idx = checkExpr(index.index, map.key);
+                requireAssignable(map.key, idx, index.index.span, Codes.TYPE_MISMATCH, "map key");
                 if (!map.mutable) {
                     diagnostics.add(Diagnostic.error(Codes.COLLECTION_IMMUTABLE, Phase.TYPE,
                             "Cannot mutate Map[" + map.key.display() + ", " + map.value.display()
@@ -1471,6 +1473,17 @@ public final class TypeChecker {
                     "Cannot compare " + left.display() + " with " + right.display(),
                     module.uri, binary.span).withTypes(left.display(), right.display()));
             return NativeType.BOOL;
+        }
+        // Nullable scalars use null-safe value equality on the common Sprig
+        // numeric/boolean type; primitive local comparisons stay primitive.
+        if (left.isNullable() || right.isNullable()) {
+            if (isInteger(leftBase) && isInteger(rightBase)) {
+                binary.comparisonType = NullableType.of(NativeType.INT);
+            } else if (isBinaryFloat(leftBase) && isBinaryFloat(rightBase)) {
+                binary.comparisonType = NullableType.of(NativeType.FLOAT);
+            } else if (leftBase == NativeType.BOOL && rightBase == NativeType.BOOL) {
+                binary.comparisonType = NullableType.of(NativeType.BOOL);
+            }
         }
         // Reference-like values (including String) use value equality in Sprig;
         // Int/Float/Bool use primitive comparison.

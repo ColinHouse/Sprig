@@ -18,12 +18,20 @@ through the exact-tag release workflow; the executed evidence is recorded in the
 - **Expression `match`** — `match` can be used as an expression with strict
   contextual result types, shared exhaustive/binder rules, side-effect-safe
   scrutinee evaluation, and checked effects.
-- **Adversarial correctness pass** — eight confirmed defects fixed with
+- **Adversarial correctness pass** — ten confirmed defects fixed with
   independent regressions: inferred global binding soundness, generated Java
   type-name collisions, default field effect propagation, `finally` completion
   analysis, bare-CR layout positions, JVM source-vs-bridge method resolution,
-  unnamed-package imports rejected before `javac`, and managed-installer ZIP
-  hardening (links, traversal, duplicate entries).
+  unnamed-package imports rejected before `javac`, managed-installer ZIP
+  hardening (links, traversal, duplicate entries), indexed-assignment key/index
+  type checking (writes now enforce the same compatibility the read path
+  already enforced), and null-safe nullable scalar equality (`Int32?`/`Float32?`
+  no longer use Java object identity and null operands no longer throw).
+- **Evaluation and mutation contracts** — binary operands evaluate left to
+  right, each exactly once, so `in` no longer inherits Java's
+  `container.contains(element)` argument order; compound assignment through a
+  map index requires an existing key and raises a catchable `Error` when the
+  key is missing instead of a Java unboxing failure.
 - **Managed SDK install and upgrade** — versioned user-scoped installs under
   `~/.sprig` with checksum + smoke verification, atomic `current` switch and
   `sprig upgrade`/`upgrade --check` on Linux/macOS; source checkouts and

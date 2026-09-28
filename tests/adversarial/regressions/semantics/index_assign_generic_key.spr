@@ -1,0 +1,5 @@
+generic T:
+    func put(map: MutableMap[Int, Int], key: T) -> Unit:
+        map[key] = 1
+let m: MutableMap[Int, Int] = {1: 2}
+put[String](m, "bad")

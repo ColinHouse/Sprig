@@ -1,0 +1,3 @@
+let m: MutableMap[Int, Int] = {1: 2}
+let key: Int? = null
+m[key] = 5
