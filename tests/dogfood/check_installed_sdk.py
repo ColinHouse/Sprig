@@ -135,7 +135,8 @@ def main():
             assert capabilities['stringSemantics']['positionUnit'] == 'unicode-code-point'
             assert capabilities['stringSemantics']['hasCharType'] is False
             assert capabilities['featureGuidance']['inheritance']['supported'] is False
-            check = installed('check', 'examples/hello.spr', cwd=sdk_home / 'current', env=env)
+            check = installed('check', 'website/snippets/tutorial/hello.spr',
+                              cwd=sdk_home / 'current', env=env)
             assert check.returncode == 0
 
             explained = json.loads(installed('explain', 'SPR-TYPE-NULLABLE', '--json', cwd=work, env=env).stdout)

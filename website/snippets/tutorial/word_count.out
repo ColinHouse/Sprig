@@ -1,0 +1,9 @@
+the: 3
+quick: 1
+brown: 1
+fox: 2
+jumps: 1
+over: 1
+lazy: 1
+dog: 1
+sorted keys: [brown, dog, fox, jumps, lazy, over, quick, the]

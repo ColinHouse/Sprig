@@ -67,6 +67,20 @@ Linux/macOS × JDK17/26 hosted matrix; Windows preview runs separately and is no
 results in the milestone validation record. A local contributor gate does
 not establish release or platform validation.
 
+## Where code examples live
+
+| Location | Purpose |
+|---|---|
+| `website/snippets/` | Teaches Sprig: executable documentation. Every `.spr` file has an explicit role in `website/snippets/snippets.json`; executable snippets run with an output oracle, import-only modules are check-only. |
+| `examples/` | Programs or projects with an independent user-facing purpose. |
+| `tests/` | Proves Sprig behavior: regression fixtures, goldens and harnesses. |
+
+Syntax demonstrations and tutorial programs belong under `website/snippets/`
+and must be executable documentation. `examples/` is reserved for programs or
+projects with an independent user-facing purpose; regression fixtures belong
+under `tests/`. Deleting an executable snippet's `.out` oracle fails the
+documentation gate instead of silently downgrading it to a static check.
+
 ## Scope and review
 
 - `docs`, `tests-only`, `tooling`, `stdlib`, and `compiler` describe the area.

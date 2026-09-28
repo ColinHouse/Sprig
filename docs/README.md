@@ -31,10 +31,9 @@ describes the kit's own scope.
 ## Release history (`docs/releases/`, `docs/RELEASE_VALIDATION.md`)
 
 `docs/releases/` keeps one note per published version and is historical.
-`RELEASE_VALIDATION.md` is the release validation record: it tracks the release
-being prepared and the most recent published evidence. Neither is a contract
-page: use the current `docs/` pages and `capabilities --json` for what the
-checkout does.
+`RELEASE_VALIDATION.md` is the validation record for the most recent published
+release; a newer release replaces it. Neither is a contract page: use the
+current `docs/` pages and `capabilities --json` for what the checkout does.
 
 ## Engineering history (`docs/milestones/`)
 

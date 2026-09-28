@@ -108,7 +108,7 @@ def main():
     blocker.write_text("not a directory", encoding="utf-8")
     results.append(run_case(
         "build-json-io-failure",
-        ["build", "--json", ROOT / "examples/hello.spr", "-d", blocker],
+        ["build", "--json", ROOT / "website/snippets/tutorial/hello.spr", "-d", blocker],
         expect_exit=2, expected_codes=["SPR-JVM-INTERNAL"]))
     # Non-JSON run of a failing program must keep human-readable output.
     results.append(run_case("run-text-runtime-error",

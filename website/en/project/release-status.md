@@ -1,21 +1,19 @@
 # Release status
 
-**Latest published SDK:** [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1), compiler `0.3.0-alpha.1`, JDK17+, Apache-2.0. Experimental Alpha, not production-ready.
+**Published SDK:** [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1), compiler `0.4.0-alpha.1`, JDK17+, Apache-2.0. Experimental Alpha, not production-ready.
 
-The **v0.4.0-alpha.1 release candidate** (published once the annotated tag
-workflow completes) adds the canonical formatter, explicit module re-exports, expression
+v0.4 adds the canonical formatter, explicit module re-exports, expression
 `match`, Unicode code-point string semantics, `sprig api` module/project
 introspection and managed SDK upgrades on top of v0.3, plus an adversarial
 correctness pass: inferred globals, generated type-name collisions, default
-field effects, `finally` completion, CR layout, JVM source/bridge resolution and
-installer ZIP hardening.
+field effects, `finally` completion, CR layout, JVM source/bridge resolution,
+indexed-assignment key/index checks, nullable scalar equality and installer ZIP
+hardening.
 
-Candidate verification: Linux/macOS × JDK17/26 source gates, grammar, docs and
-editor checks passed; the annotated tag workflow builds and smoke-tests the
-actual ZIP, and its evidence is recorded afterwards. Windows is an experimental,
-non-blocking preview. The SDK includes Maven Resolver, locked project
-classpaths, explicit `@std` IO/JSON modules, SQLite/Web libraries and three
-showcases.
+Linux/macOS × JDK17/26 passed source and the same actual tagged SDK ZIP gates.
+Windows is an experimental, non-blocking preview. The SDK includes Maven
+Resolver, locked project classpaths, explicit `@std` IO/JSON modules, SQLite/Web
+libraries and three showcases.
 
 See the [validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md) for source SHA, archive SHA256,
 commands, actual CI links and limits. Untagged source builds report development,

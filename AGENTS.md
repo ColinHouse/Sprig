@@ -83,7 +83,11 @@ change touches, as applicable:
 - Distinguish evidence levels when reporting results: parser acceptance,
   static checking, `javac` success, JVM runtime behavior.
 - Documented examples are executed by `tools/verify-doc-snippets.py`; keep
-  snippets compiling and their `.out` files current.
+  snippets compiling and their `.out` files current. Every `website/snippets/`
+  `.spr` file has an explicit role in `website/snippets/snippets.json`
+  (`executable` with an oracle or `import-only`); tutorial programs belong
+  there, application programs belong in `examples/`, regression fixtures in
+  `tests/`.
 - Only claim tests you actually ran.
 
 ## Boundaries

@@ -75,8 +75,9 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
         for example in json.loads(command("help", topic, "--json"))["examples"]:
             if example.startswith(("examples/", "website/", "tests/")):
                 assert (sdk / example).is_file(), (topic, example)
-    assert json.loads(command("check", "examples/hello.spr", "--json"))["diagnostics"] == []
-    assert json.loads(command("run", "examples/hello.spr", "--json"))["programOutput"] == "Hello, Ada!\n"
+    hello = "website/snippets/tutorial/hello.spr"
+    assert json.loads(command("check", hello, "--json"))["diagnostics"] == []
+    assert json.loads(command("run", hello, "--json"))["programOutput"] == "Hello, Ada!\n"
     independent = Path(temp) / "standalone std user"
     independent.mkdir()
     source = independent / "main.spr"
