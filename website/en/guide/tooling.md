@@ -21,7 +21,7 @@ version
 
 `check`, `build`, `run`, and `api` accept repeated `--classpath` values for
 local JARs/directories. They use the same resolved path. No dependency is
-downloaded. These commands are included in the v0.3.0-alpha.1 SDK.
+downloaded. These commands are included in the v0.4.0-alpha.1 SDK.
 Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
 
 - `check` stops before code generation. `--syntax-only` stops even earlier,
@@ -44,7 +44,7 @@ A successful run:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.3.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -58,7 +58,7 @@ A failed check (path shortened here; the real `uri` is a `file:` URI):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.3.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},

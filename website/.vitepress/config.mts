@@ -94,8 +94,8 @@ export default defineConfig({
               items: [
                 { text: '快速开始', link: '/guide/getting-started' },
                 { text: '语言导览', link: '/guide/language-tour' },
-                { text: '泛型（v0.8）', link: '/guide/generics' },
-                { text: '项目（v0.8）', link: '/guide/projects' },
+                { text: '泛型', link: '/guide/generics' },
+                { text: '项目', link: '/guide/projects' },
                 { text: 'JVM 互操作', link: '/guide/jvm-interop' },
                 { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
                 { text: '工具与 JSON', link: '/guide/tooling' },
@@ -130,7 +130,7 @@ export default defineConfig({
           ]
         },
         footer: {
-          message: 'Sprig 采用 Apache-2.0 许可证 · v0.2.0-alpha.1 已作为 prerelease 发布',
+          message: 'Sprig 采用 Apache-2.0 许可证 · v0.4.0-alpha.1 已作为 prerelease 发布',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }
@@ -168,8 +168,8 @@ export default defineConfig({
               items: [
                 { text: 'Getting Started', link: '/en/guide/getting-started' },
                 { text: 'Language Tour', link: '/en/guide/language-tour' },
-                { text: 'Generics (v0.8)', link: '/en/guide/generics' },
-                { text: 'Projects (v0.8)', link: '/en/guide/projects' },
+                { text: 'Generics', link: '/en/guide/generics' },
+                { text: 'Projects', link: '/en/guide/projects' },
                 { text: 'JVM Interoperability', link: '/en/guide/jvm-interop' },
                 { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
@@ -185,8 +185,8 @@ export default defineConfig({
             {
               text: 'Language contract',
               items: [
-                { text: 'Language spec (v0.7 design)', link: '/en/reference/LANGUAGE_SPEC' },
-                { text: 'Generics contract (v0.8)', link: '/en/reference/GENERICS' },
+                { text: 'Language spec (design contract)', link: '/en/reference/LANGUAGE_SPEC' },
+                { text: 'Generics contract', link: '/en/reference/GENERICS' },
                 { text: 'Quick reference', link: '/en/reference/QUICK_REFERENCE' },
                 { text: 'Numerical semantics', link: '/en/reference/NUMERIC_SEMANTICS' },
                 { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
@@ -230,7 +230,7 @@ export default defineConfig({
         },
         footer: {
           message:
-            'Sprig is licensed under Apache-2.0 · v0.2.0-alpha.1 published as a prerelease',
+            'Sprig is licensed under Apache-2.0 · v0.4.0-alpha.1 published as a prerelease',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }

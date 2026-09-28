@@ -90,7 +90,7 @@ makes the floating-point error explicit instead of hiding it.
 
 ## Larger programs in the test suite
 
-- `tests/runtime/` — eighteen end-to-end programs with golden stdout:
+- `tests/runtime/` — nineteen end-to-end programs with golden stdout:
   arithmetic, functions, control flow, classes, variants, enums, nullability,
   errors, collections, lambdas, strings, modules, assertions, formatting and
   JVM interop.

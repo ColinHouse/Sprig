@@ -3,7 +3,7 @@
 本页介绍当前 stage-0 编译器实际实现的 Sprig。页面中的每一段示例都是
 `website/snippets/` 下的真实文件，由 `tools/verify-doc-snippets.py` 在文档检查时执行。
 
-权威文档是[语言规范（v0.7 设计）](/en/reference/LANGUAGE_SPEC)与
+权威文档是[语言规范（设计契约）](/en/reference/LANGUAGE_SPEC)与
 [已实现功能状态](/en/reference/FEATURE_STATUS_IMPLEMENTED)。当设计稿超出当前实现时，
 本页以编译器实际行为为准。
 

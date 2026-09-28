@@ -1,6 +1,6 @@
-# Generics (v0.8)
+# Generics
 
-Sprig v0.8 adds user-defined generics with one guiding rule: **declaration and
+Sprig user-defined generics follow one guiding rule: **declaration and
 use are explicit**. There is no inference, no variance and no hidden
 conversion. This page is the runnable tour; the authoritative contract is the
 [generics reference](/en/reference/GENERICS).
@@ -81,7 +81,7 @@ every match that misses it with `SPR-MATCH-NONEXHAUSTIVE`.
 `values[index]` is indexing, not a type application. The compiler decides from
 symbol kinds: a bracket whose base names a generic declaration is a generic
 use, otherwise a single plain name is an index. Index-then-call
-(`handler[0](arg)`) is not a valid v0.8 form.
+(`handler[0](arg)`) is not a valid form.
 
 ## JVM lowering
 
@@ -89,7 +89,7 @@ Generics are erased and boxed in generated Java: a type parameter becomes
 `Object`, generic classes are raw at the JVM level, and the compiler inserts
 boxing/casts. See the [contract](/en/reference/GENERICS) for the exact rules.
 
-## Not in v0.8
+## Not implemented
 
 Inference, variance, `Comparable`, user-defined capabilities and publishing/registry. Multiple parameters, `Equatable` and the project manifest model
 are implemented. See

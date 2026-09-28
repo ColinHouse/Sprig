@@ -1,4 +1,4 @@
-# Sprig agent bootstrap guide (v0.3.0-alpha.1)
+# Sprig agent bootstrap guide (v0.4.0-alpha.1)
 
 This guide assumes only the release archive and a JDK 17+ are available.
 The compiler's versioned catalog is the quickest source of implemented syntax.
@@ -21,6 +21,7 @@ bin/sprig api . --json
 bin/sprig check program.spr --json
 bin/sprig explain SPR-CODE --json
 bin/sprig run program.spr --json
+bin/sprig fmt program.spr --check --json
 ```
 
 Use `help` topics before writing unfamiliar constructs. `capabilities` lists
@@ -103,3 +104,8 @@ For details, see `docs/QUICK_REFERENCE.md`, `docs/JVM_INTEROP.md`,
 Declaration facades use `export alias.Symbol` after imports and before other
 code. Query `sprig api module.spr --json` for exported signatures and origins.
 No wildcard, renaming or implicit reexport exists. See docs/MODULE_REEXPORTS.md.
+
+`sprig fmt file.spr` (or a project directory) writes canonical,
+comment-preserving source and fails without rewriting malformed input;
+`--check --json` reports whether files would change. Formatting never changes
+program semantics. See docs/FORMATTER.md.

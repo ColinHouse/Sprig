@@ -14,10 +14,10 @@ npm run package
 
 使用 VS Code 扩展面板的 **Install from VSIX…** 安装生成的
 `dist/sprig-language-0.1.0.vsix`。预览插件尚未发布到 Marketplace，也不在
-v0.3 SDK ZIP 中。
+v0.4 SDK ZIP 中。
 
 语法高亮不需要编译器。检查和运行需要另外安装
-[SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1) 和 JDK17+，
+[SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1) 和 JDK17+，
 并把 `sprig.compilerPath` 设置为 SDK 的 `bin/sprig`。默认先搜索 PATH，再搜索
 祖先目录中的源码构建 `bin/`。
 

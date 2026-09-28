@@ -1,9 +1,9 @@
-# Sprig v0.8-dev stage-0 — implemented feature status
+# Sprig stage-0 — implemented feature status
 
 This table reflects what the compiler in this directory **actually does**, as
 verified by `scripts/test.sh`. The release validation record is
 [on GitHub](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md).
-The historical v0.7 design kit describes target semantics rather than current capabilities.
+The historical design kit in `spec/` describes target semantics rather than current capabilities.
 
 | Feature | Front end | Static semantics | Codegen + runtime | Tests |
 |---|---|---|---|---|

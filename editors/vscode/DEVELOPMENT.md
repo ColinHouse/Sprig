@@ -1,7 +1,7 @@
 # Sprig VS Code extension plan and verification
 
 Approved scope: installable desktop extension with syntax highlighting, saved-file
-checking, explicit Run and generated Java viewing. Compiler 0.3.0-alpha.1+ remains
+checking, explicit Run and generated Java viewing. Compiler 0.4.0-alpha.1+ remains
 the semantic authority. No compiler syntax/type redesign or Marketplace release.
 
 Architecture: TextMate highlighting and language configuration work without a

@@ -1,4 +1,4 @@
-# Sprig v0.8 generics (implemented contract)
+# Sprig generics (implemented contract)
 
 > Sole current generics reference. The website and SDK use this source.
 
@@ -111,10 +111,10 @@ reports `SPR-MATCH-NONEXHAUSTIVE` for every match that misses it.
 that parses as type references as a candidate; the checker decides:
 
 - if the base names a generic declaration, the bracket is a type application;
-- otherwise a single plain name is indexing, exactly as in v0.7.
+- otherwise a single plain name is indexing, as in the design kit.
 
 One consequence: `handler[index](arg)` (index, then call the result) is not a
-valid v0.8 form and is diagnosed; index-then-call was never usable with the
+valid form and is diagnosed; index-then-call was never usable with the
 current function-type model.
 
 ## JVM lowering
@@ -130,7 +130,7 @@ Generics are erased and boxed in generated Java:
 Sprig types are preserved at the source level: `Box[Int]` is `Int` to Sprig
 even though the JVM sees a boxed value.
 
-## Not part of v0.8
+## Not implemented
 
 Generic inference, variance, `Comparable` and any user-defined capability,
 generic constraints on JVM types, and registry/publishing features. The

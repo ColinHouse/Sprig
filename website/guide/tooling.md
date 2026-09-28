@@ -20,7 +20,7 @@ version
 ```
 
 `check`、`build`、`run`、`api` 可重复使用 `--classpath` 指定本地 JAR 或目录；
-四个命令采用同一解析路径，不自动下载依赖。这些命令已包含在 v0.3.0-alpha.1 SDK 中。
+四个命令采用同一解析路径，不自动下载依赖。这些命令已包含在 v0.4.0-alpha.1 SDK 中。
 例如用 `sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
 
 - `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。
@@ -39,7 +39,7 @@ version
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.3.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -53,7 +53,7 @@ version
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.3.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},

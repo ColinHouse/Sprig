@@ -1,9 +1,10 @@
-# Dependency contract — compiler v0.3.0-alpha.1 / language v0.8-dev
+# Dependency contract — compiler v0.4.0-alpha.1
 
 `sprig resolve` is the only command that writes `sprig.lock` or performs Maven
 network requests. `check/build/run/api/doctor` consume one verified project classpath.
 A source file explicitly outside the discovered project source root remains standalone.
-The public v0.2 release did not implement Maven; these rules describe the v0.3 source.
+The public v0.2 release did not implement Maven. These rules describe the
+Maven/JVM dependency behavior implemented since v0.3 and shipped in v0.4.0-alpha.1.
 
 ## Sprig packages
 

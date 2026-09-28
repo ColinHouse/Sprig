@@ -91,7 +91,7 @@ branch = "main"
   revision fails with `SPR-DEP-OFFLINE`.
 - Cycles and duplicate aliases are rejected with structured diagnostics.
 
-**Maven/JVM dependencies are implemented in the v0.3 source candidate.**
+**Maven/JVM dependencies are implemented.**
 Declare exact release coordinates in `[[jvm]]`, run resolve, then use
 check/build/run/api/doctor without manually locating JARs. Apache Resolver handles
 parents/BOMs/transitives. Schema-3 locks record JAR/POM SHA-256, graph and order.
