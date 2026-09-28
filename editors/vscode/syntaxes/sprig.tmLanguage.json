@@ -103,7 +103,7 @@
         },
         {
           "name": "storage.type.sprig",
-          "match": "\\b(let|var|func|fn|class|enum|variant|generic)\\b"
+          "match": "\\b(let|var|func|fn|class|enum|variant|generic|conform)\\b"
         },
         {
           "name": "keyword.control.sprig",

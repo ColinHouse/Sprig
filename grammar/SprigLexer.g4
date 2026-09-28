@@ -8,6 +8,7 @@ GENERIC: 'generic';
 CLASS: 'class';
 ENUM: 'enum';
 VARIANT: 'variant';
+CONFORM: 'conform';
 MATCH: 'match';
 CASE: 'case';
 FUNC: 'func';

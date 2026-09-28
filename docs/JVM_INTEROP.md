@@ -18,6 +18,11 @@ if date != null:
     print(date.getYear())
 ```
 
+For Java framework callbacks, `conform C to J` declares a foreign JVM
+conformance between an existing Sprig class and an imported Java interface; see
+[foreign JVM conformance](JVM_CONFORMANCE.md). That declaration adds no methods
+and performs no adaptation.
+
 `sprig api java.time.LocalDate --json` reports Java and mapped Sprig parameter
 and return types, static/instance status, overloads, checked exceptions,
 generic signatures, and `usableFromSprig`/`unusableReason`. Use

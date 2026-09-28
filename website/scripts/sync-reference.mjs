@@ -21,6 +21,7 @@ const pages = [
   ['docs/MODULE_REEXPORTS.md', 'generated/en/reference/MODULE_REEXPORTS.md'],
   ['docs/FORMATTER.md', 'generated/en/reference/FORMATTER.md'],
   ['docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP.md'],
+  ['docs/JVM_CONFORMANCE.md', 'generated/en/reference/JVM_CONFORMANCE.md'],
   ['docs/STAGE1_ROADMAP.md', 'generated/en/reference/STAGE1_ROADMAP.md'],
   ['spec/docs/LANGUAGE_SPEC.md', 'generated/en/reference/LANGUAGE_SPEC.md'],
   ['docs/GENERICS.md', 'generated/en/reference/GENERICS.md'],

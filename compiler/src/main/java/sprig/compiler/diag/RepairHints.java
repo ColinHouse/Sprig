@@ -74,7 +74,12 @@ final class RepairHints {
             Map.entry(Codes.GENERIC_NULLABLE, new Hint("generics", "pass-a-non-nullable-type-argument")),
             Map.entry(Codes.RUNTIME_ERROR, new Hint("errors", "catch-or-declare-the-failing-operation")),
             Map.entry(Codes.RUNTIME_EXCEPTION, new Hint("errors", "catch-or-declare-the-failing-operation")),
-            Map.entry(Codes.CLI_OPTION, new Hint("agents", "use-documented-command-arguments")));
+            Map.entry(Codes.CLI_OPTION, new Hint("agents", "use-documented-command-arguments")),
+            Map.entry(Codes.CONFORM_SOURCE, new Hint("conform", "declare-conform-next-to-a-local-non-generic-class")),
+            Map.entry(Codes.CONFORM_TARGET, new Hint("conform", "import-a-public-non-generic-java-interface")),
+            Map.entry(Codes.CONFORM_MEMBER, new Hint("conform", "match-the-java-signature-exactly")),
+            Map.entry(Codes.CONFORM_OVERLOAD, new Hint("conform", "use-an-interface-with-unique-abstract-method-names")),
+            Map.entry(Codes.CONFORM_EFFECTS, new Hint("conform", "make-throws-compatible-with-the-interface")));
 
     static String helpTopic(String code) {
         Hint hint = HINTS.get(code);

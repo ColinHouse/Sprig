@@ -57,6 +57,8 @@ public final class AstBuilder {
                 module.decls.add(buildEnum(ctx));
             } else if (child instanceof SprigParser.VariantDefinitionContext ctx) {
                 module.decls.add(buildVariant(ctx));
+            } else if (child instanceof SprigParser.ConformDefinitionContext ctx) {
+                module.decls.add(buildConform(ctx));
             } else if (child instanceof SprigParser.FunctionDefinitionContext ctx) {
                 module.decls.add(buildFunction(ctx));
             } else if (child instanceof SprigParser.StatementContext ctx) {
@@ -111,6 +113,12 @@ public final class AstBuilder {
             methods.add(buildFunction(method));
         }
         Decl.ClassDecl decl = new Decl.ClassDecl(ctx.IDENT().getText(), fields, methods);
+        decl.span = span(ctx);
+        return decl;
+    }
+
+    private Decl buildConform(SprigParser.ConformDefinitionContext ctx) {
+        Decl.Conform decl = new Decl.Conform(ctx.IDENT(0).getText(), ctx.IDENT(1).getText());
         decl.span = span(ctx);
         return decl;
     }

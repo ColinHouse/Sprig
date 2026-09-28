@@ -10,6 +10,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 | Expression `match` | one expression per branch | strict contextual/inferred results, shared exhaustive/binder rules | Java 17 switch/yield; no closures; scrutinee once | match expression runtime/generic/null/effect tests |
 | Explicit `export alias.Symbol` | yes | original symbols, collisions, cycles and package boundaries | no wrapper/copy | reexport runtime/API/package suite |
 | Canonical `sprig fmt` | trivia-preserving lexer | parse structure invariant | atomic file replacement, check/JSON modes | formatter fixtures + valid corpus |
+| Foreign JVM conformance `conform C to J` | declaration form, one per relation | exact JVM witness matching, v1 restrictions, foreign conformance conversion | emitted `implements`; non-null entry guards (`SPR-CONFORM-*`) | `tests/conform` runtime and negative suite |
 | Functions, typed parameters/returns, recursion | yes | yes | Java static methods | runtime 01/02, visitor |
 | Indentation, blocks, `if`/`elif`/`else`, `while`, `for`, `break`/`continue` | yes | yes | Java control flow | runtime 03/13 |
 | `let`/`var`, local inference, assignment rules | yes | yes (`SPR-NAME-LET-ASSIGN`) | locals/static fields | runtime 16 |

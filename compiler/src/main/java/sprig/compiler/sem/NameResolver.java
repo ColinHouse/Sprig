@@ -58,7 +58,7 @@ public final class NameResolver {
         registerBuiltins(scope);
         declareImports(module);
         for (Decl decl : module.decls) {
-            if (!(decl instanceof Decl.Func)) {
+            if (!(decl instanceof Decl.Func) && !(decl instanceof Decl.Conform)) {
                 declareType(module, decl);
             }
         }
@@ -188,6 +188,9 @@ public final class NameResolver {
     }
 
     private void declareType(Module module, Decl decl) {
+        if (decl instanceof Decl.Conform) {
+            return; // resolved and validated by the conformance checker
+        }
         if (RESERVED_TYPE_NAMES.contains(decl.name)) {
             diagnostics.add(Diagnostic.error(Codes.NAME_DUPLICATE, Phase.NAME,
                     "'" + decl.name + "' is a built-in type name", module.uri, decl.span));

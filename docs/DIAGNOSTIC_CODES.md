@@ -20,6 +20,11 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-MISSING-RETURN | A non-Unit function must return on every path. |
 | SPR-FLOW-THROWS | A recoverable error must be declared with throws or caught. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
+| SPR-CONFORM-EFFECTS | A witness method declares checked exceptions the Java interface method does not permit. |
+| SPR-CONFORM-MEMBER | An existing class method does not exactly match a required abstract Java method. |
+| SPR-CONFORM-OVERLOAD | The Java interface requires overloaded abstract methods, which Sprig classes cannot represent. |
+| SPR-CONFORM-SOURCE | The conform source must be a non-generic Sprig class declared in this module. |
+| SPR-CONFORM-TARGET | The conform target must be an imported public, non-generic, non-sealed Java interface. |
 | SPR-JVM-AMBIGUOUS | The Java overload is ambiguous for these argument types. |
 | SPR-JVM-CLASS | The imported Java class could not be loaded, or it lives in the unnamed package. |
 | SPR-JVM-CLASSPATH | A `--classpath` entry is empty, missing, or not a JAR/directory. |

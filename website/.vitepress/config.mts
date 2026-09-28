@@ -206,6 +206,7 @@ export default defineConfig({
                 },
                 { text: 'Known limitations', link: '/en/reference/KNOWN_LIMITATIONS' },
                 { text: 'JVM interop', link: '/en/reference/JVM_INTEROP' },
+                { text: 'Foreign conformance', link: '/en/reference/JVM_CONFORMANCE' },
                 { text: 'Diagnostic codes', link: '/en/reference/DIAGNOSTIC_CODES' },
                 { text: 'Stage-1 roadmap', link: '/en/reference/STAGE1_ROADMAP' },
                 {

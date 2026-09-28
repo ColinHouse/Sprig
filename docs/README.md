@@ -23,7 +23,8 @@ describes the kit's own scope.
 |---|---|
 | Language status and orientation | `FEATURE_STATUS_IMPLEMENTED.md`, `QUICK_REFERENCE.md`, `KNOWN_LIMITATIONS.md` |
 | Syntax features | `FORMATTER.md`, `MATCH_EXPRESSIONS.md`, `MODULE_REEXPORTS.md` |
-| Type and value contracts | `GENERICS.md`, `NUMERIC_SEMANTICS.md`, `NUMERIC_DESIGN_DECISIONS.md`, `JVM_INTEROP.md` |
+| Type and value contracts | `GENERICS.md`, `NUMERIC_SEMANTICS.md`, `NUMERIC_DESIGN_DECISIONS.md` |
+| JVM boundaries | `JVM_INTEROP.md`, `JVM_CONFORMANCE.md` |
 | Projects and dependencies | `PROJECTS.md`, `DEPENDENCIES.md`, `STANDARD_LIBRARY.md`, `HOST_SERVICES.md` |
 | Tooling and operations | `DIAGNOSTIC_CODES.md`, `INSTALL.md`, `SHOWCASES.md` |
 | Future work | `STAGE1_ROADMAP.md` |

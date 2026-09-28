@@ -154,6 +154,13 @@ public final class JavaTypes {
         if (source instanceof JavaType javaType) {
             return boxed.isAssignableFrom(javaType.clazz);
         }
+        if (source instanceof sprig.compiler.types.ClassType classSource && target.isInterface()) {
+            for (Class<?> declared : classSource.decl.conformedInterfaces) {
+                if (target.isAssignableFrom(declared)) {
+                    return true; // declared foreign conformance conversion
+                }
+            }
+        }
         return boxed == Object.class;
     }
 
