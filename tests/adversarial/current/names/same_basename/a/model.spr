@@ -1,0 +1,4 @@
+class Box:
+    let value: Int
+func make() -> Box:
+    return Box(value=42)

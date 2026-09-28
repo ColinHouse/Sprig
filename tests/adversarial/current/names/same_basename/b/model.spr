@@ -1,0 +1,4 @@
+class Box:
+    let value: String
+func make() -> Box:
+    return Box(value="forty")

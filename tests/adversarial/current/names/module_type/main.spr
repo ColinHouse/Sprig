@@ -1,0 +1,3 @@
+class M_main:
+    let value: Int
+print(M_main(value=8).value)

@@ -1,0 +1,6 @@
+import "./a.spr" as a
+import "./b.spr" as b
+class a_Box:
+    let value: String
+print(a.make().value)
+print(a_Box(value="local").value)

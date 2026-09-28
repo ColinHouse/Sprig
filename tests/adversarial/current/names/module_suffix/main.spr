@@ -1,0 +1,6 @@
+import "./a/model.spr" as a
+import "./b/model.spr" as b
+import "./model$2.spr" as c
+print(a.value())
+print(b.value())
+print(c.value())

@@ -1,0 +1,2 @@
+func value() -> Int:
+    return 3
