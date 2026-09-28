@@ -130,7 +130,7 @@ export default defineConfig({
           ]
         },
         footer: {
-          message: 'Sprig 采用 Apache-2.0 许可证 · 最新已发布 v0.3.0-alpha.1（v0.4.0-alpha.1 发布候选）',
+          message: 'Sprig 采用 Apache-2.0 许可证 · v0.4.0-alpha.1 已作为 prerelease 发布',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }
@@ -230,7 +230,7 @@ export default defineConfig({
         },
         footer: {
           message:
-            'Sprig is licensed under Apache-2.0 · latest published v0.3.0-alpha.1 (v0.4.0-alpha.1 release candidate)',
+            'Sprig is licensed under Apache-2.0 · v0.4.0-alpha.1 published as a prerelease',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }

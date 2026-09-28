@@ -50,11 +50,11 @@ Output: `Hello, Sprig!`. Then query `sprig capabilities --json`, edit
 
 ## Release and limitations
 
-The published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1).
-The v0.4.0-alpha.1 release candidate adds the canonical formatter, explicit
+The published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
+v0.4 adds the canonical formatter, explicit
 module re-exports, expression `match`, Unicode code-point string semantics,
 `sprig api` module/project introspection, managed SDK upgrades and an adversarial
-correctness pass; it becomes published when the annotated tag workflow completes.
+correctness pass.
 See [release status](/en/project/release-status), the release assets and the
 checkout's capability output. Sprig is not self-hosted or production ready.
 Publishing/registry, LSP, interfaces and generic inference remain future work.

@@ -14,9 +14,9 @@ sprig upgrade --check
 sprig upgrade
 ```
 
-如需手工安装，可从[发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/INSTALL)。
+如需手工安装，可从[发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/INSTALL)。
 
-已发布版本为 v0.3.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。v0.3 SDK 支持本地/Git/Maven 依赖及显式 @std 内置标准包导入；v0.4.0-alpha.1 发布候选在其上加入 canonical formatter、显式模块 re-export 与表达式 `match`。
+已发布版本为 v0.4.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。v0.4 SDK 在 v0.3 基础（本地/Git/Maven 依赖及显式 @std 内置标准包导入）上加入 canonical formatter、显式模块 re-export 与表达式 `match`。
 
 ## 初始化、解析、运行
 
@@ -76,7 +76,8 @@ JSON 格式见[工具与 JSON](/guide/tooling)。不要从其他语言猜测规�
 
 [Showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)包括
 输出 JSON 的仓库审计器、真实 Maven 库应用和源码分析器，各 README 给出输入和命令。
-基础语法见[语言导览](/guide/language-tour)。
+基础语法见可执行的[教程与示例页](/examples)或[语言导览](/guide/language-tour)；应用程序项目见
+[示例总览](https://github.com/ColinHouse/Sprig/blob/main/examples/README.md)。
 
 想和编码 Agent 一起贡献？读[贡献指南（英文）](/en/project/contributing)和
 `AGENTS.md`，挑选有验收条件的小任务，运行 `scripts/verify.sh`

@@ -99,8 +99,8 @@ invoke `bin/sprig` on Linux/macOS or `bin\\sprig.cmd` on Windows.
 
 ```text
 sprig version
-sprig check examples/hello.spr
-sprig run examples/hello.spr
+sprig check website/snippets/tutorial/hello.spr
+sprig run website/snippets/tutorial/hello.spr
 sprig init my-tool
 cd my-tool
 sprig resolve

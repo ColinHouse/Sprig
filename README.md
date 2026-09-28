@@ -47,7 +47,7 @@ checks. These are implemented contracts; see
 ## Five-minute first project
 
 Install **JDK 17+** with `java` and `javac` on `PATH`.
-The current published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1); the [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1) release candidate is prepared and becomes published when its annotated tag workflow completes.
+The current published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
 On Linux/macOS, install and upgrade it with the [managed installer](docs/INSTALL.md),
 which verifies the release checksum. You can also download its ZIP and `.sha256`,
 verify the checksum, and extract manually. The SDK includes compiler/runtime libraries, **not a JDK**. Supported release platforms:
@@ -69,10 +69,10 @@ cd my-tool
 
 Expected program output: `Hello, Sprig!`. You now have `sprig.toml`,
 `src/main.spr` and a generated `sprig.lock`. Edit the source, check it, run it.
-The v0.4.0-alpha.1 release candidate adds the canonical formatter, explicit
-module re-exports, expression `match`, the adversarial correctness fixes and
-managed SDK upgrades on top of the v0.3 base (local/Git and Maven dependencies,
-explicit @std imports and three tested showcase projects).
+The v0.4 SDK adds the canonical formatter, explicit module re-exports,
+expression `match`, the adversarial correctness fixes and managed SDK upgrades
+on top of the v0.3 base (local/Git and Maven dependencies, explicit @std imports
+and three tested showcase projects).
 
 For the current source milestone (JDK 17+, Python 3.12+, Git):
 
@@ -113,8 +113,9 @@ The SDK includes three project-oriented showcases:
 
 Their READMEs specify real inputs and commands. All three were executed from
 the published SDK; exact artifact and platform evidence is in the validation
-record. Smaller [examples](examples/README.md) and
-[language tour](website/en/guide/language-tour.md) teach individual constructs.
+record. [Executable tutorials](website/snippets/tutorial/hello.spr) and the
+[language tour](website/en/guide/language-tour.md) teach individual constructs;
+the [examples gallery](examples/README.md) collects the application projects.
 
 ### Web + SQLite examples
 

@@ -58,8 +58,8 @@ INCOMPLETE = [
 
 # The five files behind the original 403-prefix fuzz in the acceptance report.
 FUZZ_FILES = [
-    "examples/shapes.spr",
-    "examples/word_count.spr",
+    "website/snippets/tutorial/shapes.spr",
+    "website/snippets/tutorial/word_count.spr",
     "tests/visitor/ast_visitor.spr",
     "tests/review_cases/recursive_visitor.spr",
     "tests/runtime/09_collections.spr",
@@ -67,8 +67,8 @@ FUZZ_FILES = [
 
 # A few more real programs, every fourth line, to widen shape coverage.
 EXTRA_FUZZ_FILES = [
-    "examples/fizzbuzz.spr",
-    "examples/numeric_science.spr",
+    "website/snippets/tutorial/fizzbuzz.spr",
+    "website/snippets/tutorial/numeric_science.spr",
     "tests/runtime/08_errors.spr",
     "tests/runtime/15_jvm_interop.spr",
 ]

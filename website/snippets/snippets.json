@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "executable": [
+    "classes.spr",
+    "collections.spr",
+    "errors.spr",
+    "function_types.spr",
+    "functions.spr",
+    "generics.spr",
+    "json_lookup.spr",
+    "jvm_exceptions.spr",
+    "jvm_interop.spr",
+    "lambdas.spr",
+    "modules/main.spr",
+    "nullable.spr",
+    "variables.spr",
+    "variants.spr",
+    "tutorial/fizzbuzz.spr",
+    "tutorial/hello.spr",
+    "tutorial/numeric_science.spr",
+    "tutorial/shapes.spr",
+    "tutorial/word_count.spr"
+  ],
+  "import-only": [
+    "modules/math_module.spr"
+  ]
+}

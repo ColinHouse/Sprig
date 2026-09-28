@@ -20,7 +20,7 @@ WORK = ROOT / "build" / "acceptance_matrix"
 
 MATRIX = [
     # name, file, check_exit, build_exit, run_exit, run_code
-    ("legal-hello", ROOT / "examples/hello.spr", 0, 0, 0, None),
+    ("legal-hello", ROOT / "website/snippets/tutorial/hello.spr", 0, 0, 0, None),
     ("type-error-null", CASES / "p1_java_null_builder.spr", 1, 1, 1, None),
     ("default-effect", CASES / "p1_default_two_effects.spr", 1, 1, 1, None),
     ("unit-field", CASES / "p1_unit_field.spr", 1, 1, 1, None),
@@ -91,7 +91,7 @@ def main():
     stale_classes.mkdir(parents=True, exist_ok=True)
     (stale_java / "$Stale.java").write_text("public class $Stale {}\n", encoding="utf-8")
     (stale_classes / "$Stale.class").write_bytes(b"stale")
-    build = subprocess.run([SPRIG, "build", "--json", ROOT / "examples/hello.spr",
+    build = subprocess.run([SPRIG, "build", "--json", ROOT / "website/snippets/tutorial/hello.spr",
                             "-d", stale_dir], capture_output=True, text=True)
     stale_files = list(stale_dir.rglob("*Stale*"))
     stale_record = {

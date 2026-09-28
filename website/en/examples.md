@@ -1,40 +1,26 @@
 # Examples
 
-Every file under `examples/` is compiled and executed by `scripts/test.sh` on
-each test run. The listings below are the real files, not retyped copies.
+The tutorials below are executable documentation: each program lives under
+`website/snippets/tutorial/`, and the documentation gate runs it and compares
+its output with the checked `.out` oracle on every verification. The listings
+are the real files, not retyped copies; the Chinese and English pages include
+the same Sprig sources. For programs that build or do something useful with
+Sprig, see [Application examples](#application-examples).
 
 ## Hello world
 
-<<< @/../examples/hello.spr
+<<< @/snippets/tutorial/hello.spr
 
-```text
-Hello, Ada!
-```
+<<< @/snippets/tutorial/hello.out
 
 ## FizzBuzz
 
-<<< @/../examples/fizzbuzz.spr
+<<< @/snippets/tutorial/fizzbuzz.spr
 
-```text
-1
-2
-Fizz
-4
-Buzz
-Fizz
-7
-8
-Fizz
-Buzz
-11
-Fizz
-13
-14
-FizzBuzz
-```
+<<< @/snippets/tutorial/fizzbuzz.out
 
 <details>
-<summary>Show all 15 lines</summary>
+<summary>Why the output looks like this</summary>
 
 The program iterates `range(1, 16)` and prints one value per line, replacing
 multiples of 3 with `Fizz`, of 5 with `Buzz` and of 15 with `FizzBuzz`.
@@ -43,16 +29,9 @@ multiples of 3 with `Fizz`, of 5 with `Buzz` and of 15 with `FizzBuzz`.
 
 ## Shapes: classes, variants and match
 
-<<< @/../examples/shapes.spr
+<<< @/snippets/tutorial/shapes.spr
 
-```text
-circle r=2.0cm
-area=12.56636
-rect 3.0x4.0cm
-area=12.0
-radius=2.0
-drawn=2
-```
+<<< @/snippets/tutorial/shapes.out
 
 This example combines a class with defaults, a sealed `variant`, an `enum`,
 two exhaustive `match` statements, a nullable return type and immutable
@@ -60,33 +39,40 @@ collections.
 
 ## Word counting
 
-<<< @/../examples/word_count.spr
+<<< @/snippets/tutorial/word_count.spr
 
-```text
-the: 3
-quick: 1
-brown: 1
-fox: 2
-jumps: 1
-over: 1
-lazy: 1
-dog: 1
-sorted keys: [brown, dog, fox, jumps, lazy, over, quick, the]
-```
+<<< @/snippets/tutorial/word_count.out
 
 ## Numerical precision policy
 
-<<< @/../examples/numeric_science.spr
+<<< @/snippets/tutorial/numeric_science.spr
 
-```text
-2.0
-0.3
-true
-```
+<<< @/snippets/tutorial/numeric_science.out
 
 The mean uses binary64 `Float`; the money-like value uses `Decimal`, so
 `0.1 + 0.2` is exactly `0.3` instead of a binary approximation. The last line
 makes the floating-point error explicit instead of hiding it.
+
+## Application examples
+
+`examples/` contains programs and projects with an independent purpose, not
+syntax demonstrations. Start with the
+[examples gallery](https://github.com/ColinHouse/Sprig/blob/main/examples/README.md):
+
+- [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web) —
+  typed routes, JSON, OpenAPI.
+- [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) —
+  pinned Maven JDBC driver and persisted prepared SQL.
+- [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger) —
+  reduced accounts/transactions HTTP backend with restart persistence.
+- [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations) —
+  ordered, transactional SQLite migrations.
+- [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select) —
+  multi-file JSON CLI.
+- [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools) —
+  Sprig-written compiler API and diagnostic tools.
+- [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases) —
+  repository auditor, Maven-backed utility and source analyzer.
 
 ## Larger programs in the test suite
 

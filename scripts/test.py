@@ -47,9 +47,6 @@ def main():
                    output.rstrip("\n") == golden.read_text(encoding="utf-8").rstrip("\n"), output)
     proc = sprig("check", ROOT / "tests/visitor/nonexhaustive.spr")
     record("visitor exhaustiveness", "SPR-MATCH-NONEXHAUSTIVE" in proc.stdout + proc.stderr)
-    for source in sorted((ROOT / "examples").glob("*.spr")):
-        proc = sprig("run", source)
-        record(f"example {source.name}", proc.returncode == 0, proc.stdout + proc.stderr)
     record("explain", sprig("explain", "SPR-MATCH-NONEXHAUSTIVE").returncode == 0)
     try:
         json.loads(sprig("check", "--json", ROOT / "tests/semantics/missing_case.spr").stdout)
@@ -61,7 +58,7 @@ def main():
               "tests/correctness/check_correctness.py", "tests/recovery/check_recovery.py",
               "acceptance/scripts/run_acceptance.py", "acceptance/scripts/json_matrix.py",
               "acceptance/scripts/consistency_matrix.py", "tests/agent_tooling/check_tooling.py",
-              "tests/agent_tooling/check_diagnostics.py",
+              "tests/agent_tooling/check_diagnostics.py", "tests/docs/check_doc_roles.py",
               "tests/agent_tooling/check_sprig_api.py", "tests/agent_tooling/check_agent_tools.py",
               "tests/agent_eval/check_task_pack.py",
               "tests/cli_contract/check_cli_contract.py", "tests/bootstrap/check_probe.py",

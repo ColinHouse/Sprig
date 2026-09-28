@@ -2,7 +2,7 @@
 
 > 本页是中文摘要；权威英文文档为
 > [Implemented features](/en/reference/FEATURE_STATUS_IMPLEMENTED)，它随验证用的测试
-> 一起维护。两者不一致时以英文文档和实际测试结果为准。最新已发布：`0.3.0-alpha.1`；`0.4.0-alpha.1` 为发布候选。
+> 一起维护。两者不一致时以英文文档和实际测试结果为准。当前 prerelease：`0.4.0-alpha.1`。
 
 下表描述仓库内 Java stage-0 编译器**实际做到**的事情。
 
