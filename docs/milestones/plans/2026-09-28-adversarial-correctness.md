@@ -16,5 +16,5 @@
 - [x] Review diagnostics, machine-readable claims, docs, termination and current CI evidence. (`api-no-init`, JSON envelopes, docs updates for A11.)
 - [x] Run final canonical verification, inspect patch and working tree, complete report/ledger, commit locally. (`./scripts/verify.sh` 102 gates; `check-sdk-archive.py` passed.)
 
-Evidence lives in `tests/adversarial/current/` and the final report at
+Evidence lives in `tests/adversarial/regressions/` and the final report at
 `docs/milestones/ADVERSARIAL_CORRECTNESS_AUDIT.md`. Temporary reproductions/logs live outside tracked source. A confirmed bug gets an explicit expected value or rejection code; tests must fail on the baseline for the intended reason. Each ledger row records status, severity, subsystem, reproducer, expected/actual behavior, cause, fix, regression, verification and commit. Ambiguous contracts stay design-required.

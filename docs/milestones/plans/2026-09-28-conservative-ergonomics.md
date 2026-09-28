@@ -26,4 +26,4 @@
 - [x] Adversarial/metamorphic/mutation checks, real library dogfood, docs/tooling, commit `Add match expressions`.
 
 ## Completion
-- [x] Run full verification and inspect diff; record exact evidence and remaining risks in CONSERVATIVE_ERGONOMICS_MILESTONE.md.
+- [x] Run full verification and inspect diff; record exact evidence and remaining risks in `../CONSERVATIVE_ERGONOMICS_MILESTONE.md`.
