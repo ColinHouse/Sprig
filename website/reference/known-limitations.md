@@ -2,7 +2,7 @@
 
 > 本页是中文摘要；权威英文文档为
 > [Known limitations](/en/reference/KNOWN_LIMITATIONS)。以下描述 Java stage-0
-> 实现，而不是 v0.7 设计稿中提议的全部特性。
+> 实现，而不是历史设计稿中提议的全部特性。
 
 - 编译器用 Java 编写，先输出 Java 源码再调用 `javac`；它**不能编译自身**，也未自举。
 - 本地/Git/Maven 解析及小型 std 层已实现；VS Code 有独立桌面适配器，提供高亮、

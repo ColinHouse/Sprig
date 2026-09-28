@@ -8,7 +8,7 @@ Sprig 的**权威技术参考目前只有英文版本**，它们由仓库根目�
 
 | 文档 | 内容 |
 |---|---|
-| [Language specification (v0.7 design)](/en/reference/LANGUAGE_SPEC) | 语言设计契约；描述目标语义，未全部实现。 |
+| [Language specification（设计契约）](/en/reference/LANGUAGE_SPEC) | 语言设计契约；描述目标语义，未全部实现。 |
 | [Quick reference](/en/reference/QUICK_REFERENCE) | 当前编译器支持的简明示例。 |
 | [Numerical semantics](/en/reference/NUMERIC_SEMANTICS) | **规范文档**：整数范围、溢出、除法、转换、Decimal/BigInt、IEEE 浮点。 |
 | [Numeric design decisions](/en/reference/NUMERIC_DESIGN_DECISIONS) | 数值规则的设计取舍与剩余工作。 |

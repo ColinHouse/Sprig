@@ -1,11 +1,11 @@
-# Known limitations — v0.3.0-alpha.1
+# Known limitations — v0.4.0-alpha.1
 
 This list describes the Java stage-0 implementation, not every feature proposed
-by the Sprig v0.7 design kit.
+by the historical design kit in `spec/`.
 
 - The compiler is written in Java and emits Java source before invoking `javac`.
   It does not compile itself and is not self-hosted.
-- v0.8 generics accept one or more parameters (`generic K, V:`) but are fully
+- Generics accept one or more parameters (`generic K, V:`) but are fully
   explicit: no inference, no variance, and partial type arguments are never
   guessed. A type parameter `T` has no operators, ordering or methods, and
   equality only under `requires T: Equatable`; `Comparable` and user-defined
@@ -62,7 +62,7 @@ by the Sprig v0.7 design kit.
   applied migration is unsupported by convention, not automatically detected.
   Migration SQL is trusted project code.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig targets v0.3.0-alpha.1, an experimental Alpha under Apache-2.0 (`LICENSE`, `NOTICE`),
+- Sprig targets v0.4.0-alpha.1, an experimental Alpha under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.
 
 ## Callable boundary

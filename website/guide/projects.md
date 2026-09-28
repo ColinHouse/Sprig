@@ -85,7 +85,7 @@ branch = "main"
 - symlink 通过 real path 检查；根内且逻辑路径被 export 的 symlink 允许。
 - Git 缓存验证 HEAD、marker 与 tracked/untracked 内容；修改会明确失败。
 
-**v0.3 源码候选版本已实现 Maven/JVM 依赖。**
+**Maven/JVM 依赖已实现。**
 `[[jvm]]` 声明精确 release 坐标，resolve 后 check/build/run/api/doctor 自动使用锁定 JAR。
 Apache Resolver 处理父 POM、BOM 和传递依赖。Schema-3 记录 JAR/POM SHA-256、图和顺序。
 离线需要完整缓存；消费命令不会重新解析。见

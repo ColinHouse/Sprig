@@ -15,7 +15,14 @@ import io
 
 ROOT = Path(__file__).resolve().parents[2]
 CLI = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
-BASE_TAG = "v" + subprocess.check_output([str(CLI), "version"], text=True).split()[-1].strip()
+BASE_VERSION = subprocess.check_output([str(CLI), "version"], text=True).split()[-1].strip()
+BASE_TAG = "v" + BASE_VERSION
+MAJOR, MINOR, SUFFIX = BASE_VERSION.split(".", 2)
+
+
+def next_tag(offset):
+    """Tags after the compiler being tested, so fixtures never equal BASE_TAG."""
+    return f"v{MAJOR}.{int(MINOR) + offset}.{SUFFIX}"
 
 
 class ReleaseHandler(BaseHTTPRequestHandler):
@@ -120,7 +127,7 @@ def main():
             assert "already the latest" in checked.stdout.lower(), checked.stdout
             assert not any(path.endswith(".zip") for path in ReleaseHandler.requested[len(before_assets):])
 
-            newer = "v0.4.0-alpha.1"
+            newer = next_tag(1)
             publish(newer)
             ReleaseHandler.releases = [{"tag_name": newer, "draft": False},
                                        {"tag_name": BASE_TAG, "draft": False}]
@@ -132,10 +139,10 @@ def main():
             current = sdk / "current"
             assert current.resolve() == (sdk / "versions" / newer).resolve(), (upgraded.stdout, os.readlink(current), current.resolve())
             assert (sdk / "versions" / BASE_TAG / "bin/sprig").is_file()
-            assert "0.4.0-alpha.1" in run("version").stdout
+            assert newer.removeprefix("v") in run("version").stdout
             assert (manifest.read_bytes(), lock.read_bytes()) == before
 
-            latest = "v0.5.0-alpha.1"
+            latest = next_tag(2)
             publish(latest, valid=False)
             ReleaseHandler.releases = [{"tag_name": latest, "draft": False}]
             bad = run("upgrade", expect=1, binary=version_dir / "bin/sprig")
@@ -143,7 +150,7 @@ def main():
             assert current.resolve() == (sdk / "versions" / newer).resolve()
             assert (manifest.read_bytes(), lock.read_bytes()) == before
 
-            malformed = "v0.6.0-alpha.1"
+            malformed = next_tag(3)
             ReleaseHandler.assets[f"/download/{malformed}/sprig-{malformed}-jdk.zip"] = b"not a ZIP archive"
             name = f"sprig-{malformed}-jdk.zip"
             digest = hashlib.sha256(b"not a ZIP archive").hexdigest()
@@ -154,7 +161,7 @@ def main():
             assert current.resolve() == (sdk / "versions" / newer).resolve()
             assert (manifest.read_bytes(), lock.read_bytes()) == before
 
-            bad_smoke = "v0.7.0-alpha.1"
+            bad_smoke = next_tag(4)
             archive_name = f"sprig-{bad_smoke}-jdk.zip"
             payload = fake_archive(bad_smoke, output_version="9.9.9")
             ReleaseHandler.assets[f"/download/{bad_smoke}/{archive_name}"] = payload
@@ -166,7 +173,7 @@ def main():
             assert current.resolve() == (sdk / "versions" / newer).resolve()
             assert (manifest.read_bytes(), lock.read_bytes()) == before
 
-            traversal = "v0.8.0-alpha.1"
+            traversal = next_tag(5)
             traversal_name = f"sprig-{traversal}-jdk.zip"
             attack = io.BytesIO()
             with zipfile.ZipFile(attack, "w") as archive:

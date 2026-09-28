@@ -46,7 +46,7 @@ def main():
         assert run('resolve', '--offline', '--json', cwd=project).returncode == 0
         lockpath = project / 'sprig.lock'
         lock = dict(re.findall(r'^([a-z0-9-]+) = "([^"]*)"$', lockpath.read_text(encoding='utf-8'), re.M))
-        assert lock['stdlib-version'] == '0.3.0-alpha.1'
+        assert lock['stdlib-version'] == '0.4.0-alpha.1'
         digest = hashlib.sha256()
         for file in sorted((ROOT / 'std').glob('*.spr')):
             digest.update(file.name.encode('utf-8') + b'\0' + file.read_bytes() + b'\0')

@@ -6,7 +6,7 @@ repository and is executed by `tools/verify-doc-snippets.py` during
 documentation checks.
 
 The normative documents are the
-[language spec (v0.7 design)](/en/reference/LANGUAGE_SPEC) and the
+[language spec (design contract)](/en/reference/LANGUAGE_SPEC) and the
 [implemented feature status](/en/reference/FEATURE_STATUS_IMPLEMENTED). Where the
 design kit proposes more than the compiler does, this page follows the
 compiler.

@@ -83,7 +83,7 @@ true
 
 ## 测试套件中的更大程序
 
-- `tests/runtime/`：18 个带 golden stdout 的端到端程序，覆盖算术、函数、控制流、
+- `tests/runtime/`：19 个带 golden stdout 的端到端程序，覆盖算术、函数、控制流、
   类、variant、enum、可空性、错误、集合、lambda、字符串、模块、断言、格式化与
   JVM 互操作。
 - `tests/visitor/ast_visitor.spr`：完全用 Sprig 编写的小型 AST 解释器，包含四个

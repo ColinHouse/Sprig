@@ -1,4 +1,4 @@
-# Implemented quick reference (v0.3.0-alpha.1)
+# Implemented quick reference (v0.4.0-alpha.1)
 
 `sprig help <topic> --json` is the versioned machine-readable reference.
 `sprig capabilities --json` is the implemented feature inventory. This page

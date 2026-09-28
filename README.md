@@ -6,8 +6,8 @@
 
 **A small, explicit JVM language for tools, automation and reliable application
 code — designed for humans and coding agents to work from compiler feedback.**
-Sprig is experimental, statically typed and indentation based. Alpha; JDK 17+;
-language `0.8-dev`. It is implemented by a Java stage-0 compiler and is not self-hosted.
+Sprig is experimental, statically typed and indentation based. Alpha; JDK 17+.
+It is implemented by a Java stage-0 compiler and is not self-hosted.
 
 [简体中文](https://colinhouse.github.io/Sprig/) ·
 [English docs](https://colinhouse.github.io/Sprig/en/) ·
@@ -47,7 +47,7 @@ checks. These are implemented contracts; see
 ## Five-minute first project
 
 Install **JDK 17+** with `java` and `javac` on `PATH`.
-The current published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1).
+The current published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
 On Linux/macOS, install and upgrade it with the [managed installer](docs/INSTALL.md),
 which verifies the release checksum. You can also download its ZIP and `.sha256`,
 verify the checksum, and extract manually. The SDK includes compiler/runtime libraries, **not a JDK**. Supported release platforms:
@@ -69,8 +69,10 @@ cd my-tool
 
 Expected program output: `Hello, Sprig!`. You now have `sprig.toml`,
 `src/main.spr` and a generated `sprig.lock`. Edit the source, check it, run it.
-The v0.3 SDK supports local/Git and Maven dependencies, explicit @std imports
-and three tested showcase projects.
+The v0.4 SDK adds the canonical formatter, explicit module re-exports,
+expression `match`, the adversarial correctness fixes and managed SDK upgrades
+on top of the v0.3 base (local/Git and Maven dependencies, explicit @std imports
+and three tested showcase projects).
 
 For the current source milestone (JDK 17+, Python 3.12+, Git):
 
@@ -114,19 +116,18 @@ the published SDK; exact artifact and platform evidence is in the validation
 record. Smaller [examples](examples/README.md) and
 [language tour](website/en/guide/language-tour.md) teach individual constructs.
 
-### Web + SQLite development examples
+### Web + SQLite examples
 
-The current checkout adds [mini-web](examples/mini_web/README.md),
+The v0.4 SDK includes [mini-web](examples/mini_web/README.md),
 [persistent SQLite](examples/sqlite/README.md), and a
 [reduced ledger backend](examples/ledger/README.md). Routing, typed handlers,
 JSON and explicit OpenAPI schemas are Sprig; small JVM adapters own HTTP and JDBC.
 See the [web API](libraries/sprig-web/README.md),
 [SQLite API](libraries/sprig-sqlite/README.md) and
 [engineering evidence](docs/milestones/WEB_SQLITE_ENGINEERING_REPORT.md).
-The current checkout also has transactional SQLite migration support and a CLI
-option parsing library; see [migration example](examples/sqlite_migrations/README.md),
+It also ships transactional SQLite migration support and a CLI option parsing
+library; see the [migration example](examples/sqlite_migrations/README.md),
 [JSON CLI example](examples/json_select/README.md) and their library READMEs.
-These additions are development work, not a newly published release.
 
 ## Contribute with your coding agent
 
@@ -176,7 +177,7 @@ Generated `bin/`, `build/` and website outputs are not committed.
 Sprig 是一门小型、显式、静态类型的 JVM 语言，面向命令行工具、自动化、代码分析
 和可靠的应用代码。人与编码 Agent 可以查询编译器、修改、检查、理解诊断并修复，
 无需猜测语言规则。缩进式语法、封闭 variant、穷尽 match、显式泛型与受检数值是
-现有基础；当前仍是实验性 Alpha，需要 JDK 17+，语言版本为 `0.8-dev`，尚未自举。
+现有基础；当前仍是实验性 Alpha，需要 JDK 17+，尚未自举。
 
 [快速开始](https://colinhouse.github.io/Sprig/guide/getting-started) ·
 [参与贡献](CONTRIBUTING.md)。欢迎使用 Codex / Claude / ChatGPT 完成有验收条件的

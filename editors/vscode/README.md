@@ -1,6 +1,6 @@
 # Sprig for VS Code
 
-Small desktop extension for Sprig compiler **0.3.0-alpha.1+** / language 0.8-dev.
+Small desktop extension for Sprig compiler **0.4.0-alpha.1+**.
 Extension version **0.1.0** is independent of the compiler version.
 
 ## Install / 安装
@@ -14,7 +14,7 @@ code --install-extension sprig-language-0.1.0.vsix
 
 This package is locally installable; it has not been published to Marketplace.
 Syntax highlighting works immediately, without Java or the compiler.
-For checks and execution, install the [Sprig SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1)
+For checks and execution, install the [Sprig SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)
 and JDK17+, then set **Sprig: Compiler Path** to the SDK's `bin/sprig` launcher.
 On macOS/Linux you can also put the SDK's `bin` on PATH. A built Sprig source
 checkout is detected by searching ancestors for `bin/sprig` after PATH.
