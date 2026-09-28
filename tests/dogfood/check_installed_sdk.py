@@ -99,13 +99,13 @@ def main():
                            cwd=ROOT, text=True, capture_output=True, timeout=180)
     if build.returncode:
         raise AssertionError(('package-alpha', build.stdout, build.stderr))
-    archive = ROOT / 'dist' / 'sprig-v0.3.0-alpha.1-jdk.zip'
+    archive = ROOT / 'dist' / 'sprig-v0.4.0-alpha.1-jdk.zip'
     if not archive.is_file():
         raise AssertionError('package-alpha did not create the SDK ZIP')
 
     with tempfile.TemporaryDirectory(prefix='sprig installed SDK dogfood ') as temp:
         work = Path(temp)
-        Releases.version = 'v0.3.0-alpha.1'
+        Releases.version = 'v0.4.0-alpha.1'
         Releases.archive = archive.read_bytes()
         server = ThreadingHTTPServer(('127.0.0.1', 0), Releases)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -129,7 +129,7 @@ def main():
                 shutil.copytree(shared_cache, cache)
             env = {**fixture_env, 'PATH': installed_path, 'SPRIG_MAVEN_CACHE': str(cache)}
             version = installed('version', cwd=work, env=env)
-            assert '0.3.0-alpha.1' in version.stdout
+            assert '0.4.0-alpha.1' in version.stdout
             capabilities = json.loads(installed('capabilities', '--json', cwd=work, env=env).stdout)
             assert capabilities.get('compilerVersion') or capabilities.get('version')
             assert capabilities['stringSemantics']['positionUnit'] == 'unicode-code-point'

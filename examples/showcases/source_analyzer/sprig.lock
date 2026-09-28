@@ -1,6 +1,6 @@
 lock-version = 3
 language = "0.8"
-compiler = "0.3.0-alpha.1"
+compiler = "0.4.0-alpha.1"
 manifest-sha256 = "c3c48a3d3417163b543461426742a41ba9861f51c2b1c0099b82eb966f582d9f"
-stdlib-version = "0.3.0-alpha.1"
+stdlib-version = "0.4.0-alpha.1"
 stdlib-sha256 = "43af893a517d27669153babb5934a7bebc1d843dd0897d0473729ec0622dc3bf"
