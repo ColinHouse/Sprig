@@ -1,0 +1,10 @@
+enum E:
+    A
+    B
+let x = match E.B:
+    case E.A:
+        null
+    case E.B:
+        42
+if x != null:
+    print(x + 1)

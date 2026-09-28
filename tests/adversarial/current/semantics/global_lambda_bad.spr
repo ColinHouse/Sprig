@@ -1,0 +1,3 @@
+let box = "bad"
+func f() -> fn() -> Int:
+    return fn() => box

@@ -1,0 +1,7 @@
+generic T:
+    class Box:
+        let value: T?
+let box: Box[Int] = Box[Int](value=42)
+let v = box.value
+if v != null:
+    print(v + 1)

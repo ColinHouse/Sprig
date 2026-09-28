@@ -1,0 +1,13 @@
+class Outer:
+    let b: Inner = Inner()
+class Inner:
+    let x: Int = fail()
+func fail() -> Int throws Error:
+    throw Error("bad")
+func make() -> Int:
+    try:
+        let x = Outer()
+        return x.b.x
+    catch error: Error:
+        return 42
+print(make())

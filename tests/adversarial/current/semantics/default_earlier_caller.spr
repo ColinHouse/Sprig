@@ -1,0 +1,6 @@
+func make() -> A:
+    return A()
+class A:
+    let x: Int = fail()
+func fail() -> Int throws Error:
+    throw Error("bad")

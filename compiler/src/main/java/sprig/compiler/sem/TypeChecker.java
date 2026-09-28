@@ -132,25 +132,53 @@ public final class TypeChecker {
         this.typeResolver = new TypeRefResolver(diagnostics);
     }
 
+    // Module signatures include inferred binding types before any body can use
+    // them. Initializers are validated again in normal source order after default
+    // effects are known; the preparation pass must never silently publish ERROR.
+    private Map<Symbol, Stmt.VarDecl> globalInitializers = Map.of();
+    private Set<Symbol> inferringGlobals = new HashSet<>();
+
+    private void inferGlobal(Symbol symbol) {
+        if (symbol.type != null) return;
+        Stmt.VarDecl declaration = globalInitializers.get(symbol);
+        if (declaration == null) return;
+        if (!inferringGlobals.add(symbol)) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_INFER, Phase.TYPE,
+                    "Cyclic initializer cannot establish the type of '" + symbol.name
+                            + "'; write an explicit type annotation", module.uri, symbol.span));
+            symbol.type = NativeType.ERROR;
+            return;
+        }
+        // An initializer has its own module context, not the narrowing, lambda
+        // depth or expected result of the expression that triggered inference.
+        TypeChecker initializer = new TypeChecker(diagnostics);
+        initializer.module = module;
+        initializer.globalInitializers = globalInitializers;
+        initializer.inferringGlobals = inferringGlobals;
+        initializer.checkVarDecl(declaration);
+        inferringGlobals.remove(symbol);
+    }
+
     public void check(Module module) {
         this.module = module;
+        TypeChecker inference = new TypeChecker(diagnostics);
+        inference.module = module;
+        inference.globalInitializers = new LinkedHashMap<>();
+        for (Stmt statement : module.topStatements) {
+            if (statement instanceof Stmt.VarDecl declaration && declaration.symbol != null
+                    && declaration.typeRef == null) {
+                inference.globalInitializers.put(declaration.symbol, declaration);
+            }
+        }
+        int errorsBeforeInference = diagnostics.errorCount();
+        for (Symbol symbol : inference.globalInitializers.keySet()) inference.inferGlobal(symbol);
+        if (diagnostics.errorCount() != errorsBeforeInference) return;
+        prepareDefaultEffects();
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
                 for (Decl.Field field : classDecl.fields) {
                     if (field.defaultExpr != null) {
-                        currentFunction = null;
-                        currentClass = classDecl;
-                        activeTypeParams = classDecl.typeParamTypes;
-                        narrowing.clear();
-                        caughtStack.clear();
-                        List<Type> effects = new ArrayList<>();
-                        effectCollectors.push(effects);
-                        Type type = checkExpr(field.defaultExpr, field.type);
-                        effectCollectors.pop();
-                        field.defaultThrowsTypes.clear();
-                        field.defaultThrowsTypes.addAll(effects);
-                        requireAssignable(field.type, type, field.defaultExpr.span, Codes.TYPE_MISMATCH,
-                                "field default");
+                        checkDefault(classDecl, field);
                     }
                 }
                 for (Decl.Func method : classDecl.methods) {
@@ -168,6 +196,68 @@ public final class TypeChecker {
         caughtStack.clear();
         effectCollectors.clear();
         checkSequence(module.topStatements);
+    }
+
+    private Decl.Field collectingDefault;
+    private Map<Decl.Field, Set<Decl.Field>> defaultDependencies;
+
+    private void checkDefault(Decl.ClassDecl owner, Decl.Field field) {
+        currentFunction = null;
+        currentClass = owner;
+        activeTypeParams = owner.typeParamTypes;
+        narrowing.clear();
+        caughtStack.clear();
+        List<Type> effects = new ArrayList<>();
+        effectCollectors.push(effects);
+        collectingDefault = field;
+        Type type = checkExpr(field.defaultExpr, field.type);
+        collectingDefault = null;
+        effectCollectors.pop();
+        field.defaultThrowsTypes.clear();
+        field.defaultThrowsTypes.addAll(new LinkedHashSet<>(effects));
+        requireAssignable(field.type, type, field.defaultExpr.span, Codes.TYPE_MISMATCH,
+                "field default");
+    }
+
+    /** Resolve the finite default-effect graph before checking any caller body.
+     * A later class's omitted defaults must be visible to an earlier caller.
+     * Discovery diagnostics are discarded; normal checking below validates each
+     * expression with the completed effects, including lambda restrictions.
+     */
+    private void prepareDefaultEffects() {
+        TypeChecker discovery = new TypeChecker(new Diagnostics());
+        discovery.module = module;
+        discovery.defaultDependencies = new LinkedHashMap<>();
+        for (Decl declaration : module.decls) {
+            if (declaration instanceof Decl.ClassDecl owner) {
+                for (Decl.Field field : owner.fields) {
+                    if (field.defaultExpr != null) {
+                        discovery.defaultDependencies.put(field, new LinkedHashSet<>());
+                        discovery.checkDefault(owner, field);
+                    }
+                }
+            }
+        }
+        Map<Decl.Field, Set<Decl.Field>> callers = new LinkedHashMap<>();
+        for (var entry : discovery.defaultDependencies.entrySet()) {
+            for (Decl.Field dependency : entry.getValue()) {
+                callers.computeIfAbsent(dependency, ignored -> new LinkedHashSet<>()).add(entry.getKey());
+            }
+        }
+        Deque<Decl.Field> work = new ArrayDeque<>(callers.keySet());
+        while (!work.isEmpty()) {
+            Decl.Field field = work.removeFirst();
+            for (Decl.Field caller : callers.getOrDefault(field, Set.of())) {
+                boolean changed = false;
+                for (Type effect : field.defaultThrowsTypes) {
+                    if (!caller.defaultThrowsTypes.contains(effect)) {
+                        caller.defaultThrowsTypes.add(effect);
+                        changed = true;
+                    }
+                }
+                if (changed) work.addLast(caller);
+            }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -2030,6 +2120,9 @@ public final class TypeChecker {
             }
             if (field.defaultExpr != null && !provided.contains(field.name)) {
                 omittedDefaultEffects.addAll(field.defaultThrowsTypes);
+                if (defaultDependencies != null && collectingDefault != null && lambdaDepth == 0) {
+                    defaultDependencies.get(collectingDefault).add(field);
+                }
             }
         }
         requireHandled(new ArrayList<>(omittedDefaultEffects), call.span);
@@ -3564,6 +3657,7 @@ public final class TypeChecker {
     }
 
     private Type narrowedType(Symbol symbol) {
+        if (symbol.type == null) inferGlobal(symbol);
         for (Map<Symbol, Type> frame : narrowing) {
             Type narrowed = frame.get(symbol);
             if (narrowed != null) {
@@ -3665,114 +3759,75 @@ public final class TypeChecker {
     // Definite return / exit analysis
     // ------------------------------------------------------------------
 
-    private boolean definitelyReturns(List<Stmt> body) {
-        for (Stmt stmt : body) {
-            if (definitelyReturns(stmt)) {
-                return true;
-            }
+    private enum Completion { NORMAL, RETURN, THROW, BREAK, CONTINUE }
+
+    private Set<Completion> completions(List<Stmt> body) {
+        Set<Completion> out = java.util.EnumSet.of(Completion.NORMAL);
+        for (Stmt statement : body) {
+            if (!out.remove(Completion.NORMAL)) break;
+            out.addAll(completions(statement));
         }
-        return false;
+        return out;
     }
 
-    private boolean definitelyReturns(Stmt stmt) {
-        if (stmt instanceof Stmt.Return || stmt instanceof Stmt.Throw) {
-            return true;
+    private Set<Completion> completions(Stmt statement) {
+        if (statement instanceof Stmt.Return) return java.util.EnumSet.of(Completion.RETURN);
+        if (statement instanceof Stmt.Throw) return java.util.EnumSet.of(Completion.THROW);
+        if (statement instanceof Stmt.Break) return java.util.EnumSet.of(Completion.BREAK);
+        if (statement instanceof Stmt.Continue) return java.util.EnumSet.of(Completion.CONTINUE);
+        if (statement instanceof Stmt.IfStmt branch) {
+            Set<Completion> out = completions(branch.thenBody);
+            for (Stmt.IfStmt.Elif elif : branch.elifs) out.addAll(completions(elif.body));
+            if (branch.elseBody == null) out.add(Completion.NORMAL);
+            else out.addAll(completions(branch.elseBody));
+            return out;
         }
-        if (stmt instanceof Stmt.IfStmt ifStmt) {
-            if (ifStmt.elseBody == null) {
-                return false;
-            }
-            if (!definitelyReturns(ifStmt.thenBody) || !definitelyReturns(ifStmt.elseBody)) {
-                return false;
-            }
-            for (Stmt.IfStmt.Elif elif : ifStmt.elifs) {
-                if (!definitelyReturns(elif.body)) {
-                    return false;
-                }
-            }
-            return true;
+        if (statement instanceof Stmt.Match match && !match.branches.isEmpty()) {
+            Set<Completion> out = java.util.EnumSet.noneOf(Completion.class);
+            for (Stmt.Match.Branch branch : match.branches) out.addAll(completions(branch.body));
+            return out;
         }
-        if (stmt instanceof Stmt.Match match) {
-            if (match.branches.isEmpty()) {
-                return false;
+        if (statement instanceof Stmt.Try attempt) {
+            Set<Completion> out = completions(attempt.body);
+            for (Stmt.Try.CatchClause clause : attempt.catches) out.addAll(completions(clause.body));
+            if (attempt.finallyBody != null) {
+                Set<Completion> cleanup = completions(attempt.finallyBody);
+                // An abrupt finally overrides the pending return/throw/break.
+                // A normally completing finally preserves that pending outcome.
+                if (!cleanup.remove(Completion.NORMAL)) out.clear();
+                out.addAll(cleanup);
             }
-            for (Stmt.Match.Branch branch : match.branches) {
-                if (!definitelyReturns(branch.body)) {
-                    return false;
-                }
-            }
-            return true;
+            return out;
         }
-        if (stmt instanceof Stmt.Try tryStmt) {
-            if (tryStmt.catches.isEmpty()) {
-                return false;
-            }
-            if (!definitelyReturns(tryStmt.body)) {
-                return false;
-            }
-            for (Stmt.Try.CatchClause clause : tryStmt.catches) {
-                if (!definitelyReturns(clause.body)) {
-                    return false;
-                }
-            }
-            return true;
+        if (statement instanceof Stmt.WhileStmt loop) {
+            Set<Completion> out = completions(loop.body);
+            out.remove(Completion.BREAK);
+            out.remove(Completion.CONTINUE);
+            out.add(Completion.NORMAL); // conservatively allow zero iterations
+            return out;
         }
-        return false;
+        if (statement instanceof Stmt.ForStmt loop) {
+            Set<Completion> out = completions(loop.body);
+            out.remove(Completion.BREAK);
+            out.remove(Completion.CONTINUE);
+            out.add(Completion.NORMAL);
+            return out;
+        }
+        return java.util.EnumSet.of(Completion.NORMAL);
+    }
+
+    private boolean definitelyReturns(List<Stmt> body) {
+        Set<Completion> outcomes = completions(body);
+        return !outcomes.contains(Completion.NORMAL) && !outcomes.contains(Completion.BREAK)
+                && !outcomes.contains(Completion.CONTINUE);
     }
 
     private boolean definitelyExitsSequence(List<Stmt> body) {
-        for (Stmt stmt : body) {
-            if (definitelyExits(stmt)) {
-                return true;
-            }
-        }
-        return false;
+        return !completions(body).contains(Completion.NORMAL);
     }
 
-    private boolean definitelyExits(Stmt stmt) {
-        if (stmt instanceof Stmt.Break || stmt instanceof Stmt.Continue) {
-            return true;
-        }
-        if (stmt instanceof Stmt.IfStmt ifStmt) {
-            if (ifStmt.elseBody == null) {
-                return false;
-            }
-            if (!definitelyExitsSequence(ifStmt.thenBody) || !definitelyExitsSequence(ifStmt.elseBody)) {
-                return false;
-            }
-            for (Stmt.IfStmt.Elif elif : ifStmt.elifs) {
-                if (!definitelyExitsSequence(elif.body)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        if (stmt instanceof Stmt.Match match) {
-            if (match.branches.isEmpty()) {
-                return false;
-            }
-            for (Stmt.Match.Branch branch : match.branches) {
-                if (!definitelyExitsSequence(branch.body)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        if (stmt instanceof Stmt.Try tryStmt) {
-            if (tryStmt.catches.isEmpty()) {
-                return false;
-            }
-            if (!definitelyExitsSequence(tryStmt.body)) {
-                return false;
-            }
-            for (Stmt.Try.CatchClause clause : tryStmt.catches) {
-                if (!definitelyExitsSequence(clause.body)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return definitelyReturns(stmt);
+    private boolean definitelyExits(Stmt statement) {
+        return !completions(statement).contains(Completion.NORMAL);
     }
 
     /** Exposed for the code generator: whether a match statement's branches all exit. */

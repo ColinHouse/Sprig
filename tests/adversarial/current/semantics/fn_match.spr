@@ -1,0 +1,9 @@
+enum Choice:
+    A
+    B
+let f: fn(Int) -> Int = match Choice.A:
+    case Choice.A:
+        fn(x: Int) => x + 1
+    case Choice.B:
+        fn(x: Int) => x - 1
+print(f(41))

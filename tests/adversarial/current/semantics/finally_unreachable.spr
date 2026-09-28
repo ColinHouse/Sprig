@@ -1,0 +1,6 @@
+func f() -> Int:
+    try:
+        print("try")
+    finally:
+        return 1
+    print("never")

@@ -1,0 +1,7 @@
+func f() -> Int:
+    var x: String? = "yes"
+    if x != null:
+        x = null
+        return x.length()
+    return 0
+print(f())

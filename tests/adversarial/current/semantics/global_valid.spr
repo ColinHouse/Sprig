@@ -1,0 +1,4 @@
+let input = 41
+func f() -> Int:
+    return input + 1
+print(f())

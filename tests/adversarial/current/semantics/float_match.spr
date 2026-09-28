@@ -1,0 +1,9 @@
+enum E:
+    A
+    B
+let value: Float32 = match E.A:
+    case E.A:
+        0.1
+    case E.B:
+        0.2
+print(value)
