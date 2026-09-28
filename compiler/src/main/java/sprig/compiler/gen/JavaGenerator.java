@@ -763,8 +763,15 @@ public final class JavaGenerator {
         String receiver = freshTemp("collection");
         String key = freshTemp("key");
         w.line("var " + receiver + " = " + emitExpr(index.receiver) + ";");
-        Type keyType = index.receiver.type.nonNull() instanceof MapType map ? map.key : NativeType.INT;
+        Type receiverBase = index.receiver.type.nonNull();
+        Type keyType = receiverBase instanceof MapType map ? map.key : NativeType.INT;
         w.line("var " + key + " = " + convertedExpression(index.index, keyType) + ";");
+        if (!assign.op.equals("=") && receiverBase instanceof MapType) {
+            // Compound assignment reads an existing value; a missing key is a
+            // Sprig Error, not a Java unboxing failure.
+            w.line("if (!" + receiver + ".containsKeyObject(" + key + ")) throw new sprig.runtime.SprigError("
+                    + "\"compound assignment requires an existing map key\");");
+        }
         String oldValue = receiver + ".get(" + key + ")";
         w.line(receiver + ".set(" + key + ", " + assignmentValue(index.type, oldValue, assign) + ");");
     }
@@ -1106,13 +1113,26 @@ public final class JavaGenerator {
             Type expected = rightType instanceof MapType map ? map.key
                     : rightType instanceof ListType list ? list.element : NativeType.STRING;
             left = convertedExpression(binary.left, expected);
-            String method = rightType instanceof MapType ? ".containsKey(" : ".contains(";
-            return "(" + right + method + left + "))";
+            // Runtime helpers keep Sprig's left-to-right operand evaluation;
+            // `right.contains(left)` would evaluate the container first.
+            if (rightType instanceof MapType) {
+                return "(sprig.runtime.SprigRuntime.mapContainsKey(" + left + ", " + right + "))";
+            }
+            if (rightType instanceof ListType) {
+                return "(sprig.runtime.SprigRuntime.listContains(" + left + ", " + right + "))";
+            }
+            return "(sprig.runtime.SprigRuntime.stringContains(" + left + ", " + right + "))";
         }
         if (op.equals("==") || op.equals("!=")) {
             boolean negate = op.equals("!=");
             if (binary.left instanceof Expr.NullLit || binary.right instanceof Expr.NullLit) {
                 return wrapNegate(negate, "(" + left + " == " + right + ")");
+            }
+            if (binary.comparisonType != null) {
+                String call = "sprig.runtime.SprigRuntime.equalsValue("
+                        + convertedExpression(binary.left, binary.comparisonType) + ", "
+                        + convertedExpression(binary.right, binary.comparisonType) + ")";
+                return wrapNegate(negate, call);
             }
             Type base = binary.left.type == null ? null : binary.left.type.nonNull();
             if (binary.valueEquality) {

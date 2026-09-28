@@ -1,0 +1,17 @@
+# Compound assignment to a map index requires an existing key; a missing key
+# is a catchable Sprig Error, not a Java unboxing failure.
+func bump(scores: MutableMap[String, Int], name: String) -> Int:
+    var result: Int = -1
+    try:
+        scores[name] += 1
+        let value = scores[name]
+        if value != null:
+            result = value
+    catch error: Error:
+        result = -1
+    return result
+
+let scores: MutableMap[String, Int] = {}
+print(bump(scores, "alice"))
+scores["alice"] = 41
+print(bump(scores, "alice"))

@@ -1474,6 +1474,17 @@ public final class TypeChecker {
                     module.uri, binary.span).withTypes(left.display(), right.display()));
             return NativeType.BOOL;
         }
+        // Nullable scalars use null-safe value equality on the common Sprig
+        // numeric/boolean type; primitive local comparisons stay primitive.
+        if (left.isNullable() || right.isNullable()) {
+            if (isInteger(leftBase) && isInteger(rightBase)) {
+                binary.comparisonType = NullableType.of(NativeType.INT);
+            } else if (isBinaryFloat(leftBase) && isBinaryFloat(rightBase)) {
+                binary.comparisonType = NullableType.of(NativeType.FLOAT);
+            } else if (leftBase == NativeType.BOOL && rightBase == NativeType.BOOL) {
+                binary.comparisonType = NullableType.of(NativeType.BOOL);
+            }
+        }
         // Reference-like values (including String) use value equality in Sprig;
         // Int/Float/Bool use primitive comparison.
         binary.valueEquality = Semantics.isReference(leftBase);

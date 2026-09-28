@@ -1,0 +1,28 @@
+# Binary operands evaluate left to right, each exactly once, including `in`.
+func left() -> Int:
+    print("L")
+    return 1
+
+func right() -> List[Int]:
+    print("R")
+    return [1]
+
+func key() -> String:
+    print("K")
+    return "a"
+
+func table() -> Map[String, Int]:
+    print("T")
+    return {"a": 1}
+
+func word() -> String:
+    print("W")
+    return "bar"
+
+func text() -> String:
+    print("X")
+    return "foobar"
+
+print(left() in right())
+print(key() in table())
+print(word() in text())

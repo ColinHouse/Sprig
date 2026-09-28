@@ -1,0 +1,32 @@
+# Nullable scalar equality is null-safe value equality on the common type.
+let missing: Int? = null
+let one: Int? = 1
+print(missing == one)
+print(missing != one)
+print(missing == null)
+print(one == 1)
+print(one != 1)
+
+let none: Bool? = null
+let alsoNone: Bool? = null
+print(none == alsoNone)
+let yes: Bool? = true
+print(none != yes)
+print(yes == true)
+
+let small32: Int32? = 5
+let alsoSmall32: Int32? = 5
+let big32: Int32? = 1000
+let alsoBig32: Int32? = 1000
+print(small32 == alsoSmall32)
+print(big32 == alsoBig32)
+print(small32 == big32)
+
+let first: Float32? = 1000.5
+let second: Float32? = 1000.5
+print(first == second)
+print(first == null)
+
+let widened: Int? = 5
+let widened32: Int32? = 5
+print(widened == widened32)
