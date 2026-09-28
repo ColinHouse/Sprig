@@ -32,9 +32,14 @@ by the historical design kit in `spec/`.
   VS Code preview offers lexical highlighting, CLI checks/run and Java viewing;
   see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
-  calls, overloads, and checked exceptions. Java generic signatures, type-use
-  nullability annotations, arrays, varargs, and collection adapters are limited
-  or unsupported. Java reference results are conservatively nullable; Java
+  calls, overloads, and checked exceptions. Java arrays cross the boundary as
+  opaque values (no source array syntax; varargs remain unsupported). Concrete
+  generic arguments are preserved for explicit `Type[Arg]` application on
+  imported classes and methods; wildcards, inference, recursive bounds and
+  generic arrays are rejected with structured reasons, and raw boundaries stay
+  erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
+  implicit Java/Sprig collection conversion. Type-use nullability annotations
+  are not interpreted. Java reference results are conservatively nullable; Java
   reference parameters are conservatively non-null.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
   exception classes and top-level execution remains provisional.

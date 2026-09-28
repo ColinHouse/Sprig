@@ -13,6 +13,8 @@ public final class JvmMember {
     public String name;
     public List<Type> paramTypes;
     public Type returnType;
+    /** Concrete receiver/explicit-argument bindings used to resolve generics. */
+    public java.util.Map<java.lang.reflect.TypeVariable<?>, Type> bindings = java.util.Map.of();
 
     public boolean isStatic() {
         if (field != null) {

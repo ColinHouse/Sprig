@@ -48,11 +48,19 @@ For a Maven library, declare exact release coordinates in `[[jvm]]` and run
 Only resolve downloads. Extra local JARs can use repeated `--classpath` flags;
 paths resolve against cwd and follow locked entries. Inspect
 `api`'s `usableFromSprig`, `signatureSupported`, `interopLevel`,
-`unusableReason`, `genericBoundary`, and `checkedExceptions` before writing a
-call. `usableFromSprig` means the compiler can bind and emit the erased JVM
-signature; it does not promise generic element safety. `interopLevel` is
-`direct`, `erased-generic`, or `unsupported`. Use `--member NAME` to limit the
-metadata result while preserving overloads. `api` does not initialize classes.
+`interopReasonCodes`, `adaptation`, `unusableReason`, `genericBoundary`, and
+`checkedExceptions` before writing a call. `usableFromSprig` means the compiler
+can bind and emit the JVM signature; it does not promise generic element
+safety. `interopLevel` is `direct`, `concrete-generic`, `opaque-array`,
+`adaptable`, `sprig-callable`, `erased-generic`, or `unsupported`; reason codes
+are stable ids (`varargs-unsupported`, `wildcard-unsupported`,
+`raw-generic-boundary`, `explicit-type-arguments-required`, ...) and
+`adaptation` names an explicit helper when one exists (`byte-array` via
+`sprig.runtime.jvm.HostBytes`, `collection-adapter` via `@std/jvm.spr`). Java
+arrays cross as opaque values with their exact JVM class; concrete generic
+arguments require explicit `Type[Arg]` application. Use `--member NAME` to
+limit the metadata result while preserving overloads. `api` does not
+initialize classes.
 
 `api` also accepts a `.spr` module path, `@package/module.spr`, or a project
 directory. It returns resolved declarations after normal checking: function

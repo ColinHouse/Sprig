@@ -3,7 +3,7 @@ language = "0.8"
 compiler = "0.4.0-alpha.1"
 manifest-sha256 = "8f546e06b877d0eb27a30a4ed8619f057f4172ccc95c1c9fedc172814d341633"
 stdlib-version = "0.4.0-alpha.1"
-stdlib-sha256 = "43af893a517d27669153babb5934a7bebc1d843dd0897d0473729ec0622dc3bf"
+stdlib-sha256 = "42754988e4f9fc0fa92948b632cea45cff09f3756373719e422b7646421de11d"
 
 [[jvm]]
 group = "org.apache"

@@ -1,0 +1,36 @@
+# Explicit JVM collection adapters. Java collections never convert implicitly:
+# list_snapshot/map_snapshot copy validated non-null contents into immutable
+# Sprig collections; list_copy/map_copy build independent mutable Java copies.
+import java.util.ArrayList as ArrayList
+import java.util.LinkedHashMap as LinkedHashMap
+import java.util.List as JavaList
+import java.util.Map as JavaMap
+import sprig.runtime.jvm.HostCollections as HostCollections
+
+generic T:
+    func list_snapshot(source: JavaList) -> List[T] throws Error:
+        let snapshot = HostCollections.listSnapshot[T](source)
+        if snapshot != null:
+            return snapshot
+        throw Error("java.util.List snapshot unexpectedly returned null")
+
+generic K, V:
+    func map_snapshot(source: JavaMap) -> Map[K, V] throws Error:
+        let snapshot = HostCollections.mapSnapshot[K, V](source)
+        if snapshot != null:
+            return snapshot
+        throw Error("java.util.Map snapshot unexpectedly returned null")
+
+generic T:
+    func list_copy(values: List[T]) -> JavaList[T] throws Error:
+        let copy = HostCollections.listCopy[T](values)
+        if copy != null:
+            return copy
+        throw Error("java.util.ArrayList copy unexpectedly returned null")
+
+generic K, V:
+    func map_copy(values: Map[K, V]) -> JavaMap[K, V] throws Error:
+        let copy = HostCollections.mapCopy[K, V](values)
+        if copy != null:
+            return copy
+        throw Error("java.util.LinkedHashMap copy unexpectedly returned null")
