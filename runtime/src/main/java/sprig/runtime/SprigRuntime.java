@@ -8,6 +8,37 @@ public final class SprigRuntime {
     private SprigRuntime() {
     }
 
+    /** Single-line transport markers for an uncaught failure; consumed by the CLI. */
+    public static final String FAILURE_PREFIX = "sprig-runtime-failure:";
+
+    /** Generated-Java location of the first user frame, when one exists. */
+    public static final String FRAME_PREFIX = "sprig-runtime-frame:";
+
+    /**
+     * Reports an uncaught program failure without exposing JVM frames by
+     * default. {@code SPRIG_STACKTRACE=1} (set by {@code sprig run
+     * --stacktrace}) restores the full JVM stack trace for debugging.
+     */
+    public static void reportRuntimeFailure(Throwable failure) {
+        if (System.getenv("SPRIG_STACKTRACE") != null) {
+            failure.printStackTrace();
+            return;
+        }
+        StringBuilder out = new StringBuilder(FAILURE_PREFIX).append(' ')
+                .append(failure.getClass().getName());
+        String message = failure.getMessage();
+        if (message != null && !message.isEmpty()) {
+            out.append(": ").append(message.replace('\n', ' ').replace('\r', ' '));
+        }
+        System.err.println(out);
+        for (StackTraceElement frame : failure.getStackTrace()) {
+            if (frame.getClassName().startsWith("sprig.user.")) {
+                System.err.println(FRAME_PREFIX + " " + frame.getFileName() + ":" + frame.getLineNumber());
+                break;
+            }
+        }
+    }
+
     /** Sprig {@code print}: one line, Sprig value formatting. */
     public static void print(Object value) {
         System.out.println(format(value));

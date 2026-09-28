@@ -586,8 +586,8 @@ public final class Explanations {
                         "A Java exception crossed an interop boundary unhandled.",
                         "A runtime assumption failed (null from Java, numeric edge, file/process failure)."));
                 out.put("safeFixes", List.of("Catch or declare the error at the appropriate function boundary.",
-                        "Narrow Java reference results before use and read the reported stderr output.",
-                        "Use try/catch around the failing operation and handle the absent case explicitly."));
+                        "Narrow Java reference results before use; the diagnostic origin names the failing category.",
+                        "Re-run with `sprig run --stacktrace` when the raw JVM stack is needed for debugging."));
                 out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.TYPE_NULLABLE));
             }
             case Codes.CLI_OPTION -> {

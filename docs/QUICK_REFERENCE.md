@@ -62,7 +62,8 @@ Loads imports and performs ordinary static checking, writes `generated/java/`,
 then stops before javac. JSON includes `javaSources`, `mainClass` and
 `javacInvoked=false`; invalid sources still fail with normal diagnostics.
 Normal `build` additionally compiles classes; `run --keep` retains temporary
-Java for execution debugging. No extra transpile command is introduced.
+Java for execution debugging and `run --stacktrace` restores the raw JVM stack
+of an uncaught runtime failure. No extra transpile command is introduced.
 
 Explicit facades: `import "./internal.spr" as internal`, then
 `export internal.Widget`. Imports, exports, ordinary declarations/statements

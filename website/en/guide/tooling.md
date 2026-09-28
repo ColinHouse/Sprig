@@ -8,7 +8,7 @@ highlighting, CLI diagnostics, Run and generated Java viewing.
 
 ```text
 check <file.spr> [--json] [--syntax-only]   parse and type-check
-run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
+run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      versioned language reference
 capabilities [--json]                     implemented feature inventory
@@ -27,7 +27,9 @@ Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
 - `check` stops before code generation. `--syntax-only` stops even earlier,
   after lexing, layout and parsing.
 - `run` accepts program arguments after `--` and `--keep` for inspecting
-  generated files.
+  generated files. Uncaught runtime failures report stable codes
+  (`SPR-RUNTIME-ERROR`/`SPR-RUNTIME-EXCEPTION`) with a wrapped message and
+  source range; `--stacktrace` adds the raw JVM stack for debugging.
 - `build` writes generated Java and `.class` files to `-d` (default
   `sprig-build`). A failed check produces no class files.
 - `explain` and `codes` document the stable diagnostic vocabulary in

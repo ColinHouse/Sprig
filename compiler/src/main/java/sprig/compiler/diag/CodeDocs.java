@@ -93,8 +93,9 @@ public final class CodeDocs {
             Map.entry(Codes.JVM_AMBIGUOUS, "The Java overload is ambiguous for these argument types."),
             Map.entry(Codes.JVM_COMPILE, "The generated Java source did not compile; may be a compiler bug."),
             Map.entry(Codes.JVM_INTERNAL, "Internal compiler or tooling failure."),
-            Map.entry(Codes.RUNTIME_ERROR, "Uncaught Sprig Error value at runtime."),
-            Map.entry(Codes.RUNTIME_EXCEPTION, "Uncaught JVM exception at runtime."),
+            Map.entry(Codes.RUNTIME_ERROR, "Uncaught Sprig Error value at runtime; the message carries the Error value."),
+            Map.entry(Codes.RUNTIME_EXCEPTION,
+                    "Uncaught JVM exception at runtime, wrapped with a Sprig source range; run --stacktrace for the JVM stack."),
             Map.entry(Codes.PROGRAM_EXIT, "The Sprig program exited with a non-zero process status."));
 
     private CodeDocs() {

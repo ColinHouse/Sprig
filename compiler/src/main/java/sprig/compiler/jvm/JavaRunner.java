@@ -26,6 +26,13 @@ public final class JavaRunner {
     /** Text CLI output streams immediately; JSON mode retains a complete captured envelope. */
     public static Result run(Path classesDir, String mainClass, List<String> args, Path workDir,
                              boolean streamOutput) throws IOException, InterruptedException {
+        return run(classesDir, mainClass, args, workDir, streamOutput, false);
+    }
+
+    /** {@code stacktrace} exposes the raw JVM stack of an uncaught program failure. */
+    public static Result run(Path classesDir, String mainClass, List<String> args, Path workDir,
+                             boolean streamOutput, boolean stacktrace)
+            throws IOException, InterruptedException {
         Path outFile = workDir.resolve("program.out");
         Path errFile = workDir.resolve("program.err");
         List<String> command = new ArrayList<>();
@@ -37,6 +44,9 @@ public final class JavaRunner {
         command.add(mainClass);
         command.addAll(args);
         ProcessBuilder builder = new ProcessBuilder(command);
+        if (stacktrace) {
+            builder.environment().put("SPRIG_STACKTRACE", "1");
+        }
         if (streamOutput) {
             builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT);

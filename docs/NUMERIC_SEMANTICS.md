@@ -145,7 +145,9 @@ to propose an explicit fix; it must not silently insert `Lossy` or `Trunc`.
 Example: assigning an `Int` variable to `Float` reports
 `SPR-NUM-CONVERSION`, `expectedType="Float"`, `actualType="Int"`, and a hint
 to choose exact or explicitly lossy conversion. Runtime numeric failures use
-`SprigNumericError` and are reported as `SPR-RUNTIME-EXCEPTION` when uncaught;
-the arithmetic expression's precise Sprig span is not yet attached. Run
+`SprigNumericError` and are reported as `SPR-RUNTIME-EXCEPTION` when uncaught,
+wrapped as `Numeric error: <message>` with the nearest statement range and
+`data.origin="checked-arithmetic"`; `sprig run --stacktrace` restores the raw
+JVM stack. Run
 `python3 tests/numeric/check_numeric.py` or `./scripts/test.sh` from the
 repository root.

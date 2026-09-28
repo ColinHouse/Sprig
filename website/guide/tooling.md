@@ -8,7 +8,7 @@ stage-0 编译器只提供一个可执行文件 `bin/sprig`，由 `scripts/build
 
 ```text
 check <file.spr> [--json] [--syntax-only]   parse and type-check
-run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM
+run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      带版本的语言参考
 capabilities [--json]                     已实现能力清单
@@ -24,7 +24,9 @@ version
 例如用 `sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
 
 - `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。
-- `run` 支持在 `--` 之后传递程序参数，`--keep` 用于保留生成的中间文件。
+- `run` 支持在 `--` 之后传递程序参数，`--keep` 用于保留生成的中间文件。未捕获的
+  运行时错误使用稳定诊断码（`SPR-RUNTIME-ERROR`/`SPR-RUNTIME-EXCEPTION`），
+  携带包装后的消息与源码范围；`--stacktrace` 额外输出原始 JVM 堆栈用于调试。
 - `build` 把生成的 Java 与 `.class` 写入 `-d`（默认 `sprig-build`）；检查失败时不会
   留下 class 文件。
 - `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/DIAGNOSTIC_CODES)。

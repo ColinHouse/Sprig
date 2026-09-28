@@ -69,8 +69,9 @@ public final class JavacRunner {
         }
     }
 
-    private static Span mapBack(Path generatedFile, long javaLine,
-                                Map<Path, Map<Integer, Span>> lineMaps) {
+    /** Maps a 1-based generated-Java line back to the nearest recorded Sprig span. */
+    public static Span mapBack(Path generatedFile, long javaLine,
+                               Map<Path, Map<Integer, Span>> lineMaps) {
         if (generatedFile == null || javaLine < 0) {
             return null;
         }

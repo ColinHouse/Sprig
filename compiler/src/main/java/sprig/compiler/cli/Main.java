@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import sprig.compiler.Compilation;
 import sprig.compiler.Compiler;
@@ -36,6 +38,7 @@ import sprig.compiler.jvm.JvmMetadata;
 import sprig.compiler.tooling.Catalog;
 import sprig.compiler.tooling.SprigApi;
 import sprig.compiler.tooling.ToolJson;
+import sprig.runtime.SprigRuntime;
 
 /**
  * {@code sprig} command line: check, run, build, explain, version.
@@ -113,7 +116,7 @@ public final class Main {
         out.println("Usage: sprig <command> [options]");
         out.println();
         out.println("  check <file.spr> [--json] [--syntax-only]   parse and type-check");
-        out.println("  run   <file.spr> [--json] [--keep] [-- a b] compile and execute on the JVM");
+        out.println("  run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM");
         out.println("  build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
@@ -747,17 +750,21 @@ public final class Main {
                     return 1;
                 }
                 JavaRunner.Result result = JavaRunner.run(classesDir, output.mainClass,
-                        options.programArgs, work, !options.json);
+                        options.programArgs, work, !options.json, options.stacktrace);
                 if (!options.json) {
                     System.out.print(result.stdout);
                     System.out.flush();
                 }
                 if (!options.json && !result.stderr.isEmpty()) {
-                    System.err.print(result.stderr);
+                    result.stderr.lines()
+                            .filter(line -> !line.startsWith(SprigRuntime.FAILURE_PREFIX)
+                                    && !line.startsWith(SprigRuntime.FRAME_PREFIX))
+                            .forEach(System.err::println);
                 }
                 if (result.exitCode != 0) {
                     diagnostics.add(runtimeDiagnostic(result.stderr, result.exitCode,
-                            source.toAbsolutePath().toUri().toString()));
+                            source.toAbsolutePath().toUri().toString(), lineMaps, uris,
+                            options.stacktrace));
                 }
                 report(diagnostics, options.json, "run", result.exitCode, options.json ? result.stdout : null);
                 return result.exitCode;
@@ -1246,27 +1253,206 @@ public final class Main {
         }
     }
 
-    private static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String uri) {
-        boolean jvmFailure = stderr.lines().anyMatch(line -> line.startsWith("Exception in thread ")
-                || line.startsWith("sprig.runtime.SprigError") || line.startsWith("\tat "));
-        if (!jvmFailure) {
+    private record RuntimeFailure(String className, String message, String frameFile, int frameLine) {
+    }
+
+    private record RuntimeOrigin(String id, String hint) {
+    }
+
+    private static final Pattern FRAME_TAIL = Pattern.compile("^(.+\\.java):(\\d+)$");
+    private static final Pattern STRING_INDEX =
+            Pattern.compile("index (-?\\d+), code point length (-?\\d+)");
+    private static final Pattern STRING_RANGE =
+            Pattern.compile("begin (-?\\d+), end (-?\\d+), code point length (-?\\d+)");
+    private static final Pattern LIST_INDEX = Pattern.compile("Index: (\\d+), Size: (\\d+)");
+    private static final Pattern LIST_INDEX_LENGTH =
+            Pattern.compile("Index (\\d+) out of bounds for length (\\d+)");
+
+    private static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String sourceUri,
+            Map<Path, Map<Integer, Span>> lineMaps, Map<Path, String> uris, boolean stacktrace) {
+        RuntimeFailure failure = parseRuntimeFailure(stderr);
+        if (failure == null) {
             return Diagnostic.error(Codes.PROGRAM_EXIT, Phase.RUNTIME,
-                    "Program exited with status " + exitCode, uri, null)
+                    "Program exited with status " + exitCode, sourceUri, null)
                     .withHint("The run command forwards the Sprig program's process exit status.")
                     .withData(Map.of("programExitCode", exitCode));
         }
-        String code = stderr.contains("sprig.runtime.SprigError") ? Codes.RUNTIME_ERROR
+        String code = failure.className.equals("sprig.runtime.SprigError") ? Codes.RUNTIME_ERROR
                 : Codes.RUNTIME_EXCEPTION;
-        String message = "Program failed at runtime";
-        for (String line : stderr.split("\n")) {
-            String trimmed = line.trim();
-            if (trimmed.contains("Exception") || trimmed.contains("Error")) {
-                message = trimmed;
+        RuntimeOrigin origin = runtimeOrigin(failure.className, failure.message);
+        String uri = sourceUri;
+        Span span = null;
+        if (failure.frameFile != null) {
+            for (Map.Entry<Path, Map<Integer, Span>> entry : lineMaps.entrySet()) {
+                if (!entry.getKey().getFileName().toString().equals(failure.frameFile)) continue;
+                span = JavacRunner.mapBack(entry.getKey(), failure.frameLine, lineMaps);
+                String mapped = uris.get(entry.getKey());
+                if (mapped != null) uri = mapped;
                 break;
             }
         }
-        return Diagnostic.error(code, Phase.RUNTIME, message, uri, null)
-                .withHint("See the JVM stack trace above; use --keep to inspect generated Java.");
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("exception", failure.className);
+        data.put("origin", origin.id());
+        if (stacktrace && !stderr.isBlank()) {
+            data.put("jvmStack", stderr.strip());
+        }
+        return Diagnostic.error(code, Phase.RUNTIME, runtimeMessage(failure), uri, span)
+                .withHint(origin.hint() + " Run with --stacktrace to see the JVM stack.")
+                .withData(data);
+    }
+
+    /**
+     * Reads the transport marker emitted by {@link SprigRuntime#reportRuntimeFailure}.
+     * Older or externally launched JVMs fall back to the raw stack-trace format.
+     */
+    private static RuntimeFailure parseRuntimeFailure(String stderr) {
+        String[] lines = stderr.split("\n");
+        for (String line : lines) {
+            if (!line.startsWith(SprigRuntime.FAILURE_PREFIX)) continue;
+            String rest = line.substring(SprigRuntime.FAILURE_PREFIX.length()).trim();
+            int colon = rest.indexOf(": ");
+            String className = colon < 0 ? rest : rest.substring(0, colon).trim();
+            if (className.isEmpty()) return null;
+            String message = colon < 0 ? null : rest.substring(colon + 2).trim();
+            String frameFile = null;
+            int frameLine = -1;
+            for (String frameLineText : lines) {
+                if (!frameLineText.startsWith(SprigRuntime.FRAME_PREFIX)) continue;
+                Matcher frame = FRAME_TAIL.matcher(
+                        frameLineText.substring(SprigRuntime.FRAME_PREFIX.length()).trim());
+                if (frame.matches()) {
+                    frameFile = frame.group(1);
+                    frameLine = Integer.parseInt(frame.group(2));
+                }
+                break;
+            }
+            return new RuntimeFailure(className, message, frameFile, frameLine);
+        }
+        boolean jvmFailure = stderr.lines().anyMatch(line -> line.startsWith("Exception in thread ")
+                || line.startsWith("sprig.runtime.SprigError") || line.startsWith("\tat "));
+        if (!jvmFailure) return null;
+        String className = "java.lang.Throwable";
+        String message = null;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("at ") || (!trimmed.contains("Exception") && !trimmed.contains("Error"))) {
+                continue;
+            }
+            trimmed = trimmed.replaceFirst("^Exception in thread \"[^\"]*\" ", "");
+            int colon = trimmed.indexOf(": ");
+            className = colon < 0 ? trimmed : trimmed.substring(0, colon).trim();
+            message = colon < 0 ? null : trimmed.substring(colon + 2).trim();
+            break;
+        }
+        String frameFile = null;
+        int frameLine = -1;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            int paren = trimmed.lastIndexOf('(');
+            int close = trimmed.lastIndexOf(')');
+            if (!trimmed.startsWith("at ") || paren < 0 || close < paren) continue;
+            String holder = trimmed.substring(3, paren).trim();
+            if (holder.startsWith("java.") || holder.startsWith("jdk.") || holder.startsWith("sun.")
+                    || holder.startsWith("sprig.runtime.")) {
+                continue;
+            }
+            Matcher frame = FRAME_TAIL.matcher(trimmed.substring(paren + 1, close));
+            if (!frame.matches()) continue;
+            frameFile = frame.group(1);
+            frameLine = Integer.parseInt(frame.group(2));
+            break;
+        }
+        return new RuntimeFailure(className, message, frameFile, frameLine);
+    }
+
+    private static String runtimeMessage(RuntimeFailure failure) {
+        String className = failure.className;
+        String raw = failure.message;
+        if (className.equals("sprig.runtime.SprigError")) {
+            return raw == null || raw.isBlank() ? "Uncaught Sprig Error" : "Uncaught Error: " + raw;
+        }
+        if (className.equals("sprig.runtime.SprigNumericError")) {
+            return raw == null || raw.isBlank() ? "Numeric operation failed" : "Numeric error: " + raw;
+        }
+        if (raw != null) {
+            Matcher stringIndex = STRING_INDEX.matcher(raw);
+            if (stringIndex.find()) {
+                return "String index " + stringIndex.group(1) + " is out of bounds; the string has "
+                        + codePoints(Integer.parseInt(stringIndex.group(2)));
+            }
+            Matcher stringRange = STRING_RANGE.matcher(raw);
+            if (stringRange.find()) {
+                int begin = Integer.parseInt(stringRange.group(1));
+                int end = Integer.parseInt(stringRange.group(2));
+                if (begin > end) {
+                    return "String slice start " + begin + " is after end " + end;
+                }
+                return "String slice [" + begin + ", " + end + ") is out of bounds; the string has "
+                        + codePoints(Integer.parseInt(stringRange.group(3)));
+            }
+            String listBounds = listBoundMessage(raw);
+            if (listBounds != null) return listBounds;
+        }
+        if (className.equals("java.lang.NullPointerException")) {
+            if (raw == null || raw.isBlank() || raw.startsWith("Cannot ")) {
+                return "Null value where a non-null value is required";
+            }
+            return raw;
+        }
+        String simple = className.substring(className.lastIndexOf('.') + 1);
+        return raw == null || raw.isBlank() ? simple + " at runtime" : simple + ": " + raw;
+    }
+
+    private static String codePoints(int count) {
+        return count + (count == 1 ? " code point" : " code points");
+    }
+
+    private static String listBoundMessage(String raw) {
+        for (Pattern pattern : List.of(LIST_INDEX, LIST_INDEX_LENGTH)) {
+            Matcher matcher = pattern.matcher(raw);
+            if (matcher.find()) {
+                return "List index " + matcher.group(1) + " is out of bounds; size is "
+                        + matcher.group(2);
+            }
+        }
+        return null;
+    }
+
+    private static RuntimeOrigin runtimeOrigin(String className, String message) {
+        if (className.equals("sprig.runtime.SprigError")) {
+            return new RuntimeOrigin("sprig-error",
+                    "Catch it with try/catch or declare throws in the calling function.");
+        }
+        if (className.equals("sprig.runtime.SprigNumericError")) {
+            return new RuntimeOrigin("checked-arithmetic",
+                    "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.");
+        }
+        if (className.equals("java.lang.StringIndexOutOfBoundsException")) {
+            return new RuntimeOrigin("string-bounds",
+                    "Check the string length in code points before indexing; see `sprig help strings`.");
+        }
+        if (className.equals("java.lang.ArrayIndexOutOfBoundsException")) {
+            return new RuntimeOrigin("array-bounds", "Check the array length before indexing.");
+        }
+        if (className.equals("java.lang.NullPointerException")
+                && message != null && message.contains("foreign boundary")) {
+            return new RuntimeOrigin("foreign-boundary",
+                    "Java passed null to a non-null foreign parameter; the boundary rejected it.");
+        }
+        if (className.equals("java.lang.NullPointerException")
+                && message != null && message.contains("non-null callable")) {
+            return new RuntimeOrigin("null-boundary",
+                    "Java returned or passed null for a non-null callable; handle the null case before the call.");
+        }
+        if (className.equals("java.lang.NullPointerException")) {
+            return new RuntimeOrigin("null-value", "Check for null before using the value.");
+        }
+        if (className.equals("java.lang.IndexOutOfBoundsException")
+                || (message != null && listBoundMessage(message) != null)) {
+            return new RuntimeOrigin("list-bounds", "Check the list length before indexing.");
+        }
+        return new RuntimeOrigin("jvm", "Inspect the failing operation and the values it received.");
     }
 
     private static void writeSources(JavaGenerator.Output output, Path javaDir) throws IOException {
@@ -1435,6 +1621,7 @@ public final class Main {
         Path outDir;
         boolean outDirSpecified;
         boolean emitJavaOnly;
+        boolean stacktrace;
         boolean separatorProvided;
         String memberFilter;
         String bin;
@@ -1453,6 +1640,7 @@ public final class Main {
                     case "--offline" -> options.offline = true;
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
+                    case "--stacktrace" -> options.stacktrace = true;
                     case "--emit-java-only" -> options.emitJavaOnly = true;
                     case "--bin" -> {
                         if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.bin = args[++i];
@@ -1497,6 +1685,7 @@ public final class Main {
             if (syntaxOnly && !command.equals("check")) return "--syntax-only is only valid with check";
             if (emitJavaOnly && !command.equals("build")) return "--emit-java-only is only valid with build";
             if (keep && !command.equals("run")) return "--keep is only valid with run";
+            if (stacktrace && !command.equals("run")) return "--stacktrace is only valid with run";
             if (outDirSpecified && !command.equals("build")) return "-d/--out is only valid with build";
             if (memberFilter != null && !command.equals("api")) return "--member is only valid with api";
             if (bin != null && !command.equals("run")) return "--bin is only valid with run";
