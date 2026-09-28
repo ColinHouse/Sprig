@@ -62,8 +62,8 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-NUM-CONVERSION | An implicit numeric conversion risks precision or range loss. |
 | SPR-NUM-DIVISION | Integer/BigInt `/` would truncate, or Decimal `/` lacks a rounding policy. |
 | SPR-NUM-MIXED | A numeric operator cannot implicitly mix these numeric families. |
-| SPR-RUNTIME-ERROR | Uncaught Sprig Error value at runtime. |
-| SPR-RUNTIME-EXCEPTION | Uncaught JVM exception at runtime. |
+| SPR-RUNTIME-ERROR | Uncaught Sprig Error value at runtime; the wrapped message, `origin` data and source range are reported. |
+| SPR-RUNTIME-EXCEPTION | Uncaught JVM exception at runtime, wrapped to a Sprig-level message with a source range; `run --stacktrace` restores the raw JVM stack. |
 | SPR-PROGRAM-EXIT | The Sprig program exited with a non-zero process status. |
 | SPR-SYNTAX-ERROR | The token sequence does not match the Sprig grammar. |
 | SPR-TYPE-ASSIGN | Assignment value does not match the target type. |

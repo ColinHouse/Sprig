@@ -613,7 +613,7 @@ public final class JavaGenerator {
         w.line("sprigMain();");
         w.close();
         w.open("catch (java.lang.Throwable failure)");
-        w.line("failure.printStackTrace();");
+        w.line("sprig.runtime.SprigRuntime.reportRuntimeFailure(failure);");
         w.line("java.lang.System.exit(1);");
         w.close();
         w.close();
