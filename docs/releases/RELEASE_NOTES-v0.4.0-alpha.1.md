@@ -38,6 +38,12 @@ through the exact-tag release workflow; the executed evidence is recorded in the
 - **Libraries and applications** — `sprig-cli`, `sprig-sqlite` (including
   migrations) and `sprig-web`, with the mini-web, ledger, sqlite-migrations,
   json-select and agent-tool examples, all exercised by the release gates.
+- **Agent-facing diagnostics** — every stable `SPR-*` code has a concise
+  meaning plus structured `sprig explain --json` guidance (causes, safe fixes,
+  related codes, help topic), and capability claims point to executable
+  regression evidence enforced by a consistency gate. Repair metadata remains
+  guidance only: `machineApplicable` stays `false`, with no automatic semantic
+  rewrites.
 - **Repository hygiene** — milestone plans and blind-trial evidence are archived,
   audit regressions are permanent under `tests/adversarial/regressions/`, and
   `docs/README.md` defines the documentation trust order.

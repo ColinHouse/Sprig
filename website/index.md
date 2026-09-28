@@ -49,11 +49,11 @@ sprig run
 
 ## 发行状态与限制
 
-公开 SDK 是 [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)。
-v0.4 在 v0.3 的基础上加入 canonical formatter、显式模块 re-export、表达式 match、
-Unicode code-point 字符串语义、`sprig api` 模块/项目内省、managed SDK 升级和一轮
-对抗正确性修复。已发布 SDK 的功能请查看[发行状态](/project/release-status)、发行资产
-和 capability 输出。
+公开 SDK 是 [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1)。
+v0.4.0-alpha.1 发布候选在 v0.3 基础上加入 canonical formatter、显式模块 re-export、
+表达式 match、Unicode code-point 字符串语义、`sprig api` 模块/项目内省、managed SDK
+升级和一轮对抗正确性修复；annotated tag workflow 完成后成为已发布版本。已发布 SDK 的
+功能请查看[发行状态](/project/release-status)、发行资产和 capability 输出。
 Sprig 尚未自举，也不承诺生产可用；发布/registry、LSP、接口与泛型推断仍属未来工作。
 见[已知限制](/reference/known-limitations)。
 

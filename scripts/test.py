@@ -61,6 +61,7 @@ def main():
               "tests/correctness/check_correctness.py", "tests/recovery/check_recovery.py",
               "acceptance/scripts/run_acceptance.py", "acceptance/scripts/json_matrix.py",
               "acceptance/scripts/consistency_matrix.py", "tests/agent_tooling/check_tooling.py",
+              "tests/agent_tooling/check_diagnostics.py",
               "tests/agent_tooling/check_sprig_api.py", "tests/agent_tooling/check_agent_tools.py",
               "tests/agent_eval/check_task_pack.py",
               "tests/cli_contract/check_cli_contract.py", "tests/bootstrap/check_probe.py",

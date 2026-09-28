@@ -6,22 +6,22 @@ The SDK contains the compiler/runtime libraries and launcher, not a JDK.
 
 ## Download and verify
 
-The published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
+The published SDK is [v0.3.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.3.0-alpha.1).
 Download the ZIP and its `.sha256` from that release. On Linux/macOS:
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.4.0-alpha.1/sprig-v0.4.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.4.0-alpha.1/sprig-v0.4.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.4.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.4.0-alpha.1-jdk.zip
-cd sprig-v0.4.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.3.0-alpha.1/sprig-v0.3.0-alpha.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.3.0-alpha.1-jdk.zip.sha256
+unzip sprig-v0.3.0-alpha.1-jdk.zip
+cd sprig-v0.3.0-alpha.1-jdk
 ```
 
 On Linux, `sha256sum -c` is also available. Stop if the checksum differs.
 Use the release assets and capability output to check which features your SDK
-actually includes. The v0.4 SDK adds the canonical formatter, explicit module
-re-exports and expression `match` on top of the v0.3 base (local/Git/Maven
-dependencies and explicit bundled @std imports).
+actually includes. The v0.3 SDK supports local/Git/Maven dependencies and
+explicit bundled @std imports; the v0.4.0-alpha.1 release candidate adds the
+canonical formatter, explicit module re-exports and expression `match`.
 
 ## Initialize, resolve, run
 

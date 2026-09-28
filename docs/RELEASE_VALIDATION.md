@@ -1,12 +1,13 @@
-# Release validation — Sprig v0.4.0-alpha.1
+# Release validation — Sprig v0.4.0-alpha.1 (release candidate)
 
-This is the validation authority for the published `v0.4.0-alpha.1` snapshot.
-Published experimental Alpha: compiler **0.4.0-alpha.1**, JDK17+, Apache-2.0.
-Supported: **Linux/macOS**. Windows is **experimental and non-blocking**
-(issue #33). This record is updated with the annotated tag target, workflow run
-links and published ZIP SHA256 when the downloaded-release audit is performed.
+Release candidate: compiler **0.4.0-alpha.1**, JDK17+, Apache-2.0. The latest
+**published** release remains `v0.3.0-alpha.1`; no v0.4 publication is claimed
+until the annotated tag workflow completes. Supported: **Linux/macOS**. Windows
+is **experimental and non-blocking** (issue #33). After publication, the tag
+target, workflow run links, published ZIP SHA256 and downloaded-release audit
+are recorded here.
 
-## Published artifact and evidence
+## Publication workflow
 
 - [Release](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1):
   annotated tag `v0.4.0-alpha.1`, built by the exact-tag

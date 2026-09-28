@@ -127,8 +127,13 @@ public final class Explanations {
             case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> {
                 out.put("whyMatters", "Java calls are resolved against real signatures; unsupported boundaries are reported instead of guessed.");
                 out.put("confusedWith", List.of("Java automatic boxing", "Kotlin SAM conversion"));
-                out.put("commonCauses", List.of("Wrong arity, numeric narrowing, nullable argument, array/varargs boundary, or ambiguous overload."));
-                out.put("safeFixes", List.of("Run sprig api <fully.qualified.Class> --json; choose a supported signature and make conversions explicit."));
+                out.put("commonCauses", List.of("The argument types or arity match no declared overload.",
+                        "A nullable Sprig value was passed to a non-null Java parameter.",
+                        "The signature needs an array, varargs or a raw generic boundary that Sprig cannot bind.",
+                        "Two overloads are equally applicable, so the call is ambiguous."));
+                out.put("safeFixes", List.of("Run sprig api <fully.qualified.Class> --json and read the reported candidates.",
+                        "Choose a supported signature and convert explicitly (toIntExact(), toString(), ...).",
+                        "Narrow or restructure nullable arguments before the call."));
                 out.put("relatedCodes", List.of(Codes.TYPE_NULLABLE, Codes.JVM_CLASS));
             }
             case Codes.JVM_CLASSPATH -> {
@@ -138,8 +143,12 @@ public final class Explanations {
             }
             case Codes.PROJECT_LOCK_MISSING, Codes.PROJECT_LOCK_STALE -> {
                 out.put("whyMatters", "The lockfile makes dependency resolution deterministic and offline-safe.");
-                out.put("commonCauses", List.of("sprig.toml changed, the SDK std bundle changed, or the project was never resolved."));
-                out.put("safeFixes", List.of("Run sprig resolve in the project root, then retry the command."));
+                out.put("commonCauses", List.of("sprig.toml or a dependency manifest changed after the lock was written.",
+                        "The project was never resolved, or the bundled std version changed.",
+                        "A build step deleted or replaced sprig.lock."));
+                out.put("safeFixes", List.of("Run sprig resolve in the project root, then retry the command.",
+                        "Commit the refreshed sprig.lock when dependencies legitimately change.",
+                        "Do not hand-edit sprig.lock; resolve rewrites it deterministically."));
                 out.put("relatedCodes", List.of(Codes.PROJECT_NOT_EXPORTED, Codes.DEP_OFFLINE));
             }
             case Codes.PROJECT_NOT_EXPORTED -> {
@@ -187,24 +196,395 @@ public final class Explanations {
                 out.put("commonCauses", List.of("A lambda body reads a var local."));
                 out.put("safeFixes", List.of("Copy the var into a let binding before the lambda."));
             }
+            case Codes.MATCH_RESULT -> {
+                out.put("whyMatters", "An expression match has one result type; every branch must produce a value assignable to it without implicit conversion.");
+                out.put("confusedWith", List.of("Java switch statement fallthrough", "Rust match arm coercion"));
+                out.put("commonCauses", List.of("A branch returns a different type than the contextual or first non-null branch.",
+                        "Branches mix Int/Int32 or Int/Float without an explicit conversion.",
+                        "A branch yields null but the result type is not nullable."));
+                out.put("safeFixes", List.of("Make every branch produce the declared result type.",
+                        "Annotate the target (let value: T = match ...) so the contextual type is explicit.",
+                        "Convert explicitly per branch with toString(), toIntExact() or another named conversion."));
+                out.put("relatedCodes", List.of(Codes.MATCH_INFERENCE, Codes.TYPE_MISMATCH, Codes.TYPE_RETURN));
+            }
+            case Codes.MATCH_INFERENCE -> {
+                out.put("whyMatters", "An expression match needs a result type; all-null or unresolved branches cannot supply one.");
+                out.put("commonCauses", List.of("Every branch is null or an unannotated empty collection.",
+                        "Branch results do not agree on one type."));
+                out.put("safeFixes", List.of("Annotate the target: let name: String? = match ...",
+                        "Give at least one branch a value of the intended type."));
+                out.put("relatedCodes", List.of(Codes.MATCH_RESULT, Codes.TYPE_INFER));
+            }
+            case Codes.MODULE_EXPORT -> {
+                out.put("whyMatters", "A facade export forwards exactly one public declaration; identity is preserved, not copied.");
+                out.put("commonCauses", List.of("The exported name is not imported or declared in this module.",
+                        "The name refers to a non-public or unexported dependency declaration.",
+                        "The export name collides with another declaration."));
+                out.put("safeFixes", List.of("Run sprig api <module.spr> --json to list declared and exported names, then export the exact public name.",
+                        "Import the source module first with import \"...\" as alias."));
+                out.put("relatedCodes", List.of(Codes.MODULE_EXPORT_ORDER, Codes.PROJECT_NOT_EXPORTED, Codes.NAME_UNRESOLVED));
+            }
+            case Codes.MODULE_EXPORT_ORDER -> {
+                out.put("whyMatters", "Module structure is fixed: imports, then exports, then declarations and statements.");
+                out.put("confusedWith", List.of("Python imports anywhere", "JavaScript hoisted exports"));
+                out.put("commonCauses", List.of("An export appears after a declaration or statement.",
+                        "An export precedes its import."));
+                out.put("safeFixes", List.of("Move every export directly after the import block.",
+                        "Declare local helpers after the export block."));
+                out.put("relatedCodes", List.of(Codes.MODULE_EXPORT));
+            }
+            case Codes.TYPE_INFER -> {
+                out.put("whyMatters", "Local inference only reads an initializer; ambiguous initializers must be annotated.");
+                out.put("commonCauses", List.of("let x = null has no inferable type.",
+                        "Top-level initializers reference each other in a cycle.",
+                        "A generic value is constructed without explicit [Type] arguments.",
+                        "The initializer is a Unit call."));
+                out.put("safeFixes", List.of("Write the type: let x: String? = null.",
+                        "Write generic arguments: Box[Int](value=1).",
+                        "Break a cycle by annotating one binding or reordering initialization."));
+                out.put("relatedCodes", List.of(Codes.TYPE_UNIT, Codes.GENERIC_ARGS_REQUIRED, Codes.TYPE_MISMATCH));
+            }
+            case Codes.TYPE_RETURN -> {
+                out.put("whyMatters", "The declared result type is the function's contract at every call site.");
+                out.put("commonCauses", List.of("The returned value has a different type.",
+                        "A generic argument differs from the declared result type.",
+                        "A nullable value is returned from a non-null function."));
+                out.put("safeFixes", List.of("Return the declared type, converting explicitly if needed.",
+                        "Change the declared result type if the contract should be different.",
+                        "Handle null before returning when the result is non-null."));
+                out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.TYPE_NULLABLE, Codes.FLOW_MISSING_RETURN));
+            }
+            case Codes.TYPE_ASSIGN -> {
+                out.put("whyMatters", "Assignment never converts implicitly; every visible type change is deliberate.");
+                out.put("commonCauses", List.of("The value has a different type than the target.",
+                        "A nullable value is assigned to a non-null target.",
+                        "An immutable binding is reassigned (also reports SPR-NAME-LET-ASSIGN)."));
+                out.put("safeFixes", List.of("Convert explicitly or change the target's declared type.",
+                        "Check for null, or declare the target as T?.",
+                        "Use var when the binding should be reassignable."));
+                out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.TYPE_NULL, Codes.NAME_LET_ASSIGN));
+            }
+            case Codes.TYPE_OPERAND -> {
+                out.put("whyMatters", "Operators and methods exist only for types that define them; there is no implicit coercion.");
+                out.put("commonCauses", List.of("Arithmetic or ordering on a type that does not support it (String, Bool, nullable).",
+                        "A method name that does not exist on the value's type.",
+                        "Mixed numeric kinds that need an explicit conversion (see SPR-NUM-MIXED)."));
+                out.put("safeFixes", List.of("Use an operation the type defines; check sprig help types --json.",
+                        "Convert explicitly (toInt(), toFloatExact(), ...) before the operation.",
+                        "Narrow nullable values before calling methods on them."));
+                out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.NUM_MIXED, Codes.TYPE_NULLABLE));
+            }
+            case Codes.TYPE_NOT_CALLABLE -> {
+                out.put("whyMatters", "Call syntax requires a function value or callable type; method names are not first-class values.");
+                out.put("commonCauses", List.of("Calling a non-function value, or a field/lambda without the call.",
+                        "Using a method name as a value (named function references are not implemented).",
+                        "The callee resolved to an error, which then reports as not callable."));
+                out.put("safeFixes", List.of("Call the target with matching arguments.",
+                        "Wrap a named function in a lambda: fn(x: Int) => named(x)."));
+                out.put("relatedCodes", List.of(Codes.TYPE_FUNCTION_ARITY, Codes.NAME_NOT_A_VALUE));
+            }
+            case Codes.TYPE_UNIT -> {
+                out.put("whyMatters", "Unit marks a result-less call; it is not a value you can store or pass.");
+                out.put("commonCauses", List.of("Binding a Unit result: let x = print(\"hi\").",
+                        "Using Unit as a field, parameter, element, or value result type."));
+                out.put("safeFixes", List.of("Call the function for its effect without binding the result.",
+                        "Return a real value from functions whose result is used."));
+                out.put("relatedCodes", List.of(Codes.TYPE_INFER, Codes.TYPE_MISMATCH));
+            }
+            case Codes.CALL_ARITY -> {
+                out.put("whyMatters", "Calls are resolved against explicit parameter lists; there are no default values.");
+                out.put("commonCauses", List.of("Wrong number of arguments.",
+                        "Positional arguments for a constructor (reports SPR-CALL-NAMED-REQUIRED).",
+                        "Named arguments for a function (reports SPR-CALL-POSITIONAL-REQUIRED)."));
+                out.put("safeFixes", List.of("Pass exactly the declared parameter count.",
+                        "Check the declaration or sprig api <module> --json for the signature."));
+                out.put("relatedCodes", List.of(Codes.CALL_NAMED_REQUIRED, Codes.CALL_POSITIONAL_REQUIRED, Codes.TYPE_FUNCTION_ARITY));
+            }
+            case Codes.CALL_MISSING_FIELD, Codes.CALL_UNKNOWN_FIELD, Codes.CALL_DUPLICATE_FIELD -> {
+                out.put("whyMatters", "Named constructors make every field explicit; a typo or omission cannot be silently ignored.");
+                out.put("commonCauses", List.of("A required field was omitted and has no default.",
+                        "A field name is misspelled or belongs to another class/variant.",
+                        "The same field is passed twice."));
+                out.put("safeFixes", List.of("Read the class/variant declaration or sprig api <module.spr> --json for the field list.",
+                        "Pass each required field once; add a default in the declaration if omission is intended."));
+                out.put("relatedCodes", List.of(Codes.CALL_ARITY, Codes.TYPE_MISMATCH));
+            }
+            case Codes.PROJECT_MANIFEST -> {
+                out.put("whyMatters", "sprig.toml is the project contract; the compiler refuses ambiguous manifests.");
+                out.put("commonCauses", List.of("Missing [project] section or a required key.",
+                        "Unknown or duplicate keys, or a value of the wrong kind.",
+                        "An entry/source path that does not exist."));
+                out.put("safeFixes", List.of("Compare with the manifest produced by sprig init.",
+                        "Run sprig project --json to inspect the resolved model.",
+                        "See sprig help projects --json for the accepted keys."));
+                out.put("relatedCodes", List.of(Codes.PROJECT_ENTRY, Codes.PROJECT_LOCK_MISSING));
+            }
+            case Codes.PROJECT_ENTRY -> {
+                out.put("whyMatters", "An entry selects the file to run; ambiguous projects must select explicitly.");
+                out.put("commonCauses", List.of("The entry file does not exist.",
+                        "sprig run was used in a multi-bin project without --bin.",
+                        "The requested --bin name is not declared."));
+                out.put("safeFixes", List.of("Run sprig project --json to list resolved bins and entries.",
+                        "Create the entry file, or pass run --bin <name> or an explicit .spr file."));
+                out.put("relatedCodes", List.of(Codes.PROJECT_MANIFEST));
+            }
+            case Codes.PROJECT_LOCK_SCHEMA -> {
+                out.put("whyMatters", "Lock schemas are versioned; an old lock cannot be silently trusted by a new compiler.");
+                out.put("commonCauses", List.of("The lock was written by an older compiler or hand-edited."));
+                out.put("safeFixes", List.of("Run sprig resolve to rewrite the lock with the current schema.",
+                        "Do not hand-edit sprig.lock."));
+                out.put("relatedCodes", List.of(Codes.PROJECT_LOCK_STALE, Codes.PROJECT_LOCK_MISSING));
+            }
+            case Codes.PROJECT_UNSUPPORTED -> {
+                out.put("whyMatters", "Only project features the current compiler implements are accepted.");
+                out.put("commonCauses", List.of("A dependency declares a language version this compiler does not support.",
+                        "The manifest requests a project feature outside the implemented set."));
+                out.put("safeFixes", List.of("Align the dependency's language/version with the compiler.",
+                        "See sprig help projects --json and sprig help dependencies --json."));
+                out.put("relatedCodes", List.of(Codes.PROJECT_MANIFEST));
+            }
+            case Codes.DEP_OFFLINE -> {
+                out.put("whyMatters", "Offline mode never touches the network, so a cold cache fails instead of silently fetching.");
+                out.put("commonCauses", List.of("A locked artifact or Git revision is missing from the local cache.",
+                        "The project was never resolved on this machine."));
+                out.put("safeFixes", List.of("Run sprig resolve once with network access, then reuse --offline.",
+                        "Check that the expected cache directory exists under the user home."));
+                out.put("relatedCodes", List.of(Codes.DEP_CHECKSUM, Codes.PROJECT_LOCK_STALE));
+            }
+            case Codes.DEP_CHECKSUM -> {
+                out.put("whyMatters", "Locked artifacts are content-addressed; a mismatch means the cache entry is not the locked bytes.");
+                out.put("commonCauses", List.of("A corrupted or truncated cache entry.",
+                        "An upstream branch or tag moved and the lock references different bytes."));
+                out.put("safeFixes", List.of("Discard the corrupted cache entry and run sprig resolve again with network access.",
+                        "Do not edit sprig.lock or the cache by hand."));
+                out.put("relatedCodes", List.of(Codes.DEP_OFFLINE, Codes.DEP_GIT));
+            }
+            case Codes.DEP_MAVEN -> {
+                out.put("whyMatters", "Maven coordinates resolve to exact locked models and JARs; unsupported packaging is refused.");
+                out.put("commonCauses", List.of("Wrong group/artifact/version coordinates.",
+                        "No network access during the first resolve for that artifact.",
+                        "The artifact is not a JAR or needs unsupported Maven behavior."));
+                out.put("safeFixes", List.of("Verify exact release coordinates in [[jvm]].",
+                        "Run sprig resolve with network access.",
+                        "See docs/DEPENDENCIES.md; there is no Maven CLI/plugin path."));
+                out.put("relatedCodes", List.of(Codes.DEP_NOT_FOUND, Codes.DEP_OFFLINE));
+            }
+            case Codes.DEP_NOT_FOUND -> {
+                out.put("whyMatters", "Dependency paths and aliases are resolved explicitly; nothing is found by accident.");
+                out.put("commonCauses", List.of("A [[dependency]] path is wrong or missing.",
+                        "An @alias/module.spr import names a module the dependency does not export.",
+                        "Only direct dependency aliases are visible; transitive aliases are package-local."));
+                out.put("safeFixes", List.of("Run sprig project --json and sprig deps --json to inspect the resolved graph.",
+                        "Check the manifest path/name and the dependency's exports list."));
+                out.put("relatedCodes", List.of(Codes.PROJECT_NOT_EXPORTED, Codes.DEP_CYCLE));
+            }
+            case Codes.DEP_CYCLE -> {
+                out.put("whyMatters", "Acyclic dependencies keep resolution and initialization order defined.");
+                out.put("commonCauses", List.of("Two project packages depend on each other directly or transitively."));
+                out.put("safeFixes", List.of("Extract the shared code into a third package both depend on.",
+                        "Break the edge by inlining or moving the declaration."));
+                out.put("relatedCodes", List.of(Codes.NAME_IMPORT_CYCLE, Codes.DEP_NOT_FOUND));
+            }
+            case Codes.DEP_GIT -> {
+                out.put("whyMatters", "Git dependencies are locked to a revision; resolution never moves branches by itself.");
+                out.put("commonCauses", List.of("git is unavailable or the remote/ref cannot be reached.",
+                        "The requested branch/tag/revision does not exist."));
+                out.put("safeFixes", List.of("Verify the remote URL and branch/ref in sprig.toml.",
+                        "Ensure git is installed and the network is reachable for the first resolve.",
+                        "Run sprig resolve to refresh the locked revision deliberately."));
+                out.put("relatedCodes", List.of(Codes.DEP_CHECKSUM, Codes.DEP_OFFLINE));
+            }
+            case Codes.JVM_CLASS -> {
+                out.put("whyMatters", "Java imports resolve against real classpath metadata without initializing the class.");
+                out.put("commonCauses", List.of("A class name is misspelled or not on the compile classpath.",
+                        "The class lives in the unnamed package, which generated code cannot reference.",
+                        "A --classpath entry or locked JAR is missing."));
+                out.put("safeFixes", List.of("Run sprig api <fully.qualified.Class> --classpath ... --json to confirm resolution.",
+                        "Add the missing --classpath entry or resolve the manifest dependency.",
+                        "Move unnamed-package classes into a named package."));
+                out.put("relatedCodes", List.of(Codes.JVM_CLASSPATH, Codes.JVM_MEMBER));
+            }
+            case Codes.SYNTAX_ERROR -> {
+                out.put("whyMatters", "The grammar is small and explicit; fixing the first syntax error removes most later ones.");
+                out.put("commonCauses", List.of("A block header without a trailing ':'.",
+                        "Mismatched indentation or an unexpected token.",
+                        "A construct from another language (braces, semicolons, ternaries)."));
+                out.put("safeFixes", List.of("Fix the first reported error, then re-check; cascades are common.",
+                        "Query sprig help language --json and sprig help <topic> --json for accepted syntax."));
+                out.put("relatedCodes", List.of(Codes.LEX_INDENT_INCONSISTENT, Codes.LEX_INDENT_FIRST, Codes.LEX_CHAR));
+            }
+            case Codes.LEX_INDENT_INCONSISTENT -> {
+                out.put("whyMatters", "Indentation is syntax; a dedent must match an earlier block level exactly.");
+                out.put("commonCauses", List.of("Spaces and tabs were mixed, or a level uses a different width.",
+                        "A dedent lands between two earlier indentation levels."));
+                out.put("safeFixes", List.of("Use spaces only, and align dedents with a previous block level.",
+                        "Format with sprig fmt after the file parses."));
+                out.put("relatedCodes", List.of(Codes.LEX_TAB, Codes.LEX_INDENT_FIRST, Codes.SYNTAX_ERROR));
+            }
+            case Codes.NAME_DUPLICATE, Codes.NAME_DUPLICATE_MEMBER -> {
+                out.put("whyMatters", "One namespace has one meaning per name; duplicates are always explicit errors.");
+                out.put("commonCauses", List.of("Two declarations share a name in the same scope.",
+                        "A class or variant declares the same member twice."));
+                out.put("safeFixes", List.of("Rename one declaration or member.",
+                        "Move the competing declaration into another module if both are needed."));
+                out.put("relatedCodes", List.of(Codes.NAME_FIELD_SHADOW, Codes.NAME_UNRESOLVED));
+            }
+            case Codes.NAME_LET_ASSIGN -> {
+                out.put("whyMatters", "let bindings and let fields are immutable; mutation is visible in the declaration.");
+                out.put("confusedWith", List.of("JavaScript let reassignment", "Python variables"));
+                out.put("commonCauses", List.of("Reassigning a let binding or let field."));
+                out.put("safeFixes", List.of("Declare it with var if reassignment is intended.",
+                        "Compute a new let value instead of mutating."));
+                out.put("relatedCodes", List.of(Codes.TYPE_ASSIGN));
+            }
+            case Codes.NAME_IMPORT -> {
+                out.put("whyMatters", "Every import resolves to a real file, bundled module, or class; nothing is implicit.");
+                out.put("commonCauses", List.of("A relative module path is wrong or missing.",
+                        "An @alias module is not exported by the dependency.",
+                        "A Java class import cannot be loaded (name or classpath)."));
+                out.put("safeFixes", List.of("Check the path relative to the importing file, or @std/@alias spelling.",
+                        "Run sprig project --json / sprig deps --json for dependency aliases and exports.",
+                        "For Java, confirm the class name and classpath."));
+                out.put("relatedCodes", List.of(Codes.PROJECT_NOT_EXPORTED, Codes.JVM_CLASS, Codes.NAME_IMPORT_CYCLE));
+            }
+            case Codes.MATCH_SCRUTINEE -> {
+                out.put("whyMatters", "match can only dispatch on a non-null enum or variant value.");
+                out.put("commonCauses", List.of("The matched expression is nullable or of another type."));
+                out.put("safeFixes", List.of("Narrow the nullable value first, or convert it to an enum/variant.",
+                        "Change the function result type contract upstream."));
+                out.put("relatedCodes", List.of(Codes.TYPE_NULLABLE, Codes.MATCH_WRONG_TYPE));
+            }
+            case Codes.MATCH_DUPLICATE, Codes.MATCH_WRONG_TYPE, Codes.MATCH_UNKNOWN_CASE, Codes.MATCH_ENUM_BINDER -> {
+                out.put("whyMatters", "Match branches are a closed, checked enumeration of cases.");
+                out.put("commonCauses", List.of("A case is repeated, belongs to another enum/variant, or is misspelled.",
+                        "A payloadless enum case binds 'as name'."));
+                out.put("safeFixes", List.of("Compare against the declared enum/variant cases.",
+                        "Remove duplicate/foreign branches and binders on payloadless cases."));
+                out.put("relatedCodes", List.of(Codes.MATCH_NONEXHAUSTIVE, Codes.MATCH_RESULT));
+            }
+            case Codes.FLOW_MISSING_RETURN -> {
+                out.put("whyMatters", "A non-Unit function must return on every path; control cannot fall off the end.");
+                out.put("commonCauses", List.of("A branch or loop body is missing a return.",
+                        "try/finally or match paths do not all complete."));
+                out.put("safeFixes", List.of("Return on every path, or make the function's result type Unit."));
+                out.put("relatedCodes", List.of(Codes.FLOW_UNREACHABLE, Codes.TYPE_RETURN));
+            }
+            case Codes.FLOW_UNREACHABLE -> {
+                out.put("whyMatters", "Statements after a guaranteed return/throw/break/continue can never run.");
+                out.put("commonCauses", List.of("Code follows a return, throw, break or continue.",
+                        "A finally block already overrides the surrounding exit."));
+                out.put("safeFixes", List.of("Remove the unreachable statement, or restructure the control flow."));
+                out.put("relatedCodes", List.of(Codes.FLOW_MISSING_RETURN, Codes.FLOW_BREAK, Codes.FLOW_CONTINUE));
+            }
+            case Codes.API_TARGET -> {
+                out.put("whyMatters", "sprig api reports resolved compiler metadata; the target must be a real module or project.");
+                out.put("commonCauses", List.of("The .spr path or @package/module.spr target does not exist.",
+                        "The project has no current lock (resolve first)."));
+                out.put("safeFixes", List.of("Check the path and run sprig resolve for project targets.",
+                        "Use sprig api . or sprig api <module.spr> --json and read the diagnostic."));
+                out.put("relatedCodes", List.of(Codes.API_MEMBER, Codes.PROJECT_LOCK_STALE));
+            }
+            case Codes.NUM_RANGE -> {
+                out.put("whyMatters", "Numeric literals are checked against the target type's exact range and precision.");
+                out.put("commonCauses", List.of("A literal is outside Int/Int32 range.",
+                        "A literal is too small to represent without underflowing to zero.",
+                        "A BigInt or Decimal literal is written without the matching construction."));
+                out.put("safeFixes", List.of("Use a literal within the target range.",
+                        "Use BigInt/Decimal construction for large or exact values.",
+                        "Check sprig help numerics --json."));
+                out.put("relatedCodes", List.of(Codes.NUM_CONVERSION, Codes.TYPE_MISMATCH));
+            }
+            case Codes.LEX_STRING -> {
+                out.put("whyMatters", "Strings are single-line, double-quoted literals with a small escape set.");
+                out.put("commonCauses", List.of("A closing quote is missing.",
+                        "A raw newline appears inside the literal.",
+                        "An unsupported escape (such as \\u or a backslash before a normal character)."));
+                out.put("safeFixes", List.of("Close the literal on the same line.",
+                        "Use the supported escapes \\\" \\\\ \\n \\r \\t, or String.fromCode for other code points.",
+                        "Concatenate with + across lines if a long text is needed."));
+                out.put("relatedCodes", List.of(Codes.LEX_UNCLOSED, Codes.LEX_CHAR));
+            }
+            case Codes.LEX_UNCLOSED, Codes.LEX_UNMATCHED -> {
+                out.put("whyMatters", "Delimiters must balance; the parser trusts the token stream after lexing.");
+                out.put("commonCauses", List.of("A '(' '[' or '{' was never closed.",
+                        "A closing delimiter has no matching opener.",
+                        "A multi-line expression was split incorrectly."));
+                out.put("safeFixes", List.of("Balance the delimiters around the reported span.",
+                        "Re-check the first reported delimiter; later errors usually cascade from it."));
+                out.put("relatedCodes", List.of(Codes.SYNTAX_ERROR));
+            }
+            case Codes.LEX_CHAR, Codes.LEX_INDENT_FIRST -> {
+                out.put("whyMatters", "The lexer is strict and indentation is syntax; invisible input still fails loudly.");
+                out.put("commonCauses", List.of("A character outside the Sprig lexer (smart quotes, $, emoji outside strings).",
+                        "The first code line of the file is indented."));
+                out.put("safeFixes", List.of("Replace or remove the reported character; keep escapes inside strings.",
+                        "Start the first code line at column 1."));
+                out.put("relatedCodes", List.of(Codes.LEX_TAB, Codes.SYNTAX_ERROR));
+            }
+            case Codes.FLOW_BREAK, Codes.FLOW_CONTINUE -> {
+                out.put("whyMatters", "Loop control is only meaningful inside a loop body.");
+                out.put("commonCauses", List.of("break or continue appears outside any while/for body.",
+                        "The statement was moved out of a loop during editing."));
+                out.put("safeFixes", List.of("Move the statement inside the intended loop.",
+                        "Replace it with an early return or a condition if a loop is not intended."));
+                out.put("relatedCodes", List.of(Codes.FLOW_UNREACHABLE));
+            }
+            case Codes.NAME_NOT_A_VALUE -> {
+                out.put("whyMatters", "Types and modules name declarations, not runtime values.");
+                out.put("commonCauses", List.of("A class, variant, enum or module name was used where a value is required.",
+                        "A constructor call is missing."));
+                out.put("safeFixes", List.of("Construct a value: Person(name=\"Ada\"), Expr.Literal(value=1).",
+                        "Reference a declared value or call a function instead."));
+                out.put("relatedCodes", List.of(Codes.TYPE_NOT_CALLABLE, Codes.NAME_NOT_A_TYPE));
+            }
+            case Codes.GENERIC_NULLABLE -> {
+                out.put("whyMatters", "A type parameter declared with '?' must be instantiated with a non-nullable type.");
+                out.put("commonCauses", List.of("A nullable type argument was supplied for a '?'-declared parameter."));
+                out.put("safeFixes", List.of("Pass the non-nullable form: Box[String] instead of Box[String?].",
+                        "Declare the parameter without '?' if nullable arguments should be allowed."));
+                out.put("relatedCodes", List.of(Codes.TYPE_NULL, Codes.GENERIC_ARITY));
+            }
+            case Codes.RUNTIME_ERROR, Codes.RUNTIME_EXCEPTION -> {
+                out.put("whyMatters", "An uncaught error aborts the program; the diagnostic is runtime evidence, not a compile error.");
+                out.put("commonCauses", List.of("A thrown Sprig Error reached the top level without a catch.",
+                        "A Java exception crossed an interop boundary unhandled.",
+                        "A runtime assumption failed (null from Java, numeric edge, file/process failure)."));
+                out.put("safeFixes", List.of("Catch or declare the error at the appropriate function boundary.",
+                        "Narrow Java reference results before use and read the reported stderr output.",
+                        "Use try/catch around the failing operation and handle the absent case explicitly."));
+                out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.TYPE_NULLABLE));
+            }
+            case Codes.CLI_OPTION -> {
+                out.put("whyMatters", "The CLI contract is exact: missing arguments and unknown options fail instead of guessing.");
+                out.put("commonCauses", List.of("A required argument or file path is missing.",
+                        "An option is misspelled or not supported by that command."));
+                out.put("safeFixes", List.of("Run the command with the documented arguments; sprig help agents --json lists the query commands.",
+                        "Use --json consistently when scripting."));
+                out.put("relatedCodes", List.of(Codes.API_TARGET));
+            }
             default -> { }
         }
         return out;
     }
 
     private static String topic(String code) {
+        if (code.contains("GENERIC")) return "generics";
+        if (code.contains("NULL")) return "nullability";
+        if (code.contains("FUNCTION") || code.contains("CALLABLE")) return "functions";
         if (code.startsWith("SPR-JVM-")) return "jvm";
         if (code.startsWith("SPR-NUM-")) return "numerics";
         if (code.startsWith("SPR-MATCH-")) return "match";
         if (code.startsWith("SPR-COLLECTION-")) return "collections";
-        if (code.startsWith("SPR-GENERIC-") || code.contains("GENERIC")) return "generics";
-        if (code.startsWith("SPR-PROJECT-") || code.startsWith("SPR-DEP-")) return "dependencies";
-        if (code.startsWith("SPR-API-")) return "agents";
+        if (code.startsWith("SPR-DEP-")) return "dependencies";
+        if (code.startsWith("SPR-PROJECT-")) return "projects";
+        if (code.startsWith("SPR-MODULE-") || code.equals(Codes.NAME_IMPORT)
+                || code.equals(Codes.NAME_IMPORT_CYCLE) || code.equals(Codes.NAME_MODULE)) return "modules";
+        if (code.startsWith("SPR-API-") || code.startsWith("SPR-CLI-")) return "agents";
         if (code.startsWith("SPR-LEX-") || code.startsWith("SPR-SYNTAX-")) return "language";
-        if (code.startsWith("SPR-FLOW-")) return "errors";
+        if (code.startsWith("SPR-FLOW-") || code.startsWith("SPR-RUNTIME-")) return "errors";
         if (code.startsWith("SPR-CALL-")) return "classes";
-        if (code.contains("NULL")) return "nullability";
-        if (code.contains("FUNCTION") || code.contains("CALLABLE")) return "functions";
+        if (code.startsWith("SPR-TYPE-")) return "types";
+        if (code.startsWith("SPR-NAME-")) return "language";
         return "language";
     }
 }

@@ -10,30 +10,18 @@
   "feature.matchExpression": [
     "tests/match_expression/check_match_expression.py"
   ],
+  "feature.sourceFunctionTypes": [
+    "tests/callables/check_callables.py"
+  ],
+  "feature.sprigCallableJvmBridge": [
+    "tests/callables/check_callables.py"
+  ],
   "feature.userGenerics": [
     "tests/runtime/19_generics.spr",
     "tests/semantics/generic_inference.spr"
   ],
-  "feature.nullableTypes": [
-    "tests/runtime/07_nullable.spr",
-    "tests/semantics/nullable_receiver.spr"
-  ],
-  "feature.thirdPartyClasspath": [
-    "tests/agent_tooling/check_tooling.py#classpath-check"
-  ],
-  "feature.sourceModules": [
-    "tests/runtime/12_modules.spr"
-  ],
-  "feature.jsonDiagnostics": [
-    "tests/semantics/missing_case.spr"
-  ],
-  "lambdaMaxArity": [
-    "tests/runtime/10_lambdas.spr",
-    "tests/runtime/18_lambda_zero_arg.spr"
-  ],
-  "stringSemantics": [
-    "tests/runtime/20_string_codepoints.spr",
-    "tests/runtime/check_strings.py"
+  "feature.multipleGenericParameters": [
+    "tests/runtime/19_generics.spr"
   ],
   "feature.genericConstraints": [
     "tests/visitor/generic_stack.spr",
@@ -42,13 +30,68 @@
   "feature.genericTypeInference": [
     "tests/semantics/generic_inference.spr"
   ],
-  "feature.multipleGenericParameters": [
-    "tests/runtime/19_generics.spr"
+  "feature.nullableTypes": [
+    "tests/runtime/07_nullable.spr",
+    "tests/semantics/nullable_receiver.spr"
+  ],
+  "feature.packageManifest": [
+    "tests/project/check_project.py"
+  ],
+  "feature.packageExports": [
+    "tests/project_deps/check_deps.py",
+    "tests/reexports/check_reexports.py"
+  ],
+  "feature.offlineResolution": [
+    "tests/maven/check_resolver.py",
+    "tests/project_deps/check_deps.py"
+  ],
+  "feature.projectAwareClasspath": [
+    "tests/maven/check_resolver.py",
+    "scripts/test-showcases.py"
+  ],
+  "feature.lockfile": [
+    "tests/project/check_project.py",
+    "tests/maven/check_resolver.py"
+  ],
+  "feature.localDependencies": [
+    "tests/project_deps/check_deps.py"
+  ],
+  "feature.gitDependencies": [
+    "tests/project_deps/check_deps.py"
+  ],
+  "feature.mavenDependencies": [
+    "tests/maven/check_resolver.py",
+    "scripts/test-showcases.py"
+  ],
+  "feature.thirdPartyClasspath": [
+    "tests/agent_tooling/check_tooling.py#classpath-check"
+  ],
+  "feature.sourceModules": [
+    "tests/runtime/12_modules.spr"
+  ],
+  "feature.moduleReexports": [
+    "tests/reexports/check_reexports.py"
+  ],
+  "feature.jsonDiagnostics": [
+    "acceptance/scripts/json_matrix.py",
+    "tests/semantics/missing_case.spr"
+  ],
+  "feature.bundledStd": [
+    "tests/release_hardening/check_hardening.py",
+    "scripts/test-stdlib.py"
+  ],
+  "feature.emitJavaOnly": [
+    "tests/release_hardening/check_hardening.py"
   ],
   "feature.formatter": [
     "tests/formatter/check_formatter.py"
   ],
-  "feature.moduleReexports": [
-    "tests/reexports/check_reexports.py"
+  "lambdaMaxArity": [
+    "tests/runtime/10_lambdas.spr",
+    "tests/runtime/18_lambda_zero_arg.spr"
+  ],
+  "stringSemantics": [
+    "tests/runtime/20_string_codepoints.spr",
+    "tests/runtime/check_strings.py"
   ]
 }

@@ -63,6 +63,35 @@ def main():
                       executed.returncode == 0 and not obj(executed)["diagnostics"])
     check("help-text", "Syntax:" in run("help", "match").stdout)
     check("help-unknown-json", obj(run("help", "invalid", "--json"))["exitCode"] == 2)
+
+    # Every advertised capability must point to executable evidence; every
+    # deliberately unsupported one must have canonical guidance.
+    driver = (ROOT / "scripts/test.py").read_text(encoding="utf-8")
+
+    def executable_evidence(entry):
+        relative = entry.split("#", 1)[0]
+        path = ROOT / relative
+        if not path.is_file():
+            return False
+        if path.suffix == ".py":
+            return relative in driver
+        if path.suffix == ".spr":
+            return path.with_suffix(".out").is_file()
+        return False
+
+    guidance = catalog["featureGuidance"]
+    for feature, supported in catalog["features"].items():
+        if supported:
+            fixtures = capability_tests.get("feature." + feature)
+            check("capability-evidence-" + feature,
+                  fixtures is not None and any(executable_evidence(item) for item in fixtures))
+        else:
+            entry = guidance.get(feature)
+            check("capability-guidance-" + feature,
+                  isinstance(entry, dict) and entry.get("supported") is False
+                  and entry.get("helpTopic") in topics and bool(entry.get("alternatives")))
+    check("feature-guidance-topics-exist",
+          all(entry.get("helpTopic") in topics for entry in guidance.values()))
     doctor = obj(run("doctor", "--json"))
     check("doctor", doctor["javacAvailable"] and doctor["antlrAvailable"]
           and doctor["compilerVersion"] == catalog["compilerVersion"])
