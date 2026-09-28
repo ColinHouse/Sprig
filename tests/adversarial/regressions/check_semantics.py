@@ -25,6 +25,14 @@ NEGATIVE = {
     'mutable_loop': 'SPR-TYPE-NULLABLE', 'generic_wrong_nested': 'SPR-TYPE-RETURN',
     'nonnull_java': 'SPR-TYPE-NULLABLE', 'match_scope': 'SPR-NAME-UNRESOLVED',
     'default_self_lambda': 'SPR-NAME-UNRESOLVED',
+    'index_assign_map_key': 'SPR-TYPE-MISMATCH',
+    'index_assign_map_compound_key': 'SPR-TYPE-MISMATCH',
+    'index_assign_map_key_nullable': 'SPR-TYPE-NULLABLE',
+    'index_assign_map_key_bool': 'SPR-TYPE-MISMATCH',
+    'index_assign_list_index_string': 'SPR-TYPE-MISMATCH',
+    'index_assign_list_index_nullable': 'SPR-TYPE-NULLABLE',
+    'index_assign_generic_key': 'SPR-TYPE-MISMATCH',
+    'index_assign_param_key': 'SPR-TYPE-MISMATCH',
 }
 POSITIVE = {
     'finally_break_override': '42\n', 'finally_continue_override': '42\n',
@@ -35,6 +43,8 @@ POSITIVE = {
     'generic_nullable': '43\n', 'generic_fn_return': '42\n', 'generic_fn_param': '42\n',
     'fn_match': '42\n', 'compound_index': '1\n3\n', 'null_match': '43\n',
     'map_generic': '43\n', 'context_fn': '42\n', 'float_match': '0.1\n',
+    'index_assign_legal': '10\n5\n', 'index_assign_generic_legal': '2\n',
+    'index_assign_widening_legal': '4\n',
 }
 
 def main():

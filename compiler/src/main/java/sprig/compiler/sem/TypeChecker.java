@@ -455,7 +455,8 @@ public final class TypeChecker {
                 receiver = receiver.nonNull();
             }
             if (receiver instanceof ListType list) {
-                checkExpr(index.index, NativeType.INT);
+                Type idx = checkExpr(index.index, NativeType.INT);
+                requireAssignable(NativeType.INT, idx, index.index.span, Codes.TYPE_MISMATCH, "list index");
                 if (!list.mutable) {
                     diagnostics.add(Diagnostic.error(Codes.COLLECTION_IMMUTABLE, Phase.TYPE,
                             "Cannot mutate List[" + list.element.display() + "]; convert it with toMutableList()",
@@ -463,7 +464,8 @@ public final class TypeChecker {
                 }
                 targetType = list.element;
             } else if (receiver instanceof MapType map) {
-                checkExpr(index.index, map.key);
+                Type idx = checkExpr(index.index, map.key);
+                requireAssignable(map.key, idx, index.index.span, Codes.TYPE_MISMATCH, "map key");
                 if (!map.mutable) {
                     diagnostics.add(Diagnostic.error(Codes.COLLECTION_IMMUTABLE, Phase.TYPE,
                             "Cannot mutate Map[" + map.key.display() + ", " + map.value.display()

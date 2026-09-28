@@ -1,0 +1,8 @@
+let m: MutableMap[Int, Int] = {1: 2}
+m[3] = 4
+m[3] += 6
+let xs: MutableList[Int] = [1]
+xs[0] = 2
+xs[0] += 3
+print(m[3])
+print(xs[0])
