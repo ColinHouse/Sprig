@@ -32,7 +32,19 @@ def main():
     assert lines[1] == '[-0,0.0,1E+2,-9223372036854775809]'
     import json
     assert json.loads(lines[2]) == '\b\f\t\r\n\x00/\\"'
-    assert lines[3:] == ['true', 'serializer rejected invalid number', 'serializer rejected duplicate keys']
+    independently_built_depth_128 = '[' * 128 + 'null' + ']' * 128
+    assert lines[3:11] == [
+        'true',
+        'parse depth 128 accepted=128',
+        f'depth-128 output length={len(independently_built_depth_128)}',
+        'parse depth 129 rejected=true',
+        f'serialize depth 128 accepted={len(independently_built_depth_128)}',
+        'serialize depth 129 rejected=true',
+        'supplementary pair="' + json.loads('"\\ud83d\\ude00"') + '"',
+        'escaped duplicate rejected=true',
+    ]
+    assert lines[11] == 'large exponent=1e9999'
+    assert lines[12:] == ['serializer rejected invalid number', 'serializer rejected duplicate keys']
     lookup = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json_lookup.spr')], cwd=ROOT,
                             text=True, encoding='utf-8', capture_output=True)
     assert lookup.returncode == 0, (lookup.stdout, lookup.stderr)
