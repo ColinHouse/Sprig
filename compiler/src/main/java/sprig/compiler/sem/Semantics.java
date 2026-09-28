@@ -50,6 +50,14 @@ public final class Semantics {
             if (source instanceof JavaType javaSource) {
                 return javaTarget.clazz.isAssignableFrom(javaSource.clazz);
             }
+            if (source instanceof sprig.compiler.types.ClassType classSource
+                    && javaTarget.clazz.isInterface()) {
+                for (Class<?> declared : classSource.decl.conformedInterfaces) {
+                    if (javaTarget.clazz.isAssignableFrom(declared)) {
+                        return true; // declared foreign conformance conversion
+                    }
+                }
+            }
             return false;
         }
         return false;

@@ -484,6 +484,42 @@ public final class Explanations {
                         "Use sprig api . or sprig api <module.spr> --json and read the diagnostic."));
                 out.put("relatedCodes", List.of(Codes.API_MEMBER, Codes.PROJECT_LOCK_STALE));
             }
+            case Codes.CONFORM_SOURCE, Codes.CONFORM_TARGET -> {
+                out.put("whyMatters", "conform declares a foreign JVM contract for an existing local class; it adds no methods and performs no adaptation.");
+                out.put("commonCauses", List.of("The left name is not a class declared in this module (imported, dependency or value name).",
+                        "The class is generic.",
+                        "The target alias is not an imported public Java interface, or the interface is generic, sealed or an annotation."));
+                out.put("safeFixes", List.of("Declare conform in the same file as a non-generic class.",
+                        "Import the target: import java.lang.Runnable as Runnable.",
+                        "For different signatures, write a separate class that composes the original."));
+                out.put("relatedCodes", List.of(Codes.CONFORM_MEMBER, Codes.CONFORM_OVERLOAD, Codes.JVM_CLASS));
+            }
+            case Codes.CONFORM_MEMBER -> {
+                out.put("whyMatters", "A witness method must match the Java signature exactly: name, arity, JVM parameter shapes and return shape.");
+                out.put("commonCauses", List.of("The class is missing a required method.",
+                        "A parameter's JVM shape differs (Int vs String, Int vs Int32, nullable primitive).",
+                        "The return shape differs (Unit vs a value, primitive vs boxed)."));
+                out.put("safeFixes", List.of("Add or rename the method to the interface's method name.",
+                        "Run sprig api <Java.Class> --json to inspect the exact interface signature.",
+                        "Use composition and a separate adapter class when the signature cannot match."));
+                out.put("relatedCodes", List.of(Codes.CONFORM_SOURCE, Codes.CONFORM_OVERLOAD, Codes.JVM_MEMBER));
+            }
+            case Codes.CONFORM_OVERLOAD -> {
+                out.put("whyMatters", "Sprig classes have one method per name, so an interface with overloaded abstract methods cannot be represented.");
+                out.put("commonCauses", List.of("The Java interface declares abstract methods that share a name with different parameters."));
+                out.put("safeFixes", List.of("Use an interface whose abstract methods have unique names.",
+                        "Keep the overloaded Java type behind ordinary Java interop instead of conforming to it."));
+                out.put("relatedCodes", List.of(Codes.CONFORM_MEMBER, Codes.JVM_MEMBER));
+            }
+            case Codes.CONFORM_EFFECTS -> {
+                out.put("whyMatters", "A Java interface method only permits the checked exceptions it declares; the witness cannot add more.");
+                out.put("commonCauses", List.of("The witness declares a checked exception while the interface method declares none.",
+                        "The declared checked exception is not a subtype of any exception the interface permits."));
+                out.put("safeFixes", List.of("Catch the exception inside the method and handle it.",
+                        "Remove the throws clause and surface failure another way.",
+                        "Use an interface method that declares a compatible exception."));
+                out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.CONFORM_MEMBER));
+            }
             case Codes.NUM_RANGE -> {
                 out.put("whyMatters", "Numeric literals are checked against the target type's exact range and precision.");
                 out.put("commonCauses", List.of("A literal is outside Int/Int32 range.",

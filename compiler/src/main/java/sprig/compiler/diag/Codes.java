@@ -101,6 +101,13 @@ public final class Codes {
     public static final String FLOW_CONTINUE = "SPR-FLOW-CONTINUE";
     public static final String FLOW_THROWS = "SPR-FLOW-THROWS";
 
+    // CONFORM (foreign JVM nominal contract)
+    public static final String CONFORM_SOURCE = "SPR-CONFORM-SOURCE";
+    public static final String CONFORM_TARGET = "SPR-CONFORM-TARGET";
+    public static final String CONFORM_MEMBER = "SPR-CONFORM-MEMBER";
+    public static final String CONFORM_OVERLOAD = "SPR-CONFORM-OVERLOAD";
+    public static final String CONFORM_EFFECTS = "SPR-CONFORM-EFFECTS";
+
     // JVM
     public static final String JVM_CLASS = "SPR-JVM-CLASS";
     public static final String JVM_CLASSPATH = "SPR-JVM-CLASSPATH";

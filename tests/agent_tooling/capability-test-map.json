@@ -86,6 +86,9 @@
   "feature.formatter": [
     "tests/formatter/check_formatter.py"
   ],
+  "feature.foreignConformance": [
+    "tests/conform/check_conform.py"
+  ],
   "lambdaMaxArity": [
     "tests/runtime/10_lambdas.spr",
     "tests/runtime/18_lambda_zero_arg.spr"

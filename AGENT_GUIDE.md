@@ -10,6 +10,7 @@ bin/sprig capabilities --json
 bin/sprig help language --json
 bin/sprig help strings --json
 bin/sprig help match --json
+bin/sprig help conform --json
 bin/sprig help generics --json
 bin/sprig help projects --json
 bin/sprig help dependencies --json

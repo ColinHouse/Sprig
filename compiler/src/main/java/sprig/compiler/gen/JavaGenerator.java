@@ -484,7 +484,16 @@ public final class JavaGenerator {
         w.blank();
         w.line("// Sprig class " + currentModule.name + ":" + classDecl.span.display());
         w.map(classDecl.span);
-        w.open("public final class " + simpleName(typeNames.get(decl)));
+        StringBuilder header = new StringBuilder("public final class ")
+                .append(simpleName(typeNames.get(decl)));
+        if (!classDecl.conformedInterfaces.isEmpty()) {
+            List<String> interfaces = new ArrayList<>();
+            for (Class<?> iface : classDecl.conformedInterfaces) {
+                interfaces.add(sourceName(iface));
+            }
+            header.append(" implements ").append(String.join(", ", interfaces));
+        }
+        w.open(header.toString());
         for (Decl.Field field : classDecl.fields) {
             w.map(field.span);
             String prefix = "public " + (field.mutable ? "" : "final ");
@@ -654,6 +663,19 @@ public final class JavaGenerator {
             sig.append(" throws ").append(String.join(", ", throwsClauses));
         }
         w.open(sig.toString());
+        if (func.foreignBoundary) {
+            // Foreign conformance methods are a checked JVM boundary: a Java
+            // caller can pass null, so non-null reference parameters are
+            // guarded before any Sprig code observes them.
+            for (Decl.Param param : func.params) {
+                Type type = param.type;
+                if (type == null || type.isNullable() || !Semantics.isReference(type)) {
+                    continue;
+                }
+                w.line("java.util.Objects.requireNonNull(" + localName(param.symbol) + ", "
+                        + "\"foreign boundary: parameter '" + param.name + "' must be non-null\");");
+            }
+        }
         for (Stmt stmt : func.body) {
             emitStmt(w, stmt);
         }

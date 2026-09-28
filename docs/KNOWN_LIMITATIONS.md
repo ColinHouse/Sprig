@@ -5,6 +5,10 @@ by the historical design kit in `spec/`.
 
 - The compiler is written in Java and emits Java source before invoking `javac`.
   It does not compile itself and is not self-hosted.
+- `conform C to J` is v1-scoped: Java interfaces only, a non-generic source
+  class and target interface, no overloaded abstract methods and no method
+  renaming or adapters. It declares a foreign JVM contract; it does not add
+  inheritance or interfaces to the language.
 - Generics accept one or more parameters (`generic K, V:`) but are fully
   explicit: no inference, no variance, and partial type arguments are never
   guessed. A type parameter `T` has no operators, ordering or methods, and

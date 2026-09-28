@@ -1,0 +1,1 @@
+conform Worker to Runnable, Closeable

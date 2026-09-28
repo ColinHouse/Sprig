@@ -72,7 +72,8 @@ def main():
                "tests/adversarial/regressions/check_properties.py",
                "tests/adversarial/regressions/check_install_failures.py",
                "tests/adversarial/regressions/check_sdk_composition.py"]
-    suites += ["tests/callables/check_callables.py", "tests/installer/check_installer.py", "tests/upgrade/check_upgrade.py",
+    suites += ["tests/conform/check_conform.py",
+               "tests/callables/check_callables.py", "tests/installer/check_installer.py", "tests/upgrade/check_upgrade.py",
                "tests/cli_library/check_cli_library.py", "tests/web/check_web.py", "tests/sqlite/check_sqlite.py", "tests/sqlite/check_migrations.py", "tests/dogfood/check_installed_sdk.py", "tests/maven/check_resolver.py", "scripts/test-stdlib.py",
                "scripts/test-showcases.py", "tests/release_hardening/check_hardening.py"]
     for suite in suites:

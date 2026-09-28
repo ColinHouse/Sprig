@@ -8,8 +8,14 @@ options { tokenVocab=SprigLexer; }
 program
     : NEWLINE* ((importStatement | exportStatement) NEWLINE NEWLINE*)*
       (NEWLINE | exportStatement NEWLINE | genericDefinition | classDefinition | enumDefinition
-      | variantDefinition | functionDefinition | statement)* EOF
+      | variantDefinition | conformDefinition | functionDefinition | statement)* EOF
     ;
+
+// Declares a foreign JVM nominal contract: the Sprig class already specified
+// by the left name satisfies the imported Java interface named on the right.
+// 'to' stays a contextual word so existing identifiers named to keep working.
+conformDefinition: CONFORM IDENT toClause IDENT;
+toClause: {"to".equals(_input.LT(1).getText())}? IDENT;
 
 // v0.8: block-scoped generic parameters around exactly one declaration.
 // Parameters are only visible inside this block and never leak. There is no

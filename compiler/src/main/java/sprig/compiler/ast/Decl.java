@@ -43,6 +43,8 @@ public abstract class Decl extends Node {
         public Type returnType;
         public final List<Type> throwsTypes = new java.util.ArrayList<>();
         public ClassDecl owner; // non-null for methods
+        /** True when this method witnesses a declared foreign conformance. */
+        public boolean foreignBoundary;
         /**
          * Lexical generic parameters visible while checking this function:
          * its own {@code generic T:} parameters, or its class's parameters for
@@ -91,6 +93,8 @@ public abstract class Decl extends Node {
         public final List<Field> fields;
         public final List<Func> methods;
         public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
+        /** Verified foreign JVM interfaces emitted in this class's interface list. */
+        public final java.util.Set<Class<?>> conformedInterfaces = new java.util.LinkedHashSet<>();
 
         public ClassDecl(String name, List<Field> fields, List<Func> methods) {
             super(name);
@@ -102,6 +106,26 @@ public abstract class Decl extends Node {
             for (Func method : this.methods) {
                 method.owner = this;
             }
+        }
+    }
+
+    /**
+     * A {@code conform C to J} declaration. It defines no methods and performs
+     * no adaptation: the checker verifies that the existing class methods
+     * satisfy every supported abstract instance requirement of the imported
+     * Java interface, records a foreign assignability edge, and the generator
+     * emits the interface in the class's JVM interface list.
+     */
+    public static final class Conform extends Decl {
+        public final String sourceName;
+        public final String targetAlias;
+        public ClassDecl source;
+        public Class<?> target;
+
+        public Conform(String sourceName, String targetAlias) {
+            super(sourceName + " to " + targetAlias);
+            this.sourceName = sourceName;
+            this.targetAlias = targetAlias;
         }
     }
 

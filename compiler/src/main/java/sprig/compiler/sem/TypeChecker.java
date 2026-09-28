@@ -174,6 +174,7 @@ public final class TypeChecker {
         for (Symbol symbol : inference.globalInitializers.keySet()) inference.inferGlobal(symbol);
         if (diagnostics.errorCount() != errorsBeforeInference) return;
         prepareDefaultEffects();
+        new ConformanceChecker(diagnostics).check(module);
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
                 for (Decl.Field field : classDecl.fields) {
