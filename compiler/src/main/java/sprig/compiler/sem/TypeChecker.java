@@ -161,6 +161,9 @@ public final class TypeChecker {
 
     public void check(Module module) {
         this.module = module;
+        // Conformance edges must exist before any expression is checked,
+        // including the unannotated-global inference prepass below.
+        new ConformanceChecker(diagnostics).check(module);
         TypeChecker inference = new TypeChecker(diagnostics);
         inference.module = module;
         inference.globalInitializers = new LinkedHashMap<>();
@@ -174,7 +177,6 @@ public final class TypeChecker {
         for (Symbol symbol : inference.globalInitializers.keySet()) inference.inferGlobal(symbol);
         if (diagnostics.errorCount() != errorsBeforeInference) return;
         prepareDefaultEffects();
-        new ConformanceChecker(diagnostics).check(module);
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
                 for (Decl.Field field : classDecl.fields) {

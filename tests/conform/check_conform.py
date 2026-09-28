@@ -95,6 +95,55 @@ public interface Child extends Parent {
     void b();
 }
 """,
+    "AbstractF.java": """package conformfixture;
+public interface AbstractF { void f(); }
+""",
+    "DefaultFChild.java": """package conformfixture;
+public interface DefaultFChild extends AbstractF { default void f() {} }
+""",
+    "CovBase.java": """package conformfixture;
+public interface CovBase { Object value(); }
+""",
+    "CovDerived.java": """package conformfixture;
+public interface CovDerived extends CovBase { String value(); }
+""",
+    "ThrowBase.java": """package conformfixture;
+public interface ThrowBase { void f() throws java.io.IOException; }
+""",
+    "ThrowNarrow.java": """package conformfixture;
+public interface ThrowNarrow extends ThrowBase { void f(); }
+""",
+    "ThrowWide.java": """package conformfixture;
+public interface ThrowWide { void f() throws Exception; }
+""",
+    "MixAbstract.java": """package conformfixture;
+public interface MixAbstract { void g(); }
+""",
+    "MixDefault.java": """package conformfixture;
+public interface MixDefault { default void g() {} }
+""",
+    "MixAbstractC.java": """package conformfixture;
+public interface MixAbstractC extends MixAbstract, MixDefault { void g(); }
+""",
+    "MixDefaultC.java": """package conformfixture;
+public interface MixDefaultC extends MixAbstract, MixDefault { default void g() {} }
+""",
+    "ObjectBag.java": """package conformfixture;
+public interface ObjectBag {
+    boolean equals(Object value);
+    int hashCode();
+    String toString();
+}
+""",
+    "GenericAccept.java": """package conformfixture;
+public interface GenericAccept { <T> void accept(T value); }
+""",
+    "BoxedShort.java": """package conformfixture;
+public interface BoxedShort { void take(Short value); }
+""",
+    "BoxedCharacter.java": """package conformfixture;
+public interface BoxedCharacter { void take(Character value); }
+""",
     "Hidden.java": """package conformfixture;
 interface Hidden {
     void hidden();
@@ -102,7 +151,7 @@ interface Hidden {
 """,
     "Support.java": """package conformfixture;
 public final class Support {
-    public static void runIt(Runnable runnable) { runnable.run(); }
+    public static String runIt(Runnable runnable) { runnable.run(); return "ok"; }
     public static void initialize(Initializer initializer) { initializer.onInitialize(); }
     public static void tick(TickCallback callback, Server server) { callback.onTick(server); }
     public static void tickNull(TickCallback callback) { callback.onTick(null); }
@@ -113,6 +162,21 @@ public final class Support {
 IMPORTS = """import java.lang.Runnable as Runnable
 import java.io.Closeable as Closeable
 import java.io.IOException as IOException
+import conformfixture.AbstractF as AbstractF
+import conformfixture.DefaultFChild as DefaultFChild
+import conformfixture.CovBase as CovBase
+import conformfixture.CovDerived as CovDerived
+import conformfixture.ThrowBase as ThrowBase
+import conformfixture.ThrowNarrow as ThrowNarrow
+import conformfixture.ThrowWide as ThrowWide
+import conformfixture.MixAbstractC as MixAbstractC
+import conformfixture.MixDefaultC as MixDefaultC
+import conformfixture.ObjectBag as ObjectBag
+import conformfixture.GenericAccept as GenericAccept
+import conformfixture.BoxedShort as BoxedShort
+import conformfixture.BoxedCharacter as BoxedCharacter
+import java.lang.Object as Object
+import java.lang.Exception as Exception
 import conformfixture.Initializer as Initializer
 import conformfixture.Server as Server
 import conformfixture.TickCallback as TickCallback
@@ -133,6 +197,82 @@ import conformfixture.Support as Support
 """
 
 POSITIVE = {
+    "child_default_contract": (IMPORTS + """
+class Example:
+    pass
+
+conform Example to DefaultFChild
+
+let example = Example()
+print("ok")
+""", "ok\n"),
+    "mixed_default_contract": (IMPORTS + """
+class Example:
+    pass
+
+conform Example to MixDefaultC
+
+let example = Example()
+print("ok")
+""", "ok\n"),
+    "mixed_abstract_override": (IMPORTS + """
+class Example:
+    func g() -> Unit:
+        pass
+
+conform Example to MixAbstractC
+
+let example = Example()
+print("ok")
+""", "ok\n"),
+    "covariant_return": (IMPORTS + """
+class Example:
+    func value() -> String:
+        return "v"
+
+conform Example to CovDerived
+
+print(Example().value())
+""", "v\n"),
+    "object_methods_satisfied": (IMPORTS + """
+class Example:
+    pass
+
+conform Example to ObjectBag
+
+let view: ObjectBag = Example()
+print(view.toString() != null)
+""", "true\n"),
+    "generic_method_erasure": (IMPORTS + """
+class Example:
+    func accept(value: Object) -> Unit:
+        pass
+
+conform Example to GenericAccept
+
+let example = Example()
+print("ok")
+""", "ok\n"),
+    "throws_within_declared": (IMPORTS + """
+class Example:
+    func f() -> Unit throws IOException:
+        pass
+
+conform Example to ThrowWide
+
+let example = Example()
+print("ok")
+""", "ok\n"),
+    "inferred_global_conformance": (IMPORTS + """
+class Task:
+    func run() -> Unit:
+        print("run")
+
+conform Task to Runnable
+
+let handle = Support.runIt(Task())
+print(handle)
+""", "run\nok\n"),
     "runnable": (IMPORTS + """
 class Task:
     func run() -> Unit:
@@ -272,6 +412,41 @@ class A:
         pass
 conform A to Hidden
 """, "SPR-CONFORM-TARGET"),
+    "covariant_parent_witness": (IMPORTS + """
+class Example:
+    func value() -> Object:
+        return "v"
+
+conform Example to CovDerived
+""", "SPR-CONFORM-MEMBER"),
+    "throws_narrowed_child": (IMPORTS + """
+class Example:
+    func f() -> Unit throws IOException:
+        pass
+
+conform Example to ThrowNarrow
+""", "SPR-CONFORM-EFFECTS"),
+    "throws_broader_than_declared": (IMPORTS + """
+class Example:
+    func f() -> Unit throws Exception:
+        pass
+
+conform Example to ThrowBase
+""", "SPR-CONFORM-EFFECTS"),
+    "boxed_short_parameter": (IMPORTS + """
+class Example:
+    func take(value: Int) -> Unit:
+        pass
+
+conform Example to BoxedShort
+""", "SPR-CONFORM-MEMBER"),
+    "character_parameter": (IMPORTS + """
+class Example:
+    func take(value: String) -> Unit:
+        pass
+
+conform Example to BoxedCharacter
+""", "SPR-CONFORM-MEMBER"),
     "member_missing": (IMPORTS + """
 class A:
     pass
