@@ -1,8 +1,10 @@
 # Release validation — Sprig v0.3.0-alpha.1
 
-This is the sole current validation authority. Published experimental Alpha:
-compiler **0.3.0-alpha.1**, language **0.8-dev**, JDK17+, Apache-2.0.
-Supported: **Linux/macOS**. **Windows is experimental and non-blocking**.
+This is the validation authority for the published `v0.3.0-alpha.1` snapshot;
+it does not describe later unreleased `main`, which the next release record
+replaces. Published experimental Alpha: compiler **0.3.0-alpha.1**, language
+**0.8-dev**, JDK17+, Apache-2.0. Supported: **Linux/macOS**. **Windows is
+experimental and non-blocking**.
 
 ## Published artifact and evidence
 
@@ -83,11 +85,11 @@ Their patches are preserved locally and are not merged. External human/project
 adoption remains unmeasured.
 
 Direct Maven relocation, non-JAR runtime artifacts, authentication/package registry/
-package publishing, complete Java generic/array/varargs/SAM adapters, formatter, full LSP/IDE services
+package publishing, complete Java generic/array/varargs/SAM adapters, full LSP/IDE services
 and self-hosting remain absent. Cache locks are cooperative and lack a timeout;
 local locks contain absolute paths. Effective POM activation can depend on the
 resolving JVM/OS, then is frozen by the lock. Types do not prove algorithmic
-correctness or numerical stability. A local VS Code extension preview follows SDK publication (see below); mixed
+correctness or numerical stability. A local VS Code extension preview was published separately (see below); mixed
 Java/Sprig Web pressure testing and stage-1 remain later projects, without language
 redesign by unrelated PR. See DESIGN_PRESSURE and known limitations.
 

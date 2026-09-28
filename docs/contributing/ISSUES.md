@@ -1,9 +1,15 @@
 # Scoped contribution issues
 
-These public contracts target the v0.3 source milestone. Each states problem,
-behavior, non-goals, areas, acceptance commands and semantic constraints. Check
-current open/closed status before starting; pick an `agent-friendly` issue,
-read AGENTS.md, run verify, review the patch, then submit a PR.
+These public contracts were opened for the v0.3 source milestone and remain
+candidates for contribution. Each states problem, behavior, non-goals, areas,
+acceptance commands and semantic constraints. Check current open/closed status
+before starting; pick an `agent-friendly` issue, read AGENTS.md, run verify,
+review the patch, then submit a PR.
+
+Status checked 2026-09-28: every issue below is still open. `#18`'s
+`find_member`/`Lookup` helpers now exist in `std/json.spr`, and `#17`'s
+`text.join` does not exist in `std/text.spr`; review the original scope before
+closing or re-scoping either one.
 
 | Issue | Scope |
 |---|---|
