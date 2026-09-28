@@ -25,6 +25,44 @@ while level < 129:
     level += 1
 print(rejected(deep))
 
+# Parsing and serialization allow 128 container levels and reject level 129.
+var at128 = "null"
+level = 0
+while level < 128:
+    at128 = "[" + at128 + "]"
+    level += 1
+json.parse(at128)
+let rendered128 = json.stringify(json.parse(at128))
+if rendered128 != at128:
+    throw Error("JSON depth-128 parse/stringify changed the input")
+print("parse depth 128 accepted=" + level.toString())
+print("depth-128 output length=" + rendered128.length().toString())
+print("parse depth 129 rejected=" + rejected("[" + at128 + "]").toString())
+
+var nested: json.Value = json.Value.Null
+level = 0
+while level < 128:
+    nested = json.Value.Array(values=[nested])
+    level += 1
+let serialized128 = json.stringify(nested)
+print("serialize depth 128 accepted=" + serialized128.length().toString())
+var serialize129Rejected = false
+try:
+    json.stringify(json.Value.Array(values=[nested]))
+catch problem: Error:
+    serialize129Rejected = true
+print("serialize depth 129 rejected=" + serialize129Rejected.toString())
+
+let supplementary = json.stringify(json.parse("\"\\uD83D\\uDE00\""))
+print("supplementary pair=" + supplementary)
+var escapedDuplicateRejected = false
+try:
+    json.parse("{\"a\":1,\"\\u0061\":2}")
+catch problem: Error:
+    escapedDuplicateRejected = true
+print("escaped duplicate rejected=" + escapedDuplicateRejected.toString())
+print("large exponent=" + json.stringify(json.parse("1e9999")))
+
 var number_rejected = false
 try:
     json.stringify(json.Value.Number(text="01"))

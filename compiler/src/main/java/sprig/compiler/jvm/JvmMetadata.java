@@ -35,7 +35,8 @@ public final class JvmMetadata {
         out.put("staticMethods", staticMethods);
         out.put("instanceMethods", instanceMethods);
         List<Map<String, Object>> fields = new ArrayList<>();
-        Arrays.stream(clazz.getFields()).sorted(Comparator.comparing(Field::getName))
+        Arrays.stream(clazz.getFields()).sorted(Comparator.comparing(Field::getName)
+                        .thenComparing(Field::toGenericString))
                 .forEach(field -> fields.add(describe(field)));
         out.put("fields", fields);
         out.put("nullabilityPolicy", "Java reference results are nullable; parameters require non-null values unless future metadata proves otherwise");
