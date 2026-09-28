@@ -11,6 +11,7 @@ a finding here should reproduce from the documented commands alone.
 | `scripts/json_matrix.py` | Exercises `check`/`build`/`run --json` success and failure paths. |
 | `scripts/consistency_matrix.py` | Verifies `check`, `build` and `run` agree and that rejected programs leave no class files. |
 | `results/` | Generated on each run (gitignored): logs, JSON records and environment details. |
+| `history/` | Frozen alpha.2 blind-trial artifacts; historical evidence, intentionally not executed. See `history/README.md`. |
 
 All scripts are invoked by `scripts/test.sh` from the repository root, and each
 can be run directly with Python 3 after `scripts/build.sh`.

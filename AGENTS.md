@@ -17,10 +17,12 @@ contributors who change the repository. It is not a language tutorial.
 | Implemented features | `docs/FEATURE_STATUS_IMPLEMENTED.md` |
 | Diagnostic codes | `docs/DIAGNOSTIC_CODES.md` |
 | Language design kit | `spec/docs/LANGUAGE_SPEC.md` (target semantics; not fully implemented) |
+| Documentation map | `docs/README.md` (contract vs release vs history) |
 
 If the design kit and the compiler disagree, do not guess: preserve the
 disagreement as an explicit issue or document the implemented behavior under
-`docs/`.
+`docs/`. Milestone reports and `docs/milestones/plans/` are history, not
+current behavior; `docs/README.md` defines the order to trust.
 
 ## Query before guessing
 

@@ -8,13 +8,13 @@
 
 Result: 8 confirmed defects fixed (three S0, one S1, four S2), 2 design decisions
 left open, 2 attack candidates rejected as not-a-bug. Every fix has a regression
-under `tests/adversarial/current/`, wired into `scripts/test.py`.
+under `tests/adversarial/regressions/`, wired into `scripts/test.py`.
 
 ## Fixed defects
 
 ### A01 — S0 — inferred module binding types escaped function checking
 
-Reproducer family: `tests/adversarial/current/semantics/global_generic.spr`,
+Reproducer family: `tests/adversarial/regressions/semantics/global_generic.spr`,
 `global_wrong.spr`, `global_lambda_bad.spr`, `global_field_bad.spr`.
 An unannotated top-level `let box = Box[String](value="bad")` could be returned
 from a function declared `-> Box[Int]`; `sprig check` exited 0, javac succeeded
