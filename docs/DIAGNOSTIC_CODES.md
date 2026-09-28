@@ -21,7 +21,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-THROWS | A recoverable error must be declared with throws or caught. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-JVM-AMBIGUOUS | The Java overload is ambiguous for these argument types. |
-| SPR-JVM-CLASS | The imported Java class could not be loaded. |
+| SPR-JVM-CLASS | The imported Java class could not be loaded, or it lives in the unnamed package. |
 | SPR-JVM-CLASSPATH | A `--classpath` entry is empty, missing, or not a JAR/directory. |
 | SPR-JVM-COMPILE | The generated Java source did not compile; may be a compiler bug. |
 | SPR-JVM-INTERNAL | Internal compiler or tooling failure. |

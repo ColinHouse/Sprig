@@ -82,7 +82,7 @@ public final class CodeDocs {
             Map.entry(Codes.FLOW_BREAK, "break is only valid inside a loop."),
             Map.entry(Codes.FLOW_CONTINUE, "continue is only valid inside a loop."),
             Map.entry(Codes.FLOW_THROWS, "A recoverable error must be declared with throws or caught."),
-            Map.entry(Codes.JVM_CLASS, "The imported Java class could not be loaded."),
+            Map.entry(Codes.JVM_CLASS, "The imported Java class could not be loaded, or it lives in the unnamed package."),
             Map.entry(Codes.JVM_CLASSPATH, "A --classpath entry is missing, empty, or not a JAR/directory."),
             Map.entry(Codes.JVM_MEMBER, "No Java method/constructor/field matches this call."),
             Map.entry(Codes.JVM_AMBIGUOUS, "The Java overload is ambiguous for these argument types."),
