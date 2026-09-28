@@ -8,7 +8,9 @@ by the historical design kit in `spec/`.
 - `conform C to J` is v1-scoped: Java interfaces only, a non-generic source
   class and target interface, no overloaded abstract methods and no method
   renaming or adapters. It declares a foreign JVM contract; it does not add
-  inheritance or interfaces to the language.
+  inheritance or interfaces to the language. Generic methods witness by
+  erasure; boxed `Short`/`Byte`/`Character` parameters are not expressible
+  because of the existing interop adapters.
 - Generics accept one or more parameters (`generic K, V:`) but are fully
   explicit: no inference, no variance, and partial type arguments are never
   guessed. A type parameter `T` has no operators, ordering or methods, and

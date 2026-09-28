@@ -57,10 +57,26 @@ conform EndTickAdapter to EndTick
   return covariance.
 - Abstract methods that share a name (overloads) are rejected
   (`SPR-CONFORM-OVERLOAD`); Sprig classes do not overload.
-- Default methods are not requirements; call them through the Java view.
-- Java interface inheritance is flattened from JVM metadata, so conforming to
-  `Child extends Parent` satisfies both requirement sets.
+- Default methods are not requirements; call them through the Java view. A
+  default method declared in a subinterface satisfies the abstract method it
+  overrides (the effective contract shadows it).
+- Java interface inheritance is resolved to the effective contract: a
+  subinterface declaration shadows the one it overrides, covariant returns
+  collapse to the most-derived declaration, and the permitted checked
+  exceptions come from the effective declaration (intersected across unrelated
+  maximal declarations).
+- Public concrete `java.lang.Object` methods (`equals`, `hashCode`,
+  `toString`, ...) satisfy matching requirements, as they do for any Java
+  class; a Sprig method that overrides one of them still gets the boundary
+  guard.
+- Generic methods erase to their erased shapes, which may be witnessed by the
+  corresponding reference types; the type-parameter contract itself is not
+  modeled. Boxed `Short`/`Byte`/`Character` parameters cannot be witnessed
+  because the existing interop mapping turns those aliases into `Int32`/`String`.
 - `requires T: X` is unchanged: foreign interfaces are not Sprig capabilities.
+- Reference overloading (`pick(Object)` vs `pick(Runnable)`) keeps the existing
+  JVM overload ranking: conformed classes behave like ordinary Java references
+  and may report `SPR-JVM-AMBIGUOUS` where no exact class match exists.
 
 ## Foreign boundary
 
@@ -75,6 +91,23 @@ Checked effects are conservative in v1: a witness `throws` is accepted only
 when every checked exception is permitted by the Java interface method
 (`SPR-CONFORM-EFFECTS` otherwise). Sprig `Error` lowers to the unchecked
 `SprigError` and is accepted.
+
+## Explicit v1 restrictions confirmed by audit
+
+Conformance is verified against the effective Java contract, not raw
+reflection order. The following remain deliberate v1 boundaries:
+
+- generic source classes and generic target interfaces (including generic
+  ancestors);
+- overloaded abstract methods;
+- boxed `Short`/`Byte`/`Character` witness parameters;
+- parameter contravariance and return covariance in the **Sprig witness**
+  (covariance inside the Java interface hierarchy still resolves correctly);
+- method renaming, adapters, SAM conversion, interfaces, inheritance and
+  variance.
+
+`conform` reserves the word `conform` (like `class` or `variant`); `to` stays a
+contextual word and identifiers named `to` keep working.
 
 ## Diagnostics
 

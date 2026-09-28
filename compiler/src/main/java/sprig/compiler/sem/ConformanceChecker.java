@@ -4,8 +4,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import sprig.compiler.ast.Decl;
 import sprig.compiler.ast.Module;
 import sprig.compiler.diag.Codes;
@@ -29,6 +31,13 @@ import sprig.compiler.types.VariantType;
  * satisfy every supported abstract instance requirement of the imported Java
  * interface. No methods are created and no adaptation happens; a successful
  * declaration records the foreign assignability edge and the interface to emit.
+ *
+ * Requirements are the effective Java contract, not raw reflection order: a
+ * declaration in a subinterface (including a default method) shadows the one it
+ * overrides, covariant returns collapse to the most-derived declaration, and
+ * inherited checked exceptions come from the effective declaration. Public
+ * concrete {@code java.lang.Object} methods satisfy matching requirements, as
+ * they do for any Java class.
  */
 public final class ConformanceChecker {
     private final Diagnostics diagnostics;
@@ -58,16 +67,21 @@ public final class ConformanceChecker {
                     .withHint("Keep one conform declaration per interface."));
             return;
         }
-        Map<String, Method> requirements = new LinkedHashMap<>();
-        Map<String, List<String>> overloads = new LinkedHashMap<>();
-        collect(target, requirements, overloads);
+        Map<String, List<Method>> declarations = new LinkedHashMap<>();
+        collect(target, declarations);
+        Map<String, Requirement> requirements = effective(declarations);
         List<String> overloaded = new ArrayList<>();
-        for (Map.Entry<String, List<String>> entry : overloads.entrySet()) {
-            if (entry.getValue().size() > 1) {
+        Map<String, Integer> byName = new LinkedHashMap<>();
+        for (Requirement requirement : requirements.values()) {
+            byName.merge(requirement.name(), 1, Integer::sum);
+        }
+        for (Map.Entry<String, Integer> entry : byName.entrySet()) {
+            if (entry.getValue() > 1) {
                 overloaded.add(entry.getKey());
             }
         }
         if (!overloaded.isEmpty()) {
+            overloaded.sort(String::compareTo);
             diagnostics.add(Diagnostic.error(Codes.CONFORM_OVERLOAD, Phase.TYPE,
                     "Java interface " + target.getName() + " requires overloaded abstract methods ("
                             + String.join(", ", overloaded) + "); Sprig classes cannot represent this contract",
@@ -76,21 +90,131 @@ public final class ConformanceChecker {
             return;
         }
         boolean ok = true;
-        for (Method required : requirements.values()) {
-            ok &= witness(module.uri, classDecl, target, required);
+        for (Requirement requirement : requirements.values()) {
+            if (satisfiedByObject(requirement)) {
+                continue; // inherited public Object method; boundary marking below
+            }
+            ok &= witness(module.uri, classDecl, target, requirement);
         }
         if (!ok) {
-            return;
+            return; // no state is mutated until every requirement is satisfied
         }
-        for (Method required : requirements.values()) {
-            for (Decl.Func method : classDecl.methods) {
-                if (method.name.equals(required.getName())) {
-                    method.foreignBoundary = true;
-                }
-            }
+        for (Requirement requirement : requirements.values()) {
+            markBoundary(classDecl, requirement);
         }
         classDecl.conformedInterfaces.add(target);
     }
+
+    // ------------------------------------------------------------------
+    // Effective Java contract
+    // ------------------------------------------------------------------
+
+    private record Requirement(String name, Class<?>[] params, Class<?> returnType,
+            Set<Class<?>> permitted) {}
+
+    /** Collect every abstract/default/static-free declaration in the hierarchy. */
+    private void collect(Class<?> iface, Map<String, List<Method>> out) {
+        for (Class<?> parent : iface.getInterfaces()) {
+            collect(parent, out);
+        }
+        for (Method method : iface.getDeclaredMethods()) {
+            if (Modifier.isStatic(method.getModifiers()) || Modifier.isPrivate(method.getModifiers())
+                    || method.isBridge() || method.isSynthetic()) {
+                continue;
+            }
+            out.computeIfAbsent(key(method), ignored -> new ArrayList<>()).add(method);
+        }
+    }
+
+    private static String key(Method method) {
+        StringBuilder out = new StringBuilder(method.getName()).append('(');
+        for (Class<?> param : method.getParameterTypes()) {
+            out.append(param.getName()).append(',');
+        }
+        return out.append(')').toString();
+    }
+
+    /**
+     * Reduce declarations to the effective contract: a declaration in a strict
+     * subinterface shadows the one it overrides, so covariance collapses and
+     * child throws/default declarations win. Default-only signatures need no
+     * witness; when any maximal declaration is abstract, a witness is required
+     * and the permitted checked exceptions are the intersection of every
+     * maximal declaration.
+     */
+    private Map<String, Requirement> effective(Map<String, List<Method>> declarations) {
+        Map<String, Requirement> out = new LinkedHashMap<>();
+        List<String> keys = new ArrayList<>(declarations.keySet());
+        keys.sort(String::compareTo);
+        for (String key : keys) {
+            List<Method> maximal = maximal(declarations.get(key));
+            if (maximal.stream().noneMatch(ConformanceChecker::isAbstract)) {
+                continue;
+            }
+            List<Method> abstractMaximal = new ArrayList<>();
+            for (Method method : maximal) {
+                if (isAbstract(method)) {
+                    abstractMaximal.add(method);
+                }
+            }
+            abstractMaximal.sort((left, right) -> {
+                int byOwner = left.getDeclaringClass().getName().compareTo(right.getDeclaringClass().getName());
+                return byOwner != 0 ? byOwner : left.toGenericString().compareTo(right.toGenericString());
+            });
+            Method chosen = abstractMaximal.get(0);
+            Set<Class<?>> permitted = null;
+            for (Method method : maximal) {
+                Set<Class<?>> exceptions = new LinkedHashSet<>(List.of(method.getExceptionTypes()));
+                if (permitted == null) {
+                    permitted = exceptions;
+                } else {
+                    permitted.retainAll(exceptions);
+                }
+            }
+            out.put(key, new Requirement(chosen.getName(), chosen.getParameterTypes(),
+                    chosen.getReturnType(), permitted == null ? Set.of() : permitted));
+        }
+        return out;
+    }
+
+    private static List<Method> maximal(List<Method> all) {
+        List<Method> out = new ArrayList<>();
+        for (Method candidate : all) {
+            boolean shadowed = false;
+            for (Method other : all) {
+                if (other == candidate || other.getDeclaringClass() == candidate.getDeclaringClass()) {
+                    continue;
+                }
+                if (candidate.getDeclaringClass().isAssignableFrom(other.getDeclaringClass())) {
+                    shadowed = true;
+                    break;
+                }
+            }
+            if (!shadowed) {
+                out.add(candidate);
+            }
+        }
+        return out;
+    }
+
+    private static boolean isAbstract(Method method) {
+        return Modifier.isAbstract(method.getModifiers());
+    }
+
+    /** Public concrete Object methods implement matching interface methods. */
+    private static boolean satisfiedByObject(Requirement requirement) {
+        try {
+            Method inherited = Object.class.getMethod(requirement.name(), requirement.params());
+            return !Modifier.isAbstract(inherited.getModifiers())
+                    && inherited.getReturnType().equals(requirement.returnType());
+        } catch (NoSuchMethodException | SecurityException e) {
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Source and target restrictions
+    // ------------------------------------------------------------------
 
     private boolean source(Module module, Decl.Conform conform) {
         Symbol symbol = module.scope.types.get(conform.sourceName);
@@ -164,43 +288,32 @@ public final class ConformanceChecker {
         return false;
     }
 
-    private void collect(Class<?> iface, Map<String, Method> requirements,
-            Map<String, List<String>> overloads) {
-        for (Class<?> parent : iface.getInterfaces()) {
-            collect(parent, requirements, overloads);
-        }
-        for (Method method : iface.getDeclaredMethods()) {
-            if (!Modifier.isAbstract(method.getModifiers()) || Modifier.isStatic(method.getModifiers())) {
-                continue;
-            }
-            String key = method.getName() + descriptor(method);
-            if (requirements.putIfAbsent(key, method) == null) {
-                overloads.computeIfAbsent(method.getName(), ignored -> new ArrayList<>()).add(key);
-            }
-        }
-    }
+    // ------------------------------------------------------------------
+    // Witness verification
+    // ------------------------------------------------------------------
 
-    private boolean witness(String uri, Decl.ClassDecl classDecl, Class<?> target, Method required) {
+    private boolean witness(String uri, Decl.ClassDecl classDecl, Class<?> target,
+            Requirement requirement) {
         Decl.Func method = null;
         for (Decl.Func candidate : classDecl.methods) {
-            if (candidate.name.equals(required.getName())) {
+            if (candidate.name.equals(requirement.name())) {
                 method = candidate;
                 break;
             }
         }
         if (method == null) {
             diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
-                    "Class '" + classDecl.name + "' has no method '" + required.getName()
+                    "Class '" + classDecl.name + "' has no method '" + requirement.name()
                             + "' required by " + target.getName(),
                     uri, classDecl.span)
                     .withHint("Add the missing method, or adapt through a separate class."));
             return false;
         }
-        Class<?>[] expectedParams = required.getParameterTypes();
+        Class<?>[] expectedParams = requirement.params();
         if (method.params.size() != expectedParams.length) {
             diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
                     "Method '" + method.name + "' takes " + method.params.size()
-                            + " parameter(s), but " + target.getName() + "." + required.getName()
+                            + " parameter(s), but " + target.getName() + "." + requirement.name()
                             + " requires " + expectedParams.length,
                     uri, method.span)
                     .withTypes(Integer.toString(expectedParams.length), Integer.toString(method.params.size())));
@@ -212,31 +325,28 @@ public final class ConformanceChecker {
             if (!expected.equals(actual)) {
                 diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
                         "Method '" + method.name + "' parameter " + (i + 1)
-                                + " does not match " + target.getName() + "." + required.getName(),
+                                + " does not match " + target.getName() + "." + requirement.name(),
                         uri, method.span)
                         .withTypes(expected, actual)
                         .withHint("Match the Java signature exactly: name, arity and JVM shapes."));
                 return false;
             }
         }
-        String expectedReturn = shape(required.getReturnType());
+        String expectedReturn = shape(requirement.returnType());
         String actualReturn = shape(method.returnType);
         if (!expectedReturn.equals(actualReturn)) {
             diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
                     "Method '" + method.name + "' return shape does not match "
-                            + target.getName() + "." + required.getName(),
+                            + target.getName() + "." + requirement.name(),
                     uri, method.span)
                     .withTypes(expectedReturn, actualReturn)
                     .withHint("Match the Java signature exactly: name, arity and JVM shapes."));
             return false;
         }
-        if (!effects(uri, method, target, required)) {
-            return false;
-        }
-        return true;
+        return effects(uri, method, target, requirement);
     }
 
-    private boolean effects(String uri, Decl.Func method, Class<?> target, Method required) {
+    private boolean effects(String uri, Decl.Func method, Class<?> target, Requirement requirement) {
         for (Type thrown : method.throwsTypes) {
             if (thrown == null || thrown == NativeType.ERROR) {
                 continue; // SprigError is unchecked at the JVM boundary
@@ -244,7 +354,7 @@ public final class ConformanceChecker {
             if (!(thrown instanceof JavaType javaType)) {
                 diagnostics.add(Diagnostic.error(Codes.CONFORM_EFFECTS, Phase.TYPE,
                         "Method '" + method.name + "' declares throws " + thrown.display()
-                                + ", which " + target.getName() + "." + required.getName()
+                                + ", which " + target.getName() + "." + requirement.name()
                                 + " cannot accept",
                         uri, method.span));
                 return false;
@@ -257,7 +367,7 @@ public final class ConformanceChecker {
                 continue;
             }
             boolean permitted = false;
-            for (Class<?> allowed : required.getExceptionTypes()) {
+            for (Class<?> allowed : requirement.permitted()) {
                 if (allowed.isAssignableFrom(exception)) {
                     permitted = true;
                     break;
@@ -266,7 +376,7 @@ public final class ConformanceChecker {
             if (!permitted) {
                 diagnostics.add(Diagnostic.error(Codes.CONFORM_EFFECTS, Phase.TYPE,
                         "Method '" + method.name + "' declares checked " + exception.getName()
-                                + ", but " + target.getName() + "." + required.getName()
+                                + ", but " + target.getName() + "." + requirement.name()
                                 + " does not permit it",
                         uri, method.span)
                         .withHint("Remove the throws clause or catch the exception inside the method."));
@@ -274,6 +384,25 @@ public final class ConformanceChecker {
             }
         }
         return true;
+    }
+
+    /** Marks a declared Sprig method that overrides a requirement for the boundary guard. */
+    private static void markBoundary(Decl.ClassDecl classDecl, Requirement requirement) {
+        for (Decl.Func method : classDecl.methods) {
+            if (!method.name.equals(requirement.name()) || method.params.size() != requirement.params().length) {
+                continue;
+            }
+            boolean match = true;
+            for (int i = 0; i < method.params.size(); i++) {
+                if (!shape(requirement.params()[i]).equals(shape(method.params.get(i).type))) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match && shape(requirement.returnType()).equals(shape(method.returnType))) {
+                method.foreignBoundary = true;
+            }
+        }
     }
 
     /** JVM shape of a Sprig type, as a stable comparable name. */
@@ -322,13 +451,5 @@ public final class ConformanceChecker {
         if (clazz == boolean.class) return "boolean";
         if (clazz == char.class) return "char";
         return clazz.getName();
-    }
-
-    private static String descriptor(Method method) {
-        StringBuilder out = new StringBuilder("(");
-        for (Class<?> param : method.getParameterTypes()) {
-            out.append(shape(param)).append(',');
-        }
-        return out.append(')').append(shape(method.getReturnType())).toString();
     }
 }
