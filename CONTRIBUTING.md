@@ -67,6 +67,23 @@ Linux/macOS × JDK17/26 hosted matrix; Windows preview runs separately and is no
 results in the milestone validation record. A local contributor gate does
 not establish release or platform validation.
 
+## Generated lockfiles
+
+Tracked `sprig.lock` files are generated artifacts. Never hand-merge or
+hand-edit a lock conflict; which side Git shows as `ours` or `theirs` does not
+matter. Take either complete side for the lockfile, then regenerate:
+
+```bash
+git checkout --ours -- path/to/sprig.lock   # or --theirs; either is temporary
+python3 scripts/refresh-locks.py
+git add path/to/sprig.lock
+```
+
+`scripts/refresh-locks.py` rewrites every Git-tracked lock with
+`sprig resolve --offline` (never online) and fails clearly if the launcher or
+the local cache is missing. The regenerated `sprig resolve` output is the only
+authority.
+
 ## Where code examples live
 
 | Location | Purpose |
