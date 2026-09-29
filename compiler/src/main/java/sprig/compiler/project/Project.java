@@ -64,6 +64,16 @@ public final class Project {
         public boolean isGit() {
             return git != null;
         }
+
+        /** Relative declarations are owner-relative and survive relocation. */
+        public boolean isPortable() {
+            return isLocal() && !Path.of(path).isAbsolute();
+        }
+
+        /** Normalized forward-slash locator used as the portable lock path. */
+        public String locator() {
+            return Lockfile.normalizedLocator(path);
+        }
     }
 
     public static final class JvmDependency {

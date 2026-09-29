@@ -957,6 +957,10 @@ public final class Main {
             data.put("alreadyResolved", already);
             data.put("lockfile", project.lockPath().toString());
             if (result != null) {
+                Map<String, String> runtimePaths = new HashMap<>();
+                for (DependencyResolver.Package pkg : result.packages) {
+                    if (pkg.kind.equals("local")) runtimePaths.put(pkg.id, pkg.root.toString());
+                }
                 List<Object> entries = new ArrayList<>();
                 for (Lockfile.SprigEntry entry : result.entries()) {
                     Map<String, Object> item = new LinkedHashMap<>();
@@ -970,7 +974,9 @@ public final class Main {
                         item.put("revision", entry.revision);
                     } else {
                         item.put("path", entry.path);
-                        item.put("portable", false);
+                        item.put("portable", entry.portable);
+                        String runtimePath = runtimePaths.get(entry.id);
+                        if (runtimePath != null) item.put("runtimeResolvedPath", runtimePath);
                     }
                     entries.add(item);
                 }
@@ -1131,10 +1137,14 @@ public final class Main {
             return 1;
         }
         Lockfile lock = null;
+        Map<String, String> runtimePaths = new HashMap<>();
         if (Files.isRegularFile(project.lockPath())) {
             try {
                 lock = Lockfile.parse(Files.readString(project.lockPath()));
-                DependencyResolver.load(project, lock, true);
+                DependencyResolver.Result graph = DependencyResolver.load(project, lock, true);
+                for (DependencyResolver.Package pkg : graph.packages) {
+                    if (pkg.kind.equals("local")) runtimePaths.put(pkg.id, pkg.root.toString());
+                }
             } catch (DepError e) {
                 diagnostics.add(depDiagnostic(e));
                 report(diagnostics, options.json, "deps", 1, null);
@@ -1160,8 +1170,10 @@ public final class Main {
                         item.put("revision", entry.revision);
                     } else {
                         item.put("path", entry.path);
-                        item.put("portable", false);
+                        item.put("portable", entry.portable);
                         item.put("manifestSha256", entry.manifestSha);
+                        String runtimePath = runtimePaths.get(entry.id);
+                        if (runtimePath != null) item.put("runtimeResolvedPath", runtimePath);
                     }
                     sprig.add(item);
                 }
@@ -1200,7 +1212,7 @@ public final class Main {
                             + " " + entry.requested + " -> " + entry.revision);
                 } else {
                     System.out.println("sprig " + entry.name + " local " + entry.path
-                            + " (not portable)");
+                            + (entry.portable ? " (portable)" : " (not portable)"));
                 }
             }
             if (lock != null && !lock.jvm.isEmpty()) {

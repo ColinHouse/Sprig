@@ -20,7 +20,8 @@ by the historical design kit in `spec/`.
   `Object`). Boxing/unboxing is compiler-controlled, but generic values carry
   no JVM-level type information at runtime.
 - Local/Git Sprig and Maven JVM dependencies are resolved by `sprig resolve`.
-  Schema-3 locks verify graph identity, manifests and JAR/POM SHA-256. Shared
+  Schema-4 locks verify graph identity, manifests, owner-relative locators and
+  JAR/POM SHA-256. Shared
   project classpaths work for check/build/run/api/doctor; only resolve uses
   Maven networking. Apache Resolver handles effective POMs and mediation.
   Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
@@ -58,7 +59,9 @@ by the historical design kit in `spec/`.
   with JDK 17 and 26; Windows is an experimental, non-blocking preview; definitions are not execution evidence. The current
   release validation report records which exact source/archive gates ran.
   No production or architecture-wide portability guarantee is made.
-- Local dependency locks contain canonical absolute paths and are not portable.
+- Portable local locks carry owner-relative locators and survive relocation of the
+  whole workspace; absolute-path declarations are not portable and need `resolve`
+  after the target moves. The lock does not attest source bytes or symlink targets.
   Manifest semantic errors can point to line 1. Cache tree verification adds IO;
   OS locks have no timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after
