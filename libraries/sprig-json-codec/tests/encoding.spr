@@ -1,0 +1,34 @@
+import "@std/json.spr" as json
+import "../src/codec.spr" as codec
+
+func sample() -> json.Value:
+    return codec.object([
+        codec.member("schema", codec.int(1)),
+        codec.member("name", codec.text("ada")),
+        codec.member("enabled", codec.bool(true)),
+        codec.member("ratio", codec.number("1.25")),
+        codec.member("辞書", codec.text("😀東")),
+        codec.member("items", codec.array([codec.int(1), codec.int(2)])),
+        codec.member("empty", codec.array([]))])
+
+# 15/17. Encoding helpers produce a stable rendering
+let encoded = sample()
+let text = json.stringify(encoded)
+assert(json.stringify(encoded) == text)
+assert(json.stringify(sample()) == text)
+
+# 16. encode -> stringify -> parse -> decode round trip
+let decoded = codec.root(json.parse(text))
+assert(codec.required_int(decoded, "schema") == 1)
+assert(codec.required_string(decoded, "name") == "ada")
+assert(codec.required_bool(decoded, "enabled"))
+assert(codec.required_decimal(decoded, "ratio").toString() == "1.25")
+assert(codec.required_string(decoded, "辞書") == "😀東")
+let items = codec.required_array(decoded, "items")
+assert(items.size() == 2)
+assert(codec.as_int(items[0]) == 1)
+assert(codec.as_int(items[1]) == 2)
+assert(codec.required_array(decoded, "empty").size() == 0)
+
+# The round trip is value-stable, not just parseable.
+assert(json.stringify(encoded) == json.stringify(decoded.value))

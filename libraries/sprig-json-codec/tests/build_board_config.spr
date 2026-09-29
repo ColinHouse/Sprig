@@ -1,0 +1,144 @@
+# Realistic fixture in the shape that made manual decoding verbose:
+# BuildBoardConfig -> projects[] -> targets[]. Generic validation comes from
+# the codec; BuildBoard rules (schema version, id syntax, positivity, unique
+# ids, active-project existence) stay application code.
+import "@std/json.spr" as json
+import "../src/codec.spr" as codec
+
+class Target:
+    let item_id: String
+    let amount: Int
+
+class Project:
+    let id: String
+    let name: String
+    let targets: List[Target]
+
+class Config:
+    let schema: Int
+    let hud_enabled: Bool
+    let active_project: String?
+    let projects: List[Project]
+
+func valid_project_id(value: String) -> Bool:
+    if value.length() == 0:
+        return false
+    var index: Int = 0
+    while index < value.length():
+        let ch = value.charAt(index)
+        if not ((ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9") or ch == "-"):
+            return false
+        index += 1
+    return true
+
+func snapshot(config: Config) -> json.Value:
+    let projects: MutableList[json.Value] = []
+    for project in config.projects:
+        let targets: MutableList[json.Value] = []
+        for target in project.targets:
+            targets.append(codec.object([
+                codec.member("item_id", codec.text(target.item_id)),
+                codec.member("amount", codec.int(target.amount))]))
+        projects.append(codec.object([
+            codec.member("id", codec.text(project.id)),
+            codec.member("name", codec.text(project.name)),
+            codec.member("targets", codec.array(targets.toList()))]))
+    let members: MutableList[json.Member] = [
+        codec.member("schema", codec.int(config.schema)),
+        codec.member("hud_enabled", codec.bool(config.hud_enabled))]
+    let active = config.active_project
+    if active != null:
+        members.append(codec.member("active_project", codec.text(active)))
+    members.append(codec.member("projects", codec.array(projects.toList())))
+    return codec.object(members.toList())
+
+func decode(document: json.Value) -> Config throws Error:
+    let root = codec.root(document)
+    if codec.required_int(root, "schema") != 1:
+        throw Error("$.schema: unsupported config schema")
+    let allowed: List[String] = ["schema", "hud_enabled", "active_project", "projects"]
+    codec.reject_unknown_fields(root, allowed)
+    let projects: MutableList[Project] = []
+    for row in codec.required_array(root, "projects"):
+        let id = codec.required_string(row, "id")
+        let name = codec.required_string(row, "name")
+        if not valid_project_id(id):
+            throw Error(row.path + ".id: invalid project id '" + id + "'")
+        for prior in projects:
+            if prior.id == id:
+                throw Error(row.path + ".id: duplicate project id '" + id + "'")
+        let targets: MutableList[Target] = []
+        for target_row in codec.required_array(row, "targets"):
+            let item_id = codec.required_string(target_row, "item_id")
+            let amount = codec.required_int(target_row, "amount")
+            if item_id.length() == 0:
+                throw Error(target_row.path + ".item_id: item id cannot be empty")
+            if amount <= 0:
+                throw Error(target_row.path + ".amount: must be positive")
+            targets.append(Target(item_id = item_id, amount = amount))
+        projects.append(Project(id = id, name = name, targets = targets.toList()))
+    let active = codec.optional_string(root, "active_project")
+    if active != null and active != "":
+        var found = false
+        for project in projects:
+            if project.id == active:
+                found = true
+        if not found:
+            throw Error("$.active_project: unknown project id '" + active + "'")
+    return Config(schema = 1, hud_enabled = codec.required_bool(root, "hud_enabled"),
+        active_project = active, projects = projects.toList())
+
+let text = String.join([
+    "{\"schema\": 1, \"hud_enabled\": true, \"active_project\": \"alpha\",",
+    " \"projects\": [{\"id\": \"alpha\", \"name\": \"Alpha\",",
+    " \"targets\": [{\"item_id\": \"stone\", \"amount\": 3},",
+    " {\"item_id\": \"dirt\", \"amount\": 1}]},",
+    " {\"id\": \"beta\", \"name\": \"Beta\", \"targets\": []}]}"], "")
+
+let config = decode(json.parse(text))
+assert(config.schema == 1)
+assert(config.hud_enabled)
+assert(config.active_project == "alpha")
+assert(config.projects.size() == 2)
+assert(config.projects[0].targets.size() == 2)
+assert(config.projects[0].targets[1].amount == 1)
+
+# Encode -> parse -> decode keeps the same values and structure.
+let round_trip = decode(json.parse(json.stringify(snapshot(config))))
+assert(round_trip.hud_enabled)
+assert(round_trip.active_project == "alpha")
+assert(round_trip.projects.size() == 2)
+assert(round_trip.projects[0].targets[0].item_id == "stone")
+assert(round_trip.projects[1].targets.size() == 0)
+
+# Application rules stay visible and report the JSON path.
+func decode_error(source: String) -> String:
+    try:
+        let discarded = decode(json.parse(source))
+        return "decoded"
+    catch problem: Error:
+        return problem.message
+
+assert(decode_error("{\"schema\": 2, \"hud_enabled\": true, \"projects\": []}")
+    == "$.schema: unsupported config schema")
+assert(decode_error("{\"schema\": 1, \"hud_enabled\": true, \"projects\": [], \"extra\": 1}")
+    == "$: unknown field 'extra'")
+assert(decode_error("{\"schema\": 1, \"projects\": []}")
+    == "$.hud_enabled: required field is missing")
+assert(decode_error(
+    "{\"schema\": 1, \"hud_enabled\": true, \"projects\": [{\"id\": \"Bad!\", \"name\": \"x\", \"targets\": []}]}")
+    == "$.projects[0].id: invalid project id 'Bad!'")
+assert(decode_error(
+    "{\"schema\": 1, \"hud_enabled\": true, \"projects\": [{\"id\": \"a\", \"name\": \"x\", \"targets\": [{\"item_id\": \"s\", \"amount\": 0}]}]}")
+    == "$.projects[0].targets[0].amount: must be positive")
+assert(decode_error(
+    "{\"schema\": 1, \"hud_enabled\": true, \"projects\": [{\"id\": \"a\", \"name\": \"x\", \"targets\": []},"
+    +" {\"id\": \"a\", \"name\": \"y\", \"targets\": []}]}")
+    == "$.projects[1].id: duplicate project id 'a'")
+assert(decode_error(
+    "{\"schema\": 1, \"hud_enabled\": true, \"active_project\": \"ghost\", \"projects\": []}")
+    == "$.active_project: unknown project id 'ghost'")
+assert(decode_error(
+    "{\"schema\": 1, \"hud_enabled\": true, \"projects\": [{\"id\": \"a\", \"name\": \"x\","
+    +" \"targets\": [{\"item_id\": \"s\"}]}]}")
+    == "$.projects[0].targets[0].amount: required field is missing")
