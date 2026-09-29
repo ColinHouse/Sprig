@@ -41,6 +41,33 @@ func file_name(path: String) -> String throws Error:
         return value
     throw Error("host file_name returned null")
 
+func parent(path: String) -> String?:
+    return HostFiles.parent(path)
+
+func absolute(path: String) -> String throws Error:
+    let value = HostFiles.absolute(path)
+    if value != null:
+        return value
+    throw Error("host absolute returned null")
+
+func copy_file(source: String, target: String) -> Unit throws IOException:
+    HostFiles.copyFile(source, target)
+
+func move(source: String, target: String) -> Unit throws IOException:
+    HostFiles.move(source, target)
+
+func remove_file(path: String) -> Unit throws IOException:
+    HostFiles.removeFile(path)
+
+func atomic_write_utf8(path: String, value: String) -> Unit throws IOException:
+    HostFiles.atomicWriteUtf8(path, value)
+
+func temp_file() -> String throws IOException, Error:
+    let value = HostFiles.tempFile()
+    if value != null:
+        return value
+    throw Error("host temp_file returned null")
+
 func list(path: String) -> List[String] throws IOException, Error:
     let snapshot = HostFiles.directory(path)
     if snapshot != null:

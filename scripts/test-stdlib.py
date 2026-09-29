@@ -52,7 +52,26 @@ def main():
         'Missing', 'Found:null', 'Found:false', 'Found:0', 'Found:""',
         'Found:{"x":1}', 'Found:"值"', 'Missing', 'object unchanged',
         'wrong-kind=5', 'duplicate lookup rejected=2', 'parser duplicates unchanged']
-    print('stdlib: UTF-8/path/list/args/environment/text/time and recursive JSON JVM contracts passed')
+    practical_outputs = []
+    for timezone in ('UTC', 'Pacific/Honolulu'):
+        with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:
+            env = dict(os.environ, TZ=timezone)
+            result = subprocess.run(
+                [launcher, 'run', str(ROOT / 'tests/stdlib/practical.spr'), '--',
+                 str(Path(work) / 'files'), str(ROOT)], cwd=ROOT, env=env,
+                text=True, encoding='utf-8', capture_output=True)
+            assert result.returncode == 0, (timezone, result.stdout, result.stderr)
+            lines = result.stdout.splitlines()
+            assert lines == [
+                'true', 'true', 'true', 'true', '你好 Sprig', 'true', 'true', '你好 Sprig',
+                'true', 'true', 'keep', '原子写入 ✓', 'true', 'keep', 'true', 'true', 'true', 'true',
+                '', 'only', 'a::::c', '东✓😀✓é', 'ab',
+                '1970-01-01T00:00:00Z', '1969-12-31T23:59:59.999Z',
+                '1709210096789', '2024-02-29T12:34:56.789Z', 'true', 'true', 'true', 'true'
+            ], (timezone, repr(lines))
+            practical_outputs.append(lines)
+    assert practical_outputs[0] == practical_outputs[1], practical_outputs
+    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()
