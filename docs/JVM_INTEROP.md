@@ -158,7 +158,7 @@ using the same classpath and the same shared support classification as
 instead of guessed. See [the wrapper generator](WRAP.md) for the command,
 mapping policy and overwrite rules. For framework builds (dependency and
 classpath owned by a host build system such as Gradle/Loom), the website guide
-[Fabric / JVM framework integration](../website/en/guide/fabric.md) records a
+[Fabric / JVM framework integration](https://colinhouse.github.io/Sprig/en/guide/fabric) records a
 verified end-to-end wiring, while the mechanics remain framework-independent.
 
 Pass a local classpath to all related commands:

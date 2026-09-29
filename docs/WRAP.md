@@ -89,7 +89,7 @@ A verified pattern (Gradle/Loom, and the same shape for other JVM builds):
    artifact.
 
 The website guide
-[Fabric / JVM framework integration](../website/en/guide/fabric.md) records the
+[Fabric / JVM framework integration](https://colinhouse.github.io/Sprig/en/guide/fabric) records the
 verified wiring, packaging pitfalls and the clean-build checklist.
 
 ## Known limitations
