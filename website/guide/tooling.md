@@ -12,7 +12,8 @@ run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute o
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      带版本的语言参考
 capabilities [--json]                     已实现能力清单
-api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
+api <Java.Class> [--member NAME] [--classpath JAR] [--json]
+wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json]  生成可编辑的 Sprig wrapper 查询 JVM 签名
 doctor [--classpath JAR] [--json]         环境检查
 explain <SPR-CODE> [--json]                 结构化诊断说明
 codes [--json]                              list every diagnostic code

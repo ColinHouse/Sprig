@@ -33,6 +33,10 @@ def main():
             ("check-foreign-option", ["check", source, "--keep", "--json"]),
             ("build-foreign-option", ["build", source, "--syntax-only", "--json"]),
             ("run-foreign-option", ["run", source, "--syntax-only", "--json"]),
+            ("wrap-foreign-option", ["check", source, "--force", "--json"]),
+            ("wrap-missing-out", ["wrap", "java.lang.String", "--json"]),
+            ("wrap-missing-class", ["wrap", "--out", "wrapped.spr", "--json"]),
+            ("wrap-extra-positional", ["wrap", "java.lang.String", "extra", "--out", "wrapped.spr", "--json"]),
             ("run-argument-needs-separator", ["run", source, "arg", "--json"]),
             ("codes-foreign-option", ["codes", "--keep", "--json"]),
             ("missing-classpath-value", ["check", "--classpath", "--json"]),
@@ -50,6 +54,11 @@ def main():
             codes = [d["code"] for d in payload.get("diagnostics", [])]
             assert result.returncode == 2 and payload.get("exitCode") == 2 and "SPR-CLI-OPTION" in codes, (
                 name, result.returncode, payload)
+        wrapped = invoke("wrap", "java.time.LocalDate", "--out", directory / "local_date.spr", "--json",
+                         cwd=directory)
+        wrapped_json = json.loads(wrapped.stdout)
+        assert wrapped.returncode == 0 and wrapped_json["inputClass"] == "java.time.LocalDate" \
+            and (directory / "local_date.spr").is_file()
         valid = invoke("check", source, "--syntax-only", "--json", cwd=directory)
         assert valid.returncode == 0 and json.loads(valid.stdout)["diagnostics"] == []
         assert invoke("codes", "--json", cwd=directory).returncode == 0

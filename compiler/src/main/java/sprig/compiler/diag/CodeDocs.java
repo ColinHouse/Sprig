@@ -8,6 +8,7 @@ public final class CodeDocs {
     private static final Map<String, String> DOCS = Map.ofEntries(
             Map.entry(Codes.CLI_OPTION, "A CLI command is missing a required argument or has an unknown option."),
             Map.entry(Codes.API_TARGET, "The requested Sprig module or project API target cannot be resolved."),
+            Map.entry(Codes.WRAP_CHECK, "Generated Java-to-Sprig wrapper source failed Sprig checking or formatting."),
             Map.entry(Codes.API_MEMBER, "The requested --member does not exist on the inspected Sprig declaration."),
             Map.entry(Codes.LEX_TAB, "Tabs are forbidden; Sprig indentation uses spaces only."),
             Map.entry(Codes.LEX_INDENT_FIRST, "The first code line of a file must start at column 1."),

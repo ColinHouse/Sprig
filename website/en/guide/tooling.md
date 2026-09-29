@@ -12,7 +12,8 @@ run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute o
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      versioned language reference
 capabilities [--json]                     implemented feature inventory
-api <Java.Class> [--member NAME] [--classpath JAR] [--json] JVM signatures
+api <Java.Class> [--member NAME] [--classpath JAR] [--json]
+wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json] generate an editable Sprig wrapper JVM signatures
 doctor [--classpath JAR] [--json]         environment report
 explain <SPR-CODE> [--json]                 structured diagnostic explanation
 codes [--json]                              list every diagnostic code
