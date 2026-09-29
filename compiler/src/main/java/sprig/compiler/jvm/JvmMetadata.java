@@ -211,7 +211,7 @@ public final class JvmMetadata {
             return unsupported("sprig-callable-boundary",
                     "Sprig callable result requires concrete invariant Fn0..Fn3 type arguments");
         }
-        if (genericArray(executable)) {
+        if (hasShape(executable, JavaTypes.Shape.GENERIC_ARRAY)) {
             return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
         }
         if (executable.getTypeParameters().length > 0 && recursiveBounds(executable)) {
@@ -263,11 +263,12 @@ public final class JvmMetadata {
     public static Support support(Field field) {
         java.lang.reflect.Type generic = field.getGenericType();
         boolean array = field.getType().isArray();
-        JavaTypes.Shape shape = JavaTypes.shape(generic);
-        if (shape == JavaTypes.Shape.GENERIC_ARRAY) {
+        // Shape inspection must recurse: List<?> and List<T[]> only look
+        // parameterized at the top level.
+        if (containsShape(generic, JavaTypes.Shape.GENERIC_ARRAY)) {
             return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
         }
-        if (shape == JavaTypes.Shape.WILDCARD) {
+        if (containsShape(generic, JavaTypes.Shape.WILDCARD)) {
             return unsupported("wildcard-unsupported", "Java wildcards are not supported");
         }
         if (JavaTypes.wrapperArgument(generic)) {
@@ -276,15 +277,17 @@ public final class JvmMetadata {
         }
         List<String> codes = new ArrayList<>();
         if (array) codes.add("array-source-syntax-unavailable");
-        if (shape == JavaTypes.Shape.TYPE_VARIABLE) codes.add("raw-generic-boundary");
+        boolean typeVariable = containsShape(generic, JavaTypes.Shape.TYPE_VARIABLE);
+        boolean parameterized = containsShape(generic, JavaTypes.Shape.PARAMETERIZED);
+        if (typeVariable) codes.add("raw-generic-boundary");
         String level;
         if (array) {
             level = "opaque-array";
         } else if (COLLECTION_KINDS.contains(field.getType())) {
             level = "adaptable";
-        } else if (shape == JavaTypes.Shape.TYPE_VARIABLE) {
+        } else if (typeVariable) {
             level = "erased-generic";
-        } else if (shape == JavaTypes.Shape.PARAMETERIZED) {
+        } else if (parameterized) {
             level = "concrete-generic";
         } else {
             level = "direct";
@@ -349,6 +352,9 @@ public final class JvmMetadata {
                 if (containsShape(argument, target)) return true;
             }
         }
+        if (type instanceof GenericArrayType array) {
+            return containsShape(array.getGenericComponentType(), target);
+        }
         return false;
     }
 
@@ -360,14 +366,6 @@ public final class JvmMetadata {
             }
         }
         return false;
-    }
-
-    private static boolean genericArray(Executable executable) {
-        for (java.lang.reflect.Type type : executable.getGenericParameterTypes()) {
-            if (type instanceof GenericArrayType) return true;
-        }
-        return executable instanceof Method method
-                && method.getGenericReturnType() instanceof GenericArrayType;
     }
 
     private static boolean genericBoundary(java.lang.reflect.Type type) {

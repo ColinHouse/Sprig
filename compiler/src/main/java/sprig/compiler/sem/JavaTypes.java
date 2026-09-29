@@ -257,6 +257,42 @@ public final class JavaTypes {
         return projected != null && target.args.equals(projected);
     }
 
+    /**
+     * Compatibility of any Sprig source with a Java generic target, using the
+     * source's JVM image (boxed scalars, Sprig collections) and projecting it
+     * through the hierarchy. Raw targets stay erased boundaries; concrete
+     * targets require matching arguments.
+     */
+    public static boolean javaArgumentCompatible(JavaType target, Type source) {
+        if (source instanceof NullableType nullable) {
+            return javaArgumentCompatible(target, nullable.inner);
+        }
+        if (source instanceof JavaType javaSource) {
+            return javaTypeCompatible(target, javaSource);
+        }
+        if (target.args.isEmpty()) {
+            return boxedFor(source) != null;
+        }
+        if (target.clazz == sprig.runtime.SprigList.class && source instanceof ListType list) {
+            return target.args.equals(List.of(list.element));
+        }
+        if (target.clazz == sprig.runtime.SprigMutableList.class && source instanceof ListType list) {
+            return list.mutable && target.args.equals(List.of(list.element));
+        }
+        if (target.clazz == sprig.runtime.SprigMap.class && source instanceof MapType map) {
+            return target.args.equals(List.of(map.key, map.value));
+        }
+        if (target.clazz == sprig.runtime.SprigMutableMap.class && source instanceof MapType map) {
+            return map.mutable && target.args.equals(List.of(map.key, map.value));
+        }
+        Class<?> image = boxedFor(source);
+        if (image == null || image == Object.class || !target.clazz.isAssignableFrom(image)) {
+            return false;
+        }
+        List<Type> projected = projectedArguments(target.clazz, image, List.of());
+        return projected != null && target.args.equals(projected);
+    }
+
     /** Projects source arguments onto target type variables through the hierarchy. */
     public static List<Type> projectedArguments(Class<?> target, Class<?> source,
             List<Type> sourceArguments) {
@@ -533,6 +569,29 @@ public final class JavaTypes {
             return Character.class;
         }
         return clazz;
+    }
+
+    /**
+     * Preferred source-level JVM class for a mapped Sprig type, used to box
+     * arguments at a bound generic call (e.g. {@code Int32} binds to
+     * {@code int}/{@code Integer}, never {@code long}).
+     */
+    public static Class<?> preferredRaw(Type type) {
+        if (type instanceof NullableType nullable) {
+            return preferredRaw(nullable.inner);
+        }
+        if (type == NativeType.INT) return long.class;
+        if (type == NativeType.INT32) return int.class;
+        if (type == NativeType.FLOAT) return double.class;
+        if (type == NativeType.FLOAT32) return float.class;
+        if (type == NativeType.BOOL) return boolean.class;
+        if (type == NativeType.STRING) return String.class;
+        if (type == NativeType.DECIMAL) return sprig.runtime.SprigDecimal.class;
+        if (type == NativeType.BIGINT) return sprig.runtime.SprigBigInt.class;
+        if (type instanceof JavaType javaType) return javaType.clazz;
+        if (type instanceof ListType) return sprig.runtime.SprigList.class;
+        if (type instanceof MapType) return sprig.runtime.SprigMap.class;
+        return null;
     }
 
     /** JVM class for a Sprig native type usable in generic argument position. */
