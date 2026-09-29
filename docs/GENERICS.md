@@ -147,5 +147,5 @@ Java reference results remain conservatively nullable. See
 Generic inference, variance, `Comparable` and any user-defined capability,
 generic constraints on JVM types, and registry/publishing features. The
 manifest and entry-discovery model (`sprig.toml`, `init`, `project`, `deps`,
-`run --bin`), schema-3 lockfiles, local/Git and Apache Maven resolution are implemented;
+`run --bin`), schema-4 lockfiles, local/Git and Apache Maven resolution are implemented;
 see the current project/dependency documentation.

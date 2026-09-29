@@ -2687,6 +2687,16 @@ public final class TypeChecker {
         try {
             java.lang.reflect.Field javaField = clazz.getField(access.name);
             if (staticContext == java.lang.reflect.Modifier.isStatic(javaField.getModifiers())) {
+                JvmMetadata.Support fieldSupport = JvmMetadata.support(javaField);
+                if (!fieldSupport.usable()) {
+                    diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+                            "Java field '" + access.name + "' is unsupported: "
+                                    + fieldSupport.unusableReason(),
+                            module.uri, access.span)
+                            .withData(Map.of("interopReasonCodes", fieldSupport.reasonCodes(),
+                                    "interopLevel", fieldSupport.level())));
+                    return errorField(access);
+                }
                 ResolvedField field = new ResolvedField();
                 field.kind = ResolvedField.Kind.JAVA_FIELD;
                 JvmMember member = new JvmMember();
@@ -3552,6 +3562,11 @@ public final class TypeChecker {
             }
             return javaTarget.clazz.equals(javaSource.clazz) ? 3 : 2;
         }
+        if (target instanceof JavaType javaTarget && !javaTarget.args.isEmpty()) {
+            // Concrete generic target with a native scalar or Sprig collection
+            // source: project the source image, never accept by raw class.
+            return JavaTypes.javaArgumentCompatible(javaTarget, base) ? 2 : -1;
+        }
         if (target instanceof ListType listTarget && base instanceof ListType listSource) {
             return listTarget.equals(listSource) ? 3 : -1;
         }
@@ -3566,18 +3581,7 @@ public final class TypeChecker {
     }
 
     private static Class<?> boundRawClass(Type type) {
-        if (type == NativeType.INT) return long.class;
-        if (type == NativeType.INT32) return int.class;
-        if (type == NativeType.FLOAT) return double.class;
-        if (type == NativeType.FLOAT32) return float.class;
-        if (type == NativeType.BOOL) return boolean.class;
-        if (type == NativeType.STRING) return String.class;
-        if (type == NativeType.DECIMAL) return sprig.runtime.SprigDecimal.class;
-        if (type == NativeType.BIGINT) return sprig.runtime.SprigBigInt.class;
-        if (type instanceof JavaType javaType) return javaType.clazz;
-        if (type instanceof ListType) return sprig.runtime.SprigList.class;
-        if (type instanceof MapType) return sprig.runtime.SprigMap.class;
-        return null;
+        return JavaTypes.preferredRaw(type);
     }
 
     /** Whether a Java call names the class (static) rather than a value receiver. */

@@ -52,6 +52,8 @@ JAVA = {
     "Interop.java": '''package audit;
 import java.util.List;
 import java.util.Map;
+import sprig.runtime.SprigList;
+import sprig.runtime.SprigMap;
 
 public final class Interop {
     private Interop() {}
@@ -95,6 +97,26 @@ public final class Interop {
         return java.security.MessageDigest.getInstance("SHA-256").digest(value);
     }
     public static String base64(byte[] value) { return java.util.Base64.getEncoder().encodeToString(value); }
+
+    public static String describe(Comparable<String> value) { return value.toString(); }
+    public static SprigList rawList() { return new SprigList(List.of(1, 2)); }
+    public static <T> SprigList<T> typedList(T value) { return new SprigList<>(List.of(value)); }
+    public static long rawLength(SprigList values) { return values.size(); }
+    public static SprigMap rawMap() { return new SprigMap(Map.of("a", 1)); }
+    public static <K, V> SprigMap<K, V> typedMap(K key, V value) { return new SprigMap<>(Map.of(key, value)); }
+    public static <T> List<T[]> nestedGenericArray(T value) { return List.of(); }
+}
+''',
+    "Holder.java": '''package audit;
+public class Holder<T> {
+    public java.util.List<?> wildcardValues;
+    public java.util.List<T[]> values;
+    public Holder() {}
+}
+''',
+    "Plain.java": '''package audit;
+public class Plain {
+    public Plain() {}
 }
 ''',
     "Bounded.java": '''package audit;
@@ -253,7 +275,8 @@ def main():
         classes = directory / "classes"
         classes.mkdir()
         compiled = subprocess.run(
-            ["javac", "--release", "17", "-d", str(classes), *map(str, sorted(source_dir.glob("*.java")))],
+            ["javac", "--release", "17", "-cp", str(ROOT / "build" / "sprig-compiler.jar"),
+             "-d", str(classes), *map(str, sorted(source_dir.glob("*.java")))],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         verify("javac-fixture", compiled.returncode == 0, compiled.stdout + compiled.stderr)
         cp = str(classes)
@@ -428,8 +451,12 @@ box.set("changed")
 let again = box.get()
 if again != null:
     print(again)
+let number = Box[Int32](5)
+let digits = number.get()
+if digits != null:
+    print(digits + 1)
 ''')
-        verify("run-box", box_run.returncode == 0 and box_run.stdout == "hi\nchanged\n",
+        verify("run-box", box_run.returncode == 0 and box_run.stdout == "hi\nchanged\n6\n",
                f"exit={box_run.returncode} stdout={box_run.stdout!r} stderr={box_run.stderr!r}")
 
         _, invariant = check_file("box-invariant.spr", '''import audit.Box as Box
@@ -614,6 +641,168 @@ let values = Interop.wildcardResult()
                and wildcard_diag["code"] == "SPR-JVM-MEMBER"
                and "Java wildcards are not supported" in wildcard_reasons,
                f"exit={wildcard_call.returncode} reasons={wildcard_reasons}")
+
+        # -------------------------------- concrete Comparable[T] projection
+        _, comparable = run_file("comparable.spr", '''import audit.Interop as Interop
+import java.lang.Comparable as Comparable
+
+let text: Comparable[String] = "abc"
+print(Interop.describe(text))
+''')
+        verify("run-comparable-concrete",
+               comparable.returncode == 0 and comparable.stdout == "abc\n",
+               f"exit={comparable.returncode} stdout={comparable.stdout!r} stderr={comparable.stderr!r}")
+
+        _, comparable_int = check_file("comparable-int.spr", '''import audit.Interop as Interop
+import java.lang.Comparable as Comparable
+
+let small: Int32 = 3
+let bad: Comparable[String] = small
+''', "--json")
+        comparable_int_diag = diagnostic(comparable_int)
+        verify("check-comparable-wrong-scalar",
+               comparable_int.returncode == 1 and comparable_int_diag
+               and comparable_int_diag["code"] == "SPR-TYPE-ASSIGN"
+               and "SPR-JVM-COMPILE" not in comparable_int.stdout + comparable_int.stderr,
+               f"exit={comparable_int.returncode} {comparable_int.stdout}{comparable_int.stderr}")
+
+        _, comparable_call = check_file("comparable-call.spr", '''import audit.Interop as Interop
+print(Interop.describe(3))
+''', "--json")
+        comparable_call_diag = diagnostic(comparable_call)
+        verify("check-comparable-wrong-argument",
+               comparable_call.returncode == 1 and comparable_call_diag
+               and comparable_call_diag["code"] == "SPR-JVM-MEMBER"
+               and "SPR-JVM-COMPILE" not in comparable_call.stdout + comparable_call.stderr,
+               f"exit={comparable_call.returncode} {comparable_call.stdout}{comparable_call.stderr}")
+
+        _, comparable_plain = check_file("comparable-plain.spr", '''import audit.Interop as Interop
+import audit.Plain as Plain
+import java.lang.Comparable as Comparable
+
+let plain = Plain()
+let bad: Comparable[String] = plain
+''', "--json")
+        comparable_plain_diag = diagnostic(comparable_plain)
+        verify("check-comparable-unrelated",
+               comparable_plain.returncode == 1 and comparable_plain_diag
+               and comparable_plain_diag["code"] == "SPR-TYPE-ASSIGN"
+               and "SPR-JVM-COMPILE" not in comparable_plain.stdout + comparable_plain.stderr,
+               f"exit={comparable_plain.returncode} {comparable_plain.stdout}{comparable_plain.stderr}")
+
+        # -------------------------- raw versus concrete SprigList/SprigMap
+        _, raw_list = check_file("raw-spriglist.spr", '''import audit.Interop as Interop
+
+let raw = Interop.rawList()
+if raw != null:
+    let needed: List[String] = raw
+''', "--json")
+        raw_list_diag = diagnostic(raw_list)
+        verify("check-raw-spriglist-rejected",
+               raw_list.returncode == 1 and raw_list_diag
+               and raw_list_diag["code"] == "SPR-TYPE-ASSIGN"
+               and "SPR-JVM-COMPILE" not in raw_list.stdout + raw_list.stderr,
+               f"exit={raw_list.returncode} {raw_list.stdout}{raw_list.stderr}")
+
+        _, typed_list = run_file("typed-spriglist.spr", '''import audit.Interop as Interop
+
+let typed = Interop.typedList[String]("x")
+if typed != null:
+    let values: List[String] = typed
+    print(values.size())
+print(Interop.rawLength(["a", "b"]))
+''')
+        verify("run-spriglist-concrete",
+               typed_list.returncode == 0 and typed_list.stdout == "1\n2\n",
+               f"exit={typed_list.returncode} stdout={typed_list.stdout!r} stderr={typed_list.stderr!r}")
+
+        _, typed_list_bad = check_file("typed-spriglist-mismatch.spr", '''import audit.Interop as Interop
+
+let typed = Interop.typedList[Int32](1)
+if typed != null:
+    let bad: List[String] = typed
+''', "--json")
+        typed_list_bad_diag = diagnostic(typed_list_bad)
+        verify("check-spriglist-element-mismatch",
+               typed_list_bad.returncode == 1 and typed_list_bad_diag
+               and typed_list_bad_diag["code"] == "SPR-TYPE-ASSIGN"
+               and "SPR-JVM-COMPILE" not in typed_list_bad.stdout + typed_list_bad.stderr,
+               f"exit={typed_list_bad.returncode} {typed_list_bad.stdout}{typed_list_bad.stderr}")
+
+        _, raw_map = check_file("raw-sprigmap.spr", '''import audit.Interop as Interop
+
+let raw = Interop.rawMap()
+if raw != null:
+    let bad: Map[String, Int32] = raw
+''', "--json")
+        raw_map_diag = diagnostic(raw_map)
+        verify("check-raw-sprigmap-rejected",
+               raw_map.returncode == 1 and raw_map_diag
+               and raw_map_diag["code"] == "SPR-TYPE-ASSIGN"
+               and "SPR-JVM-COMPILE" not in raw_map.stdout + raw_map.stderr,
+               f"exit={raw_map.returncode} {raw_map.stdout}{raw_map.stderr}")
+
+        _, typed_map = run_file("typed-sprigmap.spr", '''import audit.Interop as Interop
+
+let typed = Interop.typedMap[String, Int32]("a", 1)
+if typed != null:
+    let values: Map[String, Int32] = typed
+    print(values.size())
+''')
+        verify("run-sprigmap-concrete",
+               typed_map.returncode == 0 and typed_map.stdout == "1\n",
+               f"exit={typed_map.returncode} stdout={typed_map.stdout!r} stderr={typed_map.stderr!r}")
+
+        # -------------------------------- recursive unsupported shapes
+        nested_api = members.get("nestedGenericArray", {})
+        verify("api-nested-generic-array",
+               not nested_api.get("signatureSupported")
+               and "generic-array-unsupported" in nested_api.get("interopReasonCodes", []),
+               f"nestedGenericArray={nested_api.get('interopReasonCodes')}")
+
+        holder_api = body(call("api", "audit.Holder", "--classpath", cp, "--json")) or {}
+        holder_fields = {f["name"]: f for f in holder_api.get("fields", [])}
+        verify("api-recursive-field-shapes",
+               not holder_fields.get("wildcardValues", {}).get("signatureSupported")
+               and "wildcard-unsupported" in holder_fields.get("wildcardValues", {}).get("interopReasonCodes", [])
+               and not holder_fields.get("values", {}).get("signatureSupported")
+               and "generic-array-unsupported" in holder_fields.get("values", {}).get("interopReasonCodes", []),
+               str({name: (f.get("interopLevel"), f.get("interopReasonCodes"))
+                    for name, f in holder_fields.items()}))
+
+        _, nested_call = check_file("nested-generic-array.spr", '''import audit.Interop as Interop
+let values = Interop.nestedGenericArray[String]("x")
+''', "--json")
+        nested_diag = diagnostic(nested_call)
+        nested_reasons = [c.get("rejectedBecause") for c in
+                          (nested_diag or {}).get("data", {}).get("candidates", [])]
+        verify("check-nested-generic-array-rejected",
+               nested_call.returncode == 1 and nested_diag
+               and nested_diag["code"] == "SPR-JVM-MEMBER"
+               and any(reason and "generic array" in reason for reason in nested_reasons),
+               f"exit={nested_call.returncode} reasons={nested_reasons}")
+
+        _, holder_wildcard = check_file("holder-wildcard.spr", '''import audit.Holder as Holder
+let holder = Holder[String]()
+let values = holder.wildcardValues
+''', "--json")
+        holder_wildcard_diag = diagnostic(holder_wildcard)
+        verify("check-wildcard-field-rejected",
+               holder_wildcard.returncode == 1 and holder_wildcard_diag
+               and holder_wildcard_diag["code"] == "SPR-JVM-MEMBER"
+               and "wildcard-unsupported" in holder_wildcard_diag.get("data", {}).get("interopReasonCodes", []),
+               f"exit={holder_wildcard.returncode} {holder_wildcard.stdout}{holder_wildcard.stderr}")
+
+        _, holder_array = check_file("holder-generic-array.spr", '''import audit.Holder as Holder
+let holder = Holder[String]()
+let values = holder.values
+''', "--json")
+        holder_array_diag = diagnostic(holder_array)
+        verify("check-generic-array-field-rejected",
+               holder_array.returncode == 1 and holder_array_diag
+               and holder_array_diag["code"] == "SPR-JVM-MEMBER"
+               and "generic-array-unsupported" in holder_array_diag.get("data", {}).get("interopReasonCodes", []),
+               f"exit={holder_array.returncode} {holder_array.stdout}{holder_array.stderr}")
 
         # ------------------------------------------------- collection adapters
         _, adapters = run_file("adapters.spr", ADAPTERS)

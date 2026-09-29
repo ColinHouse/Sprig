@@ -44,7 +44,7 @@ OpenAPI 使用普通 Schema/FieldSchema/QueryParameter 元数据，不反射任�
 
 ## JVM 适配器的边界
 
-SQLite 包通过已有 Maven Resolver 和 schema-3 lock 解析固定的
+SQLite 包通过已有 Maven Resolver 和 schema-4 lock 解析固定的
 `org.xerial:sqlite-jdbc:3.46.1.0`。SQL 留在 Sprig，用户值使用具备类型的
 Integer/Text/Boolean/Null 参数。结果是脱离 JDBC 资源的快照，连接、语句和
 结果集均被关闭；失败的批处理或 RETURNING 快照会回滚。

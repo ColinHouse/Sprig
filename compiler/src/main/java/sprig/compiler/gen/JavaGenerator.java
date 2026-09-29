@@ -1382,7 +1382,7 @@ public final class JavaGenerator {
                         sb.append(", ");
                     }
                     sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm,
-                            resolved.jvm.executable.getParameterTypes()[i]));
+                            jvmParameter(resolved.jvm, i)));
                 }
                 return sb.append(')').toString();
             }
@@ -1796,7 +1796,7 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            Class<?> param = i < params.length ? params[i] : Object.class;
+            Class<?> param = i < params.length ? jvmParameter(resolved.jvm, i) : Object.class;
             sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm, param));
         }
         Class<?> rawReturn = ((java.lang.reflect.Method) resolved.jvm.executable).getReturnType();
@@ -1837,6 +1837,22 @@ public final class JavaGenerator {
         if (javaType == Short.class) return "sprig.runtime.SprigRuntime.fromJavaShort(" + code + ")";
         if (javaType == Byte.class) return "sprig.runtime.SprigRuntime.fromJavaByte(" + code + ")";
         return code;
+    }
+
+    /**
+     * Source-level parameter class for a JVM member. Bound generic calls box
+     * arguments to the mapped formal (Int32 binds to int/Integer), so an
+     * erased Object parameter still receives the right wrapper.
+     */
+    private static Class<?> jvmParameter(sprig.compiler.sem.JvmMember member, int index) {
+        Class<?> raw = member.executable.getParameterTypes()[index];
+        if (member.bindings.isEmpty()) {
+            return raw;
+        }
+        Type mapped = sprig.compiler.sem.JavaTypes.mapFormal(
+                member.executable.getGenericParameterTypes()[index], raw, member.bindings);
+        Class<?> preferred = sprig.compiler.sem.JavaTypes.preferredRaw(mapped);
+        return preferred != null ? preferred : raw;
     }
 
     private String convertJvmArg(Expr arg, sprig.compiler.sem.JvmMember member, Class<?> param) {

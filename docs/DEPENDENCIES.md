@@ -22,9 +22,16 @@ branch = "main"
 Aliases are package-local. `import "@math/vector.spr" as vector` sees only direct
 aliases and exported modules. Lock edge IDs such as `root/@a/@util` distinguish
 same-named dependencies in diamond graphs. Alias components use UTF-8 form encoding.
-Local locks store canonical absolute paths: they are development dependencies and
-must be resolved again after relocation. Source edits do not stale the lock;
-manifest edits do. Absolute package imports, `..` and symlink escapes are rejected.
+Local locks store portable identity: a relative manifest declaration is recorded as a
+normalized owner-relative locator (`portable = true`), so the lock survives moving the
+whole workspace unchanged. An absolute declaration keeps a canonical absolute path
+(`portable = false`) and needs `resolve` after the target moves. Canonical filesystem
+paths are runtime facts only; the lock never pins the source tree or a symlink target.
+Schema 4 is current; schema-3 locks are rejected with `SPR-PROJECT-LOCK-SCHEMA` and
+require `sprig resolve` (no automatic migration). Source edits do not stale the lock;
+manifest edits and locator changes do. Absolute package imports, `..` and symlink
+escapes are rejected.
+
 Relative file imports are not a general filesystem sandbox.
 
 Only resolve follows Git branch intent. Builds consume exact SHA and verified
