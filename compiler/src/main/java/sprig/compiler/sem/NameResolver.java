@@ -625,8 +625,11 @@ public final class NameResolver {
                     typeLike = true;
                 }
                 if (!typeLike) {
+                    // Defer to the checker when the bracket payload cannot be a
+                    // value expression in this scope (e.g. a Java explicit
+                    // generic call Shapes.repeat[T](...) inside generic T).
                     Expr candidate = TypeChecker.indexFromTypeArgs(subscript.typeArgs);
-                    if (candidate != null) {
+                    if (candidate != null && indexNameResolvable(scope, candidate)) {
                         resolveExpr(module, scope, candidate);
                         subscript.resolvedIndex = candidate;
                     }
@@ -666,6 +669,17 @@ public final class NameResolver {
             }
             resolveExpr(module, lambdaScope, lambda.body);
         }
+    }
+
+    /** Whether an index candidate's leftmost name resolves as a value here. */
+    private static boolean indexNameResolvable(Scope scope, Expr candidate) {
+        if (candidate instanceof Expr.Name name) {
+            return scope.resolve(name.name) != null;
+        }
+        if (candidate instanceof Expr.FieldAccess access) {
+            return indexNameResolvable(scope, access.receiver);
+        }
+        return true;
     }
 
     private void resolveName(Module module, Scope scope, Expr.Name name) {

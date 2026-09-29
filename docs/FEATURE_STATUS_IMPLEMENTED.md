@@ -29,7 +29,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 | Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model suite |
 | Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver suite |
 | Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` verified detached checkouts | dependency resolver |
-| Maven/JVM dependency resolution | exact direct release coordinates | Apache Resolver effective POM + transitive mediation, schema-3 hashes/graph | shared locked check/build/run/api/doctor classpath | Maven fixtures + real commons-text showcase |
+| Maven/JVM dependency resolution | exact direct release coordinates | Apache Resolver effective POM + transitive mediation, schema-4 hashes/graph/locators | shared locked check/build/run/api/doctor classpath | Maven fixtures + real commons-text showcase |
 | Source callable types `fn(A) -> R`, nullable `(fn(A) -> R)?`, invariant, arities 0–3 | yes | signatures/fields/locals/collections/generics, no callable effects | existing Fn0..Fn3 representation | tests/callables |
 | JVM callable ABI with concrete `sprig.runtime.Fn0..Fn3` signatures | yes | boxed invariant parameters/results, non-null arguments | direct calls, nullable returned callable and runtime contract guards | tests/callables |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
@@ -43,6 +43,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 | Java checked exceptions + typed catch + `error.message` | yes | yes | Java try/catch | runtime 15 |
 | `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
 | Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | locked JVM JARs precede explicit entries; compiler libraries isolated | agent tooling suite |
+| Bounded JVM interop: opaque arrays, concrete generics, explicit collection adapters | explicit `Type[Arg]` application; `@std/jvm.spr`; `sprig.runtime.jvm.HostBytes` | structured `interopLevel`/`interopReasonCodes`; wildcards, inference, recursive bounds and varargs rejected before `javac` | arrays keep exact JVM classes; snapshots/copies are independent; no implicit conversion | JVM interop suite |
 | javac error → Sprig span translation | — | — | line map | by design |
 | Checked effects from omitted class defaults | — | checked at each constructor call; explicit field values skip unused defaults | defaults still evaluate per instance, in declaration order | correctness regressions |
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
@@ -53,6 +54,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 | SQLite migrations (`@sqlite/migrations.spr`) | Sprig package module | validated `NNN_description.sql` names, sorted ledger and idempotent apply | trusted multi-statement SQL and ledger row share a SQLite batch transaction | migration apply/restart/failure-retry suite |
 | CLI parsing (`@cli/cli.spr`) | Sprig package module | typed option specs, duplicate/unknown/missing checks | deterministic usage, flags/values/aliases/positionals | CLI library and installed `json-select` dogfood |
 | Sprig module API (`sprig api module.spr\|@pkg/module.spr`) | resolved checked AST | declaration/field/method/throws/generic metadata; `--member Type.member` | compiler-owned JSON; never executes code | Sprig API suite |
+| Java-to-Sprig wrapper generator (`sprig wrap`) | shared `JvmMetadata.Support` classification; canonical formatting; generated source is checked before writing | plain editable `.spr`, deterministic, `--force` overwrite, structured skip report | no runtime reflection or generator dependency; Optional/adapters/`throws` mappings; unsupported members keep their reason codes | wrap suite |
 | Project API inventory (`sprig api .`) | project + lockfile validation | source modules plus each dependency's exported modules | no application execution; stale/unexported targets refused | Sprig API suite and installed SDK dogfood |
 | Structured diagnostic metadata | optional `relatedHelp` and `repair` fields | `machineApplicable` false unless semantics-preserving and unambiguous | stable fields unchanged | agent tooling suite |
 | Capability feature guidance | `featureGuidance` per unsupported feature | alternatives and help topic reflect current compiler only | additive to `features` booleans | agent tooling and Sprig API suites |
@@ -63,7 +65,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`
 expressions, nested/positional patterns, `%=`,
-tuples/destructuring, varargs/arrays/annotations in interop,
-LSP, publishing/registry, incremental checking,
-self-hosting.
+tuples/destructuring, varargs and source array syntax/annotations in interop,
+wildcard typing or Java generic inference, LSP, publishing/registry,
+incremental checking, self-hosting.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries.

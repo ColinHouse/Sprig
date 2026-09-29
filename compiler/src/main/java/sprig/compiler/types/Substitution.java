@@ -57,6 +57,12 @@ public final class Substitution {
                     ? function
                     : new FunctionType(params, result);
         }
+        if (type instanceof JavaType javaType && !javaType.args.isEmpty()) {
+            List<Type> args = applyAll(javaType.args, map);
+            return args.equals(javaType.args)
+                    ? javaType
+                    : new JavaType(javaType.clazz, args, javaType.platformNullable);
+        }
         return type;
     }
 

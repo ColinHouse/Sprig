@@ -13,6 +13,7 @@ import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.types.ClassType;
+import sprig.compiler.types.JavaType;
 import sprig.compiler.types.ListType;
 import sprig.compiler.types.MapType;
 import sprig.compiler.types.NativeType;
@@ -166,6 +167,9 @@ public final class TypeRefResolver {
      */
     private Type instantiateUserType(Module module, TypeRef ref, Symbol symbol,
                                      Map<String, Type> typeParams) {
+        if (symbol.kind == Symbol.Kind.JAVA_TYPE || symbol.javaClass != null) {
+            return instantiateJavaType(module, ref, symbol, typeParams);
+        }
         Decl decl = symbol.decl;
         if (decl == null || decl.typeParams.isEmpty()) {
             if (!ref.args.isEmpty()) {
@@ -191,6 +195,119 @@ public final class TypeRefResolver {
                 "Type '" + decl.name + "' cannot carry type arguments",
                 module.uri, ref.span));
         return NativeType.ERROR;
+    }
+
+    /**
+     * Applies explicit type arguments to an imported Java class. Arity is
+     * exact, arguments are invariant, non-nullable and must have a concrete
+     * JVM representation; wildcards and inference are not part of the profile.
+     */
+    private Type instantiateJavaType(Module module, TypeRef ref, Symbol symbol,
+                                     Map<String, Type> typeParams) {
+        Class<?> clazz = symbol.javaClass;
+        if (clazz == null) {
+            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+                    "Unknown Java type '" + ref.display() + "'", module.uri, ref.span));
+            return NativeType.ERROR;
+        }
+        if (ref.args.isEmpty()) {
+            return symbol.type;
+        }
+        List<Type> args = resolveJavaArguments(module, clazz, ref.args, typeParams, ref.span);
+        if (args == null) {
+            return NativeType.ERROR;
+        }
+        return new JavaType(clazz, args, false);
+    }
+
+    /**
+     * Resolves explicit type arguments written for an imported Java class in a
+     * type position or call site. Exact arity, invariant, non-nullable and
+     * representable; wildcards, arrays of type variables and inference are
+     * outside the profile.
+     */
+    public List<Type> resolveJavaArguments(Module module, Class<?> clazz, List<TypeRef> argRefs,
+                                           Map<String, Type> typeParams,
+                                           sprig.compiler.diag.Span span) {
+        if (argRefs == null || argRefs.isEmpty()) {
+            return List.of();
+        }
+        int arity = clazz.getTypeParameters().length;
+        if (arity == 0) {
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_ARITY, Phase.TYPE,
+                    "Java type '" + clazz.getName() + "' is not generic and accepts no type arguments",
+                    module.uri, span));
+            return null;
+        }
+        if (argRefs.size() != arity) {
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_ARITY, Phase.TYPE,
+                    "Java type '" + clazz.getName() + "' requires exactly " + arity
+                            + " type argument" + (arity == 1 ? "" : "s") + " but got " + argRefs.size(),
+                    module.uri, span));
+            return null;
+        }
+        List<Type> args = new ArrayList<>();
+        for (int i = 0; i < argRefs.size(); i++) {
+            TypeRef argRef = argRefs.get(i);
+            Type arg = resolve(module, argRef, typeParams, false);
+            sprig.compiler.diag.Span argSpan = argRef != null && argRef.span != null ? argRef.span : span;
+            if (arg.isNullable()) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_NULLABLE, Phase.TYPE,
+                        "Java type argument '" + arg.display()
+                                + "' is nullable; Java generic arguments carry no null contract",
+                        module.uri, argSpan));
+                return null;
+            }
+            if (!representableJavaArgument(arg)) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
+                        "Type '" + arg.display() + "' has no JVM representation as a Java type argument",
+                        module.uri, argSpan)
+                        .withHint("Use a native Sprig type, a concrete Java class, a Sprig collection or a generic parameter."));
+                return null;
+            }
+            if (!satisfiesJavaBound(clazz, i, arg, module, argSpan)) {
+                return null;
+            }
+            args.add(arg);
+        }
+        return args;
+    }
+
+    /** Simple class/interface bounds only; recursive or intersection bounds are rejected. */
+    private boolean satisfiesJavaBound(Class<?> clazz, int index, Type arg, Module module,
+                                       sprig.compiler.diag.Span span) {
+        for (java.lang.reflect.Type bound : clazz.getTypeParameters()[index].getBounds()) {
+            if (bound == Object.class) {
+                continue;
+            }
+            if (!(bound instanceof Class<?> boundClass)) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
+                        "Java type '" + clazz.getName() + "' declares a recursive or intersection bound; "
+                                + "only simple class/interface bounds are supported",
+                        module.uri, span));
+                return false;
+            }
+            Class<?> erased = JavaTypes.boxedFor(arg);
+            if (erased == null || erased == Object.class || !boundClass.isAssignableFrom(erased)) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
+                        "Type argument '" + arg.display() + "' does not satisfy Java bound '"
+                                + boundClass.getName() + "' required by '" + clazz.getName() + "'",
+                        module.uri, span));
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean representableJavaArgument(Type arg) {
+        if (arg instanceof JavaType || arg instanceof ListType || arg instanceof MapType
+                || arg instanceof sprig.compiler.types.TypeParameterType
+                || arg instanceof sprig.compiler.types.FunctionType) {
+            return true;
+        }
+        return arg == NativeType.INT || arg == NativeType.INT32 || arg == NativeType.FLOAT
+                || arg == NativeType.FLOAT32 || arg == NativeType.BOOL || arg == NativeType.STRING
+                || arg == NativeType.DECIMAL || arg == NativeType.BIGINT;
     }
 
     /**

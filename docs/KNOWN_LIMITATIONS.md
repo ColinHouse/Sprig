@@ -20,7 +20,8 @@ by the historical design kit in `spec/`.
   `Object`). Boxing/unboxing is compiler-controlled, but generic values carry
   no JVM-level type information at runtime.
 - Local/Git Sprig and Maven JVM dependencies are resolved by `sprig resolve`.
-  Schema-3 locks verify graph identity, manifests and JAR/POM SHA-256. Shared
+  Schema-4 locks verify graph identity, manifests, owner-relative locators and
+  JAR/POM SHA-256. Shared
   project classpaths work for check/build/run/api/doctor; only resolve uses
   Maven networking. Apache Resolver handles effective POMs and mediation.
   Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
@@ -32,9 +33,16 @@ by the historical design kit in `spec/`.
   VS Code preview offers lexical highlighting, CLI checks/run and Java viewing;
   see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
-  calls, overloads, and checked exceptions. Java generic signatures, type-use
-  nullability annotations, arrays, varargs, and collection adapters are limited
-  or unsupported. Java reference results are conservatively nullable; Java
+  calls, overloads, and checked exceptions. Java arrays cross the boundary as
+  opaque values (no source array syntax; varargs remain unsupported). Concrete
+  generic arguments are preserved for explicit `Type[Arg]` application on
+  imported classes and methods; wildcards, inference, recursive and
+  intersection bounds, generic arrays and Short/Byte/Character generic
+  arguments are rejected with structured reasons, class bounds are validated,
+  raw evidence never promotes to concrete arguments, and raw boundaries stay
+  erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
+  implicit Java/Sprig collection conversion. Type-use nullability annotations
+  are not interpreted. Java reference results are conservatively nullable; Java
   reference parameters are conservatively non-null.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
   exception classes and top-level execution remains provisional.
@@ -51,7 +59,9 @@ by the historical design kit in `spec/`.
   with JDK 17 and 26; Windows is an experimental, non-blocking preview; definitions are not execution evidence. The current
   release validation report records which exact source/archive gates ran.
   No production or architecture-wide portability guarantee is made.
-- Local dependency locks contain canonical absolute paths and are not portable.
+- Portable local locks carry owner-relative locators and survive relocation of the
+  whole workspace; absolute-path declarations are not portable and need `resolve`
+  after the target moves. The lock does not attest source bytes or symlink targets.
   Manifest semantic errors can point to line 1. Cache tree verification adds IO;
   OS locks have no timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after

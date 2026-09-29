@@ -291,7 +291,17 @@ public final class JavaGenerator {
             return typeNames.get(caseType.variant) + "." + caseType.variantCase.name;
         }
         if (type instanceof JavaType javaType) {
-            return sourceName(javaType.clazz);
+            if (javaType.args.isEmpty() || containsTypeParameter(javaType)) {
+                return sourceName(javaType.clazz);
+            }
+            StringBuilder parameterized = new StringBuilder(sourceName(javaType.clazz)).append('<');
+            for (int i = 0; i < javaType.args.size(); i++) {
+                if (i > 0) {
+                    parameterized.append(", ");
+                }
+                parameterized.append(boxedJavaType(javaType.args.get(i)));
+            }
+            return parameterized.append('>').toString();
         }
         if (type instanceof FunctionType functionType) {
             StringBuilder sb = new StringBuilder("sprig.runtime.Fn").append(functionType.params.size()).append('<');
@@ -1364,14 +1374,15 @@ public final class JavaGenerator {
             case JVM_METHOD:
                 return emitJvmMethod(call, resolved);
             case JVM_CTOR: {
-                StringBuilder sb = new StringBuilder("new ")
-                        .append(sourceName(resolved.jvm.owner)).append('(');
+                String created = resolved.returnType instanceof JavaType javaType && !javaType.args.isEmpty()
+                        ? javaType(javaType) : sourceName(resolved.jvm.owner);
+                StringBuilder sb = new StringBuilder("new ").append(created).append('(');
                 for (int i = 0; i < call.args.size(); i++) {
                     if (i > 0) {
                         sb.append(", ");
                     }
                     sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm,
-                            resolved.jvm.executable.getParameterTypes()[i]));
+                            jvmParameter(resolved.jvm, i)));
                 }
                 return sb.append(')').toString();
             }
@@ -1523,6 +1534,9 @@ public final class JavaGenerator {
         if (type instanceof FunctionType function) {
             return function.params.stream().anyMatch(JavaGenerator::containsTypeParameter)
                     || containsTypeParameter(function.result);
+        }
+        if (type instanceof JavaType javaType) {
+            return javaType.args.stream().anyMatch(JavaGenerator::containsTypeParameter);
         }
         return false;
     }
@@ -1766,14 +1780,15 @@ public final class JavaGenerator {
     }
 
     private String emitJvmMethod(Expr.Call call, ResolvedCall resolved) {
-        boolean receiverIsClass = call.callee instanceof Expr.FieldAccess access
+        Expr callee = call.callee instanceof Expr.Subscript subscript ? subscript.base : call.callee;
+        boolean receiverIsClass = callee instanceof Expr.FieldAccess access
                 && access.receiver instanceof Expr.Name name
                 && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
         StringBuilder sb = new StringBuilder();
         if (receiverIsClass) {
             sb.append(sourceName(resolved.jvm.owner));
         } else {
-            sb.append(emitExpr(((Expr.FieldAccess) call.callee).receiver));
+            sb.append(emitExpr(((Expr.FieldAccess) callee).receiver));
         }
         sb.append('.').append(resolved.jvm.name).append('(');
         Class<?>[] params = resolved.jvm.executable.getParameterTypes();
@@ -1781,11 +1796,39 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            Class<?> param = i < params.length ? params[i] : Object.class;
+            Class<?> param = i < params.length ? jvmParameter(resolved.jvm, i) : Object.class;
             sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm, param));
         }
-        return convertJvmResult(((java.lang.reflect.Method) resolved.jvm.executable).getReturnType(),
-                sb.append(')').toString());
+        Class<?> rawReturn = ((java.lang.reflect.Method) resolved.jvm.executable).getReturnType();
+        return convertJvmResult(rawReturn, boundJvmResult(rawReturn, resolved.returnType,
+                sb.append(')').toString()));
+    }
+
+    /**
+     * A concrete generic boundary can erase to {@code Object} at the JVM level
+     * (e.g. {@code Box[String].get()} or an inherited {@code T get()}); insert
+     * the statically justified cast when the raw result class cannot carry the
+     * mapped Sprig type.
+     */
+    private String boundJvmResult(Class<?> rawReturn, Type mapped, String code) {
+        if (mapped == null || mapped == NativeType.ERROR || mapped == NativeType.NULL
+                || mapped == NativeType.UNIT || rawReturn == void.class) {
+            return code;
+        }
+        // Primitive returns already carry the exact Java value type, and
+        // convertJvmResult adapts the boxed char/Short/Byte shapes.
+        if (rawReturn.isPrimitive() || rawReturn == Character.class
+                || rawReturn == Short.class || rawReturn == Byte.class) {
+            return code;
+        }
+        Class<?> mappedRaw = sprig.compiler.sem.JavaTypes.boxedFor(mapped);
+        if (mappedRaw == null || mappedRaw == rawReturn) {
+            return code;
+        }
+        if (mapped instanceof JavaType javaType && javaType.clazz == rawReturn) {
+            return code;
+        }
+        return unboxGeneric(code, mapped);
     }
 
     private static String convertJvmResult(Class<?> javaType, String code) {
@@ -1794,6 +1837,22 @@ public final class JavaGenerator {
         if (javaType == Short.class) return "sprig.runtime.SprigRuntime.fromJavaShort(" + code + ")";
         if (javaType == Byte.class) return "sprig.runtime.SprigRuntime.fromJavaByte(" + code + ")";
         return code;
+    }
+
+    /**
+     * Source-level parameter class for a JVM member. Bound generic calls box
+     * arguments to the mapped formal (Int32 binds to int/Integer), so an
+     * erased Object parameter still receives the right wrapper.
+     */
+    private static Class<?> jvmParameter(sprig.compiler.sem.JvmMember member, int index) {
+        Class<?> raw = member.executable.getParameterTypes()[index];
+        if (member.bindings.isEmpty()) {
+            return raw;
+        }
+        Type mapped = sprig.compiler.sem.JavaTypes.mapFormal(
+                member.executable.getGenericParameterTypes()[index], raw, member.bindings);
+        Class<?> preferred = sprig.compiler.sem.JavaTypes.preferredRaw(mapped);
+        return preferred != null ? preferred : raw;
     }
 
     private String convertJvmArg(Expr arg, sprig.compiler.sem.JvmMember member, Class<?> param) {

@@ -89,6 +89,10 @@ change touches, as applicable:
   there, application programs belong in `examples/`, regression fixtures in
   `tests/`.
 - Only claim tests you actually ran.
+- Tracked `sprig.lock` files are generated artifacts. Never hand-merge or
+  hand-edit a lock conflict: take either complete side, run
+  `python3 scripts/refresh-locks.py`, and commit the regenerated result.
+  `sprig resolve` output is the only authority, not `ours`/`theirs`.
 
 ## Boundaries
 

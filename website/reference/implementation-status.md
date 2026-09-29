@@ -31,7 +31,7 @@
 | `check`/`build`/`run`/`explain`/`codes`/`help`/`capabilities`/`api`/`doctor`、`--json`、`--syntax-only` | 单一 `bin/sprig` 可执行文件；所有命令包含在当前 SDK 中。 |
 | 显式本地 `--classpath` | `api`/`check`/`build`/`run` 使用同一 JAR 或目录路径；与锁定 Maven classpath 显式合并。 |
 | 多参数显式泛型、Equatable | 不变泛型；无推断。 |
-| sprig.toml、本地/Git 依赖、schema-3 lock、exports、离线构建 | 已实现；Maven 有效 POM/传递依赖、统一 classpath。 |
+| sprig.toml、本地/Git 依赖、schema-4 lock、exports、离线构建 | 已实现；Maven 有效 POM/传递依赖、统一 classpath。 |
 
 | 保留的 `@std` 包 | UTF-8 文件、进程参数/环境、文本、时间和封闭 JSON 模型；无隐式导入。 |
 | `build --emit-java-only` | 静态检查并输出 Java，不执行 javac。 |

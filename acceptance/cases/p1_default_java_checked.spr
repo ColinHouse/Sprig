@@ -1,8 +1,8 @@
-import java.lang.Class as Class
-import java.lang.ClassNotFoundException as CNF
+import java.io.FileInputStream as FileInputStream
+import java.io.FileNotFoundException as FNF
 
-func load() -> Int throws CNF:
-    Class.forName("java.lang.String")
+func load() -> Int throws FNF:
+    let stream = FileInputStream("sprig-acceptance-missing.txt")
     return 1
 
 class Box:

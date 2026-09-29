@@ -3,6 +3,7 @@ package sprig.compiler.sem;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
+import java.lang.reflect.TypeVariable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayDeque;
@@ -1164,6 +1165,9 @@ public final class TypeChecker {
                 return checkGenericFunctionCall(func, symbol, subscript, call);
             }
         }
+        if (symbol != null && symbol.kind == Symbol.Kind.JAVA_TYPE) {
+            return checkJavaConstruction(symbol, subscript, call);
+        }
         if (symbol != null && symbol.kind == Symbol.Kind.VARIANT) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                     "Construct generic variant values with Type[Arg].Case(...) or Type[Arg].Case",
@@ -1178,6 +1182,9 @@ public final class TypeChecker {
             }
             if (field.kind == ResolvedField.Kind.MODULE_FUNCTION && field.methodDecl != null) {
                 return checkGenericFunctionCall(field.methodDecl, field.symbol, subscript, call);
+            }
+            if (field.kind == ResolvedField.Kind.JVM_METHOD) {
+                return checkExplicitJvmMethod(field, subscript, call);
             }
         }
         // Ordinary indexing followed by a call; v0.8 does not support
@@ -1270,6 +1277,48 @@ public final class TypeChecker {
         resolved.substitution = map;
         checkPositionalCallSubstituted(func, call, func.name, map);
         return returnType;
+    }
+
+    /** {@code ArrayList[String](...)}: explicit arguments on an imported Java class. */
+    private Type checkJavaConstruction(Symbol symbol, Expr.Subscript subscript, Expr.Call call) {
+        Class<?> clazz = symbol.javaClass;
+        if (clazz == null) {
+            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+                    "Unknown Java type '" + symbol.name + "'", module.uri, subscript.span));
+            checkArgsUnchecked(call);
+            return NativeType.ERROR;
+        }
+        List<Type> args = typeResolver.resolveJavaArguments(module, clazz, subscript.typeArgs,
+                activeTypeParams, subscript.span);
+        if (args == null) {
+            checkArgsUnchecked(call);
+            return NativeType.ERROR;
+        }
+        JavaType applied = new JavaType(clazz, args, false);
+        subscript.applicationType = applied;
+        if (call.resolved != null) {
+            call.resolved.typeArgs = args;
+        }
+        return checkJvmConstructor(applied, call, args);
+    }
+
+    /**
+     * {@code Host.method[Type](...)} or {@code receiver.method[Type](...)};
+     * arguments are written at the call site because the profile never infers
+     * Java method type variables.
+     */
+    private Type checkExplicitJvmMethod(ResolvedField field, Expr.Subscript subscript, Expr.Call call) {
+        List<Type> args = new ArrayList<>();
+        for (sprig.compiler.ast.TypeRef ref : subscript.typeArgs) {
+            args.add(typeResolver.resolve(module, ref, activeTypeParams));
+        }
+        ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.JVM_METHOD, null);
+        resolved.receiverType = field.receiverType;
+        resolved.typeArgs = args;
+        Type result = checkJvmMethod(field, call, args);
+        resolved.jvm = field.jvm;
+        resolved.returnType = result;
+        return result;
     }
 
     private void checkPositionalCallSubstituted(Decl.Func func, Expr.Call call, String label,
@@ -2638,10 +2687,14 @@ public final class TypeChecker {
         try {
             java.lang.reflect.Field javaField = clazz.getField(access.name);
             if (staticContext == java.lang.reflect.Modifier.isStatic(javaField.getModifiers())) {
-                if (javaField.getType().isArray()) {
+                JvmMetadata.Support fieldSupport = JvmMetadata.support(javaField);
+                if (!fieldSupport.usable()) {
                     diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
-                            "Java array field '" + access.name + "' has no Sprig adapter",
-                            module.uri, access.span));
+                            "Java field '" + access.name + "' is unsupported: "
+                                    + fieldSupport.unusableReason(),
+                            module.uri, access.span)
+                            .withData(Map.of("interopReasonCodes", fieldSupport.reasonCodes(),
+                                    "interopLevel", fieldSupport.level())));
                     return errorField(access);
                 }
                 ResolvedField field = new ResolvedField();
@@ -2650,7 +2703,13 @@ public final class TypeChecker {
                 member.field = javaField;
                 member.owner = clazz;
                 member.name = access.name;
-                member.returnType = JavaTypes.mapValue(javaField.getType());
+                Map<TypeVariable<?>, Type> fieldBindings = JavaTypes
+                        .hierarchyBindings(javaType.clazz, javaType.args)
+                        .getOrDefault(javaField.getDeclaringClass(), Map.of());
+                member.bindings = fieldBindings;
+                member.returnType = fieldBindings.isEmpty()
+                        ? JavaTypes.mapValue(javaField.getType())
+                        : JavaTypes.mapValue(javaField.getGenericType(), javaField.getType(), fieldBindings);
                 field.jvm = member;
                 field.type = member.returnType;
                 return field;
@@ -3257,6 +3316,10 @@ public final class TypeChecker {
     // ------------------------------------------------------------------
 
     private Type checkJvmConstructor(JavaType javaType, Expr.Call call) {
+        return checkJvmConstructor(javaType, call, List.of());
+    }
+
+    private Type checkJvmConstructor(JavaType javaType, Expr.Call call, List<Type> classArgs) {
         if (call.hasNamedArgs()) {
             diagnostics.add(Diagnostic.error(Codes.CALL_POSITIONAL_REQUIRED, Phase.TYPE,
                     "Java constructors take positional arguments", module.uri, call.span));
@@ -3265,12 +3328,19 @@ public final class TypeChecker {
         for (Expr.Arg arg : call.args) {
             argTypes.add(checkExpr(arg.value, null));
         }
+        Map<TypeVariable<?>, Type> receiverBindings = JavaTypes
+                .hierarchyBindings(javaType.clazz, javaType.args)
+                .getOrDefault(javaType.clazz, Map.of());
+        boolean bound = !receiverBindings.isEmpty();
         Constructor<?> best = null;
         int bestScore = -1;
         boolean ambiguous = false;
         for (Constructor<?> constructor : javaType.clazz.getConstructors()) {
             if (JvmMetadata.unsupportedReason(constructor) != null) continue;
-            int score = scoreCandidate(constructor, argTypes, call.args);
+            if (constructor.getTypeParameters().length > 0) continue; // no Java inference
+            int score = bound
+                    ? scoreBoundCandidate(constructor, argTypes, call.args, receiverBindings)
+                    : scoreCandidate(constructor, argTypes, call.args);
             if (score < 0) {
                 continue;
             }
@@ -3287,10 +3357,14 @@ public final class TypeChecker {
             if (reportNullableJavaArgument(javaType.clazz.getSimpleName(), candidates, argTypes, call)) {
                 return NativeType.ERROR;
             }
-            diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+            Diagnostic diagnostic = Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
                     "No constructor of " + javaType.clazz.getSimpleName() + " matches "
-                            + argTypes.size() + " argument(s)", module.uri, call.span)
-                    .withData(jvmDiagnosticData(javaType.clazz, "<init>", argTypes, call, candidates)));
+                            + argTypes.size() + " argument(s)", module.uri, call.span);
+            Map<String, Object> data = jvmDiagnosticData(javaType.clazz, "<init>", argTypes, call, candidates);
+            if (!classArgs.isEmpty()) {
+                data.put("explicitTypeArguments", classArgs.stream().map(Type::display).toList());
+            }
+            diagnostics.add(diagnostic.withData(data));
             return NativeType.ERROR;
         }
         if (ambiguous) {
@@ -3301,13 +3375,17 @@ public final class TypeChecker {
                             List.of(javaType.clazz.getConstructors()))));
         }
         ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.JVM_CTOR, javaType);
+        resolved.typeArgs = classArgs;
         JvmMember member = new JvmMember();
         member.owner = javaType.clazz;
         member.name = "<init>";
         member.executable = best;
+        member.bindings = receiverBindings;
         member.paramTypes = new ArrayList<>();
         for (int i = 0; i < best.getParameterCount(); i++) {
-            member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i], best.getParameterTypes()[i]));
+            member.paramTypes.add(bound
+                    ? JavaTypes.mapFormal(best.getGenericParameterTypes()[i], best.getParameterTypes()[i], receiverBindings)
+                    : JavaTypes.mapFormal(best.getGenericParameterTypes()[i], best.getParameterTypes()[i]));
         }
         member.returnType = javaType;
         resolved.jvm = member;
@@ -3316,8 +3394,19 @@ public final class TypeChecker {
     }
 
     private Type checkJvmMethod(ResolvedField field, Expr.Call call) {
+        return checkJvmMethod(field, call, null);
+    }
+
+    /**
+     * {@code explicitMethodArgs} is {@code null} for an ordinary call and a
+     * list for {@code receiver.method[Type](...)}. A method with its own type
+     * variables is only a candidate when those arguments are written; the
+     * profile never infers Java method generics.
+     */
+    private Type checkJvmMethod(ResolvedField field, Expr.Call call, List<Type> explicitMethodArgs) {
         Type receiverType = field.receiverType;
-        Class<?> clazz = ((JavaType) receiverType).clazz;
+        JavaType receiver = (JavaType) receiverType;
+        Class<?> clazz = receiver.clazz;
         if (call.hasNamedArgs()) {
             diagnostics.add(Diagnostic.error(Codes.CALL_POSITIONAL_REQUIRED, Phase.TYPE,
                     "Java methods take positional arguments", module.uri, call.span));
@@ -3326,28 +3415,47 @@ public final class TypeChecker {
         for (Expr.Arg arg : call.args) {
             argTypes.add(checkExpr(arg.value, null));
         }
+        Map<Class<?>, Map<TypeVariable<?>, Type>> hierarchy =
+                JavaTypes.hierarchyBindings(receiver.clazz, receiver.args);
+        boolean receiverBound = !hierarchy.getOrDefault(receiver.clazz, Map.of()).isEmpty();
         Method best = null;
         int bestScore = -1;
         boolean ambiguous = false;
+        Map<TypeVariable<?>, Type> bestBindings = Map.of();
         for (Method method : clazz.getMethods()) {
             if (!method.getName().equals(field.jvm.name)) {
                 continue;
             }
             boolean isStatic = java.lang.reflect.Modifier.isStatic(method.getModifiers());
-            boolean receiverIsClass = call.callee instanceof Expr.FieldAccess access
-                    && access.receiver instanceof Expr.Name name
-                    && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
-            if (receiverIsClass != isStatic) {
+            if (isStaticJvmReceiver(call) != isStatic) {
                 continue;
             }
             if (JvmMetadata.unsupportedReason(method) != null) continue;
-            int score = scoreCandidate(method, argTypes, call.args);
+            int methodVariables = method.getTypeParameters().length;
+            if (methodVariables > 0) {
+                if (explicitMethodArgs == null) continue; // explicit decisions, no inference
+                if (explicitMethodArgs.size() != methodVariables) continue;
+                if (!JavaTypes.boundsSatisfied(method, explicitMethodArgs)) continue;
+            }
+            Map<TypeVariable<?>, Type> bindings = new java.util.IdentityHashMap<>(
+                    hierarchy.getOrDefault(method.getDeclaringClass(), Map.of()));
+            if (methodVariables > 0) {
+                TypeVariable<?>[] variables = method.getTypeParameters();
+                for (int i = 0; i < variables.length; i++) {
+                    bindings.put(variables[i], explicitMethodArgs.get(i));
+                }
+            }
+            boolean bound = receiverBound || methodVariables > 0;
+            int score = bound
+                    ? scoreBoundCandidate(method, argTypes, call.args, bindings)
+                    : scoreCandidate(method, argTypes, call.args);
             if (score < 0) {
                 continue;
             }
             if (score > bestScore) {
                 best = method;
                 bestScore = score;
+                bestBindings = bindings;
                 ambiguous = false;
             } else if (score == bestScore && !sameSignature(best, method)) {
                 ambiguous = true;
@@ -3355,12 +3463,9 @@ public final class TypeChecker {
         }
         if (best == null) {
             List<Method> candidates = new ArrayList<>();
-            boolean receiverIsClass = call.callee instanceof Expr.FieldAccess access
-                    && access.receiver instanceof Expr.Name name
-                    && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
             for (Method method : clazz.getMethods()) {
                 if (!method.getName().equals(field.jvm.name)
-                        || java.lang.reflect.Modifier.isStatic(method.getModifiers()) != receiverIsClass) {
+                        || java.lang.reflect.Modifier.isStatic(method.getModifiers()) != isStaticJvmReceiver(call)) {
                     continue;
                 }
                 candidates.add(method);
@@ -3369,11 +3474,15 @@ public final class TypeChecker {
                     candidates, argTypes, call)) {
                 return NativeType.ERROR;
             }
-            diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+            Diagnostic diagnostic = Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
                     "Java class " + clazz.getSimpleName() + " has no method '" + field.jvm.name
                             + "' matching " + argTypes.size() + " argument(s)",
-                    module.uri, call.span)
-                    .withData(jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates)));
+                    module.uri, call.span);
+            Map<String, Object> data = jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates);
+            if (explicitMethodArgs != null) {
+                data.put("explicitTypeArguments", explicitMethodArgs.stream().map(Type::display).toList());
+            }
+            diagnostics.add(diagnostic.withData(data));
             return NativeType.ERROR;
         }
         if (ambiguous) {
@@ -3388,28 +3497,29 @@ public final class TypeChecker {
         member.owner = clazz;
         member.name = best.getName();
         member.executable = best;
+        member.bindings = bestBindings;
         member.paramTypes = new ArrayList<>();
         for (int i = 0; i < best.getParameterCount(); i++) {
-            member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i], best.getParameterTypes()[i]));
+            member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i],
+                    best.getParameterTypes()[i], bestBindings));
         }
-        member.returnType = JavaTypes.mapValue(best.getGenericReturnType(), best.getReturnType());
+        member.returnType = JavaTypes.mapValue(best.getGenericReturnType(), best.getReturnType(), bestBindings);
         field.jvm = member;
+        if (call.resolved != null && explicitMethodArgs != null) {
+            call.resolved.typeArgs = explicitMethodArgs;
+        }
         requireHandled(jvmExceptions(best.getExceptionTypes()), call.span);
         return member.returnType;
     }
 
-    private static boolean isStaticReceiver(Expr.Call call) {
-        return call.callee instanceof Expr.FieldAccess access
-                && access.receiver instanceof Expr.Name name
-                && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
-    }
-
-    private static boolean sameSignature(Method a, Method b) {
-        return a != null && b != null && java.util.Arrays.equals(a.getParameterTypes(), b.getParameterTypes());
-    }
-
-    private static int scoreCandidate(java.lang.reflect.Executable executable, List<Type> args,
-                                      List<Expr.Arg> writtenArgs) {
+    /**
+     * Scoring for a bound receiver or an explicit generic method. The formal
+     * side is the mapped concrete type; a shape outside the concrete profile
+     * falls back to the raw class inside {@link JavaTypes#mapFormal}.
+     */
+    private static int scoreBoundCandidate(Executable executable, List<Type> args,
+                                           List<Expr.Arg> writtenArgs,
+                                           Map<TypeVariable<?>, Type> bindings) {
         Class<?>[] raw = executable.getParameterTypes();
         java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         if (raw.length != args.size()) return -1;
@@ -3421,13 +3531,104 @@ public final class TypeChecker {
                 FunctionType expected = JavaTypes.callable(generic[i]);
                 if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
                 score += 4;
-            } else {
-                int next = scoreArgument(raw[i], arg, writtenArgs.get(i).value);
-                if (next < 0) return -1;
-                score += next;
+                continue;
             }
+            Type formal = JavaTypes.mapFormal(generic[i], raw[i], bindings);
+            int next = scoreBoundArgument(formal, arg, writtenArgs.get(i).value);
+            if (next < 0) return -1;
+            score += next;
         }
         return score;
+    }
+
+    private static int scoreBoundArgument(Type formal, Type arg, Expr expr) {
+        if (arg.isNullable()) {
+            return -1;
+        }
+        Type base = arg.nonNull();
+        Type target = formal instanceof NullableType nullable ? nullable.inner : formal;
+        if (target == null) {
+            return -1;
+        }
+        if (target.equals(base)) {
+            return 3;
+        }
+        if (target instanceof JavaType javaTarget && base instanceof JavaType javaSource) {
+            if (!JavaTypes.javaTypeCompatible(javaTarget, javaSource)) {
+                return -1;
+            }
+            if (javaTarget.args.isEmpty()) {
+                return 1; // raw target keeps the erased-boundary weight
+            }
+            return javaTarget.clazz.equals(javaSource.clazz) ? 3 : 2;
+        }
+        if (target instanceof JavaType javaTarget && !javaTarget.args.isEmpty()) {
+            // Concrete generic target with a native scalar or Sprig collection
+            // source: project the source image, never accept by raw class.
+            return JavaTypes.javaArgumentCompatible(javaTarget, base) ? 2 : -1;
+        }
+        if (target instanceof ListType listTarget && base instanceof ListType listSource) {
+            return listTarget.equals(listSource) ? 3 : -1;
+        }
+        if (target instanceof MapType mapTarget && base instanceof MapType mapSource) {
+            return mapTarget.equals(mapSource) ? 3 : -1;
+        }
+        Class<?> preferred = boundRawClass(target);
+        if (preferred == null) {
+            return -1;
+        }
+        return scoreArgument(preferred, arg, expr);
+    }
+
+    private static Class<?> boundRawClass(Type type) {
+        return JavaTypes.preferredRaw(type);
+    }
+
+    /** Whether a Java call names the class (static) rather than a value receiver. */
+    private static boolean isStaticJvmReceiver(Expr.Call call) {
+        Expr callee = call.callee instanceof Expr.Subscript subscript ? subscript.base : call.callee;
+        return callee instanceof Expr.FieldAccess access
+                && access.receiver instanceof Expr.Name name
+                && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
+    }
+
+    private static boolean sameSignature(Method a, Method b) {
+        return a != null && b != null && java.util.Arrays.equals(a.getParameterTypes(), b.getParameterTypes());
+    }
+
+    private static int scoreCandidate(java.lang.reflect.Executable executable, List<Type> args,
+                                      List<Expr.Arg> writtenArgs) {
+        Class<?>[] raw = executable.getParameterTypes();
+        if (raw.length != args.size()) return -1;
+        int score = 0;
+        for (int i = 0; i < raw.length; i++) {
+            Type arg = args.get(i);
+            if (arg == NativeType.ERROR) continue;
+            int next = scoreJvmArgument(executable, i, arg, writtenArgs.get(i).value);
+            if (next < 0) return -1;
+            score += next;
+        }
+        return score;
+    }
+
+    /**
+     * One Java formal, using the concrete generic type when the signature
+     * carries one. A parameterized formal never silently accepts arguments by
+     * raw class alone ({@code ArrayList<Integer>} is not {@code List<String>}).
+     */
+    private static int scoreJvmArgument(java.lang.reflect.Executable executable, int index,
+                                        Type arg, Expr expr) {
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        if (JavaTypes.isCallableClass(raw[index])) {
+            FunctionType expected = JavaTypes.callable(generic[index]);
+            if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
+            return 4;
+        }
+        if (generic[index] != raw[index]) {
+            return scoreBoundArgument(JavaTypes.mapFormal(generic[index], raw[index]), arg, expr);
+        }
+        return scoreArgument(raw[index], arg, expr);
     }
 
     private static int scoreCandidate(Class<?>[] params, List<Type> args, List<Expr.Arg> writtenArgs) {
@@ -3579,14 +3780,20 @@ public final class TypeChecker {
                 .forEach(candidate -> {
                     Map<String, Object> item = new LinkedHashMap<>(JvmMetadata.describe(candidate));
                     Class<?>[] params = candidate.getParameterTypes();
+                    JvmMetadata.Support support = JvmMetadata.support(candidate);
                     String reason = null;
-                    if (candidate.isVarArgs()) reason = "unsupported varargs";
-                    else if (java.util.Arrays.stream(params).anyMatch(Class::isArray)) reason = "unsupported array parameter";
-                    else if (params.length != argumentTypes.size()) reason = "wrong arity";
-                    else {
+                    if (!support.usable()) {
+                        reason = support.unusableReason();
+                    } else if (params.length != argumentTypes.size()) {
+                        reason = "wrong arity";
+                    } else if (support.reasonCodes().contains("generic-bound-unsupported")) {
+                        reason = "recursive or intersection bound";
+                    } else if (support.reasonCodes().contains("explicit-type-arguments-required")) {
+                        reason = "explicit type arguments required";
+                    } else {
                         for (int i = 0; i < params.length; i++) {
                             if (argumentTypes.get(i).isNullable()) { reason = "nullable argument " + (i + 1); break; }
-                            if (scoreArgument(params[i], argumentTypes.get(i), call.args.get(i).value) < 0) {
+                            if (scoreJvmArgument(candidate, i, argumentTypes.get(i), call.args.get(i).value) < 0) {
                                 reason = "incompatible or narrowing argument " + (i + 1); break;
                             }
                         }

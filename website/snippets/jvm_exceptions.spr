@@ -1,16 +1,16 @@
-import java.lang.Class as Class
-import java.lang.ClassNotFoundException as ClassNotFound
+import java.net.URI as URI
+import java.net.URISyntaxException as URISyntax
 
-func load_class(name: String) -> String throws ClassNotFound:
-    let loaded = Class.forName(name)
-    if loaded != null:
-        let simple_name = loaded.getSimpleName()
-        if simple_name != null:
-            return simple_name
+func parse_uri(text: String) -> String throws URISyntax:
+    let uri = URI(text)
+    if uri != null:
+        let host = uri.getHost()
+        if host != null:
+            return host
     return ""
 
 try:
-    print(load_class("java.lang.String"))
-    print(load_class("does.not.Exist"))
-catch problem: ClassNotFound:
-    print("class not found: " + problem.message)
+    print(parse_uri("https://example.com"))
+    print(parse_uri("::bad"))
+catch problem: URISyntax:
+    print("bad uri")

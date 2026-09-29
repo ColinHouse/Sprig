@@ -57,7 +57,8 @@ def main():
         assert sum(x['direct'] for x in d['sprigDependencies'])==2
         assert len({x['id'] for x in d['sprigDependencies']})==4
         original=(app/'sprig.lock').read_text()
-        mutations=[original.replace('lock-version = 3','lock-version = 1'),
+        mutations=[original.replace('lock-version = 4','lock-version = 3'),
+                  original.replace('lock-version = 4','lock-version = 1'),
                    original.replace('id = "root/@a"\n','',1),
                    original.replace('id = "root/@b"','id = "root/@a"'),
                    original.replace('owner = "root"','owner = "root/@missing"',1),

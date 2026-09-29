@@ -42,6 +42,12 @@ public final class Semantics {
             return variant.decl == caseType.variant && variant.args.equals(caseType.variantArgs);
         }
         if (target instanceof JavaType javaTarget) {
+            if (!javaTarget.args.isEmpty()) {
+                // Concrete generic targets never accept blanket references;
+                // native scalars and Sprig collections project through the
+                // same hierarchy as Java values.
+                return JavaTypes.javaArgumentCompatible(javaTarget, source);
+            }
             if (javaTarget.clazz == Object.class || javaTarget.clazz == java.io.Serializable.class
                     || javaTarget.clazz == Comparable.class) {
                 return isReference(source) || source == NativeType.INT
@@ -49,6 +55,24 @@ public final class Semantics {
             }
             if (source instanceof JavaType javaSource) {
                 return javaTarget.clazz.isAssignableFrom(javaSource.clazz);
+            }
+            if (source instanceof ListType list) {
+                if (javaTarget.clazz == sprig.runtime.SprigList.class) {
+                    return true;
+                }
+                if (javaTarget.clazz == sprig.runtime.SprigMutableList.class) {
+                    return list.mutable;
+                }
+                return false;
+            }
+            if (source instanceof MapType map) {
+                if (javaTarget.clazz == sprig.runtime.SprigMap.class) {
+                    return true;
+                }
+                if (javaTarget.clazz == sprig.runtime.SprigMutableMap.class) {
+                    return map.mutable;
+                }
+                return false;
             }
             if (source instanceof sprig.compiler.types.ClassType classSource
                     && javaTarget.clazz.isInterface()) {
@@ -59,6 +83,19 @@ public final class Semantics {
                 }
             }
             return false;
+        }
+        if (target instanceof ListType list && source instanceof JavaType javaSource) {
+            Class<?> expected = list.mutable ? sprig.runtime.SprigMutableList.class : sprig.runtime.SprigList.class;
+            if (javaSource.clazz == expected) {
+                // A raw SprigList is erased evidence and never becomes List[T].
+                return javaSource.args.equals(java.util.List.of(list.element));
+            }
+        }
+        if (target instanceof MapType map && source instanceof JavaType javaSource) {
+            Class<?> expected = map.mutable ? sprig.runtime.SprigMutableMap.class : sprig.runtime.SprigMap.class;
+            if (javaSource.clazz == expected) {
+                return javaSource.args.equals(java.util.List.of(map.key, map.value));
+            }
         }
         return false;
     }

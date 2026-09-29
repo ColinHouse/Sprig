@@ -50,11 +50,28 @@ For a Maven library, declare exact release coordinates in `[[jvm]]` and run
 Only resolve downloads. Extra local JARs can use repeated `--classpath` flags;
 paths resolve against cwd and follow locked entries. Inspect
 `api`'s `usableFromSprig`, `signatureSupported`, `interopLevel`,
-`unusableReason`, `genericBoundary`, and `checkedExceptions` before writing a
-call. `usableFromSprig` means the compiler can bind and emit the erased JVM
-signature; it does not promise generic element safety. `interopLevel` is
-`direct`, `erased-generic`, or `unsupported`. Use `--member NAME` to limit the
-metadata result while preserving overloads. `api` does not initialize classes.
+`interopReasonCodes`, `adaptation`, `unusableReason`, `genericBoundary`, and
+`checkedExceptions` before writing a call. `usableFromSprig` means the compiler
+can bind and emit the JVM signature; it does not promise generic element
+safety. `interopLevel` is `direct`, `concrete-generic`, `opaque-array`,
+`adaptable`, `sprig-callable`, `erased-generic`, or `unsupported`; reason codes
+are stable ids (`varargs-unsupported`, `wildcard-unsupported`,
+`raw-generic-boundary`, `explicit-type-arguments-required`,
+`generic-wrapper-unsupported`, ...) and
+`adaptation` names an explicit helper when one exists (`byte-array` via
+`sprig.runtime.jvm.HostBytes`, `collection-adapter` via `@std/jvm.spr`). Java
+arrays cross as opaque values with their exact JVM class; concrete generic
+arguments require explicit `Type[Arg]` application. Raw generic values never
+become concrete evidence: a parameterized target requires matching arguments
+(or a hierarchy projection), and wildcard or Short/Byte/Character generic
+shapes are rejected rather than erased silently. Use `--member NAME` to
+limit the metadata result while preserving overloads. `api` does not
+initialize classes.
+
+Generate an editable wrapper for an ecosystem class with
+`bin/sprig wrap com.example.Client --out client.spr --json`; it uses the same
+classpath as `api`, skips unsupported members with the shared reason codes and
+never writes a file that fails checking.
 
 For package/application tests, run `sprig resolve` and then `sprig test --json`.
 The runner discovers ordinary `tests/**/*.spr` programs, each in a separate
@@ -102,7 +119,7 @@ For generics, read `docs/GENERICS.md`: parameters and uses are explicit,
 including multiple parameters. `requires T: Equatable` must lead the function
 body. Generic variant cases use expanded payloads and match case owners omit
 type arguments. `docs/PROJECTS.md` defines the strict manifest subset;
-`docs/DEPENDENCIES.md` describes local/Git/Maven resolution, schema-3 lock identities,
+`docs/DEPENDENCIES.md` describes local/Git/Maven resolution, schema-4 lock identities,
 exports and offline cache validation. Run `sprig resolve` before project builds.
 Use `import "@alias/module.spr" as module` for an exported dependency module.
 Project compilation refuses missing/stale locks or missing/corrupt locked JARs.
