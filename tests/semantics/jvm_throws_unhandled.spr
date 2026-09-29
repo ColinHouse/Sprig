@@ -1,5 +1,5 @@
-import java.lang.Class as Class
+import java.io.FileInputStream as FileInputStream
 
 func load(name: String) -> String:
-    let clazz = Class.forName(name)
-    return clazz.getSimpleName()
+    let stream = FileInputStream(name)
+    return name

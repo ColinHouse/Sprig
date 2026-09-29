@@ -1,4 +1,4 @@
-import java.lang.Class as JClass
+import java.io.FileReader as FileReader
 
-let load = fn(name: String) => JClass.forName(name)
-print(load("java.lang.String"))
+let load = fn(name: String) => FileReader(name)
+print(load("sprig-lambda-checked.txt"))

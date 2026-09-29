@@ -25,11 +25,10 @@ public final class JavaType implements Type {
         if (clazz.isArray()) {
             return new JavaType(clazz.getComponentType()).display() + "[]";
         }
-        String name = clazz.getSimpleName();
         if (args.isEmpty()) {
-            return name + (platformNullable ? "?" : "");
+            return clazz.getSimpleName() + (platformNullable ? "?" : "");
         }
-        StringJoiner joiner = new StringJoiner(", ", name + "[", "]");
+        StringJoiner joiner = new StringJoiner(", ", clazz.getName() + "[", "]");
         for (Type arg : args) {
             joiner.add(arg.display());
         }

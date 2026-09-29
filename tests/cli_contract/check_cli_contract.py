@@ -67,13 +67,17 @@ def main():
         collections = json.loads(invoke("api", "java.util.Collections", "--member", "emptyList", "--json",
                                         cwd=directory).stdout)
         erased = collections["staticMethods"]
-        assert erased and all(m["usableFromSprig"] and m["interopLevel"] == "erased-generic"
-                              and m["signatureSupported"] for m in erased)
+        assert erased and all(m["usableFromSprig"] and m["signatureSupported"]
+                              and m["interopLevel"] == "adaptable"
+                              and m["adaptation"]["kind"] == "collection-adapter"
+                              and "explicit-type-arguments-required" in m["interopReasonCodes"]
+                              for m in erased)
         files = json.loads(invoke("api", "java.nio.file.Files", "--member", "readAllBytes", "--json",
                                   cwd=directory).stdout)
-        unsupported = files["staticMethods"]
-        assert unsupported and all(not m["signatureSupported"] and m["interopLevel"] == "unsupported"
-                                   for m in unsupported)
+        arrays = files["staticMethods"]
+        assert arrays and all(m["signatureSupported"] and m["interopLevel"] == "opaque-array"
+                              and m["adaptation"]["kind"] == "byte-array"
+                              for m in arrays)
         string_builder = json.loads(invoke("api", "java.lang.StringBuilder", "--member", "append", "--json",
                                             cwd=directory).stdout)
         optional = json.loads(invoke("api", "java.util.Optional", "--member", "of", "--json",

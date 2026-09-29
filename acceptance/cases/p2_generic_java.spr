@@ -1,3 +1,7 @@
 import java.util.ArrayList as AL
 
-let x: AL[String] = AL()
+let x: AL[String] = AL[String]()
+x.add("ok")
+let first = x.get(0)
+if first != null:
+    print(first)

@@ -71,7 +71,7 @@ run("unit-legal-usage", "p1_unit_legal.spr", 0,
 # v0.8 uses the dedicated generic arity code for user type arguments.
 check("generic-user-class", "p2_generic_user_class.spr", 1, ["SPR-TYPE-GENERIC-ARITY"])
 check("generic-native", "p2_generic_native.spr", 1, ["SPR-TYPE-GENERIC-ARITY"])
-check("generic-java-import", "p2_generic_java.spr", 1, ["SPR-TYPE-GENERIC-ARITY"])
+run("generic-java-import", "p2_generic_java.spr", 0, "ok\n")
 check("generic-nested-arg", "p2_generic_nested_bad.spr", 1, ["SPR-TYPE-GENERIC-ARITY"])
 check("generic-arity", "p2_generic_arity.spr", 1, ["SPR-TYPE-MISMATCH", "SPR-TYPE-MISMATCH"])
 check("generic-unknown-arg", "p2_generic_unknown_arg.spr", 1, ["SPR-NAME-UNRESOLVED"])

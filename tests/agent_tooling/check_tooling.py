@@ -105,7 +105,10 @@ def main():
     check("api-text", "Java API: java.time.LocalDate" in run("api", "java.time.LocalDate").stdout)
     files = obj(run("api", "java.nio.file.Files", "--json"))
     arrays = [m for m in files["staticMethods"] if m["name"] == "readAllBytes"]
-    check("api-array-boundary", arrays and not arrays[0]["usableFromSprig"])
+    check("api-array-boundary", arrays and arrays[0]["usableFromSprig"]
+          and arrays[0]["interopLevel"] == "opaque-array"
+          and arrays[0]["adaptation"]["kind"] == "byte-array"
+          and "array-source-syntax-unavailable" in arrays[0]["interopReasonCodes"])
 
     with tempfile.TemporaryDirectory(prefix="sprig-field-order-") as tmp:
         directory = Path(tmp)

@@ -130,6 +130,18 @@ Generics are erased and boxed in generated Java:
 Sprig types are preserved at the source level: `Box[Int]` is `Int` to Sprig
 even though the JVM sees a boxed value.
 
+## Imported Java generics
+
+Explicit type arguments also apply to imported Java classes and methods
+(`ArrayList[String]`, `Host.method[String](value)`). Concrete arguments are
+preserved in Sprig types and in `sprig api` metadata; class type variables
+resolve through the receiver and its inherited hierarchy. The profile is
+deliberately bounded: no wildcard syntax, no capture conversion and no Java
+generic inference; method type parameters require explicit arguments, and
+recursive/intersection bounds or generic arrays are rejected before codegen.
+Java reference results remain conservatively nullable. See
+[JVM interop](JVM_INTEROP.md) for arrays and collection adapters.
+
 ## Not implemented
 
 Generic inference, variance, `Comparable` and any user-defined capability,

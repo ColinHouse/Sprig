@@ -3,9 +3,13 @@ package sprig.compiler.jvm;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -14,9 +18,28 @@ import java.util.List;
 import java.util.Map;
 import sprig.compiler.sem.JavaTypes;
 
-/** Shared reflection view for {@code api} and compiler overload diagnostics. */
+/**
+ * Shared reflection view for {@code api} and compiler overload diagnostics.
+ *
+ * <p>One {@link Support} classification is the single source of truth for
+ * "can Sprig bind this, how, and if not, why": the checker's candidate gate and
+ * {@code sprig api} both read it, so metadata cannot drift from behavior.
+ */
 public final class JvmMetadata {
     private JvmMetadata() {}
+
+    /** Stable interop classification shared by metadata and checking. */
+    public record Support(String level, List<String> reasonCodes, String unusableReason,
+                          boolean usable, String adaptationKind, String adaptationHelp) {
+        public boolean adaptationAvailable() {
+            return adaptationKind != null;
+        }
+    }
+
+    private static final List<Class<?>> COLLECTION_KINDS = List.of(
+            java.util.List.class, java.util.Map.class,
+            sprig.runtime.SprigList.class, sprig.runtime.SprigMap.class,
+            sprig.runtime.SprigMutableList.class, sprig.runtime.SprigMutableMap.class);
 
     public static Map<String, Object> inspect(Class<?> clazz) {
         Map<String, Object> out = new LinkedHashMap<>();
@@ -40,6 +63,14 @@ public final class JvmMetadata {
                 .forEach(field -> fields.add(describe(field)));
         out.put("fields", fields);
         out.put("nullabilityPolicy", "Java reference results are nullable; parameters require non-null values unless future metadata proves otherwise");
+        out.put("interopLevels", List.of(
+                Map.of("level", "direct", "meaning", "no generic or array shape is involved"),
+                Map.of("level", "concrete-generic", "meaning", "every generic argument is concrete and preserved"),
+                Map.of("level", "opaque-array", "meaning", "array values cross the boundary unchanged; no source array syntax exists"),
+                Map.of("level", "adaptable", "meaning", "an explicit adapter is available (collections or byte arrays)"),
+                Map.of("level", "sprig-callable", "meaning", "concrete Fn0..Fn3 slots are checked invariantly"),
+                Map.of("level", "erased-generic", "meaning", "generic information exists but this raw context binds the erased boundary"),
+                Map.of("level", "unsupported", "meaning", "the reflection shape is outside the supported profile")));
         out.put("classpath", JvmClasspath.entries().stream().map(java.nio.file.Path::toString).toList());
         return out;
     }
@@ -59,33 +90,42 @@ public final class JvmMetadata {
         out.put("sprigParameterTypes", parameterTypes);
         out.put("genericParameterTypes", Arrays.stream(executable.getGenericParameterTypes())
                 .map(Type::getTypeName).toList());
+        out.put("parameterTypeShapes", Arrays.stream(executable.getGenericParameterTypes())
+                .map(JavaTypes::shapeJson).toList());
+        out.put("typeParameters", Arrays.stream(executable.getTypeParameters())
+                .map(TypeVariable::getName).toList());
         if (executable instanceof Method method) {
             out.put("javaReturnType", method.getReturnType().getTypeName());
             out.put("sprigReturnType", JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
+            out.put("sprigBoundaryType", JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
             out.put("genericReturnType", method.getGenericReturnType().getTypeName());
+            out.put("returnTypeShape", JavaTypes.shapeJson(method.getGenericReturnType()));
             out.put("nullableResult", !method.getReturnType().isPrimitive());
         } else {
             out.put("javaReturnType", executable.getDeclaringClass().getTypeName());
             out.put("sprigReturnType", executable.getDeclaringClass().getSimpleName());
+            out.put("sprigBoundaryType", executable.getDeclaringClass().getName());
             out.put("nullableResult", false);
         }
         out.put("checkedExceptions", Arrays.stream(executable.getExceptionTypes())
                 .filter(e -> !RuntimeException.class.isAssignableFrom(e) && !Error.class.isAssignableFrom(e))
                 .map(Class::getTypeName).toList());
-        String unusable = unsupportedReason(executable);
-        out.put("usableFromSprig", unusable == null);
-        out.put("signatureSupported", unusable == null);
-        out.put("interopLevel", unusable != null ? "unsupported"
-                : erasedGenericBoundary(executable) ? "erased-generic"
-                : callableBoundary(executable) ? "sprig-callable" : "direct");
-        out.put("unusableReason", unusable);
+        Support support = support(executable);
+        out.put("usableFromSprig", support.usable());
+        out.put("signatureSupported", support.usable());
+        out.put("interopLevel", support.level());
+        out.put("interopReasonCodes", support.reasonCodes());
+        out.put("unusableReason", support.unusableReason());
+        out.put("adaptation", adaptation(support));
         out.put("genericBoundary", genericBoundary(executable));
         List<String> interopNotes = new ArrayList<>();
         boolean callableBoundary = callableBoundary(executable);
         out.put("sprigCallableBoundary", callableBoundary);
         if (callableBoundary) interopNotes.add("Concrete Fn0..Fn3 arguments preserve invariant source function types; Java callback parameters/results must be non-null, except Void denotes Unit.");
-        if (erasedGenericBoundary(executable)) interopNotes.add(
-                "Generic type arguments are erased at the Sprig boundary; no List[T] or Map[K,V] guarantee is inferred.");
+        if (support.reasonCodes().contains("raw-generic-boundary")) interopNotes.add(
+                "Generic type arguments are erased at the Sprig boundary; no List[T] or Map[K,V] guarantee is inferred. Use explicit Type[Arg] application or an adapter for concrete typing.");
+        if (support.reasonCodes().contains("array-source-syntax-unavailable")) interopNotes.add(
+                "Array values cross the boundary unchanged with their exact JVM class; Sprig has no array literal, indexing or annotation syntax.");
         if (Arrays.stream(executable.getParameterTypes())
                 .anyMatch(c -> c == char.class || c == Character.class)) interopNotes.add(
                 "Java char/Character arguments accept only a one-UTF-16-unit Sprig String literal.");
@@ -95,22 +135,36 @@ public final class JvmMetadata {
 
     public static Map<String, Object> describe(Field field) {
         Map<String, Object> out = new LinkedHashMap<>();
-        boolean array = field.getType().isArray();
-        boolean generic = !field.getGenericType().equals(field.getType());
         out.put("name", field.getName());
         out.put("javaSignature", field.toGenericString());
         out.put("javaType", field.getType().getTypeName());
-        out.put("sprigType", JavaTypes.mapValue(field.getType()).display());
+        out.put("sprigType", JavaTypes.mapValue(field.getGenericType(), field.getType()).display());
+        out.put("sprigBoundaryType", JavaTypes.mapValue(field.getGenericType(), field.getType()).display());
         out.put("genericType", field.getGenericType().getTypeName());
+        out.put("typeShape", JavaTypes.shapeJson(field.getGenericType()));
         out.put("static", Modifier.isStatic(field.getModifiers()));
         out.put("nullableResult", !field.getType().isPrimitive());
-        out.put("usableFromSprig", !array);
-        out.put("signatureSupported", !array);
-        out.put("genericBoundary", generic);
-        out.put("interopLevel", array ? "unsupported" : generic ? "erased-generic" : "direct");
-        out.put("unusableReason", field.getType().isArray() ? "Java arrays have no Sprig source type or adapter" : null);
+        Support support = support(field);
+        out.put("usableFromSprig", support.usable());
+        out.put("signatureSupported", support.usable());
+        out.put("genericBoundary", genericBoundary(field.getGenericType()));
+        out.put("interopLevel", support.level());
+        out.put("interopReasonCodes", support.reasonCodes());
+        out.put("unusableReason", support.unusableReason());
+        out.put("adaptation", adaptation(support));
         if (JavaTypes.needsValueAdapter(field.getType())) out.put("writePolicy",
                 "Direct assignment is unsupported; use an explicit Java setter or adapter.");
+        return out;
+    }
+
+    private static Map<String, Object> adaptation(Support support) {
+        if (!support.adaptationAvailable()) {
+            return Map.of("available", false);
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("available", true);
+        out.put("kind", support.adaptationKind());
+        out.put("help", support.adaptationHelp());
         return out;
     }
 
@@ -127,26 +181,211 @@ public final class JvmMetadata {
         return out.toString();
     }
 
+    // ------------------------------------------------------------------
+    // Support classification (shared with the checker)
+    // ------------------------------------------------------------------
+
+    /** Compatible one-line view of the shared classification. */
     public static String unsupportedReason(Executable executable) {
-        if (executable instanceof Method method && supersededBridge(method))
-            return "Java compiler bridge is superseded by its source method";
-        if (executable.isVarArgs()) return "Java varargs are not supported";
+        Support support = support(executable);
+        return support.usable() ? null : support.unusableReason();
+    }
+
+    public static Support support(Executable executable) {
+        if (executable instanceof Method method && supersededBridge(method)) {
+            return unsupported("bridge-superseded", "Java compiler bridge is superseded by its source method");
+        }
+        if (executable.isVarArgs()) {
+            return unsupported("varargs-unsupported", "Java varargs are not supported");
+        }
         java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         Class<?>[] raw = executable.getParameterTypes();
         for (int i = 0; i < raw.length; i++) {
-            if (JavaTypes.isCallableClass(raw[i]) && JavaTypes.callable(generic[i]) == null)
-                return "Sprig callable boundary requires concrete invariant Fn0..Fn3 type arguments";
+            if (JavaTypes.isCallableClass(raw[i]) && JavaTypes.callable(generic[i]) == null) {
+                return unsupported("sprig-callable-boundary",
+                        "Sprig callable boundary requires concrete invariant Fn0..Fn3 type arguments");
+            }
         }
         if (executable instanceof Method method && JavaTypes.isCallableClass(method.getReturnType())
-                && JavaTypes.callable(method.getGenericReturnType()) == null)
-            return "Sprig callable result requires concrete invariant Fn0..Fn3 type arguments";
+                && JavaTypes.callable(method.getGenericReturnType()) == null) {
+            return unsupported("sprig-callable-boundary",
+                    "Sprig callable result requires concrete invariant Fn0..Fn3 type arguments");
+        }
+        if (genericArray(executable)) {
+            return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
+        }
+        if (executable.getTypeParameters().length > 0 && recursiveBounds(executable)) {
+            return unsupported("generic-bound-unsupported",
+                    "Java method type parameters with recursive or intersection bounds are not supported");
+        }
+        if (hasShape(executable, JavaTypes.Shape.WILDCARD)) {
+            return unsupported("wildcard-unsupported", "Java wildcards are not supported");
+        }
+        if (genericWrapper(executable)) {
+            return unsupported("generic-wrapper-unsupported",
+                    "Short/Byte/Character generic arguments require an element adapter");
+        }
+        List<String> codes = new ArrayList<>();
+        boolean array = hasArray(executable);
+        boolean collections = hasCollection(executable);
+        boolean typeVariable = hasShape(executable, JavaTypes.Shape.TYPE_VARIABLE);
+        boolean parameterized = hasShape(executable, JavaTypes.Shape.PARAMETERIZED);
+        boolean callable = callableBoundary(executable);
+        if (array) codes.add("array-source-syntax-unavailable");
+        if (typeVariable) codes.add("raw-generic-boundary");
+        if (executable.getTypeParameters().length > 0) codes.add("explicit-type-arguments-required");
+        String level;
+        if (callable) {
+            level = "sprig-callable";
+        } else if (array) {
+            level = "opaque-array";
+        } else if (collections) {
+            level = "adaptable";
+        } else if (typeVariable) {
+            level = "erased-generic";
+        } else if (parameterized) {
+            level = "concrete-generic";
+        } else {
+            level = "direct";
+        }
+        String kind = null;
+        String help = null;
+        if (array && usesByteArray(executable)) {
+            kind = "byte-array";
+            help = "import sprig.runtime.jvm.HostBytes as HostBytes: utf8, utf8String (strict), length, hex";
+        } else if (collections) {
+            kind = "collection-adapter";
+            help = "import \"@std/jvm.spr\" as jvm: list_snapshot/map_snapshot copy validated non-null contents; list_copy/map_copy build independent Java copies";
+        }
+        return new Support(level, codes, null, true, kind, help);
+    }
+
+    public static Support support(Field field) {
+        java.lang.reflect.Type generic = field.getGenericType();
+        boolean array = field.getType().isArray();
+        JavaTypes.Shape shape = JavaTypes.shape(generic);
+        if (shape == JavaTypes.Shape.GENERIC_ARRAY) {
+            return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
+        }
+        if (shape == JavaTypes.Shape.WILDCARD) {
+            return unsupported("wildcard-unsupported", "Java wildcards are not supported");
+        }
+        if (JavaTypes.wrapperArgument(generic)) {
+            return unsupported("generic-wrapper-unsupported",
+                    "Short/Byte/Character generic arguments require an element adapter");
+        }
+        List<String> codes = new ArrayList<>();
+        if (array) codes.add("array-source-syntax-unavailable");
+        if (shape == JavaTypes.Shape.TYPE_VARIABLE) codes.add("raw-generic-boundary");
+        String level;
+        if (array) {
+            level = "opaque-array";
+        } else if (COLLECTION_KINDS.contains(field.getType())) {
+            level = "adaptable";
+        } else if (shape == JavaTypes.Shape.TYPE_VARIABLE) {
+            level = "erased-generic";
+        } else if (shape == JavaTypes.Shape.PARAMETERIZED) {
+            level = "concrete-generic";
+        } else {
+            level = "direct";
+        }
+        String kind = null;
+        String help = null;
+        if (array && field.getType() == byte[].class) {
+            kind = "byte-array";
+            help = "import sprig.runtime.jvm.HostBytes as HostBytes: utf8, utf8String (strict), length, hex";
+        } else if (COLLECTION_KINDS.contains(field.getType())) {
+            kind = "collection-adapter";
+            help = "import \"@std/jvm.spr\" as jvm: list_snapshot/map_snapshot copy validated non-null contents; list_copy/map_copy build independent Java copies";
+        }
+        return new Support(level, codes, null, true, kind, help);
+    }
+
+    private static Support unsupported(String code, String reason) {
+        return new Support("unsupported", List.of(code), reason, false, null, null);
+    }
+
+    private static boolean hasArray(Executable executable) {
         for (Class<?> param : executable.getParameterTypes()) {
-            if (param.isArray()) return "Java array parameter has no Sprig source type or adapter";
+            if (param.isArray()) return true;
         }
-        if (executable instanceof Method method && method.getReturnType().isArray()) {
-            return "Java array result has no Sprig source type or adapter";
+        return executable instanceof Method method && method.getReturnType().isArray();
+    }
+
+    private static boolean usesByteArray(Executable executable) {
+        for (Class<?> param : executable.getParameterTypes()) {
+            if (param == byte[].class) return true;
         }
-        return null;
+        return executable instanceof Method method && method.getReturnType() == byte[].class;
+    }
+
+    private static boolean hasCollection(Executable executable) {
+        for (Class<?> param : executable.getParameterTypes()) {
+            if (COLLECTION_KINDS.contains(param)) return true;
+        }
+        return executable instanceof Method method && COLLECTION_KINDS.contains(method.getReturnType());
+    }
+
+    private static boolean genericWrapper(Executable executable) {
+        for (java.lang.reflect.Type type : executable.getGenericParameterTypes()) {
+            if (JavaTypes.wrapperArgument(type)) return true;
+        }
+        return executable instanceof Method method
+                && JavaTypes.wrapperArgument(method.getGenericReturnType());
+    }
+
+    private static boolean hasShape(Executable executable, JavaTypes.Shape target) {
+        for (java.lang.reflect.Type type : executable.getGenericParameterTypes()) {
+            if (containsShape(type, target)) return true;
+        }
+        return executable instanceof Method method
+                && containsShape(method.getGenericReturnType(), target);
+    }
+
+    private static boolean containsShape(java.lang.reflect.Type type, JavaTypes.Shape target) {
+        if (JavaTypes.shape(type) == target) return true;
+        if (type instanceof ParameterizedType applied) {
+            for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                if (containsShape(argument, target)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean recursiveBounds(Executable executable) {
+        for (TypeVariable<?> variable : executable.getTypeParameters()) {
+            for (java.lang.reflect.Type bound : variable.getBounds()) {
+                if (bound == Object.class) continue;
+                if (!(bound instanceof Class<?>)) return true; // parameterized or variable bound
+            }
+        }
+        return false;
+    }
+
+    private static boolean genericArray(Executable executable) {
+        for (java.lang.reflect.Type type : executable.getGenericParameterTypes()) {
+            if (type instanceof GenericArrayType) return true;
+        }
+        return executable instanceof Method method
+                && method.getGenericReturnType() instanceof GenericArrayType;
+    }
+
+    private static boolean genericBoundary(java.lang.reflect.Type type) {
+        return JavaTypes.shape(type) != JavaTypes.Shape.CLASS
+                || (type instanceof Class<?> clazz && clazz.isArray());
+    }
+
+    private static boolean callableBoundary(Executable executable) {
+        return Arrays.stream(executable.getParameterTypes()).anyMatch(JavaTypes::isCallableClass)
+                || executable instanceof Method m && JavaTypes.isCallableClass(m.getReturnType());
+    }
+
+    private static boolean genericBoundary(Executable executable) {
+        if (executable instanceof Method method && method.getGenericReturnType() != method.getReturnType()) return true;
+        Type[] generic = executable.getGenericParameterTypes();
+        Class<?>[] raw = executable.getParameterTypes();
+        for (int i = 0; i < raw.length; i++) if (generic[i] != raw[i]) return true;
+        return false;
     }
 
     private static boolean supersededBridge(Method bridge) {
@@ -203,28 +442,5 @@ public final class JvmMetadata {
             return java.lang.reflect.Array.newInstance(erasedType(array.getGenericComponentType(), bindings), 0)
                     .getClass();
         return Object.class;
-    }
-
-    private static boolean callableBoundary(Executable executable) {
-        return Arrays.stream(executable.getParameterTypes()).anyMatch(JavaTypes::isCallableClass)
-                || executable instanceof Method m && JavaTypes.isCallableClass(m.getReturnType());
-    }
-
-    private static boolean erasedGenericBoundary(Executable executable) {
-        if (executable instanceof Method method && method.getGenericReturnType() != method.getReturnType()
-                && !JavaTypes.isCallableClass(method.getReturnType())) return true;
-        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
-        Class<?>[] raw = executable.getParameterTypes();
-        for (int i = 0; i < raw.length; i++)
-            if (generic[i] != raw[i] && !JavaTypes.isCallableClass(raw[i])) return true;
-        return false;
-    }
-
-    private static boolean genericBoundary(Executable executable) {
-        if (executable instanceof Method method && method.getGenericReturnType() != method.getReturnType()) return true;
-        Type[] generic = executable.getGenericParameterTypes();
-        Class<?>[] raw = executable.getParameterTypes();
-        for (int i = 0; i < raw.length; i++) if (generic[i] != raw[i]) return true;
-        return false;
     }
 }

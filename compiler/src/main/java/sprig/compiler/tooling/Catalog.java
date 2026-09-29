@@ -96,6 +96,11 @@ public final class Catalog {
         result.put("stringSemantics", strings);
         result.put("numericSemanticsProfile", get("numericProfile"));
         result.put("jvmInterop", get("jvmProfile"));
+        for (String key : List.of("sourceArrays", "jvmArrayPassThrough", "jvmByteArrayHelpers",
+                "jvmConcreteGenerics", "jvmCollectionAdapters", "jvmGenericInference",
+                "jvmWildcards", "jvmVarargs")) {
+            result.put(key, Boolean.parseBoolean(get(key)));
+        }
         result.put("classpath", get("classpathPolicy"));
         result.put("sourceModules", true);
         result.put("diagnosticSchemaVersion", 1);
@@ -115,7 +120,7 @@ public final class Catalog {
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
-        guidance(out, "arrays", "collections", "List[T]", "MutableList[T]");
+        guidance(out, "arrays", "jvm", "foreign JVM array pass-through with exact classes", "byte[] helpers via sprig.runtime.jvm.HostBytes", "List[T] and @std/jvm adapters");
         guidance(out, "varargs", "jvm", "List[T]", "explicit repeated calls");
         guidance(out, "annotations", "language", "explicit typed metadata", "ordinary functions");
         guidance(out, "decorators", "language", "ordinary functions and modules");

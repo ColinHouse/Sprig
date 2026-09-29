@@ -43,6 +43,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 | Java checked exceptions + typed catch + `error.message` | yes | yes | Java try/catch | runtime 15 |
 | `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
 | Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | locked JVM JARs precede explicit entries; compiler libraries isolated | agent tooling suite |
+| Bounded JVM interop: opaque arrays, concrete generics, explicit collection adapters | explicit `Type[Arg]` application; `@std/jvm.spr`; `sprig.runtime.jvm.HostBytes` | structured `interopLevel`/`interopReasonCodes`; wildcards, inference, recursive bounds and varargs rejected before `javac` | arrays keep exact JVM classes; snapshots/copies are independent; no implicit conversion | JVM interop suite |
 | javac error → Sprig span translation | — | — | line map | by design |
 | Checked effects from omitted class defaults | — | checked at each constructor call; explicit field values skip unused defaults | defaults still evaluate per instance, in declaration order | correctness regressions |
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
@@ -62,7 +63,7 @@ The historical design kit in `spec/` describes target semantics rather than curr
 Not implemented (honest status): generic type inference, variance,
 `Comparable` and user-defined capabilities, inheritance or interfaces, `match`
 expressions, nested/positional patterns, `%=`,
-tuples/destructuring, varargs/arrays/annotations in interop,
-LSP, publishing/registry, incremental checking,
-self-hosting.
+tuples/destructuring, varargs and source array syntax/annotations in interop,
+wildcard typing or Java generic inference, LSP, publishing/registry,
+incremental checking, self-hosting.
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for boundaries.
