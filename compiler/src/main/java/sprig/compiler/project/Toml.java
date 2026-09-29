@@ -2,6 +2,7 @@ package sprig.compiler.project;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -24,6 +25,7 @@ public final class Toml {
     }
 
     private final Map<String, String> scalars = new LinkedHashMap<>();
+    private final Set<String> bareRootScalars = new LinkedHashSet<>();
     private final Map<String, List<String>> arrays = new LinkedHashMap<>();
     private final Map<String, List<String>> scopedArrays = new LinkedHashMap<>();
     private final Map<String, List<Map<String, String>>> tables = new LinkedHashMap<>();
@@ -126,6 +128,7 @@ public final class Toml {
                 throw new TomlException("Duplicate key '" + key + "'", lineNumber);
             }
             scalars.put(key, parsedValue);
+            if (allowBareValues && !value.startsWith("\"")) bareRootScalars.add(key);
         }
         record(key, parsedValue, lineNumber);
     }
@@ -240,6 +243,21 @@ public final class Toml {
     }
 
     // ---- typed accessors -------------------------------------------------
+
+    /** Keys at the document root, useful for strict small TOML contracts. */
+    public Set<String> rootKeys() {
+        Set<String> keys = new LinkedHashSet<>(scalars.keySet());
+        keys.addAll(arrays.keySet());
+        return Set.copyOf(keys);
+    }
+
+    public boolean hasTables() {
+        return !tables.isEmpty() || !tableArrays.isEmpty();
+    }
+
+    public boolean rootScalarIsBare(String key) {
+        return bareRootScalars.contains(key);
+    }
 
     public String scalar(String table, String key) {
         if (table.isEmpty()) {

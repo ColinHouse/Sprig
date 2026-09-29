@@ -1,0 +1,6 @@
+import "@std/test.spr" as testing
+import "@std/files.spr" as files
+
+let path = files.join(testing.temp_dir(), "note.txt")
+files.write_utf8(path, "isolated")
+assert(files.read_utf8(path) == "isolated")

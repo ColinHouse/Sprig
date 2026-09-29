@@ -1,0 +1,4 @@
+# Mirrors the existing runtime String code-point contract with direct assertions.
+assert("A😀東".length() == 3)
+assert("A😀東".charAt(1) == "😀")
+assert("A😀東".indexOf("東") == 2)

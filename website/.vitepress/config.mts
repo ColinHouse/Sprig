@@ -99,6 +99,7 @@ export default defineConfig({
                 { text: 'JVM 互操作', link: '/guide/jvm-interop' },
                 { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
                 { text: '工具与 JSON', link: '/guide/tooling' },
+                { text: '项目测试（英文）', link: '/en/reference/TESTING' },
                 { text: 'VS Code 插件', link: '/guide/editor' }
               ]
             }
@@ -174,6 +175,7 @@ export default defineConfig({
                 { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
                 { text: 'Tooling and JSON', link: '/en/guide/tooling' },
+                { text: 'Testing projects', link: '/en/reference/TESTING' },
                 { text: 'VS Code Extension', link: '/en/guide/editor' }
               ]
             }
@@ -190,6 +192,7 @@ export default defineConfig({
                 { text: 'Quick reference', link: '/en/reference/QUICK_REFERENCE' },
                 { text: 'Numerical semantics', link: '/en/reference/NUMERIC_SEMANTICS' },
                 { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
+                { text: 'Testing projects', link: '/en/reference/TESTING' },
                 {
                   text: 'Numeric design decisions',
                   link: '/en/reference/NUMERIC_DESIGN_DECISIONS'

@@ -26,6 +26,13 @@ stdlib compatibility promise or invisible upgrade is made.
 | `text` | `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
+| `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code) |
+
+`test` is intended for ordinary programs run through `sprig test`. Its
+temporary directory helper requires the runner-provided environment. The
+process helper remains available to a standalone program, but it neither
+invokes a shell nor turns a nonzero child status into an exception. See
+[testing](TESTING.md) for isolation, timeout and failure behavior.
 
 File text always uses UTF-8. Writes replace existing file content, create a file,
 and require an existing parent; `make_directory` creates missing parents.

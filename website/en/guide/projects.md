@@ -45,6 +45,7 @@ sprig build
 sprig run
 sprig run --bin server
 sprig run path/to/file.spr   # explicit file always wins over discovery
+sprig test                   # ordinary programs under tests/
 ```
 
 Discovery walks upward from the current directory. `[[bin]]` declares named
@@ -55,6 +56,11 @@ entries:
 name = "server"
 entry = "src/server.spr"
 ```
+
+`sprig test` is available in the current source checkout. It uses the same
+locked dependencies and checks expected compile failures by diagnostic code;
+see the [testing contract](/en/reference/TESTING). The published
+v0.4.0-alpha.1 SDK predates this command.
 
 ## Dependencies
 

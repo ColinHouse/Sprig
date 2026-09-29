@@ -25,6 +25,9 @@ live in [`libraries/`](../libraries/).
   migrations with transactional rollback and retry.
 - [json_select](json_select/README.md) — a multi-file JSON CLI using the
   Sprig option-parsing library.
+- [test_runner](test_runner/README.md) — a small project that dogfoods
+  `sprig test` with runtime, table-driven, temporary-file, child-process and
+  expected-diagnostic cases.
 
 ## Showcases
 

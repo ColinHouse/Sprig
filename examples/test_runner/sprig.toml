@@ -1,0 +1,6 @@
+[project]
+name = "test-runner-dogfood"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+entry = "src/main.spr"

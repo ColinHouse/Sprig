@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** Runs a compiled Sprig program in a child JVM, capturing output. */
 public final class JavaRunner {
@@ -13,6 +15,7 @@ public final class JavaRunner {
         public int exitCode;
         public String stdout = "";
         public String stderr = "";
+        public boolean timedOut;
     }
 
     private JavaRunner() {
@@ -33,6 +36,15 @@ public final class JavaRunner {
     public static Result run(Path classesDir, String mainClass, List<String> args, Path workDir,
                              boolean streamOutput, boolean stacktrace)
             throws IOException, InterruptedException {
+        return run(classesDir, mainClass, args, workDir, streamOutput, stacktrace,
+                Map.of(), 0, null);
+    }
+
+    /** Runs one test in a fresh JVM with a bounded lifetime and explicit environment. */
+    public static Result run(Path classesDir, String mainClass, List<String> args, Path workDir,
+                             boolean streamOutput, boolean stacktrace,
+                             Map<String, String> environment, long timeoutMillis, Path processDirectory)
+            throws IOException, InterruptedException {
         Path outFile = workDir.resolve("program.out");
         Path errFile = workDir.resolve("program.err");
         List<String> command = new ArrayList<>();
@@ -44,6 +56,8 @@ public final class JavaRunner {
         command.add(mainClass);
         command.addAll(args);
         ProcessBuilder builder = new ProcessBuilder(command);
+        builder.environment().putAll(environment);
+        if (processDirectory != null) builder.directory(processDirectory.toFile());
         if (stacktrace) {
             builder.environment().put("SPRIG_STACKTRACE", "1");
         }
@@ -53,10 +67,20 @@ public final class JavaRunner {
         } else builder.redirectOutput(outFile.toFile());
         builder.redirectError(errFile.toFile());
         Process process = builder.start();
+        if (!streamOutput) process.getOutputStream().close();
         Result result = new Result();
         Thread cleanup = new Thread(process::destroy, "sprig-child-cleanup");
         Runtime.getRuntime().addShutdownHook(cleanup);
-        try { result.exitCode = process.waitFor(); }
+        try {
+            if (timeoutMillis <= 0) result.exitCode = process.waitFor();
+            else if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
+                for (ProcessHandle child : process.descendants().toList()) child.destroyForcibly();
+                process.destroyForcibly();
+                process.waitFor();
+                result.timedOut = true;
+                result.exitCode = 124;
+            } else result.exitCode = process.exitValue();
+        }
         finally {
             process.destroy();
             Runtime.getRuntime().removeShutdownHook(cleanup);

@@ -9,6 +9,7 @@ stage-0 编译器只提供一个可执行文件 `bin/sprig`，由 `scripts/build
 ```text
 check <file.spr> [--json] [--syntax-only]   parse and type-check
 run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM
+test [PATH] [--filter TEXT] [--json]        运行普通项目测试程序
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      带版本的语言参考
 capabilities [--json]                     已实现能力清单
@@ -29,6 +30,9 @@ version
   携带包装后的消息与源码范围；`--stacktrace` 额外输出原始 JVM 堆栈用于调试。
 - `build` 把生成的 Java 与 `.class` 写入 `-d`（默认 `sprig-build`）；检查失败时不会
   留下 class 文件。
+- `test` 将 `tests/**/*.spr` 作为独立 JVM 程序运行，并按同名 `.expect.toml` 核对
+  `tests/compile_fail/` 的诊断码。该命令已在当前源码实现，已发布的 v0.4.0-alpha.1
+  SDK 尚不包含它；详见[测试契约（英文）](/en/reference/TESTING)。
 - `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/DIAGNOSTIC_CODES)。
 
 ## JSON 结果
@@ -88,7 +92,6 @@ version
 以下能力都是**提案，尚未实现**：
 
 - LSP / IDE 语言服务器、
-- `sprig test`、
 - 发布或模块仓库、
 - 增量检查。
 

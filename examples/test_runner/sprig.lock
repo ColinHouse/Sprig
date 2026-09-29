@@ -1,6 +1,6 @@
 lock-version = 3
 language = "0.8"
 compiler = "0.4.0-alpha.1"
-manifest-sha256 = "1e6198085330da59b1806fdeb80df2a08a1bf1eb7c05aaf299fcf51f1119f909"
+manifest-sha256 = "81e1c2177e980220745132763f5d278dfd734647e38f8c664a33447e514f8549"
 stdlib-version = "0.4.0-alpha.1"
 stdlib-sha256 = "17820810a332e00da3b5a5289a1cf86e6ce89a1cc54045d13140a1dce96958da"

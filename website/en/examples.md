@@ -71,6 +71,9 @@ syntax demonstrations. Start with the
   multi-file JSON CLI.
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools) —
   Sprig-written compiler API and diagnostic tools.
+- [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner) —
+  five ordinary project tests: runtime, table, temporary file, child process
+  and expected compiler diagnostic (current source checkout).
 - [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases) —
   repository auditor, Maven-backed utility and source analyzer.
 

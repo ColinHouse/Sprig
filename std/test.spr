@@ -1,0 +1,26 @@
+# Test facilities are ordinary functions; cases remain ordinary Sprig programs.
+import sprig.runtime.test.HostTest as HostTest
+
+class ProcessResult:
+    let exit_code: Int32
+    let stdout: String
+    let stderr: String
+
+func temp_dir() -> String throws Error:
+    let location = HostTest.tempDir()
+    if location != null:
+        return location
+    throw Error("test host returned no temporary directory")
+
+func run_process(command: List[String]) -> ProcessResult throws Error:
+    let host = HostTest.command()
+    if host != null:
+        for argument in command:
+            host.add(argument)
+        let result = host.run()
+        if result != null:
+            let output = result.stdout
+            let errors = result.stderr
+            if output != null and errors != null:
+                return ProcessResult(exit_code=result.exitCode, stdout=output, stderr=errors)
+    throw Error("test host returned no process result")
