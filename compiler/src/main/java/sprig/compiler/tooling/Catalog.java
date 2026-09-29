@@ -42,7 +42,8 @@ public final class Catalog {
     public static List<String> topics() {
         return List.of("language", "types", "strings", "functions", "classes", "variants", "match",
                 "nullability", "errors", "collections", "numerics", "modules", "jvm", "conform",
-                "generics", "projects", "dependencies", "agents", "upgrade", "fmt", "wrap");
+                "generics", "projects", "dependencies", "agents", "upgrade", "fmt",
+                "testing", "wrap");
     }
 
     public static Map<String, Object> help(String topic) {
@@ -104,6 +105,14 @@ public final class Catalog {
         result.put("classpath", get("classpathPolicy"));
         result.put("sourceModules", true);
         result.put("diagnosticSchemaVersion", 1);
+        Map<String, Object> testing = new LinkedHashMap<>();
+        testing.put("discovery", "tests/**/*.spr");
+        testing.put("compileFailExpectations", "tests/compile_fail/**/*.expect.toml");
+        testing.put("separateJvmPerRuntimeTest", true);
+        testing.put("temporaryDirectoryEnvironment", "SPRIG_TEST_TMPDIR");
+        testing.put("processApi", "@std/test.spr");
+        testing.put("runtimeTimeoutSeconds", 30);
+        result.put("testRunner", testing);
         return result;
     }
 

@@ -43,6 +43,9 @@ Generics are explicit and invariant. Java reference results require null
 checks. These are implemented contracts; see
 [feature status](docs/FEATURE_STATUS_IMPLEMENTED.md) and
 [numeric semantics](docs/NUMERIC_SEMANTICS.md).
+The current source checkout also has a project [test runner](docs/TESTING.md);
+the published v0.4.0-alpha.1 SDK predates that command. From the repository
+root, try `bin/sprig test examples/test_runner --json`.
 
 ## Five-minute first project
 

@@ -69,6 +69,11 @@ by the historical design kit in `spec/`.
 - `sprig fmt` is canonical and comment-preserving, without configuration or
   aggressive wrapping. See [formatter](FORMATTER.md) for file safety and
   comment indentation policy. LSP integration remains future work.
+- `sprig test` is a sequential project runner for ordinary `.spr` programs.
+  It has a fixed 30-second runtime timeout and no parallel execution, watch
+  mode, coverage, snapshots or test-function discovery. It requires a current
+  lockfile and checks negative fixtures by diagnostic code, not message. See
+  [testing](TESTING.md) for its JSON and temporary directory contracts.
 - `tests/agent_eval` provides deterministic fixtures and scoring only. No LLM
   run has been performed, and no model performance is claimed.
 - The managed SDK installer/upgrader is supported only on Linux/macOS and

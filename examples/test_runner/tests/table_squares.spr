@@ -1,0 +1,11 @@
+class Case:
+    let input: Int
+    let expected: Int
+
+let cases: List[Case] = [
+    Case(input=0, expected=0),
+    Case(input=2, expected=4),
+    Case(input=7, expected=49)
+]
+for item in cases:
+    assert(item.input * item.input == item.expected)

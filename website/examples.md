@@ -60,6 +60,7 @@
 - [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations)：有序、事务化的 SQLite migrations。
 - [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：多文件 JSON CLI。
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：用 Sprig 编写的编译器 API 与诊断工具。
+- [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner)：当前源码中的五种普通项目测试，覆盖运行、表驱动、临时文件、子进程和预期诊断。
 - [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)：仓库审计器、Maven 工具和源码分析器。
 
 ## 测试套件中的更大程序

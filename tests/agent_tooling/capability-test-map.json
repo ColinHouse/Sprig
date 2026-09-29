@@ -76,6 +76,9 @@
     "acceptance/scripts/json_matrix.py",
     "tests/semantics/missing_case.spr"
   ],
+  "feature.testRunner": [
+    "tests/test_runner/check_test_runner.py"
+  ],
   "feature.bundledStd": [
     "tests/release_hardening/check_hardening.py",
     "scripts/test-stdlib.py"

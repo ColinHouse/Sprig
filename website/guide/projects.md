@@ -44,6 +44,7 @@ sprig build
 sprig run
 sprig run --bin server
 sprig run path/to/file.spr   # 显式文件优先于项目发现
+sprig test                   # 运行 tests/ 下的普通 Sprig 程序
 ```
 
 项目发现会从当前目录向上查找。`[[bin]]` 声明命名入口：
@@ -53,6 +54,10 @@ sprig run path/to/file.spr   # 显式文件优先于项目发现
 name = "server"
 entry = "src/server.spr"
 ```
+
+当前源码中的 `sprig test` 使用相同的锁定依赖图，以诊断码核对预期编译失败；
+参见[测试契约（英文）](/en/reference/TESTING)。已发布的 v0.4.0-alpha.1 SDK
+尚不包含此命令。
 
 ## 依赖
 

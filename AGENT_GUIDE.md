@@ -24,6 +24,8 @@ bin/sprig deps --json
 bin/sprig check program.spr --json
 bin/sprig explain SPR-CODE --json
 bin/sprig run program.spr --json
+bin/sprig test examples/test_runner --json
+bin/sprig help testing --json
 bin/sprig fmt program.spr --check --json
 ```
 
@@ -70,6 +72,14 @@ Generate an editable wrapper for an ecosystem class with
 `bin/sprig wrap com.example.Client --out client.spr --json`; it uses the same
 classpath as `api`, skips unsupported members with the shared reason codes and
 never writes a file that fails checking.
+
+For package/application tests, run `sprig resolve` and then `sprig test --json`.
+The runner discovers ordinary `tests/**/*.spr` programs, each in a separate
+JVM. Negative fixtures under `tests/compile_fail/` have sibling
+`.expect.toml` files listing stable diagnostic codes. `@std/test.spr` offers
+an isolated temporary directory and argv-based child process calls. The
+`testRunner` capability object and [testing contract](docs/TESTING.md) give
+the exact modes, exit codes and JSON fields; no test annotations are used.
 
 `api` also accepts a `.spr` module path, `@package/module.spr`, or a project
 directory. It returns resolved declarations after normal checking: function

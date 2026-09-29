@@ -49,6 +49,7 @@ import sprig.runtime.SprigRuntime;
  * <pre>
  *   sprig check file.spr [--json] [--syntax-only]
  *   sprig run file.spr [--json] [--keep] [-- args...]
+ *   sprig test [PATH] [--filter TEXT] [--json] [--offline]
  *   sprig build file.spr [-d outDir]
  *   sprig explain SPR-CODE
  * </pre>
@@ -96,6 +97,7 @@ public final class Main {
             case "fmt" -> FormatCommand.run(args);
             case "check" -> check(args);
             case "run" -> run(args);
+            case "test" -> TestCommand.run(args);
             case "build" -> build(args);
             case "init" -> init(args);
             case "resolve" -> resolve(args);
@@ -121,6 +123,7 @@ public final class Main {
         out.println();
         out.println("  check <file.spr> [--json] [--syntax-only]   parse and type-check");
         out.println("  run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM");
+        out.println("  test [PATH] [--filter TEXT] [--json] [--offline] run project tests and compile-fail fixtures");
         out.println("  build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
@@ -1398,7 +1401,7 @@ public final class Main {
     private static final Pattern LIST_INDEX_LENGTH =
             Pattern.compile("Index (\\d+) out of bounds for length (\\d+)");
 
-    private static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String sourceUri,
+    static Diagnostic runtimeDiagnostic(String stderr, int exitCode, String sourceUri,
             Map<Path, Map<Integer, Span>> lineMaps, Map<Path, String> uris, boolean stacktrace) {
         RuntimeFailure failure = parseRuntimeFailure(stderr);
         if (failure == null) {
@@ -1585,7 +1588,7 @@ public final class Main {
         return new RuntimeOrigin("jvm", "Inspect the failing operation and the values it received.");
     }
 
-    private static void writeSources(JavaGenerator.Output output, Path javaDir) throws IOException {
+    static void writeSources(JavaGenerator.Output output, Path javaDir) throws IOException {
         for (Map.Entry<String, String> entry : output.sources.entrySet()) {
             Path path = javaDir.resolve(entry.getKey());
             Files.createDirectories(path.getParent());
@@ -1593,7 +1596,7 @@ public final class Main {
         }
     }
 
-    private static List<Path> listJavaFiles(Path dir) throws IOException {
+    static List<Path> listJavaFiles(Path dir) throws IOException {
         try (Stream<Path> stream = Files.walk(dir)) {
             return stream.filter(p -> p.toString().endsWith(".java"))
                     .sorted(Comparator.naturalOrder())
@@ -1601,7 +1604,7 @@ public final class Main {
         }
     }
 
-    private static List<Path> runtimeSources(Diagnostics diagnostics) throws IOException {
+    static List<Path> runtimeSources(Diagnostics diagnostics) throws IOException {
         Path dir = runtimeSourceDir();
         if (dir == null) {
             diagnostics.error(Codes.JVM_INTERNAL, Phase.JVM,
@@ -1635,7 +1638,7 @@ public final class Main {
         return null;
     }
 
-    private static void deleteRecursively(Path path) throws IOException {
+    static void deleteRecursively(Path path) throws IOException {
         if (!Files.exists(path)) {
             return;
         }

@@ -9,6 +9,7 @@ highlighting, CLI diagnostics, Run and generated Java viewing.
 ```text
 check <file.spr> [--json] [--syntax-only]   parse and type-check
 run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM
+test [PATH] [--filter TEXT] [--json]        run ordinary project test programs
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      versioned language reference
 capabilities [--json]                     implemented feature inventory
@@ -33,6 +34,10 @@ Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
   source range; `--stacktrace` adds the raw JVM stack for debugging.
 - `build` writes generated Java and `.class` files to `-d` (default
   `sprig-build`). A failed check produces no class files.
+- `test` runs `tests/**/*.spr` in isolated child JVMs and checks
+  `tests/compile_fail/**/*.spr` against sibling diagnostic-code expectations.
+  It is available in the current source checkout; the v0.4.0-alpha.1 SDK
+  predates it. See the [testing contract](/en/reference/TESTING).
 - `explain` and `codes` document the stable diagnostic vocabulary in
   [Diagnostic codes](/en/reference/DIAGNOSTIC_CODES).
 
@@ -95,7 +100,6 @@ the child status in JSON `data.programExitCode`.
 The following are **proposed, not implemented**:
 
 - an LSP / IDE language server,
-- `sprig test`,
 - publishing or a module registry,
 - incremental checking.
 

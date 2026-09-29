@@ -1,0 +1,2 @@
+let text: String? = null
+print(text.length())

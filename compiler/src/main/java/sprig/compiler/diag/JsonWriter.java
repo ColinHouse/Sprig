@@ -1,6 +1,9 @@
 package sprig.compiler.diag;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Minimal JSON writer for machine-readable diagnostics (no external deps). */
 public final class JsonWriter {
@@ -9,6 +12,46 @@ public final class JsonWriter {
 
     public static String diagnostics(List<Diagnostic> diagnostics, String uriForNulls) {
         return result(diagnostics, uriForNulls, null, null, null);
+    }
+
+    /** The existing diagnostic JSON contract as a value inside another tool result. */
+    public static Map<String, Object> diagnosticMap(Diagnostic diagnostic, String fallbackUri) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("code", diagnostic.code);
+        item.put("phase", diagnostic.phase.toString());
+        item.put("severity", diagnostic.severity.name().toLowerCase(java.util.Locale.ROOT));
+        item.put("uri", diagnostic.uri == null ? fallbackUri : diagnostic.uri);
+        item.put("range", diagnostic.span == null ? null : rangeMap(diagnostic.span));
+        item.put("message", diagnostic.message);
+        if (diagnostic.expectedType != null) item.put("expectedType", diagnostic.expectedType);
+        if (diagnostic.actualType != null) item.put("actualType", diagnostic.actualType);
+        if (diagnostic.hint != null) item.put("hint", diagnostic.hint);
+        if (diagnostic.relatedHelp != null) item.put("relatedHelp", diagnostic.relatedHelp);
+        if (diagnostic.repair != null) item.put("repair", diagnostic.repair);
+        if (diagnostic.data != null) item.put("data", diagnostic.data);
+        List<Object> related = new ArrayList<>();
+        for (Diagnostic.Related entry : diagnostic.related) {
+            Map<String, Object> value = new LinkedHashMap<>();
+            value.put("message", entry.message);
+            if (entry.span != null) value.put("range", rangeMap(entry.span));
+            related.add(value);
+        }
+        item.put("related", related);
+        item.put("suggestedEdits", List.of());
+        return item;
+    }
+
+    private static Map<String, Object> rangeMap(Span span) {
+        Map<String, Object> start = new LinkedHashMap<>();
+        start.put("line", span.startLine);
+        start.put("character", span.startColumn);
+        Map<String, Object> end = new LinkedHashMap<>();
+        end.put("line", span.endLine);
+        end.put("character", span.endColumn);
+        Map<String, Object> range = new LinkedHashMap<>();
+        range.put("start", start);
+        range.put("end", end);
+        return range;
     }
 
     public static String result(List<Diagnostic> diagnostics, String uriForNulls,
