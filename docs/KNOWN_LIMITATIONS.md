@@ -27,8 +27,10 @@ by the historical design kit in `spec/`.
   Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
   and non-JAR runtime artifacts remain unsupported. See `DEPENDENCIES.md`.
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
-  text/time and a typed JSON model. It is intentionally experimental; there is
-  no giant library, HTTP server abstraction or stable package registry.
+  text/time and a typed JSON model. The first-party `sprig-http` library adds a
+  small synchronous JDK HTTP client; it does not provide an HTTP server,
+  streaming, async requests or a stable package registry. The ecosystem remains
+  intentionally small and experimental.
   LSP, debugger integration and incremental compilation are absent. The local
   VS Code preview offers lexical highlighting, CLI checks/run and Java viewing;
   see `editors/vscode/README.md`.

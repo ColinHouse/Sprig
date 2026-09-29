@@ -1,0 +1,53 @@
+# Synchronous HTTP/HTTPS transport with explicit request and response values.
+import sprig.runtime.http.HostHttp as HostHttp
+
+class Header:
+    let name: String
+    let value: String
+
+class Request:
+    let method: String
+    let url: String
+    let headers: List[Header]
+    let body: String?
+    let timeout_ms: Int
+
+class Response:
+    let status: Int32
+    let headers: List[Header]
+    let body: String
+
+func send(request: Request) -> Response throws Error:
+    let header_pairs: MutableList[String] = []
+    for header in request.headers:
+        header_pairs.append(header.name)
+        header_pairs.append(header.value)
+    var body = ""
+    var has_body = false
+    let optional_body = request.body
+    if optional_body != null:
+        body = optional_body
+        has_body = true
+    let result = HostHttp.send(request.method, request.url, header_pairs.toList(), has_body, body, request.timeout_ms)
+    if result == null:
+        throw Error("HTTP host returned no response")
+    let response_body = result.body()
+    if response_body == null:
+        throw Error("HTTP host returned a null response body")
+    let response_headers: MutableList[Header] = []
+    var index: Int = 0
+    while index < result.headerCount():
+        let name = result.headerName(index)
+        let value = result.headerValue(index)
+        if name != null and value != null:
+            response_headers.append(Header(name=name, value=value))
+        else:
+            throw Error("HTTP host returned a null response header")
+        index += 1
+    return Response(status=result.status(), headers=response_headers.toList(), body=response_body)
+
+func get(url: String, headers: List[Header], timeout_ms: Int) -> Response throws Error:
+    return send(Request(method="GET", url=url, headers=headers, body=null, timeout_ms=timeout_ms))
+
+func post_text(url: String, body: String, headers: List[Header], timeout_ms: Int) -> Response throws Error:
+    return send(Request(method="POST", url=url, headers=headers, body=body, timeout_ms=timeout_ms))
