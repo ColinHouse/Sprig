@@ -17,6 +17,12 @@ path = "../math"
 name = "remote"
 git = "https://example.invalid/math.git"
 branch = "main"
+
+[[dependency]]
+name = "json-codec"
+git = "https://github.com/ColinHouse/Sprig.git"
+tag = "v0.5.0-beta.1" # illustrative; verify that this tag contains the package
+subdir = "libraries/sprig-json-codec"
 ```
 
 Aliases are package-local. `import "@math/vector.spr" as vector` sees only direct
@@ -34,14 +40,31 @@ escapes are rejected.
 
 Relative file imports are not a general filesystem sandbox.
 
-Only resolve follows Git branch intent. Builds consume exact SHA and verified
+Git dependencies may declare one ref intent: `branch`, `tag`, or `rev`. Branch
+defaults to `main` for existing manifests. A `rev` is a full 40-character
+commit SHA. Branch and tag names are resolved only by `sprig resolve`; `rev`
+selects its exact SHA. Every lock stores the resulting full commit SHA.
+`subdir` is optional and relative to the repository root; it selects the
+package directory containing `sprig.toml`. It is normalized to forward
+slashes, rejects absolute paths and `..`, and cannot traverse symlink
+components. Omitted `subdir` and `subdir = "."` both select the repository
+root. Different package directories in one repository are separate dependency
+edges and each lock entry records its selected subdirectory.
+
+Schema 4 remains current. Its additive Git `subdir` lock field is omitted for
+the repository root; an older schema-4 entry without the field means `.`.
+This preserves existing root-package locks without rewriting or silently
+migrating them. Consumers still verify the selected package manifest and
+exact locked revision.
+
+Only resolve follows mutable Git ref intent. Builds consume exact SHA and verified
 clean detached checkouts under `~/.sprig/git`; tracked bytes/POSIX owner-execute modes, ignored and
 untracked contents and cache marker are verified. Index flags do not bypass checks.
 Checkout disables automatic newline conversion and enables real symlinks; platforms
 without symlink capability fail explicitly for packages requiring them. POSIX mode
 checks apply where that attribute view exists; Windows ACL execute rights are not
 a Git executable bit. OS file locks serialize installation. Offline mode never fetches or follows a
-branch; Git must still be available to verify cached content. Credentialed URLs,
+branch or tag; Git must still be available to verify cached content. Credentialed URLs,
 submodules, authentication and dependency build hooks are unsupported.
 
 ## Maven / JVM

@@ -1093,6 +1093,7 @@ public final class Main {
                         item.put("url", GitCache.redact(entry.url));
                         item.put("requested", entry.requested);
                         item.put("revision", entry.revision);
+                        item.put("subdir", entry.subdir == null ? "." : entry.subdir);
                     } else {
                         item.put("path", entry.path);
                         item.put("portable", entry.portable);

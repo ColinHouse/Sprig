@@ -97,7 +97,7 @@ public final class Toml {
                 case "" -> currentEntry == null ? Set.of("exports") : Set.of();
                 case "project" -> Set.of("name", "version", "language", "source", "entry", "exports");
                 case "bin" -> Set.of("name", "entry");
-                case "dependency" -> Set.of("name", "path", "git", "branch");
+                case "dependency" -> Set.of("name", "path", "git", "branch", "tag", "rev", "subdir");
                 case "jvm" -> Set.of("group", "artifact", "version");
                 default -> Set.of();
             };
