@@ -67,7 +67,9 @@ def main():
         lock_text = (app / "sprig.lock").read_text()
         check("local-lock-fields", 'kind = "local"' in lock_text
               and 'project-name = "sprig-linear"' in lock_text
-              and "portable = false" in lock_text, lock_text)
+              and "lock-version = 4" in lock_text
+              and "portable = true" in lock_text
+              and 'path = "../lib"' in lock_text, lock_text)
         run(app, "resolve")
         check("lock-deterministic", lock_text == (app / "sprig.lock").read_text())
         executed = run(app, "run")
@@ -97,6 +99,123 @@ def main():
               and "Duplicate dependency name" in duplicate.stdout + duplicate.stderr,
               duplicate.stdout + duplicate.stderr)
 
+        # ------------------------------------- portable relocation (schema 4)
+        plib = base / "portable/lib"
+        project(plib, "portable-lib", exports=["lib.spr"])
+        write(plib / "src/lib.spr", "func double(value: Int) -> Int:\n    return value * 2\n")
+        papp = base / "portable/app"
+        project(papp, "portable-app", dependencies=[("math", "../lib")])
+        write(papp / "src/main.spr",
+              'import "@math/lib.spr" as lib\nprint(lib.double(21))\n')
+        portable_resolve = run(papp, "resolve")
+        portable_lock = (papp / "sprig.lock").read_text()
+        check("portable-lock-schema", portable_resolve.returncode == 0
+              and "lock-version = 4" in portable_lock
+              and "portable = true" in portable_lock
+              and 'path = "../lib"' in portable_lock,
+              portable_resolve.stdout + portable_resolve.stderr + portable_lock)
+
+        for spelling in ("../../lib", "../../lib/./", "../../lib/../lib"):
+            sibling = base / "spellings" / spelling.replace("/", "_sl_").replace(".", "d")
+            project(sibling, "spelling-app", dependencies=[("math", spelling)])
+            write(sibling / "src/main.spr",
+                  'import "@math/lib.spr" as lib\nprint(lib.double(2))\n')
+            spelling_result = run(sibling, "resolve")
+            spelling_lock = (sibling / "sprig.lock").read_text()
+            check("locator-normalized-" + spelling.replace("/", "_"),
+                  spelling_result.returncode == 0 and 'path = "../../lib"' in spelling_lock
+                  and 'path = "../../lib/./"' not in spelling_lock
+                  and 'path = "../../lib/../lib"' not in spelling_lock,
+                  spelling_result.stdout + spelling_result.stderr + spelling_lock)
+
+        shutil.copytree(base / "portable", base / "portable-copy")
+        copied = run(base / "portable-copy/app", "run", "--offline")
+        check("direct-relocation-runs", copied.returncode == 0 and copied.stdout == "42\n",
+              copied.stdout + copied.stderr)
+        check("direct-relocation-lock-unchanged",
+              (base / "portable-copy/app/sprig.lock").read_text() == portable_lock)
+
+        deps_json = json.loads(run(papp, "deps", "--json").stdout)
+        entry = next(item for item in deps_json["sprigDependencies"] if item["name"] == "math")
+        check("deps-json-portable-locator", entry["portable"] is True
+              and entry["path"] == "../lib", json.dumps(entry))
+        check("deps-json-runtime-path-non-identity",
+              "runtimeResolvedPath" in entry
+              and "runtimeResolvedPath" not in portable_lock
+              and Path(entry["runtimeResolvedPath"]).is_dir(),
+              json.dumps(entry))
+
+        (papp / "sprig.lock").write_text(
+            portable_lock.replace("lock-version = 4", "lock-version = 3"))
+        rejected = run(papp, "check")
+        check("schema-3-rejected", rejected.returncode == 1
+              and "SPR-PROJECT-LOCK-SCHEMA" in rejected.stdout + rejected.stderr,
+              rejected.stdout + rejected.stderr)
+        (papp / "sprig.lock").write_text(portable_lock)
+
+        absent_target = base / "absent-guard"
+        project(absent_target, "absent-app",
+                dependencies=[("math", str((base / "portable/does-not-exist").resolve()))])
+        write(absent_target / "src/main.spr", "print(1)\n")
+        missing = run(absent_target, "resolve")
+        check("absolute-missing-target", missing.returncode == 1
+              and "SPR-DEP-NOT-FOUND" in missing.stdout + missing.stderr,
+              missing.stdout + missing.stderr)
+
+        project(base / "portable/abs-lib", "abs-lib", exports=["abs.spr"])
+        write(base / "portable/abs-lib/src/abs.spr", "func value() -> Int:\n    return 5\n")
+        abs_app = base / "portable/abs-app"
+        project(abs_app, "abs-app",
+                dependencies=[("abs", str((base / "portable/abs-lib").resolve()))])
+        write(abs_app / "src/main.spr",
+              'import "@abs/abs.spr" as abs\nprint(abs.value())\n')
+        abs_resolve = run(abs_app, "resolve")
+        abs_lock = (abs_app / "sprig.lock").read_text()
+        check("absolute-declaration-non-portable", abs_resolve.returncode == 0
+              and "portable = false" in abs_lock
+              and f'path = "{(base / "portable/abs-lib").resolve()}"' in abs_lock,
+              abs_resolve.stdout + abs_resolve.stderr + abs_lock)
+        shutil.copytree(abs_app, base / "portable/abs-app-moved")
+        moved_ok = run(base / "portable/abs-app-moved", "run", "--offline")
+        check("absolute-declaration-relocates-declarer", moved_ok.returncode == 0
+              and moved_ok.stdout == "5\n", moved_ok.stdout + moved_ok.stderr)
+        shutil.move(str(base / "portable/abs-lib"), str(base / "portable/abs-lib-gone"))
+        moved_missing = run(base / "portable/abs-app-moved", "check")
+        check("absolute-declaration-target-move-stale", moved_missing.returncode == 1
+              and ("SPR-DEP-NOT-FOUND" in moved_missing.stdout + moved_missing.stderr
+                   or "SPR-PROJECT-LOCK-STALE" in moved_missing.stdout + moved_missing.stderr),
+              moved_missing.stdout + moved_missing.stderr)
+        shutil.move(str(base / "portable/abs-lib-gone"), str(base / "portable/abs-lib"))
+
+        write(papp / "sprig.toml",
+              '[project]\nname = "portable-app"\nversion = "0.1.0"\nlanguage = "0.8"\n\n'
+              '[[dependency]]\nname = "math"\npath = "../lib/."\n')
+        renamed = run(papp, "check")
+        check("declaring-locator-change-stale", renamed.returncode == 1
+              and "SPR-PROJECT-LOCK-STALE" in renamed.stdout + renamed.stderr,
+              renamed.stdout + renamed.stderr)
+        write(papp / "sprig.toml",
+              '[project]\nname = "portable-app"\nversion = "0.1.0"\nlanguage = "0.8"\n\n'
+              '[[dependency]]\nname = "math"\npath = "../lib"\n')
+
+        project(base / "portable/lib-2", "portable-lib", exports=["lib.spr"])
+        write(base / "portable/lib-2/src/lib.spr", "func double(value: Int) -> Int:\n    return value * 2\n")
+        link_app = base / "portable/link-app"
+        project(link_app, "link-app", dependencies=[("math", "../lib-link")])
+        write(link_app / "src/main.spr",
+              'import "@math/lib.spr" as lib\nprint(lib.double(4))\n')
+        link = base / "portable/lib-link"
+        if os.name == "nt":
+            print("skip symlink alias relocation (windows)")
+        else:
+            link.symlink_to(base / "portable/lib")
+            check("symlink-alias-resolve", run(link_app, "resolve").returncode == 0)
+            link.unlink()
+            link.symlink_to(base / "portable/lib-2")
+            link_run = run(link_app, "run", "--offline")
+            check("symlink-alias-retarget-accepted", link_run.returncode == 0
+                  and link_run.stdout == "8\n", link_run.stdout + link_run.stderr)
+
         # ---------------------------------------------------------- cycle
         project(base / "cycle/a", "a", exports=["a.spr"], dependencies=[("b", "../b")])
         write(base / "cycle/a/src/a.spr", "func fa() -> Int:\n    return 1\n")
@@ -123,6 +242,14 @@ def main():
         trans_run = run(trans_app, "run")
         check("transitive-runs", trans_run.returncode == 0 and trans_run.stdout == "3\n",
               trans_run.stdout + trans_run.stderr)
+        shutil.copytree(base / "trans", base / "trans-copy")
+        trans_lock = (base / "trans/app/sprig.lock").read_text()
+        trans_copy = run(base / "trans-copy/app", "run", "--offline")
+        check("transitive-relocation-runs", trans_copy.returncode == 0
+              and trans_copy.stdout == "3\n", trans_copy.stdout + trans_copy.stderr)
+        check("transitive-relocation-edges", "root/@a" in trans_lock
+              and "root/@a/@b" in trans_lock
+              and (base / "trans-copy/app/sprig.lock").read_text() == trans_lock)
         write(trans_app / "src/main.spr",
               'import "@b/b.spr" as b\nprint(b.value())\n')
         leaked = run(trans_app, "check")
