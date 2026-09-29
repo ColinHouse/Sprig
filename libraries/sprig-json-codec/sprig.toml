@@ -1,0 +1,6 @@
+[project]
+name = "sprig-json-codec"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+exports = ["codec.spr"]

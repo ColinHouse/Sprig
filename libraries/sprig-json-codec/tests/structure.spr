@@ -1,0 +1,68 @@
+import "@std/json.spr" as json
+import "../src/codec.spr" as codec
+import "./support.spr" as support
+
+let document = json.parse(
+    "{\"projects\": [{\"id\": \"alpha\", \"targets\": [{\"item_id\": \"stone\", \"amount\": 3}]},"
+    +" {\"id\": \"beta\", \"targets\": [{\"item_id\": \"dirt\", \"amount\": \"lots\"}]}],"
+    +" \"tags\": [], \"meta\": {\"owner\": \"ada\"}}")
+let root = codec.root(document)
+
+# 10. arrays and element paths
+let projects = codec.required_array(root, "projects")
+assert(projects.size() == 2)
+assert(projects[0].path == "$.projects[0]")
+assert(projects[1].path == "$.projects[1]")
+
+# 11. nested objects
+let meta = codec.required_object(root, "meta")
+assert(codec.required_string(meta, "owner") == "ada")
+assert(meta.path == "$.meta")
+
+# 12. nested array/object errors carry the full deterministic path
+let beta_targets = codec.required_array(projects[1], "targets")
+assert(beta_targets[0].path == "$.projects[1].targets[0]")
+assert(support.required_int_error(beta_targets[0], "amount")
+    == "$.projects[1].targets[0].amount: expected integer, found string")
+assert(support.required_int_error(beta_targets[0], "missing")
+    == "$.projects[1].targets[0].missing: required field is missing")
+
+# Non-object array elements report the element path and actual kind
+let numbers = codec.required_array(codec.root(json.parse("{\"tags\": [1]}")), "tags")
+assert(support.required_string_error(numbers[0], "name")
+    == "$.tags[0]: expected object to read field 'name', found number")
+
+# Root validation
+assert(support.root_error(json.parse("\"text\"")) == "$: expected object, found string")
+assert(support.root_error(json.parse("[1]")) == "$: expected object, found array")
+assert(support.root_error(json.parse("null")) == "$: expected object, found null")
+assert(support.root_error(json.parse("true")) == "$: expected object, found boolean")
+
+# 13/14. unknown-field policy is explicit
+let allowed: List[String] = ["projects", "tags", "meta"]
+assert(support.unknown_error(root, allowed) == "allowed")
+let only_projects: List[String] = ["projects"]
+assert(support.unknown_error(codec.root(json.parse("{\"extra\": 1}")), only_projects)
+    == "$: unknown field 'extra'")
+let allowed_extra = codec.root(json.parse("{\"a\": 1, \"extra\": 2}"))
+assert(codec.required_int(allowed_extra, "a") == 1)
+
+# json.parse already rejects duplicate keys; manually constructed Values are
+# still caught by explicit unknown-field validation.
+let duplicate_value = codec.object([
+    codec.member("a", codec.int(1)),
+    codec.member("a", codec.int(2))])
+let only_a: List[String] = ["a"]
+assert(support.unknown_error(codec.root(duplicate_value), only_a)
+    == "$: duplicate field 'a'")
+
+# Kind checks on arrays and optional wrong types
+assert(support.required_array_error(root, "meta") == "$.meta: expected array, found object")
+assert(support.optional_string_error(root, "tags") == "$.tags: expected string, found array")
+
+# 19. empty array and empty object
+assert(codec.required_array(root, "tags").isEmpty())
+let empty = codec.root(json.parse("{}"))
+assert(codec.optional_string(empty, "name") == null)
+let empty_array = codec.required_array(codec.root(json.parse("{\"items\": []}")), "items")
+assert(empty_array.size() == 0)

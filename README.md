@@ -144,6 +144,9 @@ See the [web API](libraries/sprig-web/README.md),
 It also ships transactional SQLite migration support and a CLI option parsing
 library; see the [migration example](examples/sqlite_migrations/README.md),
 [JSON CLI example](examples/json_select/README.md) and their library READMEs.
+The libraries tree also includes [sprig-json-codec](libraries/sprig-json-codec/README.md),
+path-aware JSON decoding/encoding helpers over `@std/json` with no implicit
+coercion.
 
 ## Contribute with your coding agent
 

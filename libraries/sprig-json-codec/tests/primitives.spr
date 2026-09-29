@@ -1,0 +1,63 @@
+import "@std/json.spr" as json
+import "../src/codec.spr" as codec
+import "./support.spr" as support
+
+let document = json.parse(
+    "{\"name\": \"ada\", \"enabled\": true, \"count\": 12, \"ratio\": 1.5, \"note\": null, \"辞書\": \"😀東\"}")
+let root = codec.root(document)
+
+# 1. required string success
+assert(codec.required_string(root, "name") == "ada")
+
+# 9. boolean
+assert(codec.required_bool(root, "enabled"))
+
+# 7. integer exactness and exact number text
+assert(codec.required_int(root, "count") == 12)
+assert(codec.required_number_text(root, "ratio") == "1.5")
+assert(codec.required_decimal(root, "ratio").toString() == "1.5")
+
+# 4/5. optional fields and the missing vs present-null distinction
+assert(codec.optional_string(root, "name") == "ada")
+assert(codec.optional_string(root, "absent") == null)
+assert(codec.optional_string(root, "note") == null)
+assert(support.field_name(root, "note") == "null")
+assert(support.field_name(root, "absent") == "missing")
+
+# 2/6. missing, wrong type and present-null diagnostics stay distinct
+assert(support.required_string_error(root, "absent") == "$.absent: required field is missing")
+assert(support.required_string_error(root, "note") == "$.note: expected string, found null")
+assert(support.required_string_error(root, "count") == "$.count: expected string, found number")
+assert(support.required_int_error(root, "name") == "$.name: expected integer, found string")
+assert(support.required_bool_error(root, "count") == "$.count: expected boolean, found number")
+
+# 8. numeric coercion is rejected: no string-to-number, no truncation
+assert(support.required_int_error(codec.root(json.parse("{\"count\": \"12\"}")), "count")
+    == "$.count: expected integer, found string")
+assert(support.required_int_error(codec.root(json.parse("{\"count\": 12.5}")), "count")
+    == "$.count: expected integer, found number 12.5")
+assert(support.required_int_error(codec.root(json.parse("{\"count\": 1e3}")), "count")
+    == "$.count: expected integer, found number 1e3")
+assert(support.required_int_error(
+    codec.root(json.parse("{\"count\": 99999999999999999999999999}")), "count")
+    == "$.count: expected integer in range, found number 99999999999999999999999999")
+
+# 20. manually constructed bad Values are validated by lexeme, not by trust
+let manual_plus = codec.root(codec.object([codec.member("count", codec.number("+12"))]))
+assert(support.required_int_error(manual_plus, "count")
+    == "$.count: expected integer, found number +12")
+let manual_zero = codec.root(codec.object([codec.member("count", codec.number("007"))]))
+assert(support.required_int_error(manual_zero, "count")
+    == "$.count: expected integer, found number 007")
+let manual_decimal = codec.root(codec.object([codec.member("ratio", codec.number(".5"))]))
+assert(support.required_decimal_error(manual_decimal, "ratio")
+    == "$.ratio: expected decimal, found number .5")
+
+# 18. Unicode keys and strings survive decoding and paths
+assert(codec.required_string(root, "辞書") == "😀東")
+assert(support.required_string_error(root, "辞書 ") == "$.辞書 : required field is missing")
+
+# 19. empty object
+let empty = codec.root(json.parse("{}"))
+assert(support.required_array_error(empty, "items") == "$.items: required field is missing")
+assert(codec.optional_string(empty, "anything") == null)
