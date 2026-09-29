@@ -77,7 +77,9 @@ public final class GitCache {
         if (kind.equals("tag")) query.add(target + "^{}");
         String output = capture(query, null);
         if (output == null) {
-            throw new DepError(Codes.DEP_GIT, "git unavailable: cannot resolve " + redact(url), null);
+            throw new DepError(Codes.DEP_GIT,
+                    "Git " + kind + " lookup failed for " + redact(url)
+                            + "; check the repository URL and network access", null);
         }
         String tagObjectRevision = null;
         for (String line : output.split("\n")) {
