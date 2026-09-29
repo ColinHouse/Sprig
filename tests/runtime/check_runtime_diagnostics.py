@@ -84,6 +84,72 @@ with tempfile.TemporaryDirectory(prefix="sprig-runtime-diag-") as work:
         if code != "SPR-PROGRAM-EXIT":
             assert "Run with --stacktrace" in diagnostic["hint"], diagnostic["hint"]
 
+    # Issue #22 acceptance: local and imported Int/Int32 failures must report the
+    # actual .spr file and the failing statement line, with stable codes. The
+    # padding keeps failures away from line 1 so the mapping cannot pass by luck.
+    def local_source(type_name):
+        literal = "9223372036854775807" if type_name == "Int" else "2147483647"
+        lines = [f"# local {type_name} overflow on a later line", "",
+                 f"let big: {type_name} = {literal}",
+                 f"let one: {type_name} = 1",
+                 "print(big + one)"]
+        return "\n".join(lines) + "\n", len(lines) - 1
+
+    def module_source(type_name):
+        literal = "9223372036854775807" if type_name == "Int" else "2147483647"
+        lines = [f"# imported {type_name} failure far from the module first line",
+                 "", "", "", "", "",
+                 f"func overflow() -> {type_name}:",
+                 f"    let big: {type_name} = {literal}",
+                 f"    let one: {type_name} = 1",
+                 "    return big + one"]
+        return "\n".join(lines) + "\n", len(lines) - 1
+
+    for type_name in ("Int", "Int32"):
+        message = f"Numeric error: {type_name} addition overflow"
+
+        local = directory / f"local-{type_name.lower()}.spr"
+        local_source_text, local_line = local_source(type_name)
+        local.write_text(local_source_text, encoding="utf-8")
+        result = call("run", local, "--json")
+        try:
+            diagnostic = json.loads(result.stdout)["diagnostics"][0]
+        except (ValueError, KeyError, IndexError):
+            diagnostic = None
+        verify(f"numeric span local {type_name}",
+               result.returncode == 1 and diagnostic is not None
+               and local_line >= 4
+               and diagnostic["code"] == "SPR-RUNTIME-EXCEPTION"
+               and diagnostic["message"] == message
+               and diagnostic.get("data", {}).get("origin") == "checked-arithmetic"
+               and diagnostic.get("uri", "").endswith("/" + local.name)
+               and diagnostic.get("range") is not None
+               and diagnostic["range"]["start"]["line"] == local_line,
+               f"exit={result.returncode} line={local_line} {diagnostic}")
+
+        module = directory / f"numeric-{type_name.lower()}.spr"
+        module_source_text, module_line = module_source(type_name)
+        module.write_text(module_source_text, encoding="utf-8")
+        caller = directory / f"imported-{type_name.lower()}.spr"
+        caller.write_text(f'import "./{module.name}" as numeric\nprint("before")\n'
+                          "print(numeric.overflow())\n", encoding="utf-8")
+        result = call("run", caller, "--json")
+        try:
+            diagnostic = json.loads(result.stdout)["diagnostics"][0]
+        except (ValueError, KeyError, IndexError):
+            diagnostic = None
+        verify(f"numeric span imported {type_name}",
+               result.returncode == 1 and diagnostic is not None
+               and module_line >= 4
+               and diagnostic["code"] == "SPR-RUNTIME-EXCEPTION"
+               and diagnostic["message"] == message
+               and diagnostic.get("data", {}).get("origin") == "checked-arithmetic"
+               and diagnostic.get("uri", "").endswith("/" + module.name)
+               and not diagnostic.get("uri", "").endswith("/" + caller.name)
+               and diagnostic.get("range") is not None
+               and diagnostic["range"]["start"]["line"] == module_line,
+               f"exit={result.returncode} line={module_line} {diagnostic}")
+
     # --stacktrace restores the raw JVM frames for debugging without losing the wrapper.
     overflow = directory / "overflow.spr"
     stack = call("run", overflow, "--stacktrace")
