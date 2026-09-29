@@ -1,7 +1,8 @@
 # Dependency contract — compiler v0.4.0-alpha.1
 
-`sprig resolve` is the only command that writes `sprig.lock` or performs Maven
-network requests. `check/build/run/api/doctor` consume one verified project classpath.
+`sprig resolve`, `sprig add` and `sprig remove` are explicit dependency
+resolution commands: they may write `sprig.lock` and perform Git/Maven requests.
+`check/build/run/api/doctor` consume one verified project classpath.
 A source file explicitly outside the discovered project source root remains standalone.
 The public v0.2 release did not implement Maven. These rules describe the
 Maven/JVM dependency behavior implemented since v0.3 and shipped in v0.4.0-alpha.1.
@@ -42,8 +43,8 @@ Relative file imports are not a general filesystem sandbox.
 
 Git dependencies may declare one ref intent: `branch`, `tag`, or `rev`. Branch
 defaults to `main` for existing manifests. A `rev` is a full 40-character
-commit SHA. Branch and tag names are resolved only by `sprig resolve`; `rev`
-selects its exact SHA. Every lock stores the resulting full commit SHA.
+commit SHA. Branch and tag names are resolved by `resolve`, `add` or `remove`;
+`rev` selects its exact SHA. Every lock stores the resulting full commit SHA.
 `subdir` is optional and relative to the repository root; it selects the
 package directory containing `sprig.toml`. It is normalized to forward
 slashes, rejects absolute paths and `..`, and cannot traverse symlink

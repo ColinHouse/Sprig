@@ -293,6 +293,7 @@ public final class DependencyResolver {
                 }
             } else if (dependency.isGit()) {
                 depKind = "git";
+                GitCache.rejectCredentials(dependency.git);
                 depUrl = stripCredentials(dependency.git);
                 String refKind;
                 String refValue;

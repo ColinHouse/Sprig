@@ -36,5 +36,7 @@ metadata, not a sandbox; local file imports keep their v0.7 relative-path
 semantics. External package imports use `@alias/module.spr`; aliases are
 package-local and logical paths must be listed in the dependency exports.
 Project check/build/run requires a current generated `sprig.lock`; run
-`sprig resolve` after manifest changes. Local source edits do not stale a lock.
+`sprig resolve` after manual manifest changes, or use `sprig add`/`sprig remove`
+to edit a dependency and resolve the lock immediately. Local source edits do
+not stale a lock.
 See `DEPENDENCIES.md` before declaring a dependency.

@@ -54,6 +54,19 @@ public final class GitCache {
         return query >= 0 ? safe + "?***" : safe;
     }
 
+    /** Git credentials and query/fragment data are not supported in manifests. */
+    public static void rejectCredentials(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            boolean scpUser = !url.contains("://") && url.matches("^[^/]+@[^:]+:.+");
+            if (uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null || scpUser)
+                throw new DepError(Codes.DEP_GIT,
+                        "Git URLs with credentials, query parameters or fragments are unsupported", null);
+        } catch (IllegalArgumentException e) {
+            throw new DepError(Codes.DEP_GIT, "Invalid Git repository URL", null);
+        }
+    }
+
     public boolean available() {
         return run(List.of("--version"), null) == 0;
     }

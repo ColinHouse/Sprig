@@ -19,11 +19,12 @@ by the historical design kit in `spec/`.
 - Generic code is erased and boxed in generated Java (type parameters become
   `Object`). Boxing/unboxing is compiler-controlled, but generic values carry
   no JVM-level type information at runtime.
-- Local/Git Sprig and Maven JVM dependencies are resolved by `sprig resolve`.
+- Local/Git Sprig and Maven JVM dependencies are resolved by `sprig resolve`,
+  `sprig add` and `sprig remove`.
   Schema-4 locks verify graph identity, manifests, owner-relative locators and
   JAR/POM SHA-256. Shared
-  project classpaths work for check/build/run/api/doctor; only resolve uses
-  Maven networking. Apache Resolver handles effective POMs and mediation.
+  project classpaths work for check/build/run/api/doctor; only explicit
+  dependency-resolution commands use Maven networking. Apache Resolver handles effective POMs and mediation.
   Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
   and non-JAR runtime artifacts remain unsupported. See `DEPENDENCIES.md`.
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,

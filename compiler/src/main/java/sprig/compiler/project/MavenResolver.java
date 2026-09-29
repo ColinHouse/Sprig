@@ -100,7 +100,7 @@ public final class MavenResolver {
             throw new DepError(Codes.PROJECT_LOCK_STALE, "Locked Maven roots do not match project declarations", null)
                     .with("hint", "Run `sprig resolve`.");
     }
-    /** Explicit resolve is the only operation that performs Maven network requests. */
+    /** Called only by explicit dependency-resolution commands; consumers never invoke network resolution. */
     public static void resolve(DependencyResolver.Result graph, boolean offline) {
         List<Project.JvmDependency> declarations = new ArrayList<>();
         for (DependencyResolver.Package pkg : graph.packages) declarations.addAll(pkg.project.jvmDependencies);
