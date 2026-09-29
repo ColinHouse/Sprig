@@ -1,0 +1,71 @@
+# Shared test helpers. Every helper catches the library's Error and returns the
+# message, so test files can assert exact deterministic diagnostics.
+import "@std/json.spr" as json
+import "../src/codec.spr" as codec
+
+func root_error(value: json.Value) -> String:
+    try:
+        let reader = codec.root(value)
+        return "decoded"
+    catch problem: Error:
+        return problem.message
+
+func field_name(reader: codec.Reader, name: String) -> String throws Error:
+    match codec.field(reader, name):
+        case codec.Field.Missing:
+            return "missing"
+        case codec.Field.Null:
+            return "null"
+        case codec.Field.Value as found:
+            return "value"
+
+func unknown_error(reader: codec.Reader, allowed: List[String]) -> String:
+    try:
+        codec.reject_unknown_fields(reader, allowed)
+        return "allowed"
+    catch problem: Error:
+        return problem.message
+
+func required_string_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_string(reader, name)
+    catch problem: Error:
+        return problem.message
+
+func required_bool_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_bool(reader, name).toString()
+    catch problem: Error:
+        return problem.message
+
+func required_int_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_int(reader, name).toString()
+    catch problem: Error:
+        return problem.message
+
+func required_decimal_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_decimal(reader, name).toString()
+    catch problem: Error:
+        return problem.message
+
+func required_array_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_array(reader, name).size().toString()
+    catch problem: Error:
+        return problem.message
+
+func optional_string_error(reader: codec.Reader, name: String) -> String:
+    try:
+        let value = codec.optional_string(reader, name)
+        if value == null:
+            return "null"
+        return "decoded: " + value
+    catch problem: Error:
+        return problem.message
+
+# The helper module is also a discovered test; assert its own contract.
+assert(codec.kind(json.Value.Null) == "null")
+assert(codec.kind(json.Value.Object(members = [])) == "object")
+assert(root_error(json.parse("{\"a\": 1}")) == "decoded")
