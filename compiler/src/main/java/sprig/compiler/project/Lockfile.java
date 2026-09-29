@@ -16,7 +16,7 @@ import sprig.compiler.diag.Codes;
  * {@code sprig resolve} writes it. Unknown schema versions are rejected.
  */
 public final class Lockfile {
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
 
     public static String edgeId(String owner, String alias) {
         return owner + "/@" + java.net.URLEncoder.encode(alias, StandardCharsets.UTF_8);
@@ -128,7 +128,11 @@ public final class Lockfile {
             sprig.projectName = entry.get("project-name");
             sprig.manifestSha = entry.get("manifest-sha256");
             sprig.source = entry.get("source");
-            sprig.portable = "true".equals(entry.get("portable"));
+            String portableRaw = entry.get("portable");
+            if (portableRaw == null || !(portableRaw.equals("true") || portableRaw.equals("false")))
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                        "sprig.lock entry '" + sprig.name + "' is missing a boolean portable field", null);
+            sprig.portable = portableRaw.equals("true");
             if (sprig.id == null || sprig.owner == null || sprig.name == null
                     || sprig.name.isBlank()
                     || !(sprig.owner.equals("root") || sprig.owner.startsWith("root/@"))
@@ -147,9 +151,32 @@ public final class Lockfile {
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                         "sprig.lock git entry '" + sprig.name + "' is missing url/requested/revision", null);
             }
-            if (sprig.kind.equals("local") && sprig.path == null) {
-                throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
-                        "sprig.lock local entry '" + sprig.name + "' is missing path", null);
+            if (sprig.kind.equals("local")) {
+                if (sprig.path == null || sprig.path.isBlank()) {
+                    throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                            "sprig.lock local entry '" + sprig.name + "' is missing path", null);
+                }
+                if (sprig.portable) {
+                    if (Path.of(sprig.path).isAbsolute() || !normalizedLocator(sprig.path).equals(sprig.path)) {
+                        throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                                "sprig.lock local entry '" + sprig.name
+                                        + "' must store a normalized owner-relative locator", null);
+                    }
+                } else if (!Path.of(sprig.path).isAbsolute()) {
+                    throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                            "sprig.lock local entry '" + sprig.name
+                                    + "' is not portable and must store a canonical absolute path", null);
+                }
+            }
+            if (sprig.kind.equals("git")) {
+                if (sprig.portable) {
+                    throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                            "sprig.lock git entry '" + sprig.name + "' cannot be portable", null);
+                }
+                if (sprig.path != null) {
+                    throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                            "sprig.lock git entry '" + sprig.name + "' must not store a path", null);
+                }
             }
             if (sprig.kind.equals("git") && !sprig.revision.matches("[0-9a-f]{40}"))
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Git revision must be an exact commit SHA", null);
@@ -258,6 +285,12 @@ public final class Lockfile {
                 .forEach(e -> sb.append("\n[[jvm-edge]]\nparent = ").append(quote(e.parent()))
                         .append("\nchild = ").append(quote(e.child())).append('\n'));
         return sb.toString();
+    }
+
+    /** Normalized forward-slash locator spelling; {@code .} stays {@code .}. */
+    public static String normalizedLocator(String raw) {
+        String normalized = Path.of(raw).normalize().toString().replace('\\', '/');
+        return normalized.isEmpty() ? "." : normalized;
     }
 
     private static String quote(String value) {

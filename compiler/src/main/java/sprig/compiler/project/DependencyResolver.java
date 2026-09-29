@@ -46,12 +46,13 @@ public final class DependencyResolver {
         public final String url;
         public final String requested;
         public final String revision;
+        public final String locator;
         public final boolean portable;
         public final Map<String, Package> aliases = new LinkedHashMap<>();
         public final List<Package> direct = new ArrayList<>();
 
         Package(String alias, Project project, Path root, String kind, String url,
-                String requested, String revision, String manifestSha, boolean portable) {
+                String requested, String revision, String locator, String manifestSha, boolean portable) {
             this.alias = alias;
             this.project = project;
             this.root = root;
@@ -62,6 +63,7 @@ public final class DependencyResolver {
             this.url = url;
             this.requested = requested;
             this.revision = revision;
+            this.locator = locator;
             this.portable = portable;
         }
 
@@ -76,7 +78,7 @@ public final class DependencyResolver {
             entry.source = project.source;
             entry.portable = portable;
             if (kind.equals("local")) {
-                entry.path = root.toString();
+                entry.path = locator;
             } else {
                 entry.url = url;
                 entry.requested = requested;
@@ -207,7 +209,8 @@ public final class DependencyResolver {
         lock.language = project.language;
         lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
         StdLibrary.record(lock);
-        Package root = build(project, "root", "", "root", null, null, null, lock, offline, true, new ArrayDeque<>());
+        Package root = build(project, "root", "", "root", null, null, null, null, false, lock, offline, true,
+                new ArrayDeque<>());
         lock.sprig.addAll(new Result(root, lock).entries());
         return new Result(root, lock);
     }
@@ -228,7 +231,8 @@ public final class DependencyResolver {
                     project.manifest.toString())
                     .with("hint", "Run `sprig resolve`.");
         }
-        Package root = build(project, "root", "", "root", null, null, null, lock, offline, false, new ArrayDeque<>());
+        Package root = build(project, "root", "", "root", null, null, null, null, false, lock, offline, false,
+                new ArrayDeque<>());
         if (new Result(root, lock).entries().size() != lock.sprig.size())
             throw new DepError(Codes.PROJECT_LOCK_STALE, "Lock contains unexpected dependency edges; run `sprig resolve`", null);
         Result result = new Result(root, lock);
@@ -238,7 +242,8 @@ public final class DependencyResolver {
     }
 
     private static Package build(Project project, String id, String alias, String kind, String url,
-                                 String requested, String revision, Lockfile lock, boolean offline,
+                                 String requested, String revision, String locator, boolean portable,
+                                 Lockfile lock, boolean offline,
                                  boolean resolveMode, Deque<Path> stack) {
         String manifestSha;
         try {
@@ -248,7 +253,7 @@ public final class DependencyResolver {
                     "Cannot read manifest: " + e.getMessage(), project.manifest.toString());
         }
         Package pkg = new Package(alias, project, project.root, kind, url, requested, revision,
-                manifestSha, false);
+                locator, manifestSha, portable);
         pkg.id = id;
         pkg.owner = id.equals("root") ? "" : id.substring(0, id.lastIndexOf("/@"));
         for (Project.Dependency dependency : project.dependencies) {
@@ -263,9 +268,13 @@ public final class DependencyResolver {
             String depUrl = null;
             String depRequested = null;
             String depRevision = null;
+            String depLocator = null;
+            boolean depPortable = false;
             if (dependency.isLocal()) {
                 depRoot = canonical(project.root.resolve(dependency.path));
                 depKind = "local";
+                depPortable = dependency.isPortable();
+                depLocator = depPortable ? dependency.locator() : depRoot.toString();
                 if (!Files.isDirectory(depRoot)) {
                     throw new DepError(Codes.DEP_NOT_FOUND,
                             "Local dependency '" + dependency.name + "' not found at " + depRoot,
@@ -334,7 +343,8 @@ public final class DependencyResolver {
                         || !entry.manifestSha.equals(depManifestSha)
                         || !depKind.equals(entry.kind) || !depProject.name.equals(entry.projectName)
                         || !depProject.source.equals(entry.source)
-                        || (depKind.equals("local") && !depRoot.toString().equals(entry.path))) {
+                        || (depKind.equals("local")
+                            && (depPortable != entry.portable || !depLocator.equals(entry.path)))) {
                     throw new DepError(Codes.PROJECT_LOCK_STALE,
                             "Dependency manifest changed for '" + dependency.name + "'",
                             manifest.toString()).with("hint", "Run `sprig resolve`.");
@@ -342,7 +352,7 @@ public final class DependencyResolver {
             }
             stack.push(canonicalRoot);
             Package child = build(depProject, edgeId, dependency.name, depKind, depUrl, depRequested,
-                    depRevision, lock, offline, resolveMode, stack);
+                    depRevision, depLocator, depPortable, lock, offline, resolveMode, stack);
             stack.pop();
             pkg.aliases.put(dependency.name, child);
             pkg.direct.add(child);

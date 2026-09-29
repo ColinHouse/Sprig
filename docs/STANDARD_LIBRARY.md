@@ -12,7 +12,7 @@ import "@std/json.spr" as json
 Only the bundled flat `.spr` modules are exported; traversal and symlinks are
 rejected. There are no implicit imports or new grammar forms. Standalone files
 use their installed SDK directly. `sprig resolve` records `stdlib-version` and
-`stdlib-sha256` in schema-3 locks; project consumers fail on mismatch, including
+`stdlib-sha256` in schema-4 locks; project consumers fail on mismatch, including
 older locks missing these fields, and require explicit re-resolution.
 The digest is SHA256 of each sorted module filename, NUL, exact UTF-8 file bytes,
 NUL concatenated in filename order. LF/CRLF bytes are intentionally distinct.
