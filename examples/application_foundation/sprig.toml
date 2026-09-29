@@ -1,0 +1,14 @@
+[project]
+name = "application-foundation"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+entry = "src/main.spr"
+
+[[dependency]]
+name = "http"
+path = "../../libraries/sprig-http"
+
+[[dependency]]
+name = "json-codec"
+path = "../../libraries/sprig-json-codec"

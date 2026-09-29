@@ -1,0 +1,28 @@
+lock-version = 4
+language = "0.8"
+compiler = "0.4.0-alpha.1"
+manifest-sha256 = "b995236cc840af7b4531a71c5e064c734d123a3b579b0de800592fa50716e725"
+stdlib-version = "0.4.0-alpha.1"
+stdlib-sha256 = "454163f6da9e2a5efa6d2fdfa40e6f1640987c86d4b9d0891b5a2c6741dfb225"
+
+[[sprig]]
+id = "root/@http"
+owner = "root"
+name = "http"
+kind = "local"
+path = "../../libraries/sprig-http"
+portable = true
+project-name = "sprig-http"
+source = "src"
+manifest-sha256 = "ba83d61ddedccdbf7c5b40f7fcf94ddd4105fa1649dd6bfe15a78d31940acfcb"
+
+[[sprig]]
+id = "root/@json-codec"
+owner = "root"
+name = "json-codec"
+kind = "local"
+path = "../../libraries/sprig-json-codec"
+portable = true
+project-name = "sprig-json-codec"
+source = "src"
+manifest-sha256 = "2f29fc720d35ead3e4ae6ce9168f73e8b7123ded7bbcde68f36044583e3f2074"

@@ -1,0 +1,30 @@
+import "@http/http.spr" as http
+import "@json-codec/codec.spr" as codec
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import "@std/text.spr" as text
+import "@std/time.spr" as time
+import java.io.IOException as IOException
+
+try:
+    let url = process.argument(0)
+    let output_path = process.argument(1)
+    let response = http.get(url, [], 3000)
+    if response.status < 200 or response.status >= 300:
+        throw Error("service returned HTTP " + response.status.toString())
+    let root = codec.root(json.parse(response.body))
+    let label = codec.required_string(root, "label")
+    let received = time.parse_utc(codec.required_string(root, "receivedAt"))
+    let canonical_time = time.format_utc(received)
+    let line = text.join([label, canonical_time], " | ")
+    let output_parent = files.parent(output_path)
+    if output_parent != null:
+        if not files.is_directory(output_parent):
+            files.make_directory(output_parent)
+    files.atomic_write_utf8(output_path, line)
+    print(files.read_utf8(output_path))
+catch problem: IOException:
+    print("file error: " + problem.message)
+catch problem: Error:
+    print("application error: " + problem.message)
