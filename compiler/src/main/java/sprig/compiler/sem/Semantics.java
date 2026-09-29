@@ -48,11 +48,7 @@ public final class Semantics {
                         || source == NativeType.FLOAT || source == NativeType.BOOL;
             }
             if (source instanceof JavaType javaSource) {
-                if (!javaTarget.clazz.isAssignableFrom(javaSource.clazz)) {
-                    return false;
-                }
-                return javaTarget.args.isEmpty() || javaSource.args.isEmpty()
-                        || javaTarget.args.equals(javaSource.args);
+                return JavaTypes.javaTypeCompatible(javaTarget, javaSource);
             }
             if (source instanceof ListType list) {
                 if (javaTarget.clazz == sprig.runtime.SprigList.class) {

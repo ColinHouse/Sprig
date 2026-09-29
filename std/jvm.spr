@@ -8,14 +8,14 @@ import java.util.Map as JavaMap
 import sprig.runtime.jvm.HostCollections as HostCollections
 
 generic T:
-    func list_snapshot(source: JavaList) -> List[T] throws Error:
+    func list_snapshot(source: JavaList[T]) -> List[T] throws Error:
         let snapshot = HostCollections.listSnapshot[T](source)
         if snapshot != null:
             return snapshot
         throw Error("java.util.List snapshot unexpectedly returned null")
 
 generic K, V:
-    func map_snapshot(source: JavaMap) -> Map[K, V] throws Error:
+    func map_snapshot(source: JavaMap[K, V]) -> Map[K, V] throws Error:
         let snapshot = HostCollections.mapSnapshot[K, V](source)
         if snapshot != null:
             return snapshot

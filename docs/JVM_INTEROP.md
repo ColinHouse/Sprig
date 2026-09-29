@@ -36,8 +36,8 @@ available), `sprig-callable` (concrete Fn0..Fn3 slots), `erased-generic`
 `interopReasonCodes` (stable ids such as `varargs-unsupported`,
 `wildcard-unsupported`, `raw-generic-boundary`,
 `explicit-type-arguments-required`, `generic-array-unsupported`,
-`generic-bound-unsupported`, `array-source-syntax-unavailable`,
-`bridge-superseded`), `parameterTypeShapes`/`returnTypeShape` (recursive
+`generic-bound-unsupported`, `generic-wrapper-unsupported`,
+`array-source-syntax-unavailable`, `bridge-superseded`), `parameterTypeShapes`/`returnTypeShape` (recursive
 `class`/`parameterized`/`type-variable`/`wildcard`/`generic-array`/`array`
 shapes), `adaptation` (the explicit helper when one exists),
 `sprigBoundaryType`, and method `typeParameters`. The legacy `usableFromSprig`
@@ -98,13 +98,23 @@ superclasses (`Source[String]` reached through `StringSource`). Java reference
 results stay conservatively nullable: `ArrayList[String].get` is `String?`, not
 `String`. Method type parameters are never inferred; a generic method requires
 explicit arguments, and a call that omits them is rejected with
-`explicit-type-arguments-required`. Wildcards cannot be written and wildcard
-members remain available only as erased/raw boundaries
-(`wildcard-unsupported`, `raw-generic-boundary`); recursive or intersection
-bounds (`generic-bound-unsupported`) and generic arrays `T[]`
-(`generic-array-unsupported`) are rejected. A raw Java generic type such as
-`ArrayList()` keeps its previous erased behavior and `api` labels it
-`erased-generic`.
+`explicit-type-arguments-required`. Recursive or intersection bounds
+(`generic-bound-unsupported`) and generic arrays `T[]`
+(`generic-array-unsupported`) are rejected, and imported class
+type-parameter bounds are validated at check time (simple class/interface
+bounds only).
+
+Raw evidence never becomes concrete evidence. A raw generic value cannot be
+assigned to, or passed where, a concrete parameterized type is expected;
+concrete arguments are checked invariantly and subtype conversions project
+arguments through the hierarchy (`ArrayList[String]` is accepted as
+`List[String]`, `ArrayList[Int32]` is not). Concrete-to-raw stays an erased
+boundary: a raw receiver such as `ArrayList()` keeps its previous erased
+behavior and `api` labels it `erased-generic`. Wildcards cannot be written,
+and a member whose signature contains one is rejected with
+`wildcard-unsupported`. `Short`, `Byte` and `Character` need value adapters,
+so they are rejected in generic argument position with
+`generic-wrapper-unsupported`; direct Java calls keep their scalar adapters.
 
 ## Collection adapters
 
@@ -122,9 +132,12 @@ if foreign != null:
     SomeJavaApi.acceptNames(copy)
 ```
 
-`list_snapshot`/`map_snapshot` copy in list order (map iteration order) and
-validate non-null contents: a Java null element/key/value raises a runtime
-error instead of leaking into a non-null Sprig collection. `list_copy`/
+The façade ties the element type to the source (`list_snapshot(source:
+JavaList[T])`, `map_snapshot(source: JavaMap[K, V])`), so
+`jvm.list_snapshot[String]` of a `List[Int32]` is rejected by the checker, not
+at runtime. `list_snapshot`/`map_snapshot` copy in list order (map iteration
+order) and validate non-null contents: a Java null element/key/value raises a
+runtime error instead of leaking into a non-null Sprig collection. `list_copy`/
 `map_copy` build independent `ArrayList`/`LinkedHashMap` copies; later mutation
 on either side is not visible on the other. The adapters are the only bridge:
 no implicit assignment conversion is added.

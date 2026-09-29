@@ -19,7 +19,7 @@ public final class HostCollections {
     private HostCollections() {}
 
     @SuppressWarnings("unchecked")
-    public static <T> SprigList<T> listSnapshot(List source) {
+    public static <T> SprigList<T> listSnapshot(List<T> source) {
         if (source == null) throw new SprigError("java.util.List is null");
         List<T> out = new ArrayList<>(source.size());
         for (Object value : source) {
@@ -33,22 +33,21 @@ public final class HostCollections {
     }
 
     @SuppressWarnings("unchecked")
-    public static <K, V> SprigMap<K, V> mapSnapshot(Map source) {
+    public static <K, V> SprigMap<K, V> mapSnapshot(Map<K, V> source) {
         if (source == null) throw new SprigError("java.util.Map is null");
         Map<K, V> out = new LinkedHashMap<>();
-        for (Object item : source.entrySet()) {
-            Map.Entry<?, ?> entry = (Map.Entry<?, ?>) item;
+        for (Map.Entry<K, V> entry : source.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null) {
                 throw new SprigError("java.util.Map contains a null key or value; "
                         + "the v1 snapshot adapter copies validated non-null contents only");
             }
-            out.put((K) entry.getKey(), (V) entry.getValue());
+            out.put(entry.getKey(), entry.getValue());
         }
         return new SprigMap<>(out);
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> ArrayList<T> listCopy(SprigList source) {
+    public static <T> ArrayList<T> listCopy(SprigList<T> source) {
         if (source == null) throw new SprigError("Sprig List is null");
         ArrayList<T> out = new ArrayList<>((int) source.size());
         for (Object value : source) {
@@ -58,15 +57,14 @@ public final class HostCollections {
         return out;
     }
 
-    @SuppressWarnings("unchecked")
-    public static <K, V> LinkedHashMap<K, V> mapCopy(SprigMap source) {
+    public static <K, V> LinkedHashMap<K, V> mapCopy(SprigMap<K, V> source) {
         if (source == null) throw new SprigError("Sprig Map is null");
         LinkedHashMap<K, V> out = new LinkedHashMap<>();
-        for (Object key : source.keys()) {
+        for (K key : source.keys()) {
             if (key == null) throw new SprigError("Sprig Map contains a null key");
-            Object value = source.get(key);
+            V value = source.get(key);
             if (value == null) throw new SprigError("Sprig Map contains a null value");
-            out.put((K) key, (V) value);
+            out.put(key, value);
         }
         return out;
     }

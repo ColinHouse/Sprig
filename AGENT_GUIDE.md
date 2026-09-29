@@ -54,11 +54,15 @@ can bind and emit the JVM signature; it does not promise generic element
 safety. `interopLevel` is `direct`, `concrete-generic`, `opaque-array`,
 `adaptable`, `sprig-callable`, `erased-generic`, or `unsupported`; reason codes
 are stable ids (`varargs-unsupported`, `wildcard-unsupported`,
-`raw-generic-boundary`, `explicit-type-arguments-required`, ...) and
+`raw-generic-boundary`, `explicit-type-arguments-required`,
+`generic-wrapper-unsupported`, ...) and
 `adaptation` names an explicit helper when one exists (`byte-array` via
 `sprig.runtime.jvm.HostBytes`, `collection-adapter` via `@std/jvm.spr`). Java
 arrays cross as opaque values with their exact JVM class; concrete generic
-arguments require explicit `Type[Arg]` application. Use `--member NAME` to
+arguments require explicit `Type[Arg]` application. Raw generic values never
+become concrete evidence: a parameterized target requires matching arguments
+(or a hierarchy projection), and wildcard or Short/Byte/Character generic
+shapes are rejected rather than erased silently. Use `--member NAME` to
 limit the metadata result while preserving overloads. `api` does not
 initialize classes.
 

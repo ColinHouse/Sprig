@@ -218,15 +218,20 @@ public final class JvmMetadata {
             return unsupported("generic-bound-unsupported",
                     "Java method type parameters with recursive or intersection bounds are not supported");
         }
+        if (hasShape(executable, JavaTypes.Shape.WILDCARD)) {
+            return unsupported("wildcard-unsupported", "Java wildcards are not supported");
+        }
+        if (genericWrapper(executable)) {
+            return unsupported("generic-wrapper-unsupported",
+                    "Short/Byte/Character generic arguments require an element adapter");
+        }
         List<String> codes = new ArrayList<>();
         boolean array = hasArray(executable);
         boolean collections = hasCollection(executable);
-        boolean wildcard = hasShape(executable, JavaTypes.Shape.WILDCARD);
         boolean typeVariable = hasShape(executable, JavaTypes.Shape.TYPE_VARIABLE);
         boolean parameterized = hasShape(executable, JavaTypes.Shape.PARAMETERIZED);
         boolean callable = callableBoundary(executable);
         if (array) codes.add("array-source-syntax-unavailable");
-        if (wildcard) codes.add("wildcard-unsupported");
         if (typeVariable) codes.add("raw-generic-boundary");
         if (executable.getTypeParameters().length > 0) codes.add("explicit-type-arguments-required");
         String level;
@@ -236,7 +241,7 @@ public final class JvmMetadata {
             level = "opaque-array";
         } else if (collections) {
             level = "adaptable";
-        } else if (wildcard || typeVariable) {
+        } else if (typeVariable) {
             level = "erased-generic";
         } else if (parameterized) {
             level = "concrete-generic";
@@ -262,16 +267,22 @@ public final class JvmMetadata {
         if (shape == JavaTypes.Shape.GENERIC_ARRAY) {
             return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
         }
+        if (shape == JavaTypes.Shape.WILDCARD) {
+            return unsupported("wildcard-unsupported", "Java wildcards are not supported");
+        }
+        if (JavaTypes.wrapperArgument(generic)) {
+            return unsupported("generic-wrapper-unsupported",
+                    "Short/Byte/Character generic arguments require an element adapter");
+        }
         List<String> codes = new ArrayList<>();
         if (array) codes.add("array-source-syntax-unavailable");
-        if (shape == JavaTypes.Shape.WILDCARD) codes.add("wildcard-unsupported");
         if (shape == JavaTypes.Shape.TYPE_VARIABLE) codes.add("raw-generic-boundary");
         String level;
         if (array) {
             level = "opaque-array";
         } else if (COLLECTION_KINDS.contains(field.getType())) {
             level = "adaptable";
-        } else if (shape == JavaTypes.Shape.WILDCARD || shape == JavaTypes.Shape.TYPE_VARIABLE) {
+        } else if (shape == JavaTypes.Shape.TYPE_VARIABLE) {
             level = "erased-generic";
         } else if (shape == JavaTypes.Shape.PARAMETERIZED) {
             level = "concrete-generic";
@@ -313,6 +324,14 @@ public final class JvmMetadata {
             if (COLLECTION_KINDS.contains(param)) return true;
         }
         return executable instanceof Method method && COLLECTION_KINDS.contains(method.getReturnType());
+    }
+
+    private static boolean genericWrapper(Executable executable) {
+        for (java.lang.reflect.Type type : executable.getGenericParameterTypes()) {
+            if (JavaTypes.wrapperArgument(type)) return true;
+        }
+        return executable instanceof Method method
+                && JavaTypes.wrapperArgument(method.getGenericReturnType());
     }
 
     private static boolean hasShape(Executable executable, JavaTypes.Shape target) {

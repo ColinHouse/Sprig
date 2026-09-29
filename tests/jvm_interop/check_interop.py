@@ -72,6 +72,11 @@ public final class Interop {
     public static List<String> names() { return List.of("ada", "grace"); }
     public static Map<String, Integer> counts() { return Map.of("a", 1, "b", 2); }
     public static List<Map<String, Integer>> nested() { return List.of(Map.of("k", 1)); }
+    public static List<Integer> integerList() { return List.of(1, 2); }
+    public static java.util.ArrayList<Integer> integerArrayList() { return new java.util.ArrayList<>(List.of(1)); }
+    public static List<Short> shorts() { return List.of((short) 1); }
+    public static List<Character> characters() { return List.of('a'); }
+    public static void acceptStrings(List<String> values) { }
     public static java.util.ArrayList<String> mutableNames() {
         return new java.util.ArrayList<>(List.of("ada", "grace"));
     }
@@ -90,6 +95,12 @@ public final class Interop {
         return java.security.MessageDigest.getInstance("SHA-256").digest(value);
     }
     public static String base64(byte[] value) { return java.util.Base64.getEncoder().encodeToString(value); }
+}
+''',
+    "Bounded.java": '''package audit;
+public class Bounded<T extends Number> {
+    public Bounded() {}
+    public T get() { return null; }
 }
 ''',
     "Box.java": '''package audit;
@@ -499,6 +510,110 @@ print(Interop.genericArray[String]("x"))
                generic_array.returncode == 1 and generic_array_json
                and "Java generic array types (T[]) are not supported" in generic_array_reasons,
                f"exit={generic_array.returncode} {generic_array.stdout}{generic_array.stderr}")
+
+        # ------------------------------------------- generic safety negatives
+        _, raw_assign = check_file("raw-to-concrete.spr", '''import audit.Interop as Interop
+import java.util.List as JavaList
+
+let raw = Interop.integerList()
+if raw != null:
+    let typed: JavaList[String] = raw
+''', "--json")
+        raw_assign_diag = diagnostic(raw_assign)
+        verify("check-raw-concrete-assignment",
+               raw_assign.returncode == 1 and raw_assign_diag
+               and raw_assign_diag["code"] == "SPR-TYPE-ASSIGN"
+               and "SPR-JVM-COMPILE" not in raw_assign.stdout + raw_assign.stderr,
+               f"exit={raw_assign.returncode} {raw_assign.stdout}{raw_assign.stderr}")
+
+        _, raw_argument = check_file("raw-concrete-argument.spr", '''import audit.Interop as Interop
+
+let raw = Interop.integerArrayList()
+if raw != null:
+    Interop.acceptStrings(raw)
+''', "--json")
+        raw_argument_diag = diagnostic(raw_argument)
+        verify("check-raw-concrete-argument",
+               raw_argument.returncode == 1 and raw_argument_diag
+               and raw_argument_diag["code"] == "SPR-JVM-MEMBER"
+               and "SPR-JVM-COMPILE" not in raw_argument.stdout + raw_argument.stderr,
+               f"exit={raw_argument.returncode} {raw_argument.stdout}{raw_argument.stderr}")
+
+        _, adapter_lie = check_file("adapter-lie.spr", '''import "@std/jvm.spr" as jvm
+import audit.Interop as Interop
+
+let raw = Interop.integerList()
+if raw != null:
+    let wrong = jvm.list_snapshot[String](raw)
+''', "--json")
+        adapter_lie_diag = diagnostic(adapter_lie)
+        verify("check-adapter-element-mismatch",
+               adapter_lie.returncode == 1 and adapter_lie_diag
+               and adapter_lie_diag["code"] == "SPR-TYPE-MISMATCH"
+               and "SPR-JVM-COMPILE" not in adapter_lie.stdout + adapter_lie.stderr,
+               f"exit={adapter_lie.returncode} {adapter_lie.stdout}{adapter_lie.stderr}")
+
+        _, genuine = run_file("adapter-genuine.spr", '''import "@std/jvm.spr" as jvm
+import audit.Interop as Interop
+
+let raw = Interop.integerList()
+if raw != null:
+    let right = jvm.list_snapshot[Int32](raw)
+    print(right.size())
+''')
+        verify("run-adapter-element-match",
+               genuine.returncode == 0 and genuine.stdout == "2\n",
+               f"exit={genuine.returncode} stdout={genuine.stdout!r} stderr={genuine.stderr!r}")
+
+        shorts_api = members.get("shorts", {})
+        characters_api = members.get("characters", {})
+        verify("api-wrapper-generics",
+               not shorts_api.get("signatureSupported") and not characters_api.get("signatureSupported")
+               and "generic-wrapper-unsupported" in shorts_api.get("interopReasonCodes", [])
+               and "generic-wrapper-unsupported" in characters_api.get("interopReasonCodes", []),
+               f"shorts={shorts_api.get('interopReasonCodes')} chars={characters_api.get('interopReasonCodes')}")
+
+        _, wrapper_call = check_file("wrapper-generic.spr", '''import audit.Interop as Interop
+let values = Interop.shorts()
+''', "--json")
+        wrapper_diag = diagnostic(wrapper_call)
+        wrapper_reasons = [c.get("rejectedBecause") for c in
+                           (wrapper_diag or {}).get("data", {}).get("candidates", [])]
+        verify("check-wrapper-generic-rejected",
+               wrapper_call.returncode == 1 and wrapper_diag
+               and any(reason and "element adapter" in reason for reason in wrapper_reasons),
+               f"exit={wrapper_call.returncode} reasons={wrapper_reasons}")
+
+        _, bounded_class = check_file("bounded-class.spr", '''import audit.Bounded as Bounded
+let box = Bounded[String]()
+''', "--json")
+        bounded_class_diag = diagnostic(bounded_class)
+        verify("check-bounded-class-rejected",
+               bounded_class.returncode == 1 and bounded_class_diag
+               and bounded_class_diag["code"] == "SPR-TYPE-MISMATCH"
+               and "SPR-JVM-COMPILE" not in bounded_class.stdout + bounded_class.stderr,
+               f"exit={bounded_class.returncode} {bounded_class.stdout}{bounded_class.stderr}")
+
+        _, bounded_ok = check_file("bounded-class-ok.spr", '''import audit.Bounded as Bounded
+let box = Bounded[Int32]()
+let value = box.get()
+if value != null:
+    print(value)
+''')
+        verify("check-bounded-class-accepted", bounded_ok.returncode == 0,
+               f"exit={bounded_ok.returncode} {bounded_ok.stdout}{bounded_ok.stderr}")
+
+        _, wildcard_call = check_file("wildcard-invocation.spr", '''import audit.Interop as Interop
+let values = Interop.wildcardResult()
+''', "--json")
+        wildcard_diag = diagnostic(wildcard_call)
+        wildcard_reasons = [c.get("rejectedBecause") for c in
+                            (wildcard_diag or {}).get("data", {}).get("candidates", [])]
+        verify("check-wildcard-invocation-rejected",
+               wildcard_call.returncode == 1 and wildcard_diag
+               and wildcard_diag["code"] == "SPR-JVM-MEMBER"
+               and "Java wildcards are not supported" in wildcard_reasons,
+               f"exit={wildcard_call.returncode} reasons={wildcard_reasons}")
 
         # ------------------------------------------------- collection adapters
         _, adapters = run_file("adapters.spr", ADAPTERS)

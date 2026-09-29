@@ -6,8 +6,8 @@ import java.lang.StringBuilder as StringBuilder
 import java.lang.Integer as Integer
 import java.lang.Math as Math
 import java.lang.System as System
-import java.lang.Class as Class
-import java.lang.ClassNotFoundException as ClassNotFound
+import java.net.URI as URI
+import java.net.URISyntaxException as URISyntax
 
 let names = ArrayList()
 names.add("ada")
@@ -31,20 +31,20 @@ let version = System.getProperty("java.version")
 if version != null:
     print(version.length() > 0)
 
-func load_class(name: String) -> String throws ClassNotFound:
-    let loaded = Class.forName(name)
-    if loaded != null:
-        let simple_name = loaded.getSimpleName()
-        if simple_name != null:
-            return simple_name
+func parse_uri(text: String) -> String throws URISyntax:
+    let uri = URI(text)
+    if uri != null:
+        let host = uri.getHost()
+        if host != null:
+            return host
     return ""
 
-print(load_class("java.lang.String"))
+print(parse_uri("https://example.com"))
 
 try:
-    print(load_class("does.not.Exist"))
-catch problem: ClassNotFound:
-    print("class not found: " + problem.message)
+    print(parse_uri("::bad"))
+catch problem: URISyntax:
+    print("bad uri")
 finally:
     print("lookup done")
 

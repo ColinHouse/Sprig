@@ -142,6 +142,11 @@ public final class JavaTypes {
     public static Type mapArgument(java.lang.reflect.Type generic,
             Map<TypeVariable<?>, Type> bindings) {
         if (generic instanceof Class<?> clazz) {
+            // Short/Byte/Character need an element adapter (as Fn slots already
+            // document); mapping them to Int32/String would cast wrongly.
+            if (clazz == Short.class || clazz == Byte.class || clazz == Character.class) {
+                return null;
+            }
             return map(clazz);
         }
         if (generic instanceof TypeVariable<?> variable) {
@@ -234,12 +239,51 @@ public final class JavaTypes {
     }
 
     /**
-     * Whether written arguments satisfy a Java method's type-parameter bounds.
-     * Only ordinary concrete class/interface bounds are checked; parameterized
-     * or variable bounds are outside the profile.
+     * Invariant Java generic compatibility. Concrete arguments must project
+     * exactly onto the target's type variables through the source hierarchy:
+     * concrete -> raw is an erased boundary, raw -> concrete is never allowed.
      */
-    public static boolean boundsSatisfied(java.lang.reflect.Executable executable, List<Type> arguments) {
-        TypeVariable<?>[] variables = executable.getTypeParameters();
+    public static boolean javaTypeCompatible(JavaType target, JavaType source) {
+        if (source == null || !target.clazz.isAssignableFrom(source.clazz)) {
+            return false;
+        }
+        if (target.args.isEmpty()) {
+            return true; // concrete source to raw target stays an erased boundary
+        }
+        if (target.clazz == source.clazz) {
+            return target.args.equals(source.args);
+        }
+        List<Type> projected = projectedArguments(target.clazz, source.clazz, source.args);
+        return projected != null && target.args.equals(projected);
+    }
+
+    /** Projects source arguments onto target type variables through the hierarchy. */
+    public static List<Type> projectedArguments(Class<?> target, Class<?> source,
+            List<Type> sourceArguments) {
+        Map<Class<?>, Map<TypeVariable<?>, Type>> hierarchy =
+                hierarchyBindings(source, sourceArguments);
+        Map<TypeVariable<?>, Type> bindings = hierarchy.get(target);
+        if (bindings == null) {
+            return null;
+        }
+        TypeVariable<?>[] variables = target.getTypeParameters();
+        List<Type> out = new ArrayList<>(variables.length);
+        for (TypeVariable<?> variable : variables) {
+            Type bound = bindings.get(variable);
+            if (bound == null) {
+                return null; // an unbound variable means the source is raw here
+            }
+            out.add(bound);
+        }
+        return out;
+    }
+
+    /**
+     * Whether written arguments satisfy type-parameter bounds. Only ordinary
+     * concrete class/interface bounds are checked; parameterized or variable
+     * bounds are outside the profile.
+     */
+    public static boolean boundsSatisfied(TypeVariable<?>[] variables, List<Type> arguments) {
         if (arguments == null || arguments.size() != variables.length) {
             return false;
         }
@@ -254,6 +298,36 @@ public final class JavaTypes {
             }
         }
         return true;
+    }
+
+    public static boolean boundsSatisfied(java.lang.reflect.Executable executable, List<Type> arguments) {
+        return boundsSatisfied(executable.getTypeParameters(), arguments);
+    }
+
+    /**
+     * Whether a signature puts Short/Byte/Character inside a parameterized
+     * type, where erasure hides the value adapter. A direct wrapper
+     * parameter/result keeps its normal adapter and is not flagged.
+     */
+    public static boolean wrapperArgument(java.lang.reflect.Type type) {
+        if (type instanceof ParameterizedType applied) {
+            for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                if (wrapperInside(argument)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean wrapperInside(java.lang.reflect.Type type) {
+        if (type instanceof Class<?> clazz) {
+            return clazz == Short.class || clazz == Byte.class || clazz == Character.class;
+        }
+        if (type instanceof ParameterizedType applied) {
+            for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                if (wrapperInside(argument)) return true;
+            }
+        }
+        return false;
     }
 
     /** Where a generic shape sits in the supported concrete profile. */

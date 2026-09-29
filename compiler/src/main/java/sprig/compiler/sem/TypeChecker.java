@@ -3544,12 +3544,13 @@ public final class TypeChecker {
             return 3;
         }
         if (target instanceof JavaType javaTarget && base instanceof JavaType javaSource) {
-            if (javaTarget.clazz.equals(javaSource.clazz)
-                    && (javaTarget.args.isEmpty() || javaSource.args.isEmpty()
-                    || javaTarget.args.equals(javaSource.args))) {
-                return 3;
+            if (!JavaTypes.javaTypeCompatible(javaTarget, javaSource)) {
+                return -1;
             }
-            return JavaTypes.rawAssignable(javaTarget.clazz, base) ? 1 : -1;
+            if (javaTarget.args.isEmpty()) {
+                return 1; // raw target keeps the erased-boundary weight
+            }
+            return javaTarget.clazz.equals(javaSource.clazz) ? 3 : 2;
         }
         if (target instanceof ListType listTarget && base instanceof ListType listSource) {
             return listTarget.equals(listSource) ? 3 : -1;
@@ -3594,23 +3595,36 @@ public final class TypeChecker {
     private static int scoreCandidate(java.lang.reflect.Executable executable, List<Type> args,
                                       List<Expr.Arg> writtenArgs) {
         Class<?>[] raw = executable.getParameterTypes();
-        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         if (raw.length != args.size()) return -1;
         int score = 0;
         for (int i = 0; i < raw.length; i++) {
             Type arg = args.get(i);
             if (arg == NativeType.ERROR) continue;
-            if (JavaTypes.isCallableClass(raw[i])) {
-                FunctionType expected = JavaTypes.callable(generic[i]);
-                if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
-                score += 4;
-            } else {
-                int next = scoreArgument(raw[i], arg, writtenArgs.get(i).value);
-                if (next < 0) return -1;
-                score += next;
-            }
+            int next = scoreJvmArgument(executable, i, arg, writtenArgs.get(i).value);
+            if (next < 0) return -1;
+            score += next;
         }
         return score;
+    }
+
+    /**
+     * One Java formal, using the concrete generic type when the signature
+     * carries one. A parameterized formal never silently accepts arguments by
+     * raw class alone ({@code ArrayList<Integer>} is not {@code List<String>}).
+     */
+    private static int scoreJvmArgument(java.lang.reflect.Executable executable, int index,
+                                        Type arg, Expr expr) {
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        if (JavaTypes.isCallableClass(raw[index])) {
+            FunctionType expected = JavaTypes.callable(generic[index]);
+            if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
+            return 4;
+        }
+        if (generic[index] != raw[index]) {
+            return scoreBoundArgument(JavaTypes.mapFormal(generic[index], raw[index]), arg, expr);
+        }
+        return scoreArgument(raw[index], arg, expr);
     }
 
     private static int scoreCandidate(Class<?>[] params, List<Type> args, List<Expr.Arg> writtenArgs) {
@@ -3775,7 +3789,7 @@ public final class TypeChecker {
                     } else {
                         for (int i = 0; i < params.length; i++) {
                             if (argumentTypes.get(i).isNullable()) { reason = "nullable argument " + (i + 1); break; }
-                            if (scoreArgument(params[i], argumentTypes.get(i), call.args.get(i).value) < 0) {
+                            if (scoreJvmArgument(candidate, i, argumentTypes.get(i), call.args.get(i).value) < 0) {
                                 reason = "incompatible or narrowing argument " + (i + 1); break;
                             }
                         }

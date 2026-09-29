@@ -35,8 +35,10 @@ by the historical design kit in `spec/`.
   calls, overloads, and checked exceptions. Java arrays cross the boundary as
   opaque values (no source array syntax; varargs remain unsupported). Concrete
   generic arguments are preserved for explicit `Type[Arg]` application on
-  imported classes and methods; wildcards, inference, recursive bounds and
-  generic arrays are rejected with structured reasons, and raw boundaries stay
+  imported classes and methods; wildcards, inference, recursive and
+  intersection bounds, generic arrays and Short/Byte/Character generic
+  arguments are rejected with structured reasons, class bounds are validated,
+  raw evidence never promotes to concrete arguments, and raw boundaries stay
   erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
   implicit Java/Sprig collection conversion. Type-use nullability annotations
   are not interpreted. Java reference results are conservatively nullable; Java

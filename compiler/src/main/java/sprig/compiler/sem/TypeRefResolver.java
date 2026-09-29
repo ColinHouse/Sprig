@@ -247,7 +247,8 @@ public final class TypeRefResolver {
             return null;
         }
         List<Type> args = new ArrayList<>();
-        for (TypeRef argRef : argRefs) {
+        for (int i = 0; i < argRefs.size(); i++) {
+            TypeRef argRef = argRefs.get(i);
             Type arg = resolve(module, argRef, typeParams, false);
             sprig.compiler.diag.Span argSpan = argRef != null && argRef.span != null ? argRef.span : span;
             if (arg.isNullable()) {
@@ -264,9 +265,38 @@ public final class TypeRefResolver {
                         .withHint("Use a native Sprig type, a concrete Java class, a Sprig collection or a generic parameter."));
                 return null;
             }
+            if (!satisfiesJavaBound(clazz, i, arg, module, argSpan)) {
+                return null;
+            }
             args.add(arg);
         }
         return args;
+    }
+
+    /** Simple class/interface bounds only; recursive or intersection bounds are rejected. */
+    private boolean satisfiesJavaBound(Class<?> clazz, int index, Type arg, Module module,
+                                       sprig.compiler.diag.Span span) {
+        for (java.lang.reflect.Type bound : clazz.getTypeParameters()[index].getBounds()) {
+            if (bound == Object.class) {
+                continue;
+            }
+            if (!(bound instanceof Class<?> boundClass)) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
+                        "Java type '" + clazz.getName() + "' declares a recursive or intersection bound; "
+                                + "only simple class/interface bounds are supported",
+                        module.uri, span));
+                return false;
+            }
+            Class<?> erased = JavaTypes.boxedFor(arg);
+            if (erased == null || erased == Object.class || !boundClass.isAssignableFrom(erased)) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
+                        "Type argument '" + arg.display() + "' does not satisfy Java bound '"
+                                + boundClass.getName() + "' required by '" + clazz.getName() + "'",
+                        module.uri, span));
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean representableJavaArgument(Type arg) {
