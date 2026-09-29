@@ -33,15 +33,25 @@ public final class GitCache {
 
     /** Redacts credentials from a URL for every user-visible output. */
     public static String redact(String url) {
-        int scheme = url.indexOf("://");
-        if (scheme < 0) {
-            return url;
+        int query = url.indexOf('?');
+        int fragment = url.indexOf('#');
+        int end = url.length();
+        if (query >= 0) end = Math.min(end, query);
+        if (fragment >= 0) end = Math.min(end, fragment);
+        String safe = url.substring(0, end);
+        int scheme = safe.indexOf("://");
+        if (scheme >= 0) {
+            int at = safe.indexOf('@', scheme + 3);
+            int slash = safe.indexOf('/', scheme + 3);
+            if (at >= 0 && (slash < 0 || at < slash))
+                safe = safe.substring(0, scheme + 3) + "***@" + safe.substring(at + 1);
+        } else {
+            int at = safe.indexOf('@');
+            int colon = safe.indexOf(':');
+            if (at >= 0 && (colon < 0 || at < colon))
+                safe = "***@" + safe.substring(at + 1);
         }
-        int at = url.indexOf('@', scheme + 3);
-        if (at < 0) {
-            return url;
-        }
-        return url.substring(0, scheme + 3) + "***@" + url.substring(at + 1);
+        return query >= 0 ? safe + "?***" : safe;
     }
 
     public boolean available() {

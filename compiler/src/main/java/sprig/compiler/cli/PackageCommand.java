@@ -286,8 +286,8 @@ final class PackageCommand {
         try {
             java.net.URI uri = java.net.URI.create(url);
             boolean scpUser = !url.contains("://") && url.matches("^[^/]+@[^:]+:.+");
-            if (uri.getUserInfo() != null || scpUser)
-                throw new UsageException("Credentialed Git URLs are unsupported; configure Git authentication outside the manifest");
+            if (uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null || scpUser)
+                throw new UsageException("Git URL credentials, query parameters and fragments are unsupported; configure Git authentication outside the manifest");
         } catch (IllegalArgumentException e) {
             throw new UsageException("Invalid Git URL: " + e.getMessage());
         }

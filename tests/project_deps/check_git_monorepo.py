@@ -79,6 +79,7 @@ def main():
         write(work / "packages/nested/b/src/b.spr", "func value() -> Int:\n    return 1\n")
         write(work / "packages/other/sprig.toml", manifest("package-other", ["other.spr"]))
         write(work / "packages/other/src/other.spr", "func value() -> Int:\n    return 2\n")
+        shutil.copytree(ROOT / "libraries/sprig-json-codec", work / "libraries/sprig-json-codec")
         write(work / "packages/marker.txt", "not a package")
         git(work, "add", "-A")
         committed = git(work, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
@@ -100,6 +101,10 @@ def main():
         source = '''import "@a/a.spr" as a
 import "@other/other.spr" as other
 import "@btop/b.spr" as btop
+import "@std/json.spr" as json
+import "@json-codec/codec.spr" as codec
+let data = codec.root(json.parse("{\\"name\\":\\"json-codec\\"}"))
+print(codec.required_string(data, "name"))
 print(a.value() + other.value() + btop.value())
 '''
         branch_app = base / "branch-app"
@@ -107,38 +112,41 @@ print(a.value() + other.value() + btop.value())
             dependency("a", url, {"branch": "main"}, "packages/./a"),
             dependency("other", url, {"branch": "main"}, "packages/other"),
             dependency("btop", url, {"branch": "main"}, "packages/nested/b"),
+            dependency("json-codec", url, {"tag": "v1.0"}, "libraries/sprig-json-codec"),
         ], source)
         resolved = sprig(branch_app, "resolve", "--json")
         check("branch-subdir-resolve", resolved.returncode == 0,
               resolved.stdout + resolved.stderr)
         lock = (branch_app / "sprig.lock").read_text(encoding="utf-8")
-        check("same-repo-multiple-subdirs-locked", lock.count(f'revision = "{revision}"') == 3
+        check("same-repo-multiple-subdirs-locked", lock.count(f'revision = "{revision}"') == 4
               and 'subdir = "packages/a"' in lock
               and 'subdir = "packages/other"' in lock
-              and 'subdir = "packages/nested/b"' in lock,
+              and 'subdir = "packages/nested/b"' in lock
+              and 'subdir = "libraries/sprig-json-codec"' in lock,
               lock)
         check("transitive-package-edge-identity", 'id = "root/@a/@b"' in lock
               and 'id = "root/@btop"' in lock, lock)
         resolve_json = json.loads(resolved.stdout)
         git_rows = [row for row in resolve_json["sprig"] if row["kind"] == "git"]
         check("resolve-json-subdir", sorted(row["subdir"] for row in git_rows)
-              == ["packages/a", "packages/nested/b", "packages/other"],
+              == ["libraries/sprig-json-codec", "packages/a", "packages/nested/b", "packages/other"],
               json.dumps(git_rows, sort_keys=True))
         result = sprig(branch_app, "run")
-        check("branch-subdir-run-through-transitive", result.returncode == 0
-              and result.stdout == "4\n", result.stdout + result.stderr)
+        check("branch-subdir-run-through-transitive-and-codec", result.returncode == 0
+              and result.stdout == "json-codec\n4\n", result.stdout + result.stderr)
         first_lock = lock
         repeat_resolve = sprig(branch_app, "resolve")
         check("subdir-lock-deterministic", repeat_resolve.returncode == 0
               and (branch_app / "sprig.lock").read_text(encoding="utf-8") == first_lock,
               repeat_resolve.stdout + repeat_resolve.stderr)
         offline = sprig(branch_app, "run", "--offline")
-        check("subdir-offline-run", offline.returncode == 0 and offline.stdout == "4\n",
+        check("subdir-offline-run", offline.returncode == 0 and offline.stdout == "json-codec\n4\n",
               offline.stdout + offline.stderr)
         moved = base / "moved-branch-app"
         shutil.copytree(branch_app, moved)
         relocated = sprig(moved, "run", "--offline")
-        check("subdir-consumer-relocation", relocated.returncode == 0 and relocated.stdout == "4\n",
+        check("subdir-consumer-relocation", relocated.returncode == 0
+              and relocated.stdout == "json-codec\n4\n",
               relocated.stdout + relocated.stderr)
 
         # A manifest change from one package root to another must stale the exact lock edge.

@@ -4,6 +4,7 @@ import json
 import hashlib
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import zipfile
@@ -112,6 +113,7 @@ def main():
               '[project]\nname = "codec"\nversion = "0.1.0"\nlanguage = "0.8"\n'
               'source = "src"\nexports = ["codec.spr"]\n')
         write(repo / "packages/codec/src/codec.spr", "func value() -> Int:\n    return 8\n")
+        shutil.copytree(ROOT / "libraries/sprig-json-codec", repo / "libraries/sprig-json-codec")
         subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
         committed = git(repo, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
                         "commit", "-q", "-m", "codec")
@@ -125,6 +127,54 @@ def main():
         pushed = git(repo, "push", "-q", "origin", "main", "--tags")
         assert pushed.returncode == 0, pushed.stderr
         git_url = bare.as_uri()
+
+        # Maven is resolved through a tiny file repository, without public network access.
+        maven_repo = root / "maven-repository"
+        coordinate = maven_repo / "fixture" / "tiny" / "1.0"
+        coordinate.mkdir(parents=True)
+        pom = ('<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+               '<groupId>fixture</groupId><artifactId>tiny</artifactId><version>1.0</version>'
+               '<packaging>jar</packaging></project>')
+        (coordinate / "tiny-1.0.pom").write_text(pom, encoding="utf-8")
+        with zipfile.ZipFile(coordinate / "tiny-1.0.jar", "w") as archive:
+            archive.writestr("fixture.txt", "tiny")
+        for artifact in (coordinate / "tiny-1.0.pom", coordinate / "tiny-1.0.jar"):
+            artifact.with_name(artifact.name + ".sha1").write_text(
+                hashlib.sha1(artifact.read_bytes()).hexdigest(), encoding="ascii")
+        maven_env = dict(env, SPRIG_MAVEN_REPOSITORY=maven_repo.as_uri(),
+                         SPRIG_MAVEN_CACHE=str(root / "maven-cache"))
+
+        git_workflow = root / "agent-git-app"
+        git_init = sprig(root, "init", git_workflow, "--json", env=env)
+        assert git_init.returncode == 0, (git_init.stdout, git_init.stderr)
+        write(git_workflow / "src/main.spr",
+              'import "@std/json.spr" as json\n'
+              'import "@json-codec/codec.spr" as codec\n'
+              'let root = codec.root(json.parse("{\\"name\\":\\"Sprig\\"}"))\n'
+              'print(codec.required_string(root, "name"))\n')
+        git_workflow_add = sprig(git_workflow, "add", "json-codec", "--git", git_url,
+                                 "--tag", "v1", "--subdir", "libraries/sprig-json-codec",
+                                 "--json", env=maven_env)
+        check("agent-flow-add-json-codec-from-git-subdir", git_workflow_add.returncode == 0,
+              git_workflow_add.stdout + git_workflow_add.stderr)
+        git_workflow_jvm = sprig(git_workflow, "add", "--jvm", "fixture:tiny:1.0", "--json", env=maven_env)
+        check("agent-flow-add-jvm", git_workflow_jvm.returncode == 0,
+              git_workflow_jvm.stdout + git_workflow_jvm.stderr)
+        git_workflow_deps = sprig(git_workflow, "deps", "--json", env=maven_env)
+        check("agent-flow-git-deps-json", git_workflow_deps.returncode == 0
+              and "json-codec" in git_workflow_deps.stdout, git_workflow_deps.stdout + git_workflow_deps.stderr)
+        git_workflow_api = sprig(git_workflow, "api", "@json-codec/codec.spr", "--json", env=maven_env)
+        check("agent-flow-git-api", git_workflow_api.returncode == 0
+              and "required_string" in git_workflow_api.stdout,
+              git_workflow_api.stdout + git_workflow_api.stderr)
+        git_workflow_test = sprig(git_workflow, "test", "--json", env=maven_env)
+        check("agent-flow-git-test", git_workflow_test.returncode == 0,
+              git_workflow_test.stdout + git_workflow_test.stderr)
+        git_workflow_run = sprig(git_workflow, "run", "--json", env=maven_env)
+        check("agent-flow-git-run", git_workflow_run.returncode == 0
+              and json.loads(git_workflow_run.stdout).get("programOutput") == "Sprig\n",
+              git_workflow_run.stdout + git_workflow_run.stderr)
+
         branch_add = sprig(project, "add", "branch-codec", "--git", git_url,
                            "--branch", "main", "--subdir", "packages/codec", "--json", env=env)
         try:
@@ -152,6 +202,14 @@ def main():
 
         before_bad_git_manifest = (project / "sprig.toml").read_bytes()
         before_bad_git_lock = (project / "sprig.lock").read_bytes()
+        credentialed = sprig(project, "add", "credentialed", "--git",
+                             "https://token@example.invalid/repo.git", "--branch", "main",
+                             "--json", env=env)
+        check("credentialed-git-url-rejected", credentialed.returncode == 1
+              and (project / "sprig.toml").read_bytes() == before_bad_git_manifest
+              and (project / "sprig.lock").read_bytes() == before_bad_git_lock
+              and "authentication outside the manifest" in credentialed.stdout,
+              credentialed.stdout + credentialed.stderr)
         bad_git = sprig(project, "add", "bad-git", "--git", (root / "missing.git").as_uri(),
                         "--branch", "main", "--json", env=env)
         try:
@@ -209,21 +267,6 @@ def main():
               and "# retain this user note" in remaining_text,
               comment_remove.stdout + comment_remove.stderr + remaining_text)
 
-        # Maven is resolved through a tiny file repository, without public network access.
-        maven_repo = root / "maven-repository"
-        coordinate = maven_repo / "fixture" / "tiny" / "1.0"
-        coordinate.mkdir(parents=True)
-        pom = ('<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
-               '<groupId>fixture</groupId><artifactId>tiny</artifactId><version>1.0</version>'
-               '<packaging>jar</packaging></project>')
-        (coordinate / "tiny-1.0.pom").write_text(pom, encoding="utf-8")
-        with zipfile.ZipFile(coordinate / "tiny-1.0.jar", "w") as archive:
-            archive.writestr("fixture.txt", "tiny")
-        for artifact in (coordinate / "tiny-1.0.pom", coordinate / "tiny-1.0.jar"):
-            artifact.with_name(artifact.name + ".sha1").write_text(
-                hashlib.sha1(artifact.read_bytes()).hexdigest(), encoding="ascii")
-        maven_env = dict(env, SPRIG_MAVEN_REPOSITORY=maven_repo.as_uri(),
-                         SPRIG_MAVEN_CACHE=str(root / "maven-cache"))
         invalid_coord_before = (project / "sprig.toml").read_bytes()
         invalid_coord_lock = (project / "sprig.lock").read_bytes()
         invalid_coordinate = sprig(project, "add", "--jvm", "bad!:tiny:1.0", "--json", env=maven_env)
@@ -258,11 +301,13 @@ def main():
         write(failure_project / "src/main.spr", "print(1)\n")
         before_failure = (failure_project / "sprig.toml").read_bytes()
         (failure_project / "sprig.lock").mkdir()
+        write(failure_project / "sprig.lock/keep", "old lock destination marker\n")
+        old_lock_marker = (failure_project / "sprig.lock/keep").read_bytes()
         lock_publish_failure = sprig(failure_project, "add", "lib", "--path", "../local-lib",
                                      "--json", env=env)
         check("lock-publication-failure-rolls-back-manifest", lock_publish_failure.returncode != 0
               and (failure_project / "sprig.toml").read_bytes() == before_failure
-              and (failure_project / "sprig.lock").is_dir(),
+              and (failure_project / "sprig.lock/keep").read_bytes() == old_lock_marker,
               lock_publish_failure.stdout + lock_publish_failure.stderr)
         check("failure-cleans-temp-files", not list(failure_project.glob(".sprig-*.tmp")),
               str(list(failure_project.iterdir())))

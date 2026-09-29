@@ -66,7 +66,7 @@ without symlink capability fail explicitly for packages requiring them. POSIX mo
 checks apply where that attribute view exists; Windows ACL execute rights are not
 a Git executable bit. OS file locks serialize installation. Offline mode never fetches or follows a
 branch or tag; Git must still be available to verify cached content. Credentialed URLs,
-submodules, authentication and dependency build hooks are unsupported.
+URLs with query/fragment data, submodules, authentication and dependency build hooks are unsupported.
 
 ## Editing dependencies
 
