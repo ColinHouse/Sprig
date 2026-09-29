@@ -66,6 +66,11 @@ shapes are rejected rather than erased silently. Use `--member NAME` to
 limit the metadata result while preserving overloads. `api` does not
 initialize classes.
 
+Generate an editable wrapper for an ecosystem class with
+`bin/sprig wrap com.example.Client --out client.spr --json`; it uses the same
+classpath as `api`, skips unsupported members with the shared reason codes and
+never writes a file that fails checking.
+
 `api` also accepts a `.spr` module path, `@package/module.spr`, or a project
 directory. It returns resolved declarations after normal checking: function
 parameters/result/throws, class fields and methods, enums, variants and generic

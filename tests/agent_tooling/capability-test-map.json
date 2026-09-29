@@ -86,6 +86,9 @@
   "feature.formatter": [
     "tests/formatter/check_formatter.py"
   ],
+  "feature.wrap": [
+    "tests/wrap/check_wrap.py"
+  ],
   "feature.foreignConformance": [
     "tests/conform/check_conform.py"
   ],
