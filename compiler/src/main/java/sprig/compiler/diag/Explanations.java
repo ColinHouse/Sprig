@@ -590,6 +590,14 @@ public final class Explanations {
                         "Re-run with `sprig run --stacktrace` when the raw JVM stack is needed for debugging."));
                 out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.TYPE_NULLABLE));
             }
+            case Codes.WRAP_CHECK -> {
+                out.put("whyMatters", "The wrapper generator must emit ordinary Sprig source that checks under the same classpath; a failed check means no file was written.");
+                out.put("commonCauses", List.of("The Java shape slipped outside the shared interop profile during generation.",
+                        "The generator produced a conversion the checker rejects (a generator bug worth reporting)."));
+                out.put("safeFixes", List.of("Run sprig api on the class and check interopReasonCodes for the member.",
+                        "Generate with --member to isolate the member, and report the exact javaSignature with the diagnostic."));
+                out.put("relatedCodes", List.of(Codes.API_MEMBER, Codes.JVM_MEMBER));
+            }
             case Codes.CLI_OPTION -> {
                 out.put("whyMatters", "The CLI contract is exact: missing arguments and unknown options fail instead of guessing.");
                 out.put("commonCauses", List.of("A required argument or file path is missing.",
@@ -615,7 +623,7 @@ public final class Explanations {
         if (code.startsWith("SPR-PROJECT-")) return "projects";
         if (code.startsWith("SPR-MODULE-") || code.equals(Codes.NAME_IMPORT)
                 || code.equals(Codes.NAME_IMPORT_CYCLE) || code.equals(Codes.NAME_MODULE)) return "modules";
-        if (code.startsWith("SPR-API-") || code.startsWith("SPR-CLI-")) return "agents";
+        if (code.startsWith("SPR-API-") || code.startsWith("SPR-CLI-") || code.startsWith("SPR-WRAP-")) return "agents";
         if (code.startsWith("SPR-LEX-") || code.startsWith("SPR-SYNTAX-")) return "language";
         if (code.startsWith("SPR-FLOW-") || code.startsWith("SPR-RUNTIME-")) return "errors";
         if (code.startsWith("SPR-CALL-")) return "classes";

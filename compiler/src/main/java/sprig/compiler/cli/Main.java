@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import sprig.compiler.diag.JsonWriter;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
 import sprig.compiler.diag.Version;
+import sprig.compiler.front.SourceFormatter;
 import sprig.compiler.gen.JavaGenerator;
 import sprig.compiler.jvm.JavaRunner;
 import sprig.compiler.jvm.JavacRunner;
@@ -37,6 +39,7 @@ import sprig.compiler.jvm.JvmClasspath;
 import sprig.compiler.jvm.JvmMetadata;
 import sprig.compiler.tooling.Catalog;
 import sprig.compiler.tooling.SprigApi;
+import sprig.compiler.tooling.WrapGenerator;
 import sprig.compiler.tooling.ToolJson;
 import sprig.runtime.SprigRuntime;
 
@@ -102,6 +105,7 @@ public final class Main {
             case "codes" -> codes(args);
             case "capabilities" -> capabilities(args);
             case "api" -> api(args);
+            case "wrap" -> wrap(args);
             case "doctor" -> doctor(args);
             case "upgrade" -> ManagedSdkUpgrade.run(args);
             default -> {
@@ -125,13 +129,14 @@ public final class Main {
         out.println("  capabilities [--json]                      implemented feature inventory");
         out.println("  api <Java.Class> [--member NAME] [--classpath PATH] [--json] inspect JVM signatures");
         out.println("  api <module.spr|@pkg/module.spr|.> [--member NAME] [--json]   inspect checked Sprig API");
+        out.println("  wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json] generate a Sprig wrapper");
         out.println("  doctor [--classpath PATH] [--json]          inspect compiler environment");
         out.println("  init [dir]                                  create sprig.toml and src/main.spr");
         out.println("  resolve [--offline] [--json]               resolve dependencies and write sprig.lock");
         out.println("  project [--json]                            project discovery and manifest metadata");
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");
-        out.println("  check/build/run accept repeated --classpath JAR_OR_DIR");
+        out.println("  check/build/run/api/wrap accept repeated --classpath JAR_OR_DIR");
         out.println("  fmt <file.spr|directory> [--check] [--json] canonical comment-preserving formatting");
         out.println("  version");
     }
@@ -515,6 +520,119 @@ public final class Main {
         return String.join(", ", parts);
     }
 
+    private static int wrap(String[] args) throws IOException {
+        Options options = Options.parse(args, 1);
+        Diagnostics diagnostics = new Diagnostics();
+        int prepared = prepare(options, diagnostics, "wrap");
+        if (prepared != 0) return prepared;
+        if (options.file == null) {
+            return commandError("wrap", "Missing <fully.qualified.JavaClass>", options.json);
+        }
+        if (!options.outDirSpecified || options.outDir == null) {
+            return commandError("wrap", "Missing --out <file.spr>", options.json);
+        }
+        Path output = options.outDir.toAbsolutePath().normalize();
+        if (Files.exists(output) && !options.force) {
+            return commandError("wrap", output + " already exists; use --force to replace it", options.json);
+        }
+        String className = options.file.toString();
+        Class<?> clazz = Compiler.loadJavaClass(className);
+        if (clazz == null) {
+            diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
+                    "Cannot load Java class '" + className + "'", null, null)
+                    .withHint("Check the fully qualified name and --classpath entries."));
+            report(diagnostics, options.json, "wrap", 1, null);
+            return 1;
+        }
+        try {
+            WrapGenerator.Outcome outcome = WrapGenerator.generate(clazz, options.memberFilter);
+            if (options.memberFilter != null && outcome.generated().isEmpty()) {
+                diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+                        "No wrappable member named '" + options.memberFilter + "' on " + clazz.getName(),
+                        null, null));
+                report(diagnostics, options.json, "wrap", 1, null);
+                return 1;
+            }
+            Map<String, Object> details = wrapDetails(className, output, outcome);
+            String formatted = SourceFormatter.format(output, outcome.source(), diagnostics);
+            if (formatted == null) {
+                diagnostics.add(Diagnostic.error(Codes.WRAP_CHECK, Phase.CLI,
+                        "Generated wrapper source could not be formatted", output.toUri().toString(), null));
+                reportWrap(diagnostics, options, details, 1);
+                return 1;
+            }
+            Path parent = output.getParent() == null ? Path.of(".") : output.getParent();
+            Files.createDirectories(parent);
+            Path temp = Files.createTempFile(parent, ".sprig-wrap-", ".spr");
+            try {
+                Files.writeString(temp, formatted, StandardCharsets.UTF_8);
+                new Compiler(diagnostics).compile(temp);
+                if (diagnostics.hasErrors()) {
+                    diagnostics.add(Diagnostic.error(Codes.WRAP_CHECK, Phase.CLI,
+                            "Generated wrapper source failed Sprig checking; no file was written",
+                            output.toUri().toString(), null)
+                            .withData(Map.of("outputPath", output.toString())));
+                    reportWrap(diagnostics, options, details, 1);
+                    return 1;
+                }
+                Files.move(temp, output, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                temp = null;
+            } finally {
+                if (temp != null) Files.deleteIfExists(temp);
+            }
+            if (options.json) {
+                System.out.print(JsonWriter.result(diagnostics.all(), null, "wrap", 0, null, details));
+            } else {
+                System.out.println("Wrapped " + clazz.getName() + " -> " + output);
+                System.out.println("  generated: " + outcome.generated().size()
+                        + ", skipped: " + outcome.skipped().size());
+                for (String warning : outcome.warnings()) {
+                    System.out.println("  warning: " + warning);
+                }
+            }
+            return 0;
+        } catch (LinkageError | TypeNotPresentException error) {
+            diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
+                    "Cannot link Java class '" + className + "': " + error.getMessage(), null, null)
+                    .withHint("Supply all required JAR dependencies with --classpath."));
+            report(diagnostics, options.json, "wrap", 1, null);
+            return 1;
+        }
+    }
+
+    private static Map<String, Object> wrapDetails(String inputClass, Path output,
+                                                    WrapGenerator.Outcome outcome) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("inputClass", inputClass);
+        details.put("outputPath", output.toString());
+        details.put("generatedMembers", outcome.generated().stream().map(m -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("kind", m.kind());
+            item.put("name", m.name());
+            item.put("javaSignature", m.javaSignature());
+            return item;
+        }).toList());
+        details.put("skippedMembers", outcome.skipped().stream().map(m -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("javaSignature", m.javaSignature());
+            item.put("status", "skipped");
+            item.put("reasonCodes", m.reasonCodes());
+            item.put("explanation", m.explanation());
+            return item;
+        }).toList());
+        details.put("warnings", outcome.warnings());
+        return details;
+    }
+
+    private static void reportWrap(Diagnostics diagnostics, Options options,
+                                   Map<String, Object> details, int status) {
+        if (options.json) {
+            System.out.print(JsonWriter.result(diagnostics.all(), null, "wrap", status, null, details));
+        } else {
+            report(diagnostics, false, "wrap", status, null);
+        }
+    }
+
     private static int doctor(String[] args) {
         Options options = Options.parse(args, 1);
         Diagnostics diagnostics = new Diagnostics();
@@ -588,7 +706,7 @@ public final class Main {
         String violation = options.violation(command);
         if (violation != null) return commandError(command, violation, options.json);
         JvmClasspath.configure(options.classpath, diagnostics);
-        if (!diagnostics.hasErrors() && List.of("api", "doctor").contains(command)) {
+        if (!diagnostics.hasErrors() && List.of("api", "doctor", "wrap").contains(command)) {
             try {
                 Project project = Project.discover(Path.of(""));
                 if (project != null && (Files.isRegularFile(project.lockPath())
@@ -1622,6 +1740,7 @@ public final class Main {
         boolean outDirSpecified;
         boolean emitJavaOnly;
         boolean stacktrace;
+        boolean force;
         boolean separatorProvided;
         String memberFilter;
         String bin;
@@ -1641,6 +1760,7 @@ public final class Main {
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
                     case "--stacktrace" -> options.stacktrace = true;
+                    case "--force" -> options.force = true;
                     case "--emit-java-only" -> options.emitJavaOnly = true;
                     case "--bin" -> {
                         if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.bin = args[++i];
@@ -1686,12 +1806,15 @@ public final class Main {
             if (emitJavaOnly && !command.equals("build")) return "--emit-java-only is only valid with build";
             if (keep && !command.equals("run")) return "--keep is only valid with run";
             if (stacktrace && !command.equals("run")) return "--stacktrace is only valid with run";
-            if (outDirSpecified && !command.equals("build")) return "-d/--out is only valid with build";
-            if (memberFilter != null && !command.equals("api")) return "--member is only valid with api";
+            if (force && !command.equals("wrap")) return "--force is only valid with wrap";
+            if (outDirSpecified && !List.of("build", "wrap").contains(command))
+                return "-d/--out is only valid with build or wrap";
+            if (memberFilter != null && !List.of("api", "wrap").contains(command))
+                return "--member is only valid with api or wrap";
             if (bin != null && !command.equals("run")) return "--bin is only valid with run";
-            if (offline && !List.of("resolve", "check", "build", "run", "api", "doctor")
+            if (offline && !List.of("resolve", "check", "build", "run", "api", "doctor", "wrap")
                     .contains(command)) return "--offline is not valid with " + command;
-            if (!classpath.isEmpty() && !List.of("check", "build", "run", "api", "doctor").contains(command))
+            if (!classpath.isEmpty() && !List.of("check", "build", "run", "api", "doctor", "wrap").contains(command))
                 return "--classpath is not valid with " + command;
             if (separatorProvided && !command.equals("run")) return "-- is only valid with run";
             if (!extraPositionals.isEmpty()) {
