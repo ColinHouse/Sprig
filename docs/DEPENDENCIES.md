@@ -21,7 +21,7 @@ branch = "main"
 [[dependency]]
 name = "json-codec"
 git = "https://github.com/ColinHouse/Sprig.git"
-tag = "v0.5.0-beta.1" # illustrative; verify that this tag contains the package
+tag = "REPLACE_WITH_A_PUBLISHED_TAG"
 subdir = "libraries/sprig-json-codec"
 ```
 
@@ -57,7 +57,8 @@ This preserves existing root-package locks without rewriting or silently
 migrating them. Consumers still verify the selected package manifest and
 exact locked revision.
 
-Only resolve follows mutable Git ref intent. Builds consume exact SHA and verified
+Explicit resolution (`resolve`, `add` and `remove`) follows mutable Git ref intent.
+Builds consume exact SHA and verified
 clean detached checkouts under `~/.sprig/git`; tracked bytes/POSIX owner-execute modes, ignored and
 untracked contents and cache marker are verified. Index flags do not bypass checks.
 Checkout disables automatic newline conversion and enables real symlinks; platforms
@@ -66,6 +67,36 @@ checks apply where that attribute view exists; Windows ACL execute rights are no
 a Git executable bit. OS file locks serialize installation. Offline mode never fetches or follows a
 branch or tag; Git must still be available to verify cached content. Credentialed URLs,
 submodules, authentication and dependency build hooks are unsupported.
+
+## Editing dependencies
+
+`sprig add` and `sprig remove` update one dependency declaration and resolve a
+candidate project through the same resolver used by `sprig resolve`. A
+successful operation writes a matching lock. If resolution or lock publication
+fails, the original manifest is restored. The editor preserves unrelated
+manifest lines, comments and table order; it does not rewrite the file through
+a formatter.
+
+```sh
+sprig add math --path ../math
+sprig add json-codec --git https://github.com/ColinHouse/Sprig.git \
+  --tag REPLACE_WITH_A_PUBLISHED_TAG --subdir libraries/sprig-json-codec
+sprig add --jvm org.apache.commons:commons-text:1.12.0
+sprig remove math
+sprig remove --jvm org.apache.commons:commons-text
+```
+
+The Git tag above is a placeholder; replace it with a real tag that contains
+the package. `add` and `remove` accept `--offline` and `--json`. Offline edits
+reuse exact Git revisions from the existing lock when their URL, ref intent
+and package subdirectory still match, and fail when a new dependency is not
+already cached. `remove --jvm GROUP:ARTIFACT` removes direct declarations for
+that group and artifact, including every manually declared version;
+versions are exact declarations, not ranges. Repeating an existing add is an
+error so dependency changes remain explicit.
+
+These commands install dependencies from path, Git and Maven sources. They do
+not provide a package registry, package search, publishing or authentication.
 
 ## Maven / JVM
 

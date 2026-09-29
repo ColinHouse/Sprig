@@ -101,6 +101,7 @@ public final class Main {
             case "build" -> build(args);
             case "init" -> init(args);
             case "resolve" -> resolve(args);
+            case "add", "remove" -> PackageCommand.run(args);
             case "project" -> project(args);
             case "deps" -> deps(args);
             case "explain" -> explain(args);
@@ -136,6 +137,9 @@ public final class Main {
         out.println("  doctor [--classpath PATH] [--json]          inspect compiler environment");
         out.println("  init [dir]                                  create sprig.toml and src/main.spr");
         out.println("  resolve [--offline] [--json]               resolve dependencies and write sprig.lock");
+        out.println("  add NAME --path PATH | --git URL [--branch REF|--tag REF|--rev SHA] [--subdir DIR] [--offline] [--json]");
+        out.println("  add --jvm GROUP:ARTIFACT:VERSION [--offline] [--json]");
+        out.println("  remove NAME | --jvm GROUP:ARTIFACT [--offline] [--json]");
         out.println("  project [--json]                            project discovery and manifest metadata");
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");

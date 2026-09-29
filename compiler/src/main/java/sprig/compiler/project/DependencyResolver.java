@@ -208,13 +208,18 @@ public final class DependencyResolver {
 
     /** Resolve mode: follows Git ref intent and produces a fresh exact-SHA lockfile. */
     public static Result resolve(Project project, boolean offline) {
+        return resolve(project, offline, null);
+    }
+
+    /** Resolve a candidate manifest, optionally reusing matching locked Git revisions offline. */
+    public static Result resolve(Project project, boolean offline, Lockfile previousLock) {
         Lockfile lock = new Lockfile();
         lock.lockVersion = Lockfile.VERSION;
         lock.language = project.language;
         lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
         StdLibrary.record(lock);
         Package root = build(project, "root", "", "root", null, null, null, null, null, false, lock, offline, true,
-                new ArrayDeque<>());
+                previousLock, new ArrayDeque<>());
         lock.sprig.addAll(new Result(root, lock).entries());
         return new Result(root, lock);
     }
@@ -236,7 +241,7 @@ public final class DependencyResolver {
                     .with("hint", "Run `sprig resolve`.");
         }
         Package root = build(project, "root", "", "root", null, null, null, null, null, false, lock, offline, false,
-                new ArrayDeque<>());
+                null, new ArrayDeque<>());
         if (new Result(root, lock).entries().size() != lock.sprig.size())
             throw new DepError(Codes.PROJECT_LOCK_STALE, "Lock contains unexpected dependency edges; run `sprig resolve`", null);
         Result result = new Result(root, lock);
@@ -249,7 +254,7 @@ public final class DependencyResolver {
                                  String requested, String revision, String locator, String subdir,
                                  boolean portable,
                                  Lockfile lock, boolean offline,
-                                 boolean resolveMode, Deque<Path> stack) {
+                                 boolean resolveMode, Lockfile previousLock, Deque<Path> stack) {
         String manifestSha;
         try {
             manifestSha = Lockfile.digest(project.manifest);
@@ -310,7 +315,15 @@ public final class DependencyResolver {
                                 "Git is required for dependency '" + dependency.name
                                         + "' but 'git' is not available", null);
                     }
-                    depRevision = git.remoteRevision(depUrl, refKind, refValue);
+                    Lockfile.SprigEntry previous = offline && previousLock != null
+                            ? findLockEntry(previousLock, edgeId) : null;
+                    if (previous != null && "git".equals(previous.kind)
+                            && depUrl.equals(previous.url) && depRequested.equals(previous.requested)
+                            && depSubdir.equals(previous.subdir)) {
+                        depRevision = previous.revision;
+                    } else {
+                        depRevision = git.remoteRevision(depUrl, refKind, refValue);
+                    }
                 } else {
                     Lockfile.SprigEntry entry = findLockEntry(lock, edgeId);
                     if (entry == null || !"git".equals(entry.kind)
@@ -372,7 +385,8 @@ public final class DependencyResolver {
             }
             stack.push(canonicalRoot);
             Package child = build(depProject, edgeId, dependency.name, depKind, depUrl, depRequested,
-                    depRevision, depLocator, depSubdir, depPortable, lock, offline, resolveMode, stack);
+                    depRevision, depLocator, depSubdir, depPortable, lock, offline, resolveMode,
+                    previousLock, stack);
             stack.pop();
             pkg.aliases.put(dependency.name, child);
             pkg.direct.add(child);

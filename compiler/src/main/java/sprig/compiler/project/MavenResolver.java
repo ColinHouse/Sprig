@@ -52,7 +52,7 @@ public final class MavenResolver {
             throw failure("Maven repository must be https:// or file:// without credentials/query/fragment");
         return value.endsWith("/") ? value : value + "/";
     }
-    static void validate(String group, String artifact, String version) {
+    public static void validate(String group, String artifact, String version) {
         if (!group.matches("[A-Za-z0-9_]+(?:[.-][A-Za-z0-9_]+)*")
                 || !artifact.matches("[A-Za-z0-9_]+(?:[.-][A-Za-z0-9_]+)*")
                 || !version.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")

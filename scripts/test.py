@@ -64,7 +64,7 @@ def main():
               "tests/agent_tooling/check_sprig_api.py", "tests/agent_tooling/check_agent_tools.py",
               "tests/agent_eval/check_task_pack.py",
               "tests/cli_contract/check_cli_contract.py", "tests/test_runner/check_test_runner.py", "tests/http/check_http.py", "tests/bootstrap/check_probe.py",
-              "tests/project/check_project.py", "tests/project_deps/check_deps.py", "tests/project_deps/check_git_monorepo.py",
+              "tests/project/check_project.py", "tests/project_deps/check_deps.py", "tests/project_deps/check_git_monorepo.py", "tests/project_deps/check_add_remove.py",
               "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
               "tests/adversarial/v08/check_projects.py"]
     suites += ["tests/adversarial/regressions/check_semantics.py",
