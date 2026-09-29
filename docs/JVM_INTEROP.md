@@ -110,11 +110,19 @@ concrete arguments are checked invariantly and subtype conversions project
 arguments through the hierarchy (`ArrayList[String]` is accepted as
 `List[String]`, `ArrayList[Int32]` is not). Concrete-to-raw stays an erased
 boundary: a raw receiver such as `ArrayList()` keeps its previous erased
-behavior and `api` labels it `erased-generic`. Wildcards cannot be written,
-and a member whose signature contains one is rejected with
-`wildcard-unsupported`. `Short`, `Byte` and `Character` need value adapters,
-so they are rejected in generic argument position with
-`generic-wrapper-unsupported`; direct Java calls keep their scalar adapters.
+behavior and `api` labels it `erased-generic`. The same rule covers the Sprig
+collection images: a raw `SprigList`/`SprigMap` result never becomes
+`List[T]`/`Map[K,V]`; only a concrete `SprigList[T]` matches, and mismatched
+arguments are rejected. Concrete generic targets such as
+`Comparable[String]` also use the projection, so `String` is accepted while
+`Int32` or an unrelated reference is not.
+
+Shape inspection is recursive for members and fields: a wildcard or a generic
+array nested inside a parameterized type (`List<?>`, `List<T[]>`) is rejected
+with `wildcard-unsupported`/`generic-array-unsupported` in both `sprig api`
+and the checker. `Short`, `Byte` and `Character` need value adapters, so they
+are rejected in generic argument position with `generic-wrapper-unsupported`;
+direct Java calls keep their scalar adapters.
 
 ## Collection adapters
 
