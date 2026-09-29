@@ -150,6 +150,17 @@ runtime error instead of leaking into a non-null Sprig collection. `list_copy`/
 on either side is not visible on the other. The adapters are the only bridge:
 no implicit assignment conversion is added.
 
+## Wrapping a library
+
+`sprig wrap` turns an imported Java class into ordinary, editable Sprig source
+using the same classpath and the same shared support classification as
+`sprig api`; unsupported members are skipped with structured reason codes
+instead of guessed. See [the wrapper generator](WRAP.md) for the command,
+mapping policy and overwrite rules. For framework builds (dependency and
+classpath owned by a host build system such as Gradle/Loom), the website guide
+[Fabric / JVM framework integration](../website/en/guide/fabric.md) records a
+verified end-to-end wiring, while the mechanics remain framework-independent.
+
 Pass a local classpath to all related commands:
 
 ```text

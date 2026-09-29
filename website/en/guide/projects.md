@@ -80,7 +80,7 @@ git = "https://example.com/math.git"
 branch = "main"
 ```
 
-- Schema 2 identifies edges as `root/@a/@util`; old schemas require resolve.
+- Schema 4 identifies edges as `root/@a/@util` and records owner-relative locators for relative local dependencies (`portable = true`, the whole workspace can move); absolute declarations keep `portable = false`. Old schemas require resolve.
 - Real paths confine symlinks; exported internal symlinks are allowed.
 - Git cache reuse validates HEAD, marker and tracked/untracked contents; tampering fails.
 - `name` is the package-local import alias; distinct packages may reuse it; the dependency's own

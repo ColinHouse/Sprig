@@ -4,7 +4,23 @@ Sprig is an experimental JVM language for CLI tools, automation and reliable
 application code. Install **JDK 17+**; both `java` and `javac` must be on `PATH`.
 The SDK contains the compiler/runtime libraries and launcher, not a JDK.
 
-## Download and verify
+## Install and upgrade
+
+On Linux/macOS the managed installer downloads the official SDK ZIP and its
+SHA-256 file, verifies them, installs into a version directory and puts `sprig`
+in `~/.local/bin`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ColinHouse/Sprig/main/scripts/install-sprig.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+sprig upgrade --check
+sprig upgrade
+```
+
+The full install/upgrade contract is in
+[Install and upgrade](/en/reference/INSTALL).
+
+## Manual download and verify
 
 The published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
 Download the ZIP and its `.sha256` from that release. On Linux/macOS:
@@ -80,6 +96,7 @@ sprig capabilities --json
 sprig help generics --json
 sprig api java.time.LocalDate --json
 sprig check --json
+sprig test --json          # current source checkout; runs project tests/**/*.spr
 sprig explain SPR-TYPE-NULLABLE --json
 sprig run
 ```
@@ -89,6 +106,12 @@ another language: Java reference results are nullable, integer division is
 explicit and generics use explicit type arguments.
 [Tooling and JSON](/en/guide/tooling) explains the envelopes.
 
+`test`, `wrap` and `run --stacktrace` belong to the current source checkout; the
+published v0.4.0-alpha.1 SDK predates them. Check `capabilities --json`. To
+integrate a third-party JVM library or framework build, read
+[JVM interoperability](/en/guide/jvm-interop) and
+[Fabric / JVM framework integration](/en/guide/fabric).
+
 ## Make it useful
 
 Try the [showcase projects](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases):
@@ -97,6 +120,11 @@ source analysis. Each README specifies the entry, fixture and offline boundary.
 Learn individual constructs in the executable [tutorial and example pages](/en/examples)
 or the [language tour](/en/guide/language-tour); application projects live in the
 [examples gallery](https://github.com/ColinHouse/Sprig/blob/main/examples/README.md).
+
+When a host build system (Gradle/Loom/Maven) owns the classpath and must
+compile Sprig-generated Java back into its artifact, the reusable wiring and
+clean-build/package checklist are in
+[Fabric / JVM framework integration](/en/guide/fabric).
 
 Want to contribute with your coding agent? Read
 [Contributing](/en/project/contributing) and `AGENTS.md`, choose a scoped issue,

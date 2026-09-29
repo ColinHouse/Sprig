@@ -13,17 +13,21 @@ test [PATH] [--filter TEXT] [--json]        运行普通项目测试程序
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      带版本的语言参考
 capabilities [--json]                     已实现能力清单
-api <Java.Class> [--member NAME] [--classpath JAR] [--json]
-wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json]  生成可编辑的 Sprig wrapper 查询 JVM 签名
+api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
+wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json] 生成可编辑的 Sprig wrapper
 doctor [--classpath JAR] [--json]         环境检查
 explain <SPR-CODE> [--json]                 结构化诊断说明
 codes [--json]                              list every diagnostic code
 version
 ```
 
-`check`、`build`、`run`、`api` 可重复使用 `--classpath` 指定本地 JAR 或目录；
-四个命令采用同一解析路径，不自动下载依赖。这些命令已包含在 v0.4.0-alpha.1 SDK 中。
-例如用 `sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
+`check`、`build`、`run`、`api`、`wrap`、`doctor` 可重复使用 `--classpath` 指定本地
+JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
+`sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
+
+已发布的 v0.4.0-alpha.1 SDK 包含 `check`/`build`/`run`/`api`/`doctor` 等基础命令；
+`test`、`wrap`、`run --stacktrace` 和 schema-4 便携锁属于**当前源码**能力，尚未进入
+已发布 SDK，请以 `sprig capabilities --json` 和发行资产为准。
 
 - `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。
 - `run` 支持在 `--` 之后传递程序参数，`--keep` 用于保留生成的中间文件。未捕获的
@@ -34,6 +38,10 @@ version
 - `test` 将 `tests/**/*.spr` 作为独立 JVM 程序运行，并按同名 `.expect.toml` 核对
   `tests/compile_fail/` 的诊断码。该命令已在当前源码实现，已发布的 v0.4.0-alpha.1
   SDK 尚不包含它；详见[测试契约（英文）](/en/reference/TESTING)。
+- `wrap` 从真实 classpath 生成可编辑的 Sprig source：默认不覆盖已有文件，写出前
+  先在同一 classpath 下检查，`--json` 报告生成/跳过成员与稳定原因。
+  见 [wrapper 生成器（英文）](/en/reference/WRAP) 与
+  [Fabric / JVM 框架集成](/guide/fabric)。
 - `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/DIAGNOSTIC_CODES)。
 
 ## JSON 结果

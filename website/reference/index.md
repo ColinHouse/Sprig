@@ -23,6 +23,7 @@ Sprig 的**权威技术参考目前只有英文版本**，它们由仓库根目�
 | [Diagnostic codes](/en/reference/DIAGNOSTIC_CODES) | 稳定诊断码清单。 |
 | [Testing projects](/en/reference/TESTING) | `sprig test` 的发现、隔离、预期诊断和 JSON 契约。 |
 | [JVM interop](/en/reference/JVM_INTEROP) | `sprig api`、classpath、可空与不支持的 Java 边界。 |
+| [Wrapper generator](/en/reference/WRAP) | `sprig wrap`：生成可编辑 Sprig wrapper 的映射与策略。 |
 | [Stage-1 roadmap](/en/reference/STAGE1_ROADMAP) | 自举路线的计划，未实现。 |
 | [Agent tool protocol](/en/reference/AGENT_TOOL_PROTOCOL) | 历史设计提案；`sprig api` 已实现，LSP 等仍未实现。 |
 

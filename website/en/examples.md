@@ -77,6 +77,26 @@ syntax demonstrations. Start with the
 - [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases) —
   repository auditor, Maven-backed utility and source analyzer.
 
+## Real JVM ecosystem (Fabric dogfood)
+
+A real Fabric/Loom singleplayer mod dogfood validated the framework path:
+Gradle/Loom owns the Minecraft/Fabric classpath, Sprig `conform`s directly to
+lifecycle/tick/player callbacks, one narrow Java adapter covers the Brigadier
+wildcard builder, and the singleplayer create/command/autosave/quit/re-enter
+restore path plus the final build all passed.
+
+| Metric | Value | Note |
+|---|---:|---|
+| Handwritten Sprig feature code | 440 lines | model, persistence, entrypoint |
+| Handwritten Java glue | 52 lines | one Brigadier builder + one action interface |
+| Directly conformed callbacks | lifecycle, tick, join/disconnect | — |
+| Narrow wildcard adapters | 1 | Brigadier `then` |
+
+These are **one project's local measurements, not a general ratio**; larger
+third-party APIs will raise the Java share. The reusable wiring, verified
+versions and packaging checklist are in
+[Fabric / JVM framework integration](/en/guide/fabric).
+
 ## Larger programs in the test suite
 
 - `tests/runtime/` — nineteen end-to-end programs with golden stdout:

@@ -126,8 +126,9 @@ JVM 桥接仅针对对应的 Sprig 自有 `sprig.runtime.Fn0`–`Fn3` 形参签�
 
 ## 尚未实现
 
-泛型推断、variance、继承与接口、`match` 表达式、`%=`、元组与解构、数组、变长参数、
-字符串插值都**尚未实现**。完整列表见
+泛型推断、variance、语言内继承与接口、`%=`、元组与解构、字符串插值都**尚未实现**；
+source 数组语法、变长参数与 wildcard 形状不在 JVM interop profile 内（数组仍可作为
+不透明外部值传递，见 [JVM 互操作](/guide/jvm-interop)）。完整列表见
 [已知限制](/reference/known-limitations)，后续规划见
 [Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。
 

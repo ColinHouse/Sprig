@@ -63,6 +63,24 @@
 - [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner)：当前源码中的五种普通项目测试，覆盖运行、表驱动、临时文件、子进程和预期诊断。
 - [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)：仓库审计器、Maven 工具和源码分析器。
 
+## 真实 JVM 生态（Fabric dogfood）
+
+一次真实的 Fabric/Loom 单人 mod dogfood 验证了 framework 路径：Gradle/Loom 拥有
+Minecraft/Fabric classpath，Sprig 直接 `conform` 生命周期/tick/玩家回调，只有
+Brigadier 的 wildcard builder 用了 1 个窄 Java adapter；单人存档的创建、命令、
+自动保存、退出、重进恢复与最终构建全部通过。
+
+| 指标 | 数值 | 说明 |
+|---|---:|---|
+| 手写 Sprig 功能代码 | 440 行 | 模型、持久化、入口 |
+| 手写 Java glue | 52 行 | 1 个 Brigadier builder + 1 个 action 接口 |
+| 直接 conform 的回调 | 生命周期、tick、join/disconnect | — |
+| 窄 wildcard adapter | 1 | Brigadier `then` |
+
+这些是**单个项目的局部测量，不是普遍比例**；更大的第三方 API 会提高 Java 占比。
+可复用的接线、验证版本与打包清单见
+[Fabric / JVM 框架集成](/guide/fabric)。
+
 ## 测试套件中的更大程序
 
 - `tests/runtime/`：19 个带 golden stdout 的端到端程序，覆盖算术、函数、控制流、

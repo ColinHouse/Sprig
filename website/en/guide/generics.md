@@ -24,6 +24,8 @@ number of parameters (`generic K, V:`), duplicate names are rejected, and
 parameters are visible only inside the block — using one after the block is
 `SPR-NAME-UNRESOLVED`.
 
+Concrete generics on imported Java classes (`ArrayList[String]`, `List[Map[String, Int32]]` and explicit generic methods) are covered in [JVM interoperability](/en/guide/jvm-interop); raw generic evidence never becomes concrete.
+
 ## Use sites write `[Type]`
 
 ```sprig

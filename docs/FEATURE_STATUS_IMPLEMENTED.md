@@ -63,8 +63,8 @@ The historical design kit in `spec/` describes target semantics rather than curr
 | Agent task pack | deterministic fixtures and runner under `tests/agent_eval` | acceptance is mechanical; no model run claimed | initial states fail, known solutions pass | task-pack gate |
 
 Not implemented (honest status): generic type inference, variance,
-`Comparable` and user-defined capabilities, inheritance or interfaces, `match`
-expressions, nested/positional patterns, `%=`,
+`Comparable` and user-defined capabilities, inheritance or interfaces,
+nested/positional patterns, `%=`,
 tuples/destructuring, varargs and source array syntax/annotations in interop,
 wildcard typing or Java generic inference, LSP, publishing/registry,
 incremental checking, self-hosting.
