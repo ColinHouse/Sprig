@@ -58,7 +58,10 @@ def main():
         for name in ('leaf', 'runtime', 'optional', 'test', 'provided', 'excluded'):
             publish(name)
         publish('conflict', '1'); publish('conflict', '2')
-        publish('bridge', inner='<dependencies>' + dep('excluded') + dep('conflict', '2') + '</dependencies>')
+        publish('multi', inner='')
+        publish('bridge', inner='<dependencies>' + dep('excluded') + dep('conflict', '2')
+                + dep('multi', extra='<classifier>one</classifier>')
+                + dep('multi', extra='<classifier>two</classifier>') + '</dependencies>')
         parent = '<parent><groupId>fixture</groupId><artifactId>parent</artifactId><version>1</version><relativePath/></parent>'
         publish('client', parent=parent, inner='<dependencies>' + dep('leaf', '') + dep('runtime', extra='<scope>runtime</scope>')
                 + dep('optional', extra='<optional>true</optional>') + dep('test', extra='<scope>test</scope>')
@@ -67,13 +70,40 @@ def main():
         # Class in direct JAR calls a class in the transitively selected JAR.
         source = base / 'java'; source.mkdir()
         (source / 'Leaf.java').write_text('package fixture; public class Leaf { public static String value() { return "transitive"; } }')
-        (source / 'Client.java').write_text('package fixture; public class Client { public static String value() { return Leaf.value(); } }')
+        (source / 'One.java').write_text('package fixture; public class One { public static String value() { return "one"; } }')
+        (source / 'Two.java').write_text('package fixture; public class Two { public static String value() { return "two"; } }')
+        (source / 'Bridge.java').write_text('''package fixture;
+public class Bridge {
+  private static String resource(String name) throws Exception {
+    try (var in = Bridge.class.getResourceAsStream(name)) {
+      if (in == null) throw new IllegalStateException("missing " + name);
+      return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+  }
+  public static String value() throws Exception {
+    return One.value() + ":" + resource("/fixture/one.txt") + ":"
+        + Two.value() + ":" + resource("/fixture/two.txt");
+  }
+}
+''')
+        (source / 'Client.java').write_text('''package fixture;
+public class Client {
+  public static String value() throws Exception { return Leaf.value() + ":" + Bridge.value(); }
+}
+''')
         classes = base / 'classes'; classes.mkdir()
-        subprocess.run(['javac', '--release', '17', '-d', str(classes), str(source/'Leaf.java'), str(source/'Client.java')], check=True)
-        for name, clazz in (('leaf', 'Leaf'), ('client', 'Client')):
+        subprocess.run(['javac', '--release', '17', '-d', str(classes),
+                        *[str(p) for p in source.glob('*.java')]], check=True)
+        for name, clazz in (('leaf', 'Leaf'), ('client', 'Client'), ('bridge', 'Bridge')):
             jar = repository / 'fixture' / name / '1' / f'{name}-1.jar'
             with zipfile.ZipFile(jar, 'w') as z:
                 z.write(classes/'fixture'/f'{clazz}.class', f'fixture/{clazz}.class')
+            jar.with_name(jar.name+'.sha1').write_text(hashlib.sha1(jar.read_bytes()).hexdigest())
+        for classifier, clazz, resource in (('one', 'One', b'resource-one'), ('two', 'Two', b'resource-two')):
+            jar = repository / 'fixture' / 'multi' / '1' / f'multi-1-{classifier}.jar'
+            with zipfile.ZipFile(jar, 'w') as z:
+                z.write(classes/'fixture'/f'{clazz}.class', f'fixture/{clazz}.class')
+                z.writestr(f'fixture/{classifier}.txt', resource)
             jar.with_name(jar.name+'.sha1').write_text(hashlib.sha1(jar.read_bytes()).hexdigest())
         manifest = '[project]\nname="fixture"\n[[jvm]]\ngroup="fixture"\nartifact="client"\nversion="1"\n'
         (project/'sprig.toml').write_text(manifest)
@@ -82,15 +112,25 @@ def main():
         lock = (project/'sprig.lock').read_bytes()
         data = invoke('deps')
         jars = [e for e in data['jvmDependencies'] if e['extension'] == 'jar']
-        selected = {(e['artifact'], e['version']) for e in jars}
-        assert selected == {('client','1'), ('leaf','1'), ('runtime','1'), ('bridge','1'), ('conflict','1')}, selected
+        selected = {(e['artifact'], e.get('classifier') or '', e['version']) for e in jars}
+        assert selected == {('client','','1'), ('leaf','','1'), ('runtime','','1'),
+                            ('bridge','','1'), ('conflict','','1'), ('multi','one','1'),
+                            ('multi','two','1')}, selected
+        classified = sorted((e.get('classifier'), e['sha256']) for e in jars
+                            if e['artifact'] == 'multi')
+        assert [classifier for classifier, _ in classified] == ['one', 'two'], classified
+        assert classified[0][1] != classified[1][1], classified
         poms = {e['artifact'] for e in data['jvmDependencies'] if e['extension'] == 'pom'}
         assert {'parent','bom','client'} <= poms, poms
         assert data['jvmEdges'], data
         invoke('resolve')
         assert (project/'sprig.lock').read_bytes() == lock, 'non-deterministic lock'
+        repeated_jars = [e for e in invoke('deps')['jvmDependencies'] if e['extension'] == 'jar']
+        assert [(e['artifact'], e.get('classifier') or '', e['version'], e['sha256']) for e in repeated_jars] == [
+            (e['artifact'], e.get('classifier') or '', e['version'], e['sha256']) for e in jars
+        ], 'Maven artifact identity/classpath order changed across reads'
         invoke('check'); invoke('build', '-d', base/'output with spaces')
-        assert invoke('run')['programOutput'] == 'transitive\n'
+        assert invoke('run')['programOutput'] == 'transitive:one:resource-one:two:resource-two\n'
         assert invoke('api', 'fixture.Client')['className'] == 'fixture.Client'
         doctor = invoke('doctor')
         assert len(doctor['classpath']) == len(jars), doctor
@@ -145,7 +185,7 @@ def main():
         shutil.rmtree(repository)
         invoke('resolve', '--offline')
         invoke('check', '--offline')
-        assert invoke('run', '--offline')['programOutput'] == 'transitive\n'
+        assert invoke('run', '--offline')['programOutput'] == 'transitive:one:resource-one:two:resource-two\n'
         invoke('api', 'fixture.Client', '--offline'); invoke('doctor', '--offline')
         artifact = cache/'artifacts'/(jars[0]['sha256']+'.jar')
         original = artifact.read_bytes()

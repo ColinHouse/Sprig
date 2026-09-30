@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "active_project": "alpha",
+  "projects": [
+    {"id": "alpha", "name": "青空", "targets": [{"item_id": "stone", "amount": 3}, {"item_id": "dirt", "amount": 1}]},
+    {"id": "beta", "name": "Garden", "targets": [{"item_id": "seed", "amount": 2}]}
+  ]
+}

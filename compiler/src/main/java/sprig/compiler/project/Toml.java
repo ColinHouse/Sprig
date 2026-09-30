@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+import java.util.IdentityHashMap;
 
 /**
  * Minimal, deliberately strict TOML subset used by {@code sprig.toml}:
@@ -30,6 +31,8 @@ public final class Toml {
     private final Map<String, List<String>> scopedArrays = new LinkedHashMap<>();
     private final Map<String, List<Map<String, String>>> tables = new LinkedHashMap<>();
     private final Map<String, List<Map<String, String>>> tableArrays = new LinkedHashMap<>();
+    private final Map<Map<String, String>, Map<String, Integer>> fieldLines = new IdentityHashMap<>();
+    private final Map<Map<String, String>, Integer> headerLines = new IdentityHashMap<>();
     private String currentTable = "";
     private Map<String, String> currentEntry;
     private boolean allowBareValues;
@@ -65,6 +68,7 @@ public final class Toml {
             currentTable = name;
             currentEntry = new LinkedHashMap<>();
             tableArrays.computeIfAbsent(name, key -> new ArrayList<>()).add(currentEntry);
+            headerLines.put(currentEntry, lineNumber);
             return;
         }
         if (line.startsWith("[") && line.endsWith("]")) {
@@ -80,7 +84,9 @@ public final class Toml {
             }
             currentTable = name;
             currentEntry = null;
-            tables.computeIfAbsent(name, key -> new ArrayList<>()).add(new LinkedHashMap<>());
+            Map<String, String> table = new LinkedHashMap<>();
+            tables.computeIfAbsent(name, key -> new ArrayList<>()).add(table);
+            headerLines.put(table, lineNumber);
             return;
         }
         int equals = line.indexOf('=');
@@ -139,12 +145,14 @@ public final class Toml {
                 throw new TomlException("Duplicate key '" + key + "'", lineNumber);
             }
             currentEntry.put(key, value == null ? "" : value);
+            fieldLines.computeIfAbsent(currentEntry, ignored -> new LinkedHashMap<>()).put(key, lineNumber);
         } else if (!currentTable.isEmpty()) {
             Map<String, String> table = last(tables.get(currentTable));
             if (table.containsKey(key)) {
                 throw new TomlException("Duplicate key '" + key + "'", lineNumber);
             }
             table.put(key, value == null ? "" : value);
+            fieldLines.computeIfAbsent(table, ignored -> new LinkedHashMap<>()).put(key, lineNumber);
         }
     }
 
@@ -293,5 +301,35 @@ public final class Toml {
 
     public Map<String, List<Map<String, String>>> tableArrays() {
         return tableArrays;
+    }
+
+    /** 1-based source line for a field in an array-table entry, or its header if absent. */
+    public int entryLine(String table, int entryIndex, String key) {
+        List<Map<String, String>> entries = tableArrays.get(table);
+        if (entries == null || entryIndex < 0 || entryIndex >= entries.size()) return 1;
+        Map<String, String> entry = entries.get(entryIndex);
+        return fieldLines.getOrDefault(entry, Map.of()).getOrDefault(key,
+                headerLines.getOrDefault(entry, 1));
+    }
+
+    /** 1-based line of the last declared field among the supplied names. */
+    public int lastEntryLine(String table, int entryIndex, Set<String> keys) {
+        List<Map<String, String>> entries = tableArrays.get(table);
+        if (entries == null || entryIndex < 0 || entryIndex >= entries.size()) return 1;
+        Map<String, String> entry = entries.get(entryIndex);
+        int line = headerLines.getOrDefault(entry, 1);
+        for (Map.Entry<String, Integer> field : fieldLines.getOrDefault(entry, Map.of()).entrySet()) {
+            if (keys.contains(field.getKey())) line = field.getValue();
+        }
+        return line;
+    }
+
+    /** 1-based source line for a field in a singleton table, or its header if absent. */
+    public int tableLine(String table, String key) {
+        List<Map<String, String>> entries = tables.get(table);
+        if (entries == null || entries.isEmpty()) return 1;
+        Map<String, String> entry = last(entries);
+        return fieldLines.getOrDefault(entry, Map.of()).getOrDefault(key,
+                headerLines.getOrDefault(entry, 1));
     }
 }

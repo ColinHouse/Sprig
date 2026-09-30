@@ -1,0 +1,43 @@
+import "@std/files.spr" as files
+import "@std/process.spr" as process
+import "@std/json.spr" as json
+import "@json-codec/codec.spr" as codec
+
+func summarize(text: String) -> String throws Error:
+    let root = codec.root(json.parse(text))
+    let schema = codec.required_int(root, "schema")
+    if schema != 1:
+        throw Error("$.schema: unsupported config schema")
+    codec.reject_unknown_fields(root, ["schema", "active_project", "projects"])
+
+    let active = match codec.field(root, "active_project"):
+        case codec.Field.Missing:
+            "(none)"
+        case codec.Field.Null:
+            "(none)"
+        case codec.Field.Value as field:
+            codec.as_string(codec.Reader(path = "$.active_project", value = field.value))
+
+    let names: MutableList[String] = []
+    var target_count = 0
+    for project in codec.required_array(root, "projects"):
+        names.append(codec.required_string(project, "name"))
+        for target in codec.required_array(project, "targets"):
+            let item = codec.required_string(target, "item_id")
+            let amount = codec.required_int(target, "amount")
+            if item.isEmpty() or amount <= 0:
+                throw Error(target.path + ": item_id must be non-empty and amount must be positive")
+            target_count += 1
+
+    return String.join(["schema=" + schema.toString(), "active=" + active,
+        "projects=" + names.size().toString() + " (" + String.join(names.toList(), ", ") + ")",
+        "targets=" + target_count.toString()], "\n")
+
+let arguments = process.arguments()
+if arguments.size() != 1:
+    throw Error("usage: sprig run -- <config.json>")
+try:
+    print(summarize(files.read_utf8(arguments.get(0))))
+catch problem: Error:
+    print("config-summary: " + problem.message)
+    throw problem

@@ -101,6 +101,59 @@ def main():
         check("jvm-dependency-blocked-clearly", jvm.returncode == 1
               and "SPR-DEP-MAVEN" in jvm.stdout + jvm.stderr, jvm.stdout + jvm.stderr)
 
+        late_manifest = (
+            '[project]\nname = "app"\nversion = "0.1.0"\n\n'
+            '[[dependency]]\nname = "codec"\npath = "../codec"\n\n'
+            '[[dependency]]\nname = "codec"\npath = "../other"\n')
+        (work / "sprig.toml").write_text(late_manifest)
+        duplicate = run(work, "project")
+        check("semantic-manifest-error-text-line", duplicate.returncode == 1
+              and "line 10" in duplicate.stderr + duplicate.stdout
+              and "Duplicate dependency name 'codec'" in duplicate.stderr + duplicate.stdout,
+              duplicate.stdout + duplicate.stderr)
+        duplicate_json = run(work, "project", "--json")
+        duplicate_data = json.loads(duplicate_json.stdout)
+        diagnostic = duplicate_data["diagnostics"][0]
+        check("semantic-manifest-error-json-range", duplicate_json.returncode == 1
+              and diagnostic["code"] == "SPR-PROJECT-MANIFEST"
+              and diagnostic["uri"].endswith("sprig.toml")
+              and diagnostic["range"]["start"]["line"] == 9,
+              duplicate_json.stdout + duplicate_json.stderr)
+
+        missing_field_manifest = (
+            '[project]\nname = "app"\n\n[[jvm]]\ngroup = "fixture"\nartifact = "client"\n')
+        (work / "sprig.toml").write_text(missing_field_manifest)
+        missing_field = run(work, "project", "--json")
+        missing_field_data = json.loads(missing_field.stdout)
+        missing_diagnostic = missing_field_data["diagnostics"][0]
+        check("missing-manifest-field-points-at-table-header", missing_field.returncode == 1
+              and missing_diagnostic["code"] == "SPR-PROJECT-MANIFEST"
+              and missing_diagnostic["range"]["start"]["line"] == 3
+              and "requires group, artifact and version" in missing_diagnostic["message"],
+              missing_field.stdout + missing_field.stderr)
+
+        duplicate_bins = (
+            '[project]\nname = "app"\n\n[[bin]]\nname = "worker"\nentry = "src/one.spr"\n\n'
+            '[[bin]]\nname = "worker"\nentry = "src/two.spr"\n')
+        (work / "sprig.toml").write_text(duplicate_bins)
+        duplicate_bin = run(work, "project", "--json")
+        bin_diagnostic = json.loads(duplicate_bin.stdout)["diagnostics"][0]
+        check("duplicate-bin-points-at-second-name", duplicate_bin.returncode == 1
+              and bin_diagnostic["range"]["start"]["line"] == 8
+              and "Duplicate bin name 'worker'" in bin_diagnostic["message"],
+              duplicate_bin.stdout + duplicate_bin.stderr)
+
+        conflicting_refs = (
+            '[project]\nname = "app"\n\n[[dependency]]\nname = "dep"\n'
+            'git = "https://example.invalid/dep.git"\nbranch = "main"\ntag = "v1"\n')
+        (work / "sprig.toml").write_text(conflicting_refs)
+        refs = run(work, "project", "--json")
+        refs_diagnostic = json.loads(refs.stdout)["diagnostics"][0]
+        check("conflicting-ref-points-at-later-field", refs.returncode == 1
+              and refs_diagnostic["range"]["start"]["line"] == 7
+              and "mutually exclusive" in refs_diagnostic["message"],
+              refs.stdout + refs.stderr)
+
         (work / "sprig.toml").write_text('[project]\nname = \n')
         broken = run(work, "project")
         check("malformed-manifest", broken.returncode == 1
