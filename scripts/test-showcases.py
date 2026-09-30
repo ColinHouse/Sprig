@@ -23,8 +23,9 @@ def main():
     shared_frontend = (projects / 'source_analyzer/src/frontend.spr').read_text(encoding='utf-8')
     assert shared_frontend == probe[:probe.index('func run_source(')], 'showcase frontend diverged from tested stage-1 probe'
 
-    def run(project, *arguments):
-        result = subprocess.run([str(launcher), *arguments], cwd=project, text=True, encoding='utf-8', capture_output=True)
+    def run(project, *arguments, env=None):
+        result = subprocess.run([str(launcher), *arguments], cwd=project, env=env,
+                                text=True, encoding='utf-8', capture_output=True)
         assert result.returncode == 0, f'{arguments}:\n{result.stdout}\n{result.stderr}'
         return result.stdout
 
@@ -43,18 +44,23 @@ def main():
     assert any(method['name'] == 'escapeHtml4' and method['usableFromSprig'] for method in metadata['staticMethods'])
     assert len(metadata['classpath']) >= 2, 'Maven transitive classpath missing'
     config_summary = sdk / 'examples' / 'config_summary'
-    run(config_summary, 'resolve')
-    config_lock = (config_summary / 'sprig.lock').read_bytes()
-    run(config_summary, 'check', '--offline')
-    assert (config_summary / 'sprig.lock').read_bytes() == config_lock
     expected_config = 'schema=1\nactive=alpha\nprojects=2 (青空, Garden)\ntargets=3\n'
-    assert run(config_summary, 'run', '--offline', '--', 'fixtures/board.json') == expected_config
+    with tempfile.TemporaryDirectory(prefix='sprig-isolated-home-') as isolated_home:
+        isolated_env = dict(os.environ, JAVA_TOOL_OPTIONS=f'-Duser.home={isolated_home}',
+                            SPRIG_MAVEN_CACHE=str(Path(isolated_home) / 'maven'))
+        run(config_summary, 'resolve', env=isolated_env)
+        config_lock = (config_summary / 'sprig.lock').read_bytes()
+        run(config_summary, 'check', '--offline', env=isolated_env)
+        assert (config_summary / 'sprig.lock').read_bytes() == config_lock
+        assert run(config_summary, 'run', '--offline', '--', 'fixtures/board.json',
+                   env=isolated_env) == expected_config
     with tempfile.TemporaryDirectory(prefix='sprig showcase space ') as temporary:
         work = Path(temporary)
         bad_config = work / 'bad config.json'
         bad_config.write_text('{"schema":1,"active_project":"alpha","projects":[{"name":"bad","targets":[{"item_id":"stone","amount":"three"}]}]}', encoding='utf-8')
         invalid = subprocess.run([str(launcher), 'run', '--offline', '--', str(bad_config)],
-                                 cwd=config_summary, text=True, encoding='utf-8', capture_output=True)
+                                 cwd=config_summary, env=isolated_env,
+                                 text=True, encoding='utf-8', capture_output=True)
         assert invalid.returncode == 1 and '$.projects[0].targets[0].amount: expected integer, found string' in invalid.stdout + invalid.stderr, (invalid.stdout, invalid.stderr)
         output = work / 'report with spaces.json'
         assert run(projects / 'repository_audit', 'run', '--offline', '--', 'fixtures/tree', str(output)) == AUDIT + 'JSON report written\n'

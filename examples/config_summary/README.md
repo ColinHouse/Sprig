@@ -20,9 +20,11 @@ projects=2 (青空, Garden)
 targets=3
 ```
 
-To see a path-aware failure, make a copy of the fixture, change one target's
-`amount` to `"three"`, then run the program with that file. The decoder reports
-the JSON path and expected type; it does not coerce a string to an integer.
+To see a path-aware failure, copy the fixture, change the first target's
+`amount` from `3` to `"three"`, then run `sprig run -- /path/to/bad.json`. The
+diagnostic includes the path `$.projects[0].targets[0].amount` and reports
+`expected integer, found string`; the decoder does not coerce a string to an
+integer.
 
 The dependency is a portable path to the bundled codec library, so the same
 commands work in the repository and in the extracted SDK archive.
