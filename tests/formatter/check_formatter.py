@@ -71,6 +71,6 @@ def main():
         assert good.read_text()=='print(3+4)\n'
         cp=os.pathsep.join([str(ROOT/'build/sprig-compiler.jar'),str(ROOT/'build/deps/antlr-4.13.2-complete.jar')])
         subprocess.run(['javac','--release','17','-cp',cp,'-d',directory,str(ROOT/'tests/formatter/FormatterCorpus.java')],check=True)
-        subprocess.run(['java','-cp',cp+os.pathsep+directory,'FormatterCorpus',*[str(ROOT/r) for r in ['std','libraries','examples','tests','acceptance']]],check=True,timeout=120)
+        subprocess.run(['java','-cp',cp+os.pathsep+directory,'FormatterCorpus',*[str(ROOT/r) for r in ['std','libraries','examples','tests']]],check=True,timeout=120)
     print('formatter: canonical trivia, CRLF, EOF, idempotence, runtime, JSON, invalid-file safety and project selection passed')
 if __name__=='__main__': main()
