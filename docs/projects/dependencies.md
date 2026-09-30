@@ -5,7 +5,8 @@ resolution commands: they may write `sprig.lock` and perform Git/Maven requests.
 `check/build/run/api/doctor` consume one verified project classpath.
 A source file explicitly outside the discovered project source root remains standalone.
 The public v0.2 release did not implement Maven. These rules describe the
-Maven/JVM dependency behavior implemented since v0.3 and shipped in v0.4.0-alpha.1.
+Maven/JVM dependency support first shipped in v0.4.0-alpha.1 and remains part of
+the published v0.5.0-beta.1 SDK.
 
 ## Sprig packages
 

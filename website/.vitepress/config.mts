@@ -65,7 +65,7 @@ export default defineConfig({
       lang: 'zh-CN',
       title: 'Sprig',
       description:
-        '面向人类与编码 Agent 的静态类型 JVM 语言。Sprig 让程序和编译器反馈更少依赖猜测；当前为实验性 Alpha。',
+        '面向人类与编码 Agent 的静态类型 JVM 语言。Sprig 让程序和编译器反馈更少依赖猜测；当前为实验性 Beta。',
       head: [['meta', { property: 'og:locale', content: 'zh_CN' }]],
       markdown: {
         container: {
@@ -131,7 +131,7 @@ export default defineConfig({
           ]
         },
         footer: {
-          message: 'Sprig 采用 Apache-2.0 许可证 · v0.4.0-alpha.1 已作为 prerelease 发布',
+          message: 'Sprig 采用 Apache-2.0 许可证 · v0.5.0-beta.1 已作为 prerelease 发布',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }
@@ -141,7 +141,7 @@ export default defineConfig({
       lang: 'en-US',
       title: 'Sprig',
       description:
-        'A statically typed JVM language for people and coding agents. Sprig makes programs and compiler feedback easier to verify; currently experimental Alpha.',
+        'A statically typed JVM language for people and coding agents. Sprig makes programs and compiler feedback easier to verify; currently experimental Beta.',
       head: [['meta', { property: 'og:locale', content: 'en_US' }]],
       themeConfig: {
         nav: [
@@ -212,7 +212,7 @@ export default defineConfig({
         },
         footer: {
           message:
-            'Sprig is licensed under Apache-2.0 · v0.4.0-alpha.1 published as a prerelease',
+            'Sprig is licensed under Apache-2.0 · v0.5.0-beta.1 published as a prerelease',
           copyright: 'Copyright 2026 ColinHouse and Sprig contributors'
         }
       }

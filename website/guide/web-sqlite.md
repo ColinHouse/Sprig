@@ -1,8 +1,8 @@
-# Web 与 SQLite 开发里程碑
+# Web 与 SQLite 示例
 
-当前源码包含 `libraries/sprig-web`、`libraries/sprig-sqlite`，以及
-`examples/mini_web`、`examples/sqlite`、`examples/ledger`。
-这是当前开发成果，不是新发布版本或生产框架。
+v0.5.0-beta.1 SDK 包含 `libraries/sprig-web`、`libraries/sprig-sqlite`，以及
+`examples/mini_web`、`examples/sqlite`、`examples/ledger`。这是实验性 Beta
+示例，不是生产框架或生产部署承诺。
 
 ## 运行账本后端
 

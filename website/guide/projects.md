@@ -55,9 +55,8 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-当前源码中的 `sprig test` 使用相同的锁定依赖图，以诊断码核对预期编译失败；
-参见[测试契约（英文）](/en/reference/tooling/testing)。已发布的 v0.4.0-alpha.1 SDK
-尚不包含此命令。
+Beta SDK 中的 `sprig test` 使用相同的锁定依赖图，以诊断码核对预期编译失败；
+参见[测试契约（英文）](/en/reference/tooling/testing)。
 
 ## 依赖
 

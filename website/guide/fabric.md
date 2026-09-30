@@ -17,7 +17,7 @@ Fabric 是已验证案例，方法本身不绑定 Fabric。Gradle 插件、Maven
 | Fabric API | 0.161.0+26.3 |
 | Fabric Loom | 1.18.2（构建声明 `1.18-SNAPSHOT`） |
 | Gradle wrapper | 9.7.1 |
-| Sprig | 0.4.0-alpha.1 源码修订 `ede71f7a` |
+| Sprig dogfood toolchain | 0.4.0-alpha.1 source revision `ede71f7a` (historical Alpha-era integration) |
 | 编译与运行 JDK | OpenJDK 26.0.1（`javac --release 25`，classfile major 69） |
 
 明确未验证的内容：

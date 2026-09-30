@@ -57,10 +57,9 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-`sprig test` is available in the current source checkout. It uses the same
-locked dependencies and checks expected compile failures by diagnostic code;
-see the [testing contract](/en/reference/tooling/testing). The published
-v0.4.0-alpha.1 SDK predates this command.
+The Beta SDK's `sprig test` uses the same locked dependencies and checks
+expected compile failures by diagnostic code; see the
+[testing contract](/en/reference/tooling/testing).
 
 ## Dependencies
 

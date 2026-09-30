@@ -1,6 +1,10 @@
 # 发布状态
 
-**已发布 SDK：** [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)，编译器 `0.4.0-alpha.1`，JDK17+，Apache-2.0。这是实验性 Alpha，不是生产迁移承诺。
+**已发布 SDK：** [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1)，编译器 `0.5.0-beta.1`，语言版本 `0.8-dev`，JDK17+，Apache-2.0。这是实验性 Beta，不是生产迁移承诺。Linux/macOS 为发行支持平台；Windows 仍是非阻塞预览。
+
+Beta SDK 包含项目测试、wrapper 生成、schema-4 依赖锁、受限且显式的 Java/JVM 互操作，以及 CLI、HTTP、JSON、SQLite 和 Web 一方库。具体能力以发行资产及已安装 SDK 的 `sprig capabilities --json` 为准。没有中央包注册服务，Sprig 也尚未自举。
+
+已下载发行 ZIP 的 Linux/macOS × JDK 17/26 验收、校验和及发布流程证据见[发行验证记录](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md)。
 
 v0.4 在 v0.3 基础上加入 canonical formatter、显式模块 re-export、表达式 `match`、
 Unicode code-point 字符串语义、`sprig api` 模块/项目内省、managed SDK 升级，并完成

@@ -22,7 +22,7 @@ build → `conform` callbacks → verify the package.
 | Fabric API | 0.161.0+26.3 |
 | Fabric Loom | 1.18.2 (build declares `1.18-SNAPSHOT`) |
 | Gradle wrapper | 9.7.1 |
-| Sprig | 0.4.0-alpha.1 source revision `ede71f7a` |
+| Sprig dogfood toolchain | 0.4.0-alpha.1 source revision `ede71f7a` (historical Alpha-era integration) |
 | Compile/runtime JDK | OpenJDK 26.0.1 (`javac --release 25`, classfile major 69) |
 
 Explicitly **not** verified:
