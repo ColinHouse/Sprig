@@ -53,6 +53,9 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
         text = (sdk / name).read_text()
         assert version in text
         assert not any(marker in text for marker in ("NOT RELEASED", "development draft", "development Agent SDK")), name
+    examples_index = (sdk / "examples/README.md").read_text(encoding="utf-8")
+    assert "Begin with the [Sprig Agent Guide](../AGENT_GUIDE.md)." in examples_index
+    assert "[Fabric/Loom integration](../docs/SHOWCASES.md)" in examples_index
     subprocess.run([sys.executable, str(ROOT / "scripts/internal/check-doc-links.py"), "--root", str(sdk)], check=True)
     assert not (sdk / "acceptance").exists(), "maintainer blind-test evidence must stay in the repository"
 
