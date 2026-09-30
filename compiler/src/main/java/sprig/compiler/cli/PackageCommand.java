@@ -188,7 +188,7 @@ final class PackageCommand {
         } else {
             System.err.println(diagnostic.format());
         }
-        return 1;
+        return exitCode;
     }
 
     private static String manifestUri() {
