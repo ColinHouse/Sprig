@@ -55,6 +55,13 @@ v0.4 adds the canonical formatter, explicit
 module re-exports, expression `match`, Unicode code-point string semantics,
 `sprig api` module/project introspection, managed SDK upgrades and an adversarial
 correctness pass.
+The current source checkout (not yet in the v0.4.0-alpha.1 release assets) also
+includes concrete Java generics, opaque arrays with the explicit
+`@std/jvm.spr` collection adapters, the `sprig wrap` generator, the
+`sprig test` project runner and schema-4 owner-relative portable local locks.
+The end-to-end wiring from a real Fabric/Loom dogfood is in
+[Fabric / JVM framework integration](/en/guide/fabric).
+
 See [release status](/en/project/release-status), the release assets and the
 checkout's capability output. Sprig is not self-hosted or production ready.
 Publishing/registry, LSP, interfaces and generic inference remain future work.

@@ -65,6 +65,7 @@ sprig capabilities --json
 sprig help generics --json
 sprig api java.time.LocalDate --json
 sprig check --json
+sprig test --json          # 当前源码能力；运行项目 tests/**/*.spr
 sprig explain SPR-TYPE-NULLABLE --json
 sprig run
 ```
@@ -72,12 +73,20 @@ sprig run
 诊断提供稳定码与源位置。Java 引用结果须判空，整数除法和泛型参数须显式。
 JSON 格式见[工具与 JSON](/guide/tooling)。不要从其他语言猜测规则。
 
+`test`/`wrap`/`run --stacktrace` 属于当前源码能力，已发布的 v0.4.0-alpha.1 SDK
+尚未包含；以 `capabilities --json` 为准。要接入第三方 JVM 库或框架构建，先读
+[JVM 互操作](/guide/jvm-interop) 与 [Fabric / JVM 框架集成](/guide/fabric)。
+
 ## 做一个实用工具
 
 [Showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)包括
 输出 JSON 的仓库审计器、真实 Maven 库应用和源码分析器，各 README 给出输入和命令。
 基础语法见可执行的[教程与示例页](/examples)或[语言导览](/guide/language-tour)；应用程序项目见
 [示例总览](https://github.com/ColinHouse/Sprig/blob/main/examples/README.md)。
+
+需要把 host 构建系统（Gradle/Loom/Maven）解析出的真实 classpath 交给 Sprig、再把
+生成的 Java 交还 host 编译时，见 [Fabric / JVM 框架集成](/guide/fabric) 的可复用
+接线与 clean-build/打包清单。
 
 想和编码 Agent 一起贡献？读[贡献指南（英文）](/en/project/contributing)和
 `AGENTS.md`，挑选有验收条件的小任务，运行 `scripts/verify.sh`

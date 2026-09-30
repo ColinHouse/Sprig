@@ -53,6 +53,11 @@ sprig run
 v0.4 在 v0.3 基础上加入 canonical formatter、显式模块 re-export、
 表达式 match、Unicode code-point 字符串语义、`sprig api` 模块/项目内省、managed SDK
 升级和一轮对抗正确性修复。已发布 SDK 的功能请查看[发行状态](/project/release-status)、发行资产和 capability 输出。
+当前源码（尚未进入 v0.4.0-alpha.1 发行资产）还包含：显式 Java 具体泛型、opaque
+数组与 `@std/jvm.spr` 显式集合适配器、`sprig wrap` wrapper 生成器、`sprig test`
+项目测试与 schema-4 owner-relative 便携本地锁。真实 Fabric/Loom dogfood 的端到端
+接线见 [Fabric / JVM 框架集成](/guide/fabric)。
+
 Sprig 尚未自举，也不承诺生产可用；发布/registry、LSP、接口与泛型推断仍属未来工作。
 见[已知限制](/reference/known-limitations)。
 

@@ -43,9 +43,11 @@ Generics are explicit and invariant. Java reference results require null
 checks. These are implemented contracts; see
 [feature status](docs/FEATURE_STATUS_IMPLEMENTED.md) and
 [numeric semantics](docs/NUMERIC_SEMANTICS.md).
-The current source checkout also has a project [test runner](docs/TESTING.md);
-the published v0.4.0-alpha.1 SDK predates that command. From the repository
-root, try `bin/sprig test examples/test_runner --json`.
+The current source checkout also has a project [test runner](docs/TESTING.md)
+and the [wrapper generator](docs/WRAP.md) (`sprig wrap`); the published
+v0.4.0-alpha.1 SDK predates both. From the repository root, try
+`bin/sprig test examples/test_runner --json` or
+`bin/sprig wrap java.time.LocalDate --out /tmp/date.spr --json`.
 
 ## Five-minute first project
 
@@ -120,6 +122,16 @@ record. [Executable tutorials](website/snippets/tutorial/hello.spr) and the
 [language tour](website/en/guide/language-tour.md) teach individual constructs;
 the [examples gallery](examples/README.md) collects the application projects.
 
+### JVM framework integration
+
+A Fabric/Loom mod dogfood exercised the framework path end to end: the host
+build owns the Minecraft/Fabric classpath, Sprig conforms directly to lifecycle
+callbacks, one narrow Java adapter covers the Brigadier wildcard builder, and a
+singleplayer save/reload/build slice passed. The reusable method and verified
+versions are in the website guide
+[Fabric / JVM framework integration](website/en/guide/fabric.md); the numbers
+there are one project's local measurement, not a general promise.
+
 ### Web + SQLite examples
 
 The v0.4 SDK includes [mini-web](examples/mini_web/README.md),
@@ -164,9 +176,12 @@ installed separately; this extension is not yet on Marketplace.
 ## Boundaries and source of truth
 
 Sprig is an Alpha project, not a production migration promise. Publishing,
-registry, LSP, interfaces/traits, generic inference, arrays and
-stage-1 self-hosting remain future work. JVM generics and annotations have
-interop limits. Consult the checkout's `capabilities --json` and
+registry, LSP, interfaces/traits, generic inference and stage-1 self-hosting
+remain future work. JVM interop now passes arrays through as opaque values,
+preserves concrete Java generic arguments, offers explicit collection adapters
+and can generate editable wrappers with `sprig wrap`; wildcard shapes, varargs,
+source array syntax and annotation interpretation remain outside the profile.
+Consult the checkout's `capabilities --json` and
 [known limitations](docs/KNOWN_LIMITATIONS.md).
 
 `grammar/`, `compiler/`, and `runtime/` define implemented behavior.

@@ -22,6 +22,8 @@ generic T:
 的参数（`generic K, V:`），重复参数会被拒绝，参数只在块内可见——在块外使用会
 得到 `SPR-NAME-UNRESOLVED`。
 
+Java 导入类的具体泛型（`ArrayList[String]`、`List[Map[String, Int32]]` 与显式泛型方法）见 [JVM 互操作](/guide/jvm-interop)；raw 泛型证据不会升级为具体类型。
+
 ## 使用处必须写出 `[Type]`
 
 ```sprig

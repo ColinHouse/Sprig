@@ -22,6 +22,7 @@ const pages = [
   ['docs/MODULE_REEXPORTS.md', 'generated/en/reference/MODULE_REEXPORTS.md'],
   ['docs/FORMATTER.md', 'generated/en/reference/FORMATTER.md'],
   ['docs/JVM_INTEROP.md', 'generated/en/reference/JVM_INTEROP.md'],
+  ['docs/WRAP.md', 'generated/en/reference/WRAP.md'],
   ['docs/JVM_CONFORMANCE.md', 'generated/en/reference/JVM_CONFORMANCE.md'],
   ['docs/STAGE1_ROADMAP.md', 'generated/en/reference/STAGE1_ROADMAP.md'],
   ['spec/docs/LANGUAGE_SPEC.md', 'generated/en/reference/LANGUAGE_SPEC.md'],
@@ -61,6 +62,10 @@ const linkMap = new Map([
   ['docs/MODULE_REEXPORTS.md', '/en/reference/MODULE_REEXPORTS'],
   ['docs/FORMATTER.md', '/en/reference/FORMATTER'],
   ['docs/JVM_INTEROP.md', '/en/reference/JVM_INTEROP'],
+  ['docs/WRAP.md', '/en/reference/WRAP'],
+  ['WRAP.md', '/en/reference/WRAP'],
+  ['website/en/guide/fabric.md', '/en/guide/fabric'],
+  ['website/en/guide/jvm-interop.md', '/en/guide/jvm-interop'],
   ['docs/STAGE1_ROADMAP.md', '/en/reference/STAGE1_ROADMAP'],
   ['spec/docs/LANGUAGE_SPEC.md', '/en/reference/LANGUAGE_SPEC'],
   ['spec/docs/JVM_INTEROP.md', '/en/reference/JVM_INTEROP_DESIGN']

@@ -13,18 +13,24 @@ test [PATH] [--filter TEXT] [--json]        run ordinary project test programs
 build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
 help [topic] [--json]                      versioned language reference
 capabilities [--json]                     implemented feature inventory
-api <Java.Class> [--member NAME] [--classpath JAR] [--json]
-wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json] generate an editable Sprig wrapper JVM signatures
+api <Java.Class> [--member NAME] [--classpath JAR] [--json] inspect JVM signatures
+wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json] generate an editable Sprig wrapper
 doctor [--classpath JAR] [--json]         environment report
 explain <SPR-CODE> [--json]                 structured diagnostic explanation
 codes [--json]                              list every diagnostic code
 version
 ```
 
-`check`, `build`, `run`, and `api` accept repeated `--classpath` values for
-local JARs/directories. They use the same resolved path. No dependency is
-downloaded. These commands are included in the v0.4.0-alpha.1 SDK.
-Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
+`check`, `build`, `run`, `api`, `wrap` and `doctor` accept repeated
+`--classpath` values for local JARs/directories and use the same resolved path.
+No dependency is downloaded. Use `sprig api java.time.LocalDate --json` to
+inspect real JDK signatures.
+
+The published v0.4.0-alpha.1 SDK contains the base commands
+(`check`/`build`/`run`/`api`/`doctor` and friends). `test`, `wrap`,
+`run --stacktrace` and schema-4 portable locks belong to the **current source
+checkout** and are not in that SDK; check `sprig capabilities --json` and the
+release assets for the exact range.
 
 - `check` stops before code generation. `--syntax-only` stops even earlier,
   after lexing, layout and parsing.
@@ -38,6 +44,11 @@ Use `sprig api java.time.LocalDate --json` to inspect real JDK signatures.
   `tests/compile_fail/**/*.spr` against sibling diagnostic-code expectations.
   It is available in the current source checkout; the v0.4.0-alpha.1 SDK
   predates it. See the [testing contract](/en/reference/TESTING).
+- `wrap` generates editable Sprig source from a real classpath: it refuses to
+  overwrite without `--force`, checks the file under the same classpath before
+  writing, and reports generated/skipped members with stable reasons in
+  `--json`. See the [wrapper contract](/en/reference/WRAP) and
+  [Fabric / JVM framework integration](/en/guide/fabric).
 - `explain` and `codes` document the stable diagnostic vocabulary in
   [Diagnostic codes](/en/reference/DIAGNOSTIC_CODES).
 

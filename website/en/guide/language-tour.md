@@ -154,9 +154,11 @@ classes uses the same syntax with a qualified class name:
 
 ## What is not in the language
 
-Generic inference, variance, inheritance and interfaces, `match` expressions,
-`%=`, tuples/destructuring, arrays, varargs and string interpolation are
-**not implemented**. See
+Generic inference, variance, inheritance and interfaces, `%=`,
+tuples/destructuring and string interpolation are **not implemented**. Source
+array syntax, varargs and wildcard shapes are outside the JVM interop profile
+(arrays still cross as opaque foreign values; see
+[JVM interoperability](/en/guide/jvm-interop)). See
 [Known limitations](/en/reference/KNOWN_LIMITATIONS) for the full list, and the
 [stage-1 roadmap](/en/reference/STAGE1_ROADMAP) for what comes next.
 

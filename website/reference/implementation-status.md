@@ -26,9 +26,12 @@
 | 函数必须有返回值、不可达代码检查 | `SPR-FLOW-*`。 |
 | 模块：文件导入、别名访问、只初始化一次、环检测 | 每个模块一个静态 `$init()`。 |
 | JDK 互操作：导入、构造器、静态/实例方法与字段、重载 | 引用结果可空、参数保守非空。 |
+| 具体 Java 泛型、opaque 数组、显式集合适配器 | 显式 `Type[Arg]` 应用；数组作为不透明值传递；`@std/jvm.spr` 快照/拷贝；wildcard、变长参数与 source 数组语法保持拒绝。 |
+| `sprig wrap` wrapper 生成器 | 消费共享 interop 分类，生成普通可编辑 `.spr`；默认不覆盖，写出前检查，跳过项带稳定原因。 |
+| `sprig test` 项目测试运行器 | 运行 `tests/**/*.spr`，隔离子 JVM、30 秒超时；编译失败用 `.expect.toml` 按诊断码核对。 |
 | 受检 `Int`/`Int32`、显式整数除法、字面量范围 | `NumericOps` 运行时检查。 |
 | `BigInt`、`Decimal`、IEEE `Float`/`Float32` 与显式转换 | 见[数值语义（英文）](/en/reference/NUMERIC_SEMANTICS)。 |
-| `check`/`build`/`run`/`explain`/`codes`/`help`/`capabilities`/`api`/`doctor`、`--json`、`--syntax-only` | 单一 `bin/sprig` 可执行文件；所有命令包含在当前 SDK 中。 |
+| `check`/`build`/`run`/`test`/`explain`/`codes`/`help`/`capabilities`/`api`/`wrap`/`doctor`、`--json`、`--syntax-only`、`run --stacktrace` | 单一 `bin/sprig` 可执行文件；`test`/`wrap` 等属于当前源码，已发布 v0.4.0-alpha.1 SDK 以 `capabilities --json` 为准。 |
 | 显式本地 `--classpath` | `api`/`check`/`build`/`run` 使用同一 JAR 或目录路径；与锁定 Maven classpath 显式合并。 |
 | 多参数显式泛型、Equatable | 不变泛型；无推断。 |
 | sprig.toml、本地/Git 依赖、schema-4 lock、exports、离线构建 | 已实现；Maven 有效 POM/传递依赖、统一 classpath。 |
@@ -39,8 +42,8 @@
 
 ## 尚未实现
 
-泛型推断、variance、Comparable、继承与接口、`match` 表达式、嵌套/位置模式、任意 Java SAM 转换、
-`%=`、元组与解构、数组/变长参数、完整的 Java 泛型与注解互操作、
+泛型推断、variance、Comparable、语言内继承与接口、嵌套/位置模式、任意 Java SAM 转换、
+`%=`、元组与解构、source 数组语法、变长参数、wildcard 形状、Java 注解/type-use 可空性解释、
 发布/registry、LSP、增量检查、自举（stage-1）。
 
 完整边界与原因见[已知限制](/reference/known-limitations)和英文的

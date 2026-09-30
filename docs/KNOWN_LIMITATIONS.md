@@ -52,9 +52,11 @@ by the historical design kit in `spec/`.
 - Lambdas have single-expression bodies, support arities zero through three,
   and cannot declare a `throws` type. A lambda that calls a checked-throwing
   operation must handle that effect inside the lambda.
-- Runtime numeric failures report a runtime diagnostic but may not carry the
-  exact source span of the arithmetic expression. JVM library operations do
-  not inherit Sprig's checked integer arithmetic rules.
+- Runtime numeric failures report `SPR-RUNTIME-EXCEPTION` with the nearest
+  statement range for local and imported `Int`/`Int32` checked arithmetic, plus
+  `data.origin="checked-arithmetic"`; the span is the statement, not a
+  sub-expression. JVM library operations do not inherit Sprig's checked integer
+  arithmetic rules.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.

@@ -26,7 +26,7 @@ describes the kit's own scope.
 | Type and value contracts | `GENERICS.md`, `NUMERIC_SEMANTICS.md`, `NUMERIC_DESIGN_DECISIONS.md` |
 | JVM boundaries | `JVM_INTEROP.md`, `JVM_CONFORMANCE.md` |
 | Projects and dependencies | `PROJECTS.md`, `DEPENDENCIES.md`, `STANDARD_LIBRARY.md`, `HOST_SERVICES.md` |
-| Tooling and operations | `DIAGNOSTIC_CODES.md`, `INSTALL.md`, `TESTING.md`, `SHOWCASES.md` |
+| Tooling and operations | `DIAGNOSTIC_CODES.md`, `INSTALL.md`, `TESTING.md`, `WRAP.md`, `SHOWCASES.md` |
 | Future work | `STAGE1_ROADMAP.md` |
 
 ## Release history (`docs/releases/`, `docs/RELEASE_VALIDATION.md`)
