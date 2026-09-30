@@ -33,7 +33,12 @@ def sprig(cwd, *args, env=None):
 
 
 def git(cwd, *args):
-    return subprocess.run(["git", *map(str, args)], cwd=cwd, text=True,
+    env = dict(os.environ,
+               GIT_AUTHOR_NAME="Sprig fixture",
+               GIT_AUTHOR_EMAIL="sprig-fixture@example.invalid",
+               GIT_COMMITTER_NAME="Sprig fixture",
+               GIT_COMMITTER_EMAIL="sprig-fixture@example.invalid")
+    return subprocess.run(["git", *map(str, args)], cwd=cwd, env=env, text=True,
                           encoding="utf-8", capture_output=True)
 
 

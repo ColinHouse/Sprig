@@ -21,8 +21,13 @@ def check(name, ok, detail=""):
 
 
 def git(cwd, *args):
+    env = dict(os.environ,
+               GIT_AUTHOR_NAME="Sprig fixture",
+               GIT_AUTHOR_EMAIL="sprig-fixture@example.invalid",
+               GIT_COMMITTER_NAME="Sprig fixture",
+               GIT_COMMITTER_EMAIL="sprig-fixture@example.invalid")
     return subprocess.run(["git", *map(str, args)], cwd=cwd,
-                          text=True, encoding="utf-8", capture_output=True)
+                          env=env, text=True, encoding="utf-8", capture_output=True)
 
 
 def write(path, text):
