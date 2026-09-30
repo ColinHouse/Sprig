@@ -2,15 +2,15 @@
 layout: home
 hero:
   name: Sprig
-  text: Predictable JVM tools, written together
-  tagline: A small, explicit language for tooling, automation and reliable application code. Query the compiler, edit, check and repair. Experimental Alpha; JDK 17+.
+  text: Less to guess. Easier to verify.
+  tagline: Sprig does not try to make coding agents smarter. It tries to give them less to guess. For people and agents; agent-friendly should also mean review-friendly. Experimental Alpha; JDK 17+.
   image:
     src: /logo-round.png
     alt: Sprig
   actions:
     - theme: brand
-      text: Five-minute start
-      link: /en/guide/getting-started
+      text: Start the tutorial
+      link: /en/tutorial
     - theme: alt
       text: Contribute with your agent
       link: /en/project/contributing
@@ -18,12 +18,12 @@ hero:
       text: GitHub
       link: https://github.com/ColinHouse/Sprig
 features:
-  - title: Readable tools and ASTs
-    details: Indentation, explicit generics, sealed variants and exhaustive match for CLI utilities, configuration tools and source analyzers.
-  - title: Compiler feedback you can query
-    details: Capabilities, topic help, JVM signatures and stable JSON diagnostics give humans and coding agents a shared source of truth.
-  - title: Explicit runtime boundaries
-    details: Checked integers, exact Decimal/BigInt, conservative Java nullability and reproducible dependency locks make failures visible.
+  - title: Programs people can read
+    details: Explicit function types, clear bindings and small JVM programs make source easier to inspect and discuss.
+  - title: Ask the compiler instead of guessing
+    details: Capabilities, topic help, Java signatures and JSON diagnostics provide reproducible implementation evidence.
+  - title: Keep changes reviewable
+    details: Type checking, exhaustive match, checked numerics and locked dependencies expose concrete problems early; they do not prove an algorithm correct.
 ---
 
 ## What can I build?
@@ -32,6 +32,17 @@ Repository automation, data transforms, small JVM applications and compiler
 utilities. The source milestone's [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)
 include a repository auditor, a real Maven-library application and a source
 analyzer. Their READMEs include inputs, commands and explicit boundaries.
+
+## Early dogfood: feedback, not a performance claim
+
+The maintainer reports trying a real Sprig workflow with a lower-cost coding
+model. This is early, anecdotal product dogfooding: there was no controlled
+experiment, equivalent Java implementation, preregistered task set or
+productivity metric. It cannot support claims that Sprig beats Java, improves
+productivity by a measured amount or eliminates model errors. The narrower
+observation is that compiler queries and structured diagnostics can provide
+concrete evidence for repairs. We welcome external users to reproduce and
+report their experience.
 
 ## Start with a project
 

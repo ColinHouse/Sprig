@@ -19,7 +19,8 @@ def check(name, ok, detail=""):
         FAILURES.append(f"{name}: {detail}")
 
 
-def inventory(root, executable=("a.spr",), import_only=("mod.spr",), files=None):
+def inventory(root, executable=("a.spr",), import_only=("mod.spr",),
+              compile_fail=(), files=None):
     """Write a tiny disposable inventory and its manifest."""
     root.mkdir(parents=True, exist_ok=True)
     (root / "a.spr").write_text("print(1)\n", encoding="utf-8")
@@ -27,7 +28,8 @@ def inventory(root, executable=("a.spr",), import_only=("mod.spr",), files=None)
     (root / "mod.spr").write_text("func answer() -> Int:\n    return 42\n", encoding="utf-8")
     manifest = {"schemaVersion": 1,
                 "executable": list(executable),
-                "import-only": list(import_only)}
+                "import-only": list(import_only),
+                "compile-fail": list(compile_fail)}
     for name, content in (files or {}).items():
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -85,11 +87,38 @@ def main():
         code, output = run(duplicate)
         check("duplicate-role-fails", code == 2 and "classified twice" in output, output)
 
+        expected_failure = base / "expected-failure"
+        inventory(expected_failure, compile_fail=("bad.spr",), files={
+            "bad.spr": "let value: Int = \"wrong\"\n",
+            "bad.expect.json": '{"diagnostics": ["SPR-TYPE-ASSIGN"]}\n',
+        })
+        code, output = run(expected_failure)
+        check("compile-fail-role-passes-with-matching-diagnostic",
+              code == 0 and "3 passed, 0 failed" in output, output)
+
+        unexpected_success = base / "unexpected-success"
+        inventory(unexpected_success, compile_fail=("good.spr",), files={
+            "good.spr": "print(2)\n",
+            "good.expect.json": '{"diagnostics": ["SPR-TYPE-ASSIGN"]}\n',
+        })
+        code, output = run(unexpected_success)
+        check("compile-fail-role-rejects-unexpected-success",
+              code == 1 and "expected compilation failure" in output, output)
+
+        wrong_diagnostic = base / "wrong-diagnostic"
+        inventory(wrong_diagnostic, compile_fail=("bad.spr",), files={
+            "bad.spr": "let value: Int = \"wrong\"\n",
+            "bad.expect.json": '{"diagnostics": ["SPR-NAME-UNKNOWN"]}\n',
+        })
+        code, output = run(wrong_diagnostic)
+        check("compile-fail-role-checks-stable-diagnostic-codes",
+              code == 1 and "diagnostic codes" in output, output)
+
     if FAILURES:
         for failure in FAILURES:
             print(f"FAIL {failure}")
         return 1
-    print("documentation roles: 7 checks passed")
+    print("documentation roles: 10 checks passed")
     return 0
 
 

@@ -65,7 +65,7 @@ export default defineConfig({
       lang: 'zh-CN',
       title: 'Sprig',
       description:
-        'Sprig 是一门面向 JVM 的缩进式静态类型语言，拥有 sealed variant、穷尽 match、受检数值与显式 JVM 互操作；当前由 Java stage-0 编译器实现。',
+        '面向人类与编码 Agent 的静态类型 JVM 语言。Sprig 让程序和编译器反馈更少依赖猜测；当前为实验性 Alpha。',
       head: [['meta', { property: 'og:locale', content: 'zh_CN' }]],
       markdown: {
         container: {
@@ -79,6 +79,7 @@ export default defineConfig({
       },
       themeConfig: {
         nav: [
+          { text: '入门教程', link: '/tutorial', activeMatch: '^/tutorial' },
           { text: '指南', link: '/guide/getting-started', activeMatch: '^/guide/' },
           { text: '示例', link: '/examples', activeMatch: '^/examples' },
           {
@@ -89,11 +90,15 @@ export default defineConfig({
           { text: '项目', link: '/project/release-status', activeMatch: '^/project/' }
         ],
         sidebar: {
+          '/tutorial': [
+            { text: '从零开始', items: [{ text: 'Sprig 入门教程', link: '/tutorial' }] }
+          ],
           '/guide/': [
             {
               text: '指南',
               items: [
                 { text: '快速开始', link: '/guide/getting-started' },
+                { text: 'Agent 工作流', link: '/guide/agent-workflow' },
                 { text: '语言导览', link: '/guide/language-tour' },
                 { text: '泛型', link: '/guide/generics' },
                 { text: '项目', link: '/guide/projects' },
@@ -136,10 +141,11 @@ export default defineConfig({
       lang: 'en-US',
       title: 'Sprig',
       description:
-        'Sprig is an indentation-based, statically typed JVM language with sealed variants, exhaustive match, checked numerics and explicit JVM interop, implemented by a Java stage-0 compiler.',
+        'A statically typed JVM language for people and coding agents. Sprig makes programs and compiler feedback easier to verify; currently experimental Alpha.',
       head: [['meta', { property: 'og:locale', content: 'en_US' }]],
       themeConfig: {
         nav: [
+          { text: 'Tutorial', link: '/en/tutorial', activeMatch: '^/en/tutorial' },
           {
             text: 'Guide',
             link: '/en/guide/getting-started',
@@ -158,11 +164,15 @@ export default defineConfig({
           }
         ],
         sidebar: {
+          '/en/tutorial': [
+            { text: 'Start here', items: [{ text: 'Sprig tutorial', link: '/en/tutorial' }] }
+          ],
           '/en/guide/': [
             {
               text: 'Guide',
               items: [
                 { text: 'Getting Started', link: '/en/guide/getting-started' },
+                { text: 'Agent workflow', link: '/en/guide/agent-workflow' },
                 { text: 'Language Tour', link: '/en/guide/language-tour' },
                 { text: 'Generics', link: '/en/guide/generics' },
                 { text: 'Projects', link: '/en/guide/projects' },

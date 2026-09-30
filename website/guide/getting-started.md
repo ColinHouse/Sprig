@@ -1,4 +1,6 @@
-# 五分钟创建第一个项目
+# 安装 SDK 并创建第一个项目
+
+第一次使用 Sprig？可先从[中英双语入门教程](/tutorial)完成一个本地 Task Tracker，再回到本页查阅安装、项目与发行细节。
 
 Sprig 是面向 CLI 工具、自动化和可靠应用代码的实验性 JVM 语言。
 安装 **JDK 17+**，确保 `java` 和 `javac` 都在 `PATH`。SDK 不包含 JDK。

@@ -1,93 +1,30 @@
-# 示例
+# 应用程序示例
 
-下面的教程都是可执行文档：每个程序位于 `website/snippets/tutorial/`，文档门禁在每次
-验证时运行它并与已检入的 `.out` oracle 逐字节比较。清单是真实文件，不是重新录入的
-副本；中文和英文页面包含同一份 Sprig 源码。想要看“用 Sprig 能做出什么”，请前往
-[应用程序示例](#应用程序示例)。
+先做完[可执行入门教程](/tutorial)。这里按学习进阶列出有实际用途的程序；教程源码在 `website/snippets/`，独立项目在 `examples/`，测试夹具仍放 `tests/`。
 
-## Hello world
+## 从本地程序开始
 
-<<< @/snippets/tutorial/hello.spr
+- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：本地 JSON CLI、文件 I/O、类型化模型；不访问网络。
+- [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：多文件 JSON 命令行程序，使用 `sprig-cli`。
+- [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary)：从小型 JSON 配置文件生成可重复的摘要，并展示错误输入的诊断。
+- [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：查询 Java/Sprig API、诊断摘要与 API 差异工具。
 
-<<< @/snippets/tutorial/hello.out
+## JVM 应用与库
 
-## FizzBuzz
+- [application_foundation](https://github.com/ColinHouse/Sprig/tree/main/examples/application_foundation)：HTTP、JSON codec、UTC 时间与文件处理。
+- [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) 与 [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations)：Maven JDBC、事务、持久化和迁移。
+- [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger)：精简账户/交易 HTTP 后端与重启后持久化。
+- [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web)：类型化路由、JSON 与 OpenAPI。
 
-<<< @/snippets/tutorial/fizzbuzz.spr
+第三方库仍由普通 Maven 坐标与锁文件管理。请查看[首方库目录](https://github.com/ColinHouse/Sprig/tree/main/libraries)和[JVM 互操作指南](/guide/jvm-interop)。
 
-<<< @/snippets/tutorial/fizzbuzz.out
+## 面向编译器与生态的案例
 
-<details>
-<summary>为什么输出是这样</summary>
+- [repository_audit](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/repository_audit)：遍历仓库并生成 JSON 报告。
+- [maven_slug](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/maven_slug)：锁定 Maven 库、查询 API、离线复用缓存。
+- [source_analyzer](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/source_analyzer)：使用 Sprig frontend API 分析受支持的源码子集。
+- [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner)：普通 Sprig 项目中的 runtime、table、临时文件、子进程和 expected-diagnostic 测试。
 
-程序遍历 `range(1, 16)`，每行打印一个值：3 的倍数替换为 `Fizz`，5 的倍数替换为
-`Buzz`，15 的倍数替换为 `FizzBuzz`。
+[Fabric/Loom dogfood](/guide/fabric) 是单独的高要求框架集成案例，展示 host-owned classpath 和窄 Java adapter 的边界。
 
-</details>
-
-## Shapes：类、variant 与 match
-
-<<< @/snippets/tutorial/shapes.spr
-
-<<< @/snippets/tutorial/shapes.out
-
-这个例子组合了带默认值的类、sealed `variant`、`enum`、两个穷尽 `match`、可空返回
-类型以及不可变集合。
-
-## 词频统计
-
-<<< @/snippets/tutorial/word_count.spr
-
-<<< @/snippets/tutorial/word_count.out
-
-## 数值精度策略
-
-<<< @/snippets/tutorial/numeric_science.spr
-
-<<< @/snippets/tutorial/numeric_science.out
-
-均值使用 binary64 `Float`，金额式的值使用 `Decimal`，因此 `0.1 + 0.2` 精确等于
-`0.3`；最后一行把浮点误差显式展示出来，而不是隐藏它。
-
-## 应用程序示例
-
-`examples/` 存放有独立用途的程序与项目，而不是语法演示。先看
-[示例总览](https://github.com/ColinHouse/Sprig/blob/main/examples/README.md)：
-
-- [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web)：类型化路由、JSON、OpenAPI。
-- [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite)：锁定版本的 Maven JDBC 驱动与持久化预处理 SQL。
-- [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger)：精简的账户/交易 HTTP 后端，支持重启后持久化。
-- [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations)：有序、事务化的 SQLite migrations。
-- [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：多文件 JSON CLI。
-- [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：用 Sprig 编写的编译器 API 与诊断工具。
-- [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner)：当前源码中的五种普通项目测试，覆盖运行、表驱动、临时文件、子进程和预期诊断。
-- [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)：仓库审计器、Maven 工具和源码分析器。
-
-## 真实 JVM 生态（Fabric dogfood）
-
-一次真实的 Fabric/Loom 单人 mod dogfood 验证了 framework 路径：Gradle/Loom 拥有
-Minecraft/Fabric classpath，Sprig 直接 `conform` 生命周期/tick/玩家回调，只有
-Brigadier 的 wildcard builder 用了 1 个窄 Java adapter；单人存档的创建、命令、
-自动保存、退出、重进恢复与最终构建全部通过。
-
-| 指标 | 数值 | 说明 |
-|---|---:|---|
-| 手写 Sprig 功能代码 | 440 行 | 模型、持久化、入口 |
-| 手写 Java glue | 52 行 | 1 个 Brigadier builder + 1 个 action 接口 |
-| 直接 conform 的回调 | 生命周期、tick、join/disconnect | — |
-| 窄 wildcard adapter | 1 | Brigadier `then` |
-
-这些是**单个项目的局部测量，不是普遍比例**；更大的第三方 API 会提高 Java 占比。
-可复用的接线、验证版本与打包清单见
-[Fabric / JVM 框架集成](/guide/fabric)。
-
-## 测试套件中的更大程序
-
-- `tests/runtime/`：19 个带 golden stdout 的端到端程序，覆盖算术、函数、控制流、
-  类、variant、enum、可空性、错误、集合、lambda、字符串、模块、断言、格式化与
-  JVM 互操作。
-- `tests/visitor/ast_visitor.spr`：完全用 Sprig 编写的小型 AST 解释器，包含四个
-  visitor 类（打印、求值、化简、节点计数）；给 variant 增加 case 会让漏掉它的
-  visitor 编译失败。
-- `tests/visitor/mini_pipeline.spr`：自举可行性切片实验。
-- `tests/numeric/`：受检算术、转换与精度测试，并带有独立的 Python oracle。
+示例覆盖了有限的已测场景，不代表所有库 API 或生产工作负载都受支持。每个目录的 README 说明启动命令、锁文件和已知边界。

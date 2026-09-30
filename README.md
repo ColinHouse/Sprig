@@ -1,77 +1,45 @@
 # Sprig
 
-<p align="center">
-  <img src="website/public/logo-round.png" alt="Sprig icon" width="150">
-</p>
+**Sprig does not try to make coding agents smarter. It tries to give them less
+to guess.**
 
-**Sprig is a small, explicit, statically typed JVM language for tools,
-automation and reliable application code.** Its indentation-based syntax,
-sealed variants, exhaustive `match`, checked numerics and compiler query tools
-are designed to make programs and compiler feedback easy to inspect. Sprig is
-experimental Alpha, requires JDK 17+, and currently uses a Java stage-0
-compiler; it is not self-hosted.
+Sprig is an experimental, statically typed JVM language for people building
+tools, automation and application code. Agent-friendly should also mean
+review-friendly: inspectable source, explicit signatures, compiler queries and
+structured diagnostics help people verify what changed.
 
-[简体中文 website](https://colinhouse.github.io/Sprig/) ·
-[English website](https://colinhouse.github.io/Sprig/en/) ·
-[Releases](https://github.com/ColinHouse/Sprig/releases) ·
-[Contributing](CONTRIBUTING.md)
+The latest published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1); it requires a separate JDK 17+. Linux and macOS are release-supported. Windows is an experimental preview. Sprig uses a Java stage-0 compiler and is not self-hosted. Check the [release status](docs/releases/validation.md) and installed `sprig capabilities --json` before relying on source-only features.
 
-## Try Sprig
+## Start here
 
-Install the current published [v0.4.0-alpha.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)
-(requires a separate JDK 17+), or build a source checkout:
+- [Beginner tutorial](https://colinhouse.github.io/Sprig/tutorial)
+- [中文教程](https://colinhouse.github.io/Sprig/tutorial)
+- [Try the local Task Tracker](examples/task-tracker/README.md)
+- [Browse application examples](examples/README.md) and [first-party libraries](libraries/README.md)
+- [Language, JVM and tooling references](docs/README.md)
 
-```bash
-git clone https://github.com/ColinHouse/Sprig.git
-cd Sprig
-python3 scripts/build.py
-./bin/sprig version
-```
+Install the published SDK, then create a project:
 
-Create and run a project with an installed SDK:
-
-```bash
-sprig init my-tool
-cd my-tool
+```sh
+sprig init hello
+cd hello
 sprig resolve
 sprig run
 ```
 
-A source build fetches pinned ANTLR and Maven Resolver libraries. Maven CLI is
-not required. Linux and macOS are release-supported; Windows is an experimental
-preview.
+## Build from source
 
-## Compiler feedback
+JDK 17+, Python 3.12+, Node.js 20+/npm and Git are needed for the full
+developer gate. The first build downloads pinned ANTLR and Maven Resolver
+tools.
 
-Use the compiler to query language and JVM API details instead of guessing:
-
-```bash
-sprig capabilities --json
-sprig help generics --json
-sprig api java.time.LocalDate --json
-sprig check --json src/main.spr
-sprig explain SPR-TYPE-NULLABLE --json
-```
-
-## Documentation
-
-- [Documentation map](docs/README.md): current language, JVM, project and tooling references.
-- [Feature status](docs/language/feature-status.md) and [known limitations](docs/language/known-limitations.md).
-- [Getting started](website/guide/getting-started.md) and [examples gallery](examples/README.md).
-- [First-party libraries](libraries/README.md).
-- [Historical evidence](docs/history/README.md), including selected audits and the retired v0.7 design kit.
-- [VS Code extension](editors/vscode/README.md): local preview with syntax highlighting and compiler actions.
-
-## Contribute
-
-Read [AGENTS.md](AGENTS.md) for repository rules and [CONTRIBUTING.md](CONTRIBUTING.md)
-for setup and review expectations. The canonical local gate is:
-
-```bash
+```sh
+git clone https://github.com/ColinHouse/Sprig.git
+cd Sprig
+python3 scripts/build.py
 ./scripts/verify.sh
 ```
 
-## License
+See [contributor instructions](CONTRIBUTING.md) and [AI assistance disclosure](docs/contributing/ai-disclosure.md). Contributions are welcome; the author remains responsible for reviewing generated changes, tests, licensing and correctness.
 
-Apache-2.0. See [NOTICE](NOTICE), [third-party notices](THIRD_PARTY_NOTICES.md)
-and [license scope](docs/contributing/license-status.md).
+Apache-2.0 · [Releases](https://github.com/ColinHouse/Sprig/releases) · [中文网站](https://colinhouse.github.io/Sprig/)

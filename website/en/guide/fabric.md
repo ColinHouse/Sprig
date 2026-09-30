@@ -1,6 +1,9 @@
-# Fabric / JVM framework integration
+# Fabric / JVM framework case study
 
-This page distills a real Fabric/Loom mod dogfood into a reusable method:
+This is a demanding JVM framework integration case study, not the whole identity
+of Sprig. Start with the [beginner tutorial](/en/tutorial) and [ordinary Java
+interop](/en/guide/jvm-interop). This page distills a real Fabric/Loom mod
+dogfood into a reusable method:
 **the host build system is the dependency and classpath authority, Sprig owns
 business semantics, and only JVM shapes Sprig cannot express today get a narrow
 Java adapter.**

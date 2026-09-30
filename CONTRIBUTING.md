@@ -88,7 +88,7 @@ authority.
 
 | Location | Purpose |
 |---|---|
-| `website/snippets/` | Teaches Sprig: executable documentation. Every `.spr` file has an explicit role in `website/snippets/snippets.json`; executable snippets run with an output oracle, import-only modules are check-only. |
+| `website/snippets/` | Teaches Sprig: executable documentation. Every `.spr` file has an explicit role in `website/snippets/snippets.json`: `executable` compares runtime output, `import-only` performs static checking, and `compile-fail` checks the stable diagnostic codes in a sibling `.expect.json`. |
 | `examples/` | Programs or projects with an independent user-facing purpose. |
 | `tests/` | Proves Sprig behavior: regression fixtures, goldens and harnesses. |
 

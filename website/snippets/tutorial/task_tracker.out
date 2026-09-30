@@ -1,0 +1,2 @@
+Usage: sprig run -- list | add <title> | done <id>
+Tasks are stored in ./tasks.json

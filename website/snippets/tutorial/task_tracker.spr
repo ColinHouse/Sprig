@@ -1,0 +1,160 @@
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "@std/process.spr" as process
+import java.io.IOException as IOException
+
+class Task:
+    let id: Int
+    let title: String
+    let done: Bool
+
+func data_path() -> String:
+    let configured = process.environment("SPRIG_TASKS_FILE")
+    if configured != null:
+        return configured
+    return "tasks.json"
+
+func required_field(value: json.Value, name: String) -> json.Value throws Error:
+    match json.find_member(value, name):
+        case json.Lookup.Found as found:
+            return found.value
+        case json.Lookup.Missing:
+            throw Error("task is missing field " + name)
+        case json.Lookup.NotObject:
+            throw Error("task must be a JSON object")
+
+func as_int(value: json.Value) -> Int throws Error:
+    match value:
+        case json.Value.Number as number:
+            let parsed = number.text.toIntOrNull()
+            if parsed != null:
+                return parsed
+            throw Error("task id must be an integer")
+        case json.Value.Null:
+            throw Error("task id must be an integer")
+        case json.Value.Boolean:
+            throw Error("task id must be an integer")
+        case json.Value.Text:
+            throw Error("task id must be an integer")
+        case json.Value.Array:
+            throw Error("task id must be an integer")
+        case json.Value.Object:
+            throw Error("task id must be an integer")
+
+func as_text(value: json.Value) -> String throws Error:
+    match value:
+        case json.Value.Text as text:
+            return text.value
+        case json.Value.Null:
+            throw Error("task title must be text")
+        case json.Value.Boolean:
+            throw Error("task title must be text")
+        case json.Value.Number:
+            throw Error("task title must be text")
+        case json.Value.Array:
+            throw Error("task title must be text")
+        case json.Value.Object:
+            throw Error("task title must be text")
+
+func as_bool(value: json.Value) -> Bool throws Error:
+    match value:
+        case json.Value.Boolean as boolean:
+            return boolean.value
+        case json.Value.Null:
+            throw Error("task done must be Boolean")
+        case json.Value.Number:
+            throw Error("task done must be Boolean")
+        case json.Value.Text:
+            throw Error("task done must be Boolean")
+        case json.Value.Array:
+            throw Error("task done must be Boolean")
+        case json.Value.Object:
+            throw Error("task done must be Boolean")
+
+func decode_task(value: json.Value) -> Task throws Error:
+    return Task(
+        id=as_int(required_field(value, "id")),
+        title=as_text(required_field(value, "title")),
+        done=as_bool(required_field(value, "done"))
+    )
+
+func load_tasks() -> List[Task] throws Error, IOException:
+    let path = data_path()
+    if not files.exists(path):
+        return []
+    let document = json.parse(files.read_utf8(path))
+    var rows: List[json.Value] = []
+    match document:
+        case json.Value.Array as array:
+            rows = array.values
+        case json.Value.Null:
+            throw Error("task file must contain a JSON array")
+        case json.Value.Boolean:
+            throw Error("task file must contain a JSON array")
+        case json.Value.Number:
+            throw Error("task file must contain a JSON array")
+        case json.Value.Text:
+            throw Error("task file must contain a JSON array")
+        case json.Value.Object:
+            throw Error("task file must contain a JSON array")
+    let tasks: MutableList[Task] = []
+    for value in rows:
+        tasks.append(decode_task(value))
+    return tasks.toList()
+
+func save_tasks(tasks: List[Task]) -> Unit throws Error, IOException:
+    let values: MutableList[json.Value] = []
+    for task in tasks:
+        values.append(json.Value.Object(members=[
+            json.Member(key="id", value=json.Value.Number(text=task.id.toString())),
+            json.Member(key="title", value=json.Value.Text(value=task.title)),
+            json.Member(key="done", value=json.Value.Boolean(value=task.done))
+        ]))
+    let body = json.stringify(json.Value.Array(values=values.toList())) + "\n"
+    files.write_utf8(data_path(), body)
+
+func usage() -> Unit:
+    print("Usage: sprig run -- list | add <title> | done <id>")
+    print("Tasks are stored in ./tasks.json")
+
+let args = process.arguments()
+try:
+    if args.size() == 0:
+        usage()
+    elif args.get(0) == "list":
+        for task in load_tasks():
+            var marker = " "
+            if task.done:
+                marker = "x"
+            print(task.id.toString() + " [" + marker + "] " + task.title)
+    elif args.get(0) == "add" and args.size() == 2:
+        let tasks = load_tasks()
+        let task = Task(id=tasks.size() + 1, title=args.get(1), done=false)
+        let updated: MutableList[Task] = tasks.toMutableList()
+        updated.append(task)
+        save_tasks(updated.toList())
+        print("Added " + task.id.toString() + ": " + task.title)
+    elif args.get(0) == "done" and args.size() == 2:
+        let raw_id = args.get(1).toIntOrNull()
+        if raw_id == null:
+            throw Error("task id must be an integer")
+        let tasks = load_tasks()
+        let updated: MutableList[Task] = []
+        var found = false
+        for task in tasks:
+            if task.id == raw_id:
+                updated.append(Task(id=task.id, title=task.title, done=true))
+                found = true
+            else:
+                updated.append(task)
+        if not found:
+            throw Error("no task with id " + raw_id.toString())
+        save_tasks(updated.toList())
+        print("Completed " + raw_id.toString())
+    else:
+        usage()
+        throw Error("invalid command")
+catch problem: IOException:
+    throw Error("file operation failed: " + problem.message)
+catch problem: Error:
+    throw problem
