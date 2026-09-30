@@ -83,6 +83,17 @@ def main():
                 shutil.copytree(ROOT / tree, package / tree,
                                 ignore=shutil.ignore_patterns('sprig.lock', '*.sqlite', '*.sqlite-*',
                                                              '__pycache__', 'sprig-build'))
+        # The repository examples index points to VitePress pages, which are
+        # not part of the portable SDK archive. Give SDK users links that are
+        # present in the package instead of shipping broken relative links.
+        examples_readme = package / 'examples/README.md'
+        if examples_readme.is_file():
+            examples_index = examples_readme.read_text(encoding='utf-8')
+            examples_index = examples_index.replace(
+                '../website/tutorial.md', '../AGENT_GUIDE.md')
+            examples_index = examples_index.replace(
+                '../website/guide/fabric.md', '../docs/SHOWCASES.md')
+            examples_readme.write_text(examples_index, encoding='utf-8')
         for source in ('tests/visitor/ast_visitor.spr', 'tests/runtime/20_string_codepoints.spr'):
             destination = package / Path(source).parent
             destination.mkdir(parents=True, exist_ok=True)
