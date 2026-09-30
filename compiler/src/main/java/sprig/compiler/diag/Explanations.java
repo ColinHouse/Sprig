@@ -388,9 +388,11 @@ public final class Explanations {
             case Codes.DEP_GIT -> {
                 out.put("whyMatters", "Git dependencies are locked to a revision; resolution never moves branches by itself.");
                 out.put("commonCauses", List.of("git is unavailable or the remote/ref cannot be reached.",
-                        "The requested branch/tag/revision does not exist."));
+                        "The requested branch/tag/revision does not exist.",
+                        "Another Sprig process still holds the repository cache lock."));
                 out.put("safeFixes", List.of("Verify the remote URL and branch/ref in sprig.toml.",
                         "Ensure git is installed and the network is reachable for the first resolve.",
+                        "If the diagnostic reports lock contention, retry after the other resolve finishes.",
                         "Run sprig resolve to refresh the locked revision deliberately."));
                 out.put("relatedCodes", List.of(Codes.DEP_CHECKSUM, Codes.DEP_OFFLINE));
             }

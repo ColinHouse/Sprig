@@ -42,8 +42,20 @@ def main():
     assert metadata['className'] == 'org.apache.commons.text.StringEscapeUtils'
     assert any(method['name'] == 'escapeHtml4' and method['usableFromSprig'] for method in metadata['staticMethods'])
     assert len(metadata['classpath']) >= 2, 'Maven transitive classpath missing'
+    config_summary = sdk / 'examples' / 'config_summary'
+    run(config_summary, 'resolve')
+    config_lock = (config_summary / 'sprig.lock').read_bytes()
+    run(config_summary, 'check', '--offline')
+    assert (config_summary / 'sprig.lock').read_bytes() == config_lock
+    expected_config = 'schema=1\nactive=alpha\nprojects=2 (青空, Garden)\ntargets=3\n'
+    assert run(config_summary, 'run', '--offline', '--', 'fixtures/board.json') == expected_config
     with tempfile.TemporaryDirectory(prefix='sprig showcase space ') as temporary:
         work = Path(temporary)
+        bad_config = work / 'bad config.json'
+        bad_config.write_text('{"schema":1,"active_project":"alpha","projects":[{"name":"bad","targets":[{"item_id":"stone","amount":"three"}]}]}', encoding='utf-8')
+        invalid = subprocess.run([str(launcher), 'run', '--offline', '--', str(bad_config)],
+                                 cwd=config_summary, text=True, encoding='utf-8', capture_output=True)
+        assert invalid.returncode == 1 and '$.projects[0].targets[0].amount: expected integer, found string' in invalid.stdout + invalid.stderr, (invalid.stdout, invalid.stderr)
         output = work / 'report with spaces.json'
         assert run(projects / 'repository_audit', 'run', '--offline', '--', 'fixtures/tree', str(output)) == AUDIT + 'JSON report written\n'
         document = json.loads(output.read_text(encoding='utf-8'))
@@ -70,7 +82,7 @@ def main():
         expected = '<article id="hello-jvm-sprig"><h1>Hello &lt;jvm&gt; &amp; Sprig</h1></article>\n'
         assert rendered == expected, repr(rendered)
         assert article.read_text(encoding='utf-8') == expected
-    print('showcases: 3 project resolve/check/JVM runs, deterministic locks, JSON/findings, subset AST diagnostics, Maven API/transitive/offline passed')
+    print('showcases: 3 JVM projects plus UTF-8 JSON configuration, malformed-input diagnostics, deterministic locks, JSON/findings, subset AST diagnostics and Maven API/transitive/offline passed')
 
 if __name__ == '__main__':
     main()

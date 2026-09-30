@@ -153,8 +153,10 @@ numeric, nullability and exception contracts.
 
 Publishing/registry, Maven plugins, dependency authentication, non-JAR runtime
 artifacts, full Java generic/array/varargs adapters and an LSP are not implemented.
-File locks have no timeout; hostile concurrent mutation after validation is outside
-the cooperative cache model. POM profile activation can depend on the resolution
+Git cache materialization waits up to five seconds for its cooperative process
+lock, then reports `SPR-DEP-GIT` with retry guidance; it never steals the lock.
+The Maven cache lock still uses a blocking cooperative wait. Hostile concurrent
+mutation after validation is outside the cache model. POM profile activation can depend on the resolution
 JDK/OS; the lock freezes the chosen result, not an environment-independent model.
 
 Verification: `python3 tests/maven/check_resolver.py` creates independent local

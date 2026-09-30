@@ -18,6 +18,8 @@ import sprig.compiler.diag.Codes;
  * {@code ~/.sprig/git/checkouts/<id>/<revision>} trees.
  */
 public final class GitCache {
+    private static final long LOCK_WAIT_MILLIS = 5_000;
+    private static final long LOCK_POLL_MILLIS = 50;
     private final Path root;
     private final boolean offline;
 
@@ -128,12 +130,40 @@ public final class GitCache {
         try {
             Files.createDirectories(mutex.getParent());
             try (var channel = java.nio.channels.FileChannel.open(mutex,
-                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE);
-                 var lock = channel.lock()) {
-                return materializeLocked(url, revision);
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE)) {
+                var lock = acquireLock(channel, mutex);
+                try (lock) {
+                    return materializeLocked(url, revision);
+                }
             }
         } catch (IOException e) {
             throw new DepError(Codes.DEP_GIT, "Git cache lock failure: " + e.getMessage(), null);
+        }
+    }
+
+    private static java.nio.channels.FileLock acquireLock(java.nio.channels.FileChannel channel, Path mutex)
+            throws IOException {
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(LOCK_WAIT_MILLIS);
+        while (true) {
+            try {
+                var lock = channel.tryLock();
+                if (lock != null) return lock;
+            } catch (java.nio.channels.OverlappingFileLockException anotherThreadInProcess) {
+                // The JVM reports overlapping locks as an exception instead of returning null.
+            }
+            if (System.nanoTime() >= deadline) {
+                throw new DepError(Codes.DEP_GIT,
+                        "Timed out waiting for Git cache lock " + mutex.getFileName()
+                                + "; another Sprig process may still be resolving this repository. "
+                                + "Retry the command after it finishes.", null);
+            }
+            try {
+                Thread.sleep(LOCK_POLL_MILLIS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new DepError(Codes.DEP_GIT,
+                        "Interrupted while waiting for Git cache lock; retry the command.", null);
+            }
         }
     }
 

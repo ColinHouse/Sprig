@@ -101,7 +101,8 @@ public final class Project {
         Map<String, String> project = toml.table("project");
         String declaredName = project.get("name");
         if (declaredName == null || declaredName.isBlank()) {
-            throw new Toml.TomlException("sprig.toml is missing [project] name", 1);
+            throw new Toml.TomlException("sprig.toml is missing [project] name",
+                    toml.tableLine("project", "name"));
         }
         this.name = declaredName;
         this.version = project.getOrDefault("version", "0.1.0");
@@ -109,8 +110,8 @@ public final class Project {
         this.source = project.getOrDefault("source", "src");
         this.hasExplicitEntry = project.containsKey("entry");
         this.defaultEntry = project.getOrDefault("entry", source + "/main.spr");
-        validatePath(source, "source");
-        validatePath(defaultEntry, "entry");
+        validatePath(source, "source", toml.tableLine("project", "source"));
+        validatePath(defaultEntry, "entry", toml.tableLine("project", "entry"));
         List<String> exported = toml.array("project", "exports");
         if (exported.isEmpty()) {
             exported = toml.array("exports");
@@ -119,102 +120,128 @@ public final class Project {
 
         Set<String> binNames = new HashSet<>();
         List<Bin> parsedBins = new ArrayList<>();
-        for (Map<String, String> bin : toml.entries("bin")) {
+        List<Map<String, String>> binEntries = toml.entries("bin");
+        for (int i = 0; i < binEntries.size(); i++) {
+            Map<String, String> bin = binEntries.get(i);
             String binName = bin.get("name");
             String entry = bin.get("entry");
             if (binName == null || binName.isBlank() || entry == null || entry.isBlank()) {
-                throw new Toml.TomlException("[[bin]] requires name and entry", 1);
+                String missing = binName == null || binName.isBlank() ? "name" : "entry";
+                throw new Toml.TomlException("[[bin]] requires name and entry",
+                        toml.entryLine("bin", i, missing));
             }
-            if (!binNames.add(binName)) throw new Toml.TomlException("Duplicate bin name '" + binName + "'", 1);
-            validatePath(entry, "bin entry");
+            if (!binNames.add(binName)) throw new Toml.TomlException("Duplicate bin name '" + binName + "'",
+                    toml.entryLine("bin", i, "name"));
+            validatePath(entry, "bin entry", toml.entryLine("bin", i, "entry"));
             parsedBins.add(new Bin(binName, entry));
         }
         this.bins = List.copyOf(parsedBins);
 
         Set<String> depNames = new HashSet<>();
         List<Dependency> deps = new ArrayList<>();
-        for (Map<String, String> dep : toml.entries("dependency")) {
+        List<Map<String, String>> dependencyEntries = toml.entries("dependency");
+        for (int i = 0; i < dependencyEntries.size(); i++) {
+            Map<String, String> dep = dependencyEntries.get(i);
             String depName = dep.get("name");
             if (depName == null || depName.isBlank()) {
-                throw new Toml.TomlException("[[dependency]] requires name", 1);
+                throw new Toml.TomlException("[[dependency]] requires name",
+                        toml.entryLine("dependency", i, "name"));
             }
-            if ("std".equals(depName)) throw new Toml.TomlException("Dependency alias std is reserved for the bundled standard library", 1);
-            if (!depNames.add(depName)) throw new Toml.TomlException("Duplicate dependency name '" + depName + "'", 1);
+            if ("std".equals(depName)) throw new Toml.TomlException("Dependency alias std is reserved for the bundled standard library",
+                    toml.entryLine("dependency", i, "name"));
+            if (!depNames.add(depName)) throw new Toml.TomlException("Duplicate dependency name '" + depName + "'",
+                    toml.entryLine("dependency", i, "name"));
             if ((dep.get("path") != null) == (dep.get("git") != null)) {
                 throw new Toml.TomlException(
-                        "dependency '" + depName + "' requires exactly one of path or git", 1);
+                        "dependency '" + depName + "' requires exactly one of path or git",
+                        toml.lastEntryLine("dependency", i, Set.of("path", "git")));
             }
             for (String key : List.of("branch", "tag", "rev", "subdir"))
                 if (dep.get(key) != null && dep.get("git") == null)
-                    throw new Toml.TomlException(key + " is only valid for a git dependency", 1);
+                    throw new Toml.TomlException(key + " is only valid for a git dependency",
+                            toml.entryLine("dependency", i, key));
             int refs = (dep.get("branch") == null ? 0 : 1)
                     + (dep.get("tag") == null ? 0 : 1)
                     + (dep.get("rev") == null ? 0 : 1);
             if (refs > 1)
-                throw new Toml.TomlException("Git branch, tag and rev ref intents are mutually exclusive", 1);
+                throw new Toml.TomlException("Git branch, tag and rev ref intents are mutually exclusive",
+                        toml.lastEntryLine("dependency", i, Set.of("branch", "tag", "rev")));
             for (String key : List.of("path", "git", "branch", "tag", "rev", "subdir"))
                 if (dep.containsKey(key) && dep.get(key).isBlank())
-                    throw new Toml.TomlException("Dependency " + key + " cannot be blank", 1);
+                    throw new Toml.TomlException("Dependency " + key + " cannot be blank",
+                            toml.entryLine("dependency", i, key));
             String rev = dep.get("rev");
             if (rev != null) {
                 if (!rev.matches("[0-9a-fA-F]{40}"))
-                    throw new Toml.TomlException("Git rev must be a full 40-character commit SHA", 1);
+                    throw new Toml.TomlException("Git rev must be a full 40-character commit SHA",
+                            toml.entryLine("dependency", i, "rev"));
                 rev = rev.toLowerCase(java.util.Locale.ROOT);
             }
-            String subdir = dep.containsKey("subdir") ? normalizeSubdir(dep.get("subdir")) : null;
+            String subdir = dep.containsKey("subdir") ? normalizeSubdir(dep.get("subdir"),
+                    toml.entryLine("dependency", i, "subdir")) : null;
             deps.add(new Dependency(depName, dep.get("path"), dep.get("git"),
                     dep.get("branch"), dep.get("tag"), rev, subdir));
         }
         this.dependencies = List.copyOf(deps);
 
         List<JvmDependency> jvm = new ArrayList<>();
-        for (Map<String, String> dep : toml.entries("jvm")) {
+        List<Map<String, String>> jvmEntries = toml.entries("jvm");
+        for (int i = 0; i < jvmEntries.size(); i++) {
+            Map<String, String> dep = jvmEntries.get(i);
             String group = dep.get("group");
             String artifact = dep.get("artifact");
             String depVersion = dep.get("version");
             if (group == null || group.isBlank() || artifact == null || artifact.isBlank() || depVersion == null || depVersion.isBlank()) {
-                throw new Toml.TomlException("[[jvm]] requires group, artifact and version", 1);
+                String missing = group == null || group.isBlank() ? "group"
+                        : artifact == null || artifact.isBlank() ? "artifact" : "version";
+                throw new Toml.TomlException("[[jvm]] requires group, artifact and version",
+                        toml.entryLine("jvm", i, missing));
             }
             if (!depVersion.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")
                     || depVersion.equalsIgnoreCase("LATEST") || depVersion.equalsIgnoreCase("RELEASE")) {
                 throw new Toml.TomlException(
-                        "[[jvm]] accepts exact versions only: " + depVersion, 1);
+                        "[[jvm]] accepts exact versions only: " + depVersion,
+                        toml.entryLine("jvm", i, "version"));
             }
             try { MavenResolver.validate(group, artifact, depVersion); }
-            catch (DepError e) { throw new Toml.TomlException(e.getMessage(), 1); }
+            catch (DepError e) { throw new Toml.TomlException(e.getMessage(), toml.entryLine("jvm", i, "version")); }
             jvm.add(new JvmDependency(group, artifact, depVersion));
         }
         this.jvmDependencies = List.copyOf(jvm);
     }
 
-    private static void validatePath(String text, String field) {
+    private static void validatePath(String text, String field, int line) {
         try {
             if (text.isBlank()) throw new IllegalArgumentException("empty path");
             Path.of(text);
         } catch (IllegalArgumentException e) {
-            throw new Toml.TomlException("Invalid " + field + " path: " + e.getMessage(), 1);
+            throw new Toml.TomlException("Invalid " + field + " path: " + e.getMessage(), line);
         }
     }
 
     /** Canonical relative Git package directory; the repository root is ".". */
     public static String normalizeSubdir(String raw) {
+        return normalizeSubdir(raw, 1);
+    }
+
+    private static String normalizeSubdir(String raw, int line) {
         if (raw == null || raw.isBlank())
-            throw new Toml.TomlException("Git subdir cannot be blank", 1);
+            throw new Toml.TomlException("Git subdir cannot be blank", line);
         String portable = raw.replace('\\', '/');
         if (portable.startsWith("/") || portable.matches("^[A-Za-z]:.*"))
-            throw new Toml.TomlException("Git subdir must be relative, not absolute", 1);
+            throw new Toml.TomlException("Git subdir must be relative, not absolute", line);
         List<String> components = new ArrayList<>();
         for (String component : portable.split("/", -1)) {
             if (component.equals(".."))
-                throw new Toml.TomlException("Git subdir cannot contain '..' path components", 1);
+                throw new Toml.TomlException("Git subdir cannot contain '..' path components", line);
             if (component.isEmpty() || component.equals(".")) continue;
             if (component.matches("^[A-Za-z]:.*"))
-                throw new Toml.TomlException("Git subdir cannot contain a drive-qualified path component", 1);
+                throw new Toml.TomlException("Git subdir cannot contain a drive-qualified path component", line);
             try {
                 if (Path.of(component).isAbsolute())
-                    throw new Toml.TomlException("Git subdir must be relative, not absolute", 1);
+                    throw new Toml.TomlException("Git subdir must be relative, not absolute", line);
             } catch (java.nio.file.InvalidPathException e) {
-                throw new Toml.TomlException("Invalid Git subdir: " + e.getMessage(), 1);
+                throw new Toml.TomlException("Invalid Git subdir: " + e.getMessage(), line);
             }
             components.add(component);
         }
