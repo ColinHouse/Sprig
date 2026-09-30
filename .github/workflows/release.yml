@@ -33,14 +33,14 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Build compiler and run tests
-        run: |
-          python scripts/build.py
-          python scripts/test.py
+      - name: Build compiler
+        run: python scripts/build.py
       - name: Build release archive
         env:
           SPRIG_PACKAGE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: python scripts/package-alpha.py --skip-build
+      - name: Run tests on the tagged source
+        run: python scripts/test.py
       - uses: actions/upload-artifact@v6
         with:
           name: validated-sdk
