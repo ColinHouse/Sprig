@@ -41,7 +41,7 @@ def main():
     count = 0
     with tempfile.TemporaryDirectory(prefix='sprig-layout-lines-') as tmp:
         work = Path(tmp)
-        antlr = Path(os.environ.get('ANTLR_JAR', ROOT / 'tools/antlr-4.13.2-complete.jar')).resolve()
+        antlr = Path(os.environ.get('ANTLR_JAR', ROOT / 'build/deps/antlr-4.13.2-complete.jar')).resolve()
         harness = work / 'harness'
         harness.mkdir()
         for grammar in ('SprigLexer.g4', 'SprigParser.g4'):
@@ -49,7 +49,7 @@ def main():
                               '-no-listener', '-lib', harness, '-o', harness, grammar],
                              cwd=ROOT / 'grammar')
             assert result.returncode == 0, result.stderr
-        sources = sorted(harness.glob('*.java')) + sorted((ROOT / 'tools/grammar-harness').glob('*.java'))
+        sources = sorted(harness.glob('*.java')) + sorted((ROOT / 'tests/grammar/fixtures').glob('*.java'))
         result = command(['javac', '-cp', antlr, '-d', harness, *sources])
         assert result.returncode == 0, result.stderr
         parse = ['java', '-cp', os.pathsep.join(map(str, (harness, antlr))), 'ParseSmoke']

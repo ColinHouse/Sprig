@@ -12,8 +12,8 @@ trap 'rm -rf "$BUILD"' EXIT
 (cd "$ROOT/grammar" && java -jar "$ANTLR_JAR" -Dlanguage=Java -visitor -no-listener -o "$BUILD" SprigLexer.g4)
 (cd "$ROOT/grammar" && java -jar "$ANTLR_JAR" -Dlanguage=Java -visitor -no-listener -lib "$BUILD" -o "$BUILD" SprigParser.g4)
 javac -cp "$ANTLR_JAR" -d "$BUILD" "$BUILD"/*.java \
-  "$ROOT/tools/grammar-harness/LayoutTokenSource.java" \
-  "$ROOT/tools/grammar-harness/ParseSmoke.java"
+  "$ROOT/tests/grammar/fixtures/LayoutTokenSource.java" \
+  "$ROOT/tests/grammar/fixtures/ParseSmoke.java"
 count=0
 for f in "$ROOT"/tests/syntax/positive/*.spr; do
   java -cp "$BUILD:$ANTLR_JAR" ParseSmoke "$f"

@@ -29,7 +29,7 @@ checking, `javac` success, runtime behavior — and are never conflated.
 | `ergonomics` | optional mutation gate; rebuilds the compiler per mutation and restores sources, so it is never part of concurrent verification | `python3 ergonomics/check_mutations.py [name ...]` |
 
 The `syntax/` fixtures and the original semantic cases match the design kit in
-`spec/`; `semantics/cases.json` extends them with the cases added by this
+`docs/history/design-kit/`; `semantics/cases.json` extends them with the cases added by this
 implementation. The design kit's own copies were removed during the
 publication cleanup because this directory is the executable superset.
 

@@ -18,7 +18,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if sys.platform == "win32" else "sprig")
 DEFAULT_SNIPPETS = ROOT / "website" / "snippets"
 EXECUTABLE, IMPORT_ONLY = "executable", "import-only"

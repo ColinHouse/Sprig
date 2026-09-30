@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
         text = (sdk / name).read_text()
         assert version in text
         assert not any(marker in text for marker in ("NOT RELEASED", "development draft", "development Agent SDK")), name
-    subprocess.run([sys.executable, str(ROOT / "tools/check-doc-links.py"), "--root", str(sdk)], check=True)
+    subprocess.run([sys.executable, str(ROOT / "scripts/internal/check-doc-links.py"), "--root", str(sdk)], check=True)
     assert not (sdk / "acceptance").exists(), "maintainer blind-test evidence must stay in the repository"
 
     def command(*args, cwd=sdk):

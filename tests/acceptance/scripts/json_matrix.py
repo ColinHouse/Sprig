@@ -11,10 +11,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
-OUT = ROOT / "acceptance" / "results"
-CASES = ROOT / "acceptance" / "cases"
+OUT = ROOT / "tests" / "acceptance" / "results"
+CASES = ROOT / "tests" / "acceptance" / "cases"
 
 SYNTAX_BAD = CASES / "json_syntax_error.spr"
 MISSING = CASES / "does_not_exist.spr"

@@ -14,10 +14,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
-CASES = ROOT / "acceptance" / "cases"
-RESULTS = ROOT / "acceptance" / "results"
+CASES = ROOT / "tests" / "acceptance" / "cases"
+RESULTS = ROOT / "tests" / "acceptance" / "results"
 
 CHECKS = []          # (name, file, expected_exit, expected_codes or None)
 RUNS = []            # (name, file, expected_exit, expected_stdout or None)

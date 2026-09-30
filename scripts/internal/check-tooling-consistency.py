@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import re
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 
 
@@ -32,9 +32,9 @@ assert catalog["features"]["projectAwareClasspath"]
 assert catalog["supportedPlatforms"] == ["Linux", "macOS"]
 assert catalog["experimentalPlatforms"] == ["Windows"]
 assert catalog["features"]["bundledStd"] and catalog["features"]["emitJavaOnly"]
-assert version in (ROOT / "docs/QUICK_REFERENCE.md").read_text().splitlines()[0]
-assert version in (ROOT / "docs/JVM_INTEROP.md").read_text().splitlines()[0]
-assert (ROOT / "docs/milestones/DESIGN_PRESSURE.md").read_text().startswith("# Design pressure")
+assert version in (ROOT / "docs/language/quick-reference.md").read_text().splitlines()[0]
+assert version in (ROOT / "docs/jvm/interop.md").read_text().splitlines()[0]
+assert (ROOT / "docs/history/milestones/DESIGN_PRESSURE.md").read_text().startswith("# Design pressure")
 
 help_index = json.loads(invoke("help", "--json"))
 assert set(help_index["commands"]) == set(catalog["commands"])
@@ -45,15 +45,15 @@ for topic in help_index["topics"]:
         if example.startswith(("examples/", "tests/", "website/")):
             assert (ROOT / example).is_file(), (topic, example)
 
-code_rows = (ROOT / "docs" / "DIAGNOSTIC_CODES.md").read_text()
+code_rows = (ROOT / "docs/tooling/diagnostic-codes.md").read_text()
 for item in json.loads(invoke("codes", "--json"))["codes"]:
     assert "| " + item["code"] + " |" in code_rows, item["code"]
 
 required = {
     "README.md": [version, "v" + version, "Apache"],
     "AGENTS.md": ["sprig api", "Apache-2.0"],
-    "docs/FEATURE_STATUS_IMPLEMENTED.md": ["capabilities", "--classpath"],
-    "docs/KNOWN_LIMITATIONS.md": ["Apache-2.0", "v" + version],
+    "docs/language/feature-status.md": ["capabilities", "--classpath"],
+    "docs/language/known-limitations.md": ["Apache-2.0", "v" + version],
     "website/en/guide/tooling.md": [version, "sprig api"],
     "website/guide/tooling.md": [version, "sprig api"],
     "website/en/project/release-status.md": [version, "v" + version],
@@ -63,15 +63,15 @@ for name, markers in required.items():
     text = (ROOT / name).read_text()
     for marker in markers:
         assert marker in text, (name, marker)
-assert "no selected license" not in (ROOT / "docs" / "KNOWN_LIMITATIONS.md").read_text()
+assert "no selected license" not in (ROOT / "docs/language/known-limitations.md").read_text()
 assert not list(ROOT.glob("docs/**/REVIEW_REPORT.md"))
 # Explicit current-document inventory: historical evidence is excluded.
-current = list(required) + ["AGENT_GUIDE.md", "docs/DEPENDENCIES.md", "docs/PROJECTS.md",
-    "docs/GENERICS.md", "docs/RELEASE_VALIDATION.md",
+current = list(required) + ["docs/tooling/agent-guide.md", "docs/projects/dependencies.md", "docs/projects/projects.md",
+    "docs/language/generics.md", "docs/releases/validation.md",
  "website/en/guide/generics.md",
     "website/guide/generics.md", "website/en/guide/projects.md", "website/guide/projects.md",
     "website/en/guide/language-tour.md", "website/guide/language-tour.md",
-    "website/reference/implementation-status.md", "website/reference/known-limitations.md"]
+    "docs/language/feature-status.md", "docs/language/known-limitations.md"]
 rules = []
 features = catalog["features"]
 if features.get("userGenerics"):
@@ -98,13 +98,13 @@ for name in current:
     text = (ROOT / name).read_text()
     for pattern in rules:
         assert not re.search(pattern, text, re.I | re.S), (name, "capability drift", pattern)
-assert not (ROOT / "spec/docs/GENERICS.md").exists()
+assert not (ROOT / "docs/history/design-kit/GENERICS.md").exists()
 assert not (ROOT / "REVIEW_REPORT.md").exists()
 for name in current:
     text = (ROOT / name).read_text()
     for marker in ("no package manager", "没有包管理器"):
         assert marker.lower() not in text.lower(), (name, "stale release claim", marker)
-quick = (ROOT / "docs" / "QUICK_REFERENCE.md").read_text().split("```sprig\n", 1)[1].split("\n```", 1)[0]
+quick = (ROOT / "docs/language/quick-reference.md").read_text().split("```sprig\n", 1)[1].split("\n```", 1)[0]
 with tempfile.TemporaryDirectory(prefix="sprig-doc-reference-") as temp:
     source = Path(temp) / "quick.spr"
     source.write_text(quick + "\n")

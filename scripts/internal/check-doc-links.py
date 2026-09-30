@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', type=Path)
 args = parser.parse_args()
-root = (args.root or Path(__file__).resolve().parents[1]).resolve()
+root = (args.root or Path(__file__).resolve().parents[2]).resolve()
 package = args.root is not None
 if package:
     files = list(root.rglob('*.md'))
@@ -43,6 +43,7 @@ for path in files:
             elif target.startswith('/'):
                 rel = target.lstrip('/')
                 candidates = [site / 'public' / rel, site / rel, site / 'generated' / rel]
+                candidates += [p.with_name(p.name + '.md') for p in candidates]
                 candidates += [p.with_suffix('.md') for p in candidates]
                 candidates += [p / 'index.md' for p in candidates[:3]]
             else:

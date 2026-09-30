@@ -9,11 +9,11 @@ import tempfile
 import urllib.request
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 def main():
-    spec = json.loads((ROOT / 'tools/resolver-libraries.json').read_text(encoding='utf-8'))
-    target = ROOT / 'tools/resolver'
+    spec = json.loads((ROOT / 'scripts/internal/resolver-libraries.json').read_text(encoding='utf-8'))
+    target = ROOT / 'build/deps/resolver'
     target.mkdir(parents=True, exist_ok=True)
     def valid(name, digest):
         path = target / name

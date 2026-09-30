@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
-    antlr = Path(os.environ.get("ANTLR_JAR", ROOT / "tools/antlr-4.13.2-complete.jar")).resolve()
+    antlr = Path(os.environ.get("ANTLR_JAR", ROOT / "build/deps/antlr-4.13.2-complete.jar")).resolve()
     if not antlr.is_file():
         raise SystemExit("Build first, or set ANTLR_JAR to the pinned complete JAR.")
     with tempfile.TemporaryDirectory(prefix="sprig-antlr-") as temp:
@@ -18,7 +18,7 @@ def main():
             subprocess.run(["java", "-jar", str(antlr), "-Dlanguage=Java", "-visitor",
                             "-no-listener", "-lib", str(build), "-o", str(build), grammar],
                            cwd=ROOT / "grammar", check=True)
-        sources = sorted(build.glob("*.java")) + sorted((ROOT / "tools/grammar-harness").glob("*.java"))
+        sources = sorted(build.glob("*.java")) + sorted((ROOT / "tests/grammar/fixtures").glob("*.java"))
         subprocess.run(["javac", "-cp", str(antlr), "-d", str(build), *map(str, sources)], check=True)
         count = 0
         for category in ("positive", "negative"):

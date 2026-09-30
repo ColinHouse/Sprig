@@ -72,7 +72,7 @@ jobs:
           name: validated-sdk
           path: dist
       - name: Smoke-test the actual release ZIP outside the checkout
-        run: python -c "from pathlib import Path; import subprocess,sys; archive=next(Path('dist').glob('*.zip')); subprocess.run([sys.executable,'tools/check-sdk-archive.py','--archive',str(archive)],check=True)"
+        run: python -c "from pathlib import Path; import subprocess,sys; archive=next(Path('dist').glob('*.zip')); subprocess.run([sys.executable,'scripts/check-sdk-archive.py','--archive',str(archive)],check=True)"
 
   release:
     needs: archive-validation

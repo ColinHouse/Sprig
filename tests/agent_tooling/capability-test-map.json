@@ -73,7 +73,7 @@
     "tests/reexports/check_reexports.py"
   ],
   "feature.jsonDiagnostics": [
-    "acceptance/scripts/json_matrix.py",
+    "tests/acceptance/scripts/json_matrix.py",
     "tests/semantics/missing_case.spr"
   ],
   "feature.testRunner": [
