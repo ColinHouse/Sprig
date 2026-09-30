@@ -113,7 +113,7 @@ documentation gate instead of silently downgrading it to a static check.
   `THIRD_PARTY_NOTICES.md` for third-party material. Contributions use Apache-2.0.
 
 See [`docs/contributing/ai-disclosure.md`](docs/contributing/ai-disclosure.md) for review responsibilities and
-[`docs/contributing/TRIAL.md`](docs/contributing/TRIAL.md) for the concise
+[`docs/contributing/trial.md`](docs/contributing/trial.md) for the concise
 contributor evaluation protocol. Neither a model's confidence nor passing
 compilation replaces review of user-visible behavior.
 
