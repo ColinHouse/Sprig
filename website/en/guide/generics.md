@@ -3,7 +3,7 @@
 Sprig user-defined generics follow one guiding rule: **declaration and
 use are explicit**. There is no inference, no variance and no hidden
 conversion. This page is the runnable tour; the authoritative contract is the
-[generics reference](/en/reference/GENERICS).
+[generics reference](/en/reference/language/generics).
 
 <<< @/snippets/generics.spr
 
@@ -89,10 +89,10 @@ use, otherwise a single plain name is an index. Index-then-call
 
 Generics are erased and boxed in generated Java: a type parameter becomes
 `Object`, generic classes are raw at the JVM level, and the compiler inserts
-boxing/casts. See the [contract](/en/reference/GENERICS) for the exact rules.
+boxing/casts. See the [contract](/en/reference/language/generics) for the exact rules.
 
 ## Not implemented
 
 Inference, variance, `Comparable`, user-defined capabilities and publishing/registry. Multiple parameters, `Equatable` and the project manifest model
 are implemented. See
-[Known limitations](/en/reference/KNOWN_LIMITATIONS).
+[Known limitations](/en/reference/language/known-limitations).

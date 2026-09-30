@@ -71,6 +71,6 @@ python3 tests/sqlite/check_sqlite.py
 ./scripts/verify.sh
 ```
 
-The source report lives at `docs/milestones/WEB_SQLITE_ENGINEERING_REPORT.md`.
+The source report lives at `docs/history/milestones/WEB_SQLITE_ENGINEERING_REPORT.md`.
 Compiler query surfaces explain [function types](/en/guide/language-tour) and
-[JVM callable boundaries](/en/reference/JVM_INTEROP).
+[JVM callable boundaries](/en/reference/jvm/interop).

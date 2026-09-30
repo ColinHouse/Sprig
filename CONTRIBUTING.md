@@ -49,8 +49,8 @@ After the build, use `bin/sprig` (`bin\sprig.cmd` on Windows):
 ```
 
 Grammar and compiler implementation are authoritative for current behavior.
-[`docs/FEATURE_STATUS_IMPLEMENTED.md`](docs/FEATURE_STATUS_IMPLEMENTED.md)
-records implementation status; `spec/` describes target semantics and may differ.
+[`docs/language/feature-status.md`](docs/language/feature-status.md)
+records implementation status; `docs/history/design-kit/` preserves retired target semantics and may differ.
 Report disagreements with a reproducer. Do not improvise a language feature.
 
 ## Focused checks and release checks
@@ -105,14 +105,14 @@ documentation gate instead of silently downgrading it to a static check.
   semantics need an explicit design decision before implementation. A motivating
   program belongs in a design issue; an unrelated PR must not add syntax.
 - Fix correctness with a regression test and preserve existing oracles.
-- Keep `spec/` intact unless the issue explicitly concerns the design kit.
+- Treat `docs/history/` as historical evidence, not current specification.
 - Edit root reference docs; `website/generated/` contains generated copies.
 - Do not commit `build/`, `bin/`, downloaded JARs, `node_modules/`, caches,
   generated site output, personal paths, credentials or private trial logs.
 - Justify new dependencies and update `LICENSE`, `NOTICE` and
   `THIRD_PARTY_NOTICES.md` for third-party material. Contributions use Apache-2.0.
 
-See [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) for review responsibilities and
+See [`docs/contributing/ai-disclosure.md`](docs/contributing/ai-disclosure.md) for review responsibilities and
 [`docs/contributing/TRIAL.md`](docs/contributing/TRIAL.md) for the concise
 contributor evaluation protocol. Neither a model's confidence nor passing
 compilation replaces review of user-visible behavior.

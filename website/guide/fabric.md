@@ -106,7 +106,7 @@ bin/sprig wrap <fully.qualified.JavaClass> --member <name> \
 生成结果是普通可编辑 `.spr`，默认不覆盖已有文件（需要 `--force`），生成前会在同一
 classpath 下检查；`--json` 报告 `generatedMembers`/`skippedMembers`，跳过项带稳定
 `reasonCodes`。只保留真正需要的方法，其余删掉即可——它只是起点，不是运行时依赖。
-细节见 [wrapper 生成器（英文契约）](/en/reference/WRAP)。
+细节见 [wrapper 生成器（英文契约）](/en/reference/jvm/wrap)。
 
 ## 4. 把生成的 Java 交还 host 构建
 
@@ -169,7 +169,7 @@ Sprig 里直接 conform。注意：
 - 静态 enum 风格字段（例如 world resource 常量）同样按可空处理；
 - `conform` v1 只支持 Java interface、非泛型源类/目标接口、无重载抽象方法、无改名或
   参数适配；`Short`/`Byte`/`Character` 槽位不可表达。见
-  [conform 契约（英文）](/en/reference/JVM_CONFORMANCE)。
+  [conform 契约（英文）](/en/reference/jvm/conformance)。
 
 Fabric 入口类名是 `sprig.user.$ModEntry`，写在 `fabric.mod.json` 的 entrypoint 里。
 

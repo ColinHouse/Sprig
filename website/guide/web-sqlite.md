@@ -66,6 +66,6 @@ python3 tests/sqlite/check_sqlite.py
 ```
 
 这些测试使用真实本机 HTTP、临时 SQLite 文件、重启持久化和结构化 OpenAPI
-断言。实际验收记录位于 `docs/milestones/WEB_SQLITE_ENGINEERING_REPORT.md`。
+断言。实际验收记录位于 `docs/history/milestones/WEB_SQLITE_ENGINEERING_REPORT.md`。
 源码函数类型见[语言导览](/guide/language-tour)，JVM 边界见
 [JVM 互操作](/guide/jvm-interop)。

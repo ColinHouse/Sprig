@@ -12,7 +12,7 @@ Linux/macOS × JDK17/26 通过源码与同一个实际 tag ZIP 的验证。
 Windows 为独立、非阻塞的实验性预览。SDK 包含 Maven Resolver、锁定的项目
 classpath、显式 `@std` IO/JSON 模块、SQLite/Web 库和三个 showcase。
 
-源代码 SHA、ZIP SHA256、实际命令、CI 链接和限制见[验证记录](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md)。
+源代码 SHA、ZIP SHA256、实际命令、CI 链接和限制见[验证记录](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md)。
 未打 tag 的源码构建报告 development；匹配干净 tag 的构建报告 prerelease。
 SDK 不附带 JDK。Java SAM/数组/完整泛型适配、LSP/IDE 与自举仍是后续工作；
 类型安全不证明数值稳定性。

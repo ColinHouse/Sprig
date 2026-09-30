@@ -13,15 +13,15 @@ contributors who change the repository. It is not a language tutorial.
 | Static semantics | `compiler/src/main/java/sprig/compiler/sem/` |
 | Code generation | `compiler/src/main/java/sprig/compiler/gen/` |
 | Runtime | `runtime/src/main/java/sprig/runtime/` |
-| Numeric contract | `docs/NUMERIC_SEMANTICS.md` |
-| Implemented features | `docs/FEATURE_STATUS_IMPLEMENTED.md` |
-| Diagnostic codes | `docs/DIAGNOSTIC_CODES.md` |
-| Language design kit | `spec/docs/LANGUAGE_SPEC.md` (target semantics; not fully implemented) |
+| Numeric contract | `docs/language/numeric-semantics.md` |
+| Implemented features | `docs/language/feature-status.md` |
+| Diagnostic codes | `docs/tooling/diagnostic-codes.md` |
+| Language design kit | `docs/history/design-kit/` (retired v0.7 design material; history only) |
 | Documentation map | `docs/README.md` (contract vs release vs history) |
 
 If the design kit and the compiler disagree, do not guess: preserve the
 disagreement as an explicit issue or document the implemented behavior under
-`docs/`. Milestone reports and `docs/milestones/plans/` are history, not
+`docs/`. Milestone reports and `docs/history/milestones/` are history, not
 current behavior; `docs/README.md` defines the order to trust.
 
 ## Query before guessing
@@ -45,7 +45,7 @@ Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work
 
 | Focus | Fast command after build | Evidence |
 |---|---|---|
-| Lexer/layout/parser | `python3 tools/test-grammar.py` | parser only |
+| Lexer/layout/parser | `python3 scripts/test-grammar.py` | parser only |
 | Types/flow/diagnostics | `python3 scripts/check_cases.py .` | static checking |
 | Generation/runtime | `python3 tests/correctness/check_correctness.py` | Java/JVM |
 | CLI/JVM query tools | `python3 tests/agent_tooling/check_tooling.py` | subprocess/API fixtures |
@@ -68,9 +68,9 @@ change touches, as applicable:
 2. Name resolution / type checking / flow analysis in `compiler/.../sem/`.
 3. Java generation and, when needed, the runtime in `runtime/`.
 4. A stable diagnostic code (`compiler/.../diag/Codes.java` and
-   `docs/DIAGNOSTIC_CODES.md`).
+   `docs/tooling/diagnostic-codes.md`).
 5. Regression tests: `tests/semantics/cases.json` for static errors,
-   `tests/runtime/` with golden `.out` for behavior, and `acceptance/` cases
+   `tests/runtime/` with golden `.out` for behavior, and `tests/acceptance/` cases
    for independently written checks.
 6. Documentation: update `docs/` and, if user-visible, the VitePress pages
    and snippets in `website/`.
@@ -82,7 +82,7 @@ change touches, as applicable:
   implementation is wrong.
 - Distinguish evidence levels when reporting results: parser acceptance,
   static checking, `javac` success, JVM runtime behavior.
-- Documented examples are executed by `tools/verify-doc-snippets.py`; keep
+- Documented examples are executed by `scripts/internal/verify-doc-snippets.py`; keep
   snippets compiling and their `.out` files current. Every `website/snippets/`
   `.spr` file has an explicit role in `website/snippets/snippets.json`
   (`executable` with an oracle or `import-only`); tutorial programs belong
@@ -96,8 +96,7 @@ change touches, as applicable:
 
 ## Boundaries
 
-- Do not edit `spec/` design documents unless the change explicitly concerns
-  the design kit.
+- Do not treat `docs/history/design-kit/` as a current contract.
 - Do not commit generated code, class files, the ANTLR JAR, local paths,
   credentials or personal configuration.
 - `sprig api`, `capabilities`, `doctor`, and topic help are available; query
@@ -109,7 +108,7 @@ change touches, as applicable:
 - Apache-2.0 and the public repository are established. Do not create a tag,
   release, or deployment claim without a verified release build and owner
   publication decision.
-- AI-assisted changes follow `AI_DISCLOSURE.md`: describe significant AI
+- AI-assisted changes follow `docs/contributing/ai-disclosure.md`: describe significant AI
   assistance and what you verified yourself.
 
 ## Release support

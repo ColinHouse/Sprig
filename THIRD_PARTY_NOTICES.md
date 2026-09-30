@@ -3,7 +3,7 @@
 This file records third-party components and material rights that affect the
 Sprig repository, the runtime archives and the documentation site. It is a
 notice list, not the project license. Sprig itself is licensed under
-Apache-2.0 (see `LICENSE` and `LICENSE_STATUS.md`).
+Apache-2.0 (see `LICENSE` and `docs/contributing/license-status.md`).
 
 ## ANTLR 4.13.2 (build and runtime archive)
 
@@ -56,10 +56,10 @@ compiler or runtime:
 
 No dependency listed here is modified by this repository.
 
-## Project icon and mascot (`assets/brand/icon-source.png`)
+## Project icon and mascot (`website/assets/brand/icon-source.png`)
 
 The artwork was supplied by the project owner, who approved its use for this
-project. `assets/brand/generate.py` derives the README image, site logo,
+project. `website/assets/brand/generate.py` derives the README image, site logo,
 favicons, Apple touch icon and social preview image by **cropping, masking and
 resizing only**; the character was not redesigned or recolored. A separate
 "S" monogram is generated for 16–32px favicons because the detailed
@@ -76,9 +76,9 @@ approval.
 ## Content and fonts in this repository
 
 All prose, compiler source, tests and examples were written for this project
-(or generated with AI assistance as described in `AI_DISCLOSURE.md`). No
+(or generated with AI assistance as described in `docs/contributing/ai-disclosure.md`). No
 third-party fonts, images or datasets are committed beyond
-`assets/brand/icon-source.png` and the site assets derived from it. The
+`website/assets/brand/icon-source.png` and the site assets derived from it. The
 documentation references JDK classes by name but does not redistribute JDK
 code.
 
@@ -87,7 +87,7 @@ code.
 The SDK bundles Apache Maven Resolver 1.9.24, Maven model provider/model builder
 3.9.11 and the small required support-library closure. The build fetches the
 pinned Apache Maven 3.9.11 ZIP, verifies SHA-512 and extracts selected libraries;
-no Maven CLI/plugins/build hooks execute. `tools/resolver-libraries.json` records
+no Maven CLI/plugins/build hooks execute. `scripts/internal/resolver-libraries.json` records
 exact filenames and SHA-256. SLF4J's no-op binding 1.7.36 is separately pinned.
 
 The SDK's `legal/resolver/LICENSE`, `NOTICE`, and component `.license` files

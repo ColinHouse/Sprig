@@ -14,7 +14,7 @@ sprig upgrade --check
 sprig upgrade
 ```
 
-如需手工安装，可从[发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/INSTALL)。
+如需手工安装，可从[发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/projects/install)。
 
 已发布版本为 v0.4.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。v0.4 SDK 在 v0.3 基础（本地/Git/Maven 依赖及显式 @std 内置标准包导入）上加入 canonical formatter、显式模块 re-export 与表达式 `match`。
 

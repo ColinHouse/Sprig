@@ -37,12 +37,12 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
   留下 class 文件。
 - `test` 将 `tests/**/*.spr` 作为独立 JVM 程序运行，并按同名 `.expect.toml` 核对
   `tests/compile_fail/` 的诊断码。该命令已在当前源码实现，已发布的 v0.4.0-alpha.1
-  SDK 尚不包含它；详见[测试契约（英文）](/en/reference/TESTING)。
+  SDK 尚不包含它；详见[测试契约（英文）](/en/reference/tooling/testing)。
 - `wrap` 从真实 classpath 生成可编辑的 Sprig source：默认不覆盖已有文件，写出前
   先在同一 classpath 下检查，`--json` 报告生成/跳过成员与稳定原因。
-  见 [wrapper 生成器（英文）](/en/reference/WRAP) 与
+  见 [wrapper 生成器（英文）](/en/reference/jvm/wrap) 与
   [Fabric / JVM 框架集成](/guide/fabric)。
-- `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/DIAGNOSTIC_CODES)。
+- `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/tooling/diagnostic-codes)。
 
 ## JSON 结果
 
@@ -104,9 +104,9 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 - 发布或模块仓库、
 - 增量检查。
 
-历史[Agent 工具协议（英文，提案）](/en/reference/AGENT_TOOL_PROTOCOL)
+历史[Agent 工具协议（英文，提案）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md)
 还包含未来接口。当前能力以 `sprig capabilities --json` 为准；`api` 边界见
-[JVM 互操作（英文）](/en/reference/JVM_INTEROP)。
+[JVM 互操作（英文）](/en/reference/jvm/interop)。
 
 ## 面向 agent 的工作流
 
@@ -116,7 +116,7 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
   范围，并且常常带有指出下一步修复的 `hint`。
 - `run --json` 把程序输出与诊断分开，程序失败时仍能得到可解析的结果。
 - 仓库的质量门槛是有意设计的，见
-  [AI 辅助开发声明（英文）](/en/project/ai-disclosure)。
+  [AI 辅助开发声明（英文）](/en/project/contributing/ai-disclosure)。
 
 `sprig build file.spr --emit-java-only -d generated --json` 完成静态检查后写出
 Java，不调用 javac。JSON 包含 `javaSources`、`mainClass` 和
@@ -127,4 +127,4 @@ Java，不调用 javac。JSON 包含 `javaSources`、`mainClass` 和
 
 Use `sprig fmt file.spr` or `sprig fmt --check . --json`. Formatting is
 comment-preserving, deterministic and configless, with no aggressive wrapping.
-See [formatter contract](/en/reference/FORMATTER). Other commands never rewrite source.
+See [formatter contract](/en/reference/tooling/formatter). Other commands never rewrite source.

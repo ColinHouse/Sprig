@@ -43,14 +43,14 @@ release assets for the exact range.
 - `test` runs `tests/**/*.spr` in isolated child JVMs and checks
   `tests/compile_fail/**/*.spr` against sibling diagnostic-code expectations.
   It is available in the current source checkout; the v0.4.0-alpha.1 SDK
-  predates it. See the [testing contract](/en/reference/TESTING).
+  predates it. See the [testing contract](/en/reference/tooling/testing).
 - `wrap` generates editable Sprig source from a real classpath: it refuses to
   overwrite without `--force`, checks the file under the same classpath before
   writing, and reports generated/skipped members with stable reasons in
-  `--json`. See the [wrapper contract](/en/reference/WRAP) and
+  `--json`. See the [wrapper contract](/en/reference/jvm/wrap) and
   [Fabric / JVM framework integration](/en/guide/fabric).
 - `explain` and `codes` document the stable diagnostic vocabulary in
-  [Diagnostic codes](/en/reference/DIAGNOSTIC_CODES).
+  [Diagnostic codes](/en/reference/tooling/diagnostic-codes).
 
 ## JSON results
 
@@ -114,9 +114,9 @@ The following are **proposed, not implemented**:
 - publishing or a module registry,
 - incremental checking.
 
-The historical [Agent tool protocol](/en/reference/AGENT_TOOL_PROTOCOL)
+The historical [Agent tool protocol](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md)
 contains further proposals. Check `sprig capabilities --json` for current
-behavior, and [JVM interop](/en/reference/JVM_INTEROP) for `api` boundaries.
+behavior, and [JVM interop](/en/reference/jvm/interop) for `api` boundaries.
 
 ## For agent-assisted workflows
 
@@ -127,7 +127,7 @@ behavior, and [JVM interop](/en/reference/JVM_INTEROP) for `api` boundaries.
 - `run --json` keeps program output separate from diagnostics, so a failing
   program still yields a parseable result.
 - The repository's own quality gates are deliberate: see the
-  [AI-assisted development disclosure](/en/project/ai-disclosure).
+  [AI-assisted development disclosure](/en/project/contributing/ai-disclosure).
 
 `sprig build file.spr --emit-java-only -d generated --json` performs static
 checking and writes Java without javac. JSON returns `javaSources`, `mainClass`
@@ -138,4 +138,4 @@ the SDK bundled standard package. Windows remains experimental.
 
 Use `sprig fmt file.spr` or `sprig fmt --check . --json`. Formatting is
 comment-preserving, deterministic and configless, with no aggressive wrapping.
-See [formatter contract](/en/reference/FORMATTER). Other commands never rewrite source.
+See [formatter contract](/en/reference/tooling/formatter). Other commands never rewrite source.

@@ -15,7 +15,7 @@ Windows is an experimental, non-blocking preview. The SDK includes Maven
 Resolver, locked project classpaths, explicit `@std` IO/JSON modules, SQLite/Web
 libraries and three showcases.
 
-See the [validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/RELEASE_VALIDATION.md) for source SHA, archive SHA256,
+See the [validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md) for source SHA, archive SHA256,
 commands, actual CI links and limits. Untagged source builds report development,
 based on the published release; clean matching tagged builds report prerelease.
 No JDK is bundled. Java SAM/arrays/general generic adapters, LSP/IDE and

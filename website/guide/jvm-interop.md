@@ -4,7 +4,7 @@ Sprig 通过生成 Java 源码来编译，因此可以用显式 import 别名调
 规则有意保持保守：Java 不提供可空信息时，Sprig 一律假设引用结果可能为 `null`；Java
 引用形参默认为非空。
 
-权威契约（英文）见 [JVM interop](/en/reference/JVM_INTEROP)；本页是可运行的导览。
+权威契约（英文）见 [JVM interop](/en/reference/jvm/interop)；本页是可运行的导览。
 需要接入 host 构建系统（Gradle/Loom、Maven 等）时，见
 [Fabric / JVM 框架集成](/guide/fabric)。
 
@@ -132,7 +132,7 @@ sprig api com.example.Client --classpath lib/client.jar --json
 sprig wrap com.example.Client --out src/main/sprig/client.spr --classpath lib/client.jar --json
 ```
 
-完整策略见 [wrapper 生成器（英文）](/en/reference/WRAP)。
+完整策略见 [wrapper 生成器（英文）](/en/reference/jvm/wrap)。
 
 ## 尚未覆盖的部分
 
@@ -146,5 +146,5 @@ sprig wrap com.example.Client --out src/main/sprig/client.spr --classpath lib/cl
 - **JVM 内部运算**：Java 方法里的 `int` 溢出不会触发 Sprig 的受检数值错误。
 - `short`/`byte` 形参需要显式受检转换，目前尚未提供；请改传 `Int32`。
 
-完整边界见[已知限制](/reference/known-limitations)与
-[已知限制（英文原文）](/en/reference/KNOWN_LIMITATIONS)。
+完整边界见[已知限制](/en/reference/language/known-limitations)与
+[已知限制（英文原文）](/en/reference/language/known-limitations)。

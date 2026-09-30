@@ -56,7 +56,7 @@ entry = "src/server.spr"
 ```
 
 当前源码中的 `sprig test` 使用相同的锁定依赖图，以诊断码核对预期编译失败；
-参见[测试契约（英文）](/en/reference/TESTING)。已发布的 v0.4.0-alpha.1 SDK
+参见[测试契约（英文）](/en/reference/tooling/testing)。已发布的 v0.4.0-alpha.1 SDK
 尚不包含此命令。
 
 ## 依赖
@@ -94,4 +94,4 @@ branch = "main"
 `[[jvm]]` 声明精确 release 坐标，resolve 后 check/build/run/api/doctor 自动使用锁定 JAR。
 Apache Resolver 处理父 POM、BOM 和传递依赖。Schema-4 记录 JAR/POM SHA-256、图、顺序与本地 locator。
 离线需要完整缓存；消费命令不会重新解析。见
-[依赖契约](https://github.com/ColinHouse/Sprig/blob/main/docs/DEPENDENCIES.md)。
+[依赖契约](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/dependencies.md)。
