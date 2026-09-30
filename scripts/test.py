@@ -63,8 +63,8 @@ def main():
               "tests/agent_tooling/check_diagnostics.py", "tests/docs/check_doc_roles.py",
               "tests/agent_tooling/check_sprig_api.py", "tests/agent_tooling/check_agent_tools.py",
               "tests/agent_eval/check_task_pack.py",
-              "tests/cli_contract/check_cli_contract.py", "tests/test_runner/check_test_runner.py", "tests/bootstrap/check_probe.py",
-              "tests/project/check_project.py", "tests/project_deps/check_deps.py",
+              "tests/cli_contract/check_cli_contract.py", "tests/test_runner/check_test_runner.py", "tests/http/check_http.py", "tests/bootstrap/check_probe.py",
+              "tests/project/check_project.py", "tests/project_deps/check_deps.py", "tests/project_deps/check_git_monorepo.py", "tests/project_deps/check_add_remove.py",
               "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
               "tests/adversarial/v08/check_projects.py"]
     suites += ["tests/adversarial/regressions/check_semantics.py",
@@ -74,7 +74,7 @@ def main():
                "tests/adversarial/regressions/check_properties.py",
                "tests/adversarial/regressions/check_install_failures.py",
                "tests/adversarial/regressions/check_sdk_composition.py"]
-    suites += ["tests/conform/check_conform.py",
+    suites += ["tests/application_foundation/check_composition.py", "tests/conform/check_conform.py",
                "tests/callables/check_callables.py", "tests/installer/check_installer.py", "tests/upgrade/check_upgrade.py",
                "tests/cli_library/check_cli_library.py", "tests/json_codec/check_json_codec.py", "tests/web/check_web.py", "tests/sqlite/check_sqlite.py", "tests/sqlite/check_migrations.py", "tests/dogfood/check_installed_sdk.py", "tests/maven/check_resolver.py", "scripts/test-stdlib.py",
                "scripts/test-showcases.py", "tests/project_deps/check_refresh_locks.py",

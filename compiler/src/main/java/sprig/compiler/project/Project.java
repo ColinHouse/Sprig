@@ -49,12 +49,19 @@ public final class Project {
         public final String path;
         public final String git;
         public final String branch;
+        public final String tag;
+        public final String rev;
+        public final String subdir;
 
-        public Dependency(String name, String path, String git, String branch) {
+        public Dependency(String name, String path, String git, String branch,
+                          String tag, String rev, String subdir) {
             this.name = name;
             this.path = path;
             this.git = git;
             this.branch = branch;
+            this.tag = tag;
+            this.rev = rev;
+            this.subdir = subdir;
         }
 
         public boolean isLocal() {
@@ -137,12 +144,26 @@ public final class Project {
                 throw new Toml.TomlException(
                         "dependency '" + depName + "' requires exactly one of path or git", 1);
             }
-            if (dep.get("branch") != null && dep.get("git") == null)
-                throw new Toml.TomlException("branch is only valid for a git dependency", 1);
-            for (String key : List.of("path", "git", "branch"))
+            for (String key : List.of("branch", "tag", "rev", "subdir"))
+                if (dep.get(key) != null && dep.get("git") == null)
+                    throw new Toml.TomlException(key + " is only valid for a git dependency", 1);
+            int refs = (dep.get("branch") == null ? 0 : 1)
+                    + (dep.get("tag") == null ? 0 : 1)
+                    + (dep.get("rev") == null ? 0 : 1);
+            if (refs > 1)
+                throw new Toml.TomlException("Git branch, tag and rev ref intents are mutually exclusive", 1);
+            for (String key : List.of("path", "git", "branch", "tag", "rev", "subdir"))
                 if (dep.containsKey(key) && dep.get(key).isBlank())
                     throw new Toml.TomlException("Dependency " + key + " cannot be blank", 1);
-            deps.add(new Dependency(depName, dep.get("path"), dep.get("git"), dep.get("branch")));
+            String rev = dep.get("rev");
+            if (rev != null) {
+                if (!rev.matches("[0-9a-fA-F]{40}"))
+                    throw new Toml.TomlException("Git rev must be a full 40-character commit SHA", 1);
+                rev = rev.toLowerCase(java.util.Locale.ROOT);
+            }
+            String subdir = dep.containsKey("subdir") ? normalizeSubdir(dep.get("subdir")) : null;
+            deps.add(new Dependency(depName, dep.get("path"), dep.get("git"),
+                    dep.get("branch"), dep.get("tag"), rev, subdir));
         }
         this.dependencies = List.copyOf(deps);
 
@@ -173,6 +194,31 @@ public final class Project {
         } catch (IllegalArgumentException e) {
             throw new Toml.TomlException("Invalid " + field + " path: " + e.getMessage(), 1);
         }
+    }
+
+    /** Canonical relative Git package directory; the repository root is ".". */
+    public static String normalizeSubdir(String raw) {
+        if (raw == null || raw.isBlank())
+            throw new Toml.TomlException("Git subdir cannot be blank", 1);
+        String portable = raw.replace('\\', '/');
+        if (portable.startsWith("/") || portable.matches("^[A-Za-z]:.*"))
+            throw new Toml.TomlException("Git subdir must be relative, not absolute", 1);
+        List<String> components = new ArrayList<>();
+        for (String component : portable.split("/", -1)) {
+            if (component.equals(".."))
+                throw new Toml.TomlException("Git subdir cannot contain '..' path components", 1);
+            if (component.isEmpty() || component.equals(".")) continue;
+            if (component.matches("^[A-Za-z]:.*"))
+                throw new Toml.TomlException("Git subdir cannot contain a drive-qualified path component", 1);
+            try {
+                if (Path.of(component).isAbsolute())
+                    throw new Toml.TomlException("Git subdir must be relative, not absolute", 1);
+            } catch (java.nio.file.InvalidPathException e) {
+                throw new Toml.TomlException("Invalid Git subdir: " + e.getMessage(), 1);
+            }
+            components.add(component);
+        }
+        return components.isEmpty() ? "." : String.join("/", components);
     }
 
     /** Loads one manifest file (does not search upward). */
@@ -250,6 +296,9 @@ public final class Project {
             item.put("path", dep.path);
             item.put("git", dep.git == null ? null : GitCache.redact(dep.git));
             item.put("branch", dep.branch);
+            item.put("tag", dep.tag);
+            item.put("rev", dep.rev);
+            item.put("subdir", dep.subdir);
             item.put("kind", dep.isGit() ? "git" : dep.isLocal() ? "local" : "unknown");
             item.put("resolved", false);
             deps.add(item);

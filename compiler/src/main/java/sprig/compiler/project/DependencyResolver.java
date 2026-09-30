@@ -47,12 +47,14 @@ public final class DependencyResolver {
         public final String requested;
         public final String revision;
         public final String locator;
+        public final String subdir;
         public final boolean portable;
         public final Map<String, Package> aliases = new LinkedHashMap<>();
         public final List<Package> direct = new ArrayList<>();
 
         Package(String alias, Project project, Path root, String kind, String url,
-                String requested, String revision, String locator, String manifestSha, boolean portable) {
+                String requested, String revision, String locator, String subdir,
+                String manifestSha, boolean portable) {
             this.alias = alias;
             this.project = project;
             this.root = root;
@@ -64,6 +66,7 @@ public final class DependencyResolver {
             this.requested = requested;
             this.revision = revision;
             this.locator = locator;
+            this.subdir = subdir;
             this.portable = portable;
         }
 
@@ -83,6 +86,7 @@ public final class DependencyResolver {
                 entry.url = url;
                 entry.requested = requested;
                 entry.revision = revision;
+                entry.subdir = subdir == null ? "." : subdir;
             }
             return entry;
         }
@@ -202,15 +206,20 @@ public final class DependencyResolver {
         }
     }
 
-    /** Resolve mode: queries Git branches and produces a fresh lockfile. */
+    /** Resolve mode: follows Git ref intent and produces a fresh exact-SHA lockfile. */
     public static Result resolve(Project project, boolean offline) {
+        return resolve(project, offline, null);
+    }
+
+    /** Resolve a candidate manifest, optionally reusing matching locked Git revisions offline. */
+    public static Result resolve(Project project, boolean offline, Lockfile previousLock) {
         Lockfile lock = new Lockfile();
         lock.lockVersion = Lockfile.VERSION;
         lock.language = project.language;
         lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
         StdLibrary.record(lock);
-        Package root = build(project, "root", "", "root", null, null, null, null, false, lock, offline, true,
-                new ArrayDeque<>());
+        Package root = build(project, "root", "", "root", null, null, null, null, null, false, lock, offline, true,
+                previousLock, new ArrayDeque<>());
         lock.sprig.addAll(new Result(root, lock).entries());
         return new Result(root, lock);
     }
@@ -231,8 +240,8 @@ public final class DependencyResolver {
                     project.manifest.toString())
                     .with("hint", "Run `sprig resolve`.");
         }
-        Package root = build(project, "root", "", "root", null, null, null, null, false, lock, offline, false,
-                new ArrayDeque<>());
+        Package root = build(project, "root", "", "root", null, null, null, null, null, false, lock, offline, false,
+                null, new ArrayDeque<>());
         if (new Result(root, lock).entries().size() != lock.sprig.size())
             throw new DepError(Codes.PROJECT_LOCK_STALE, "Lock contains unexpected dependency edges; run `sprig resolve`", null);
         Result result = new Result(root, lock);
@@ -242,9 +251,10 @@ public final class DependencyResolver {
     }
 
     private static Package build(Project project, String id, String alias, String kind, String url,
-                                 String requested, String revision, String locator, boolean portable,
+                                 String requested, String revision, String locator, String subdir,
+                                 boolean portable,
                                  Lockfile lock, boolean offline,
-                                 boolean resolveMode, Deque<Path> stack) {
+                                 boolean resolveMode, Lockfile previousLock, Deque<Path> stack) {
         String manifestSha;
         try {
             manifestSha = Lockfile.digest(project.manifest);
@@ -253,7 +263,7 @@ public final class DependencyResolver {
                     "Cannot read manifest: " + e.getMessage(), project.manifest.toString());
         }
         Package pkg = new Package(alias, project, project.root, kind, url, requested, revision,
-                locator, manifestSha, portable);
+                locator, subdir, manifestSha, portable);
         pkg.id = id;
         pkg.owner = id.equals("root") ? "" : id.substring(0, id.lastIndexOf("/@"));
         for (Project.Dependency dependency : project.dependencies) {
@@ -269,6 +279,7 @@ public final class DependencyResolver {
             String depRequested = null;
             String depRevision = null;
             String depLocator = null;
+            String depSubdir = null;
             boolean depPortable = false;
             if (dependency.isLocal()) {
                 depRoot = canonical(project.root.resolve(dependency.path));
@@ -282,8 +293,22 @@ public final class DependencyResolver {
                 }
             } else if (dependency.isGit()) {
                 depKind = "git";
+                GitCache.rejectCredentials(dependency.git);
                 depUrl = stripCredentials(dependency.git);
-                depRequested = "branch:" + (dependency.branch == null ? "main" : dependency.branch);
+                String refKind;
+                String refValue;
+                if (dependency.rev != null) {
+                    refKind = "rev";
+                    refValue = dependency.rev;
+                } else if (dependency.tag != null) {
+                    refKind = "tag";
+                    refValue = dependency.tag;
+                } else {
+                    refKind = "branch";
+                    refValue = dependency.branch == null ? "main" : dependency.branch;
+                }
+                depRequested = refKind + ":" + refValue;
+                depSubdir = dependency.subdir == null ? "." : dependency.subdir;
                 GitCache git = new GitCache(GitCache.defaultRoot(), offline);
                 if (resolveMode) {
                     if (!git.available()) {
@@ -291,13 +316,21 @@ public final class DependencyResolver {
                                 "Git is required for dependency '" + dependency.name
                                         + "' but 'git' is not available", null);
                     }
-                    depRevision = git.remoteRevision(depUrl, dependency.branch == null
-                            ? "main" : dependency.branch);
+                    Lockfile.SprigEntry previous = offline && previousLock != null
+                            ? findLockEntry(previousLock, edgeId) : null;
+                    if (previous != null && "git".equals(previous.kind)
+                            && depUrl.equals(previous.url) && depRequested.equals(previous.requested)
+                            && depSubdir.equals(previous.subdir)) {
+                        depRevision = previous.revision;
+                    } else {
+                        depRevision = git.remoteRevision(depUrl, refKind, refValue);
+                    }
                 } else {
                     Lockfile.SprigEntry entry = findLockEntry(lock, edgeId);
                     if (entry == null || !"git".equals(entry.kind)
                             || !depUrl.equals(entry.url)
-                            || !depRequested.equals(entry.requested)) {
+                            || !depRequested.equals(entry.requested)
+                            || !depSubdir.equals(entry.subdir)) {
                         throw new DepError(Codes.PROJECT_LOCK_STALE,
                                 "Lockfile entry for Git dependency '" + dependency.name
                                         + "' does not match sprig.toml", project.manifest.toString())
@@ -305,7 +338,8 @@ public final class DependencyResolver {
                     }
                     depRevision = entry.revision;
                 }
-                depRoot = canonical(git.materialize(depUrl, depRevision));
+                Path checkoutRoot = canonical(git.materialize(depUrl, depRevision));
+                depRoot = gitPackageRoot(checkoutRoot, depSubdir, dependency.name);
             } else {
                 throw new DepError(Codes.DEP_NOT_FOUND,
                         "Dependency '" + dependency.name + "' needs a path or git field",
@@ -352,7 +386,8 @@ public final class DependencyResolver {
             }
             stack.push(canonicalRoot);
             Package child = build(depProject, edgeId, dependency.name, depKind, depUrl, depRequested,
-                    depRevision, depLocator, depPortable, lock, offline, resolveMode, stack);
+                    depRevision, depLocator, depSubdir, depPortable, lock, offline, resolveMode,
+                    previousLock, stack);
             stack.pop();
             pkg.aliases.put(dependency.name, child);
             pkg.direct.add(child);
@@ -405,6 +440,47 @@ public final class DependencyResolver {
             return path.toRealPath();
         } catch (IOException e) {
             return path.toAbsolutePath().normalize();
+        }
+    }
+
+    private static Path gitPackageRoot(Path checkoutRoot, String subdir, String alias) {
+        Path selected = checkoutRoot;
+        if (!subdir.equals(".")) {
+            for (String component : subdir.split("/")) {
+                selected = selected.resolve(component);
+                if (Files.isSymbolicLink(selected))
+                    throw new DepError(Codes.DEP_NOT_FOUND,
+                            "Git dependency '" + alias + "' subdir contains a symbolic-link component: " + subdir,
+                            null);
+            }
+        }
+        selected = selected.toAbsolutePath().normalize();
+        if (!selected.startsWith(checkoutRoot))
+            throw new DepError(Codes.DEP_NOT_FOUND,
+                    "Git dependency '" + alias + "' subdir escapes its repository: " + subdir, null);
+        if (!Files.exists(selected, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            throw new DepError(Codes.DEP_NOT_FOUND,
+                    "Git dependency '" + alias + "' subdir has no " + Project.MANIFEST + ": " + subdir,
+                    null);
+        if (!Files.isDirectory(selected, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            throw new DepError(Codes.DEP_NOT_FOUND,
+                    "Git dependency '" + alias + "' subdir is not a directory: " + subdir, null);
+        Path manifest = selected.resolve(Project.MANIFEST);
+        if (Files.isSymbolicLink(manifest)
+                || !Files.isRegularFile(manifest, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            throw new DepError(Codes.DEP_NOT_FOUND,
+                    "Git dependency '" + alias + "' subdir has no " + Project.MANIFEST + ": " + subdir,
+                    null);
+        try {
+            Path realCheckout = checkoutRoot.toRealPath();
+            Path realSelected = selected.toRealPath();
+            if (!realSelected.startsWith(realCheckout))
+                throw new DepError(Codes.DEP_NOT_FOUND,
+                        "Git dependency '" + alias + "' subdir escapes its repository: " + subdir, null);
+            return realSelected;
+        } catch (IOException e) {
+            throw new DepError(Codes.DEP_NOT_FOUND,
+                    "Cannot inspect Git dependency '" + alias + "' subdir: " + e.getMessage(), null);
         }
     }
 }

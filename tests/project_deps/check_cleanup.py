@@ -134,7 +134,16 @@ def main():
         env_empty=env.copy(); env_empty['JAVA_TOOL_OPTIONS']=f'-Duser.home="{b}/emptyhome"'
         expect(app,['check','--offline'],'SPR-DEP-OFFLINE',env=env_empty)
         # Project inspection must never reveal credentials from declarations.
-        write(app/'sprig.toml','[project]\nname="credential-test"\n[[dependency]]\nname="g"\ngit="https://user:secret@example.invalid/repo.git"\n')
-        p=cmd(app,'project'); assert 'secret' not in p.stdout and 'secret' not in p.stderr; count+=1
+        write(app/'sprig.toml','[project]\nname="credential-test"\n[[dependency]]\nname="g"\ngit="https://user:secret@example.invalid/repo.git?token=querySecret#fragmentSecret"\n')
+        p=cmd(app,'project'); assert all(secret not in p.stdout and secret not in p.stderr
+                                          for secret in ('secret','querySecret','fragmentSecret')); count+=1
+        d=cmd(app,'deps','--json'); assert all(secret not in d.stdout and secret not in d.stderr
+                                                for secret in ('secret','querySecret','fragmentSecret')); count+=1
+        lock_before_credential_resolve=(app/'sprig.lock').read_bytes()
+        rejected=cmd(app,'resolve'); data=json.loads(rejected.stdout)
+        assert rejected.returncode==1 and 'SPR-DEP-GIT' in [x['code'] for x in data['diagnostics']]
+        assert all(secret not in rejected.stdout and secret not in rejected.stderr
+                   for secret in ('secret','querySecret','fragmentSecret'))
+        assert (app/'sprig.lock').read_bytes()==lock_before_credential_resolve; count+=1
     print(f'resolver cleanup: {count} checks passed')
 if __name__=='__main__': main()

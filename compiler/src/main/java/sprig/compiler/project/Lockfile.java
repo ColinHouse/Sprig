@@ -31,6 +31,7 @@ public final class Lockfile {
         public String url;           // git only, credentials stripped
         public String requested;     // git only, e.g. "branch:main"
         public String revision;      // git only, exact SHA
+        public String subdir;        // git only, normalized package root; absent means repository root
         public String projectName;
         public String manifestSha;
         public String source;
@@ -125,6 +126,7 @@ public final class Lockfile {
             sprig.url = entry.get("url");
             sprig.requested = entry.get("requested");
             sprig.revision = entry.get("revision");
+            sprig.subdir = entry.get("subdir");
             sprig.projectName = entry.get("project-name");
             sprig.manifestSha = entry.get("manifest-sha256");
             sprig.source = entry.get("source");
@@ -150,6 +152,20 @@ public final class Lockfile {
                     && (sprig.url == null || sprig.requested == null || sprig.revision == null)) {
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                         "sprig.lock git entry '" + sprig.name + "' is missing url/requested/revision", null);
+            }
+            if (sprig.kind.equals("git")) {
+                if (sprig.subdir == null) sprig.subdir = ".";
+                try {
+                    if (!Project.normalizeSubdir(sprig.subdir).equals(sprig.subdir))
+                        throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                                "Git subdir in sprig.lock must be normalized", null);
+                } catch (Toml.TomlException e) {
+                    throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                            "Invalid Git subdir in sprig.lock: " + e.getMessage(), null);
+                }
+            } else if (sprig.subdir != null) {
+                throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                        "Local sprig.lock entry must not contain a Git subdir", null);
             }
             if (sprig.kind.equals("local")) {
                 if (sprig.path == null || sprig.path.isBlank()) {
@@ -255,6 +271,8 @@ public final class Lockfile {
                 sb.append("url = ").append(quote(entry.url)).append('\n');
                 sb.append("requested = ").append(quote(entry.requested)).append('\n');
                 sb.append("revision = ").append(quote(entry.revision)).append('\n');
+                if (entry.subdir != null && !entry.subdir.equals("."))
+                    sb.append("subdir = ").append(quote(entry.subdir)).append('\n');
                 sb.append("portable = ").append(entry.portable).append('\n');
             }
             sb.append("project-name = ").append(quote(entry.projectName)).append('\n');

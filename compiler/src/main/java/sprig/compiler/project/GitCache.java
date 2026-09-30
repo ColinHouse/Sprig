@@ -33,15 +33,38 @@ public final class GitCache {
 
     /** Redacts credentials from a URL for every user-visible output. */
     public static String redact(String url) {
-        int scheme = url.indexOf("://");
-        if (scheme < 0) {
-            return url;
+        int query = url.indexOf('?');
+        int fragment = url.indexOf('#');
+        int end = url.length();
+        if (query >= 0) end = Math.min(end, query);
+        if (fragment >= 0) end = Math.min(end, fragment);
+        String safe = url.substring(0, end);
+        int scheme = safe.indexOf("://");
+        if (scheme >= 0) {
+            int at = safe.indexOf('@', scheme + 3);
+            int slash = safe.indexOf('/', scheme + 3);
+            if (at >= 0 && (slash < 0 || at < slash))
+                safe = safe.substring(0, scheme + 3) + "***@" + safe.substring(at + 1);
+        } else {
+            int at = safe.indexOf('@');
+            int colon = safe.indexOf(':');
+            if (at >= 0 && (colon < 0 || at < colon))
+                safe = "***@" + safe.substring(at + 1);
         }
-        int at = url.indexOf('@', scheme + 3);
-        if (at < 0) {
-            return url;
+        return query >= 0 ? safe + "?***" : safe;
+    }
+
+    /** Git credentials and query/fragment data are not supported in manifests. */
+    public static void rejectCredentials(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            boolean scpUser = !url.contains("://") && url.matches("^[^/]+@[^:]+:.+");
+            if (uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null || scpUser)
+                throw new DepError(Codes.DEP_GIT,
+                        "Git URLs with credentials, query parameters or fragments are unsupported", null);
+        } catch (IllegalArgumentException e) {
+            throw new DepError(Codes.DEP_GIT, "Invalid Git repository URL", null);
         }
-        return url.substring(0, scheme + 3) + "***@" + url.substring(at + 1);
     }
 
     public boolean available() {
@@ -53,25 +76,48 @@ public final class GitCache {
         return output == null ? null : output.trim();
     }
 
-    /** Resolves a branch to its current commit; network unless cached metadata suffices. */
-    public String remoteRevision(String url, String branch) throws DepError {
+    /** Resolves branch/tag intent, or validates an exact caller-supplied commit SHA. */
+    public String remoteRevision(String url, String kind, String ref) throws DepError {
+        if (kind.equals("rev")) {
+            if (ref == null || !ref.matches("[0-9a-f]{40}"))
+                throw new DepError(Codes.DEP_GIT, "Git rev must be a full 40-character commit SHA", null);
+            return ref;
+        }
         if (offline) {
             throw new DepError(Codes.DEP_OFFLINE,
-                    "Offline mode cannot resolve Git branch '" + branch + "' of " + redact(url),
-                    "Run without --offline to resolve the branch, or keep the existing lock.");
+                    "Offline mode cannot resolve Git " + kind + " '" + ref + "' of " + redact(url),
+                    "Run without --offline to resolve the ref, or keep the existing lock.");
         }
-        String output = capture(List.of("ls-remote", url, "refs/heads/" + branch), null);
+        String namespace = switch (kind) {
+            case "branch" -> "refs/heads/";
+            case "tag" -> "refs/tags/";
+            default -> throw new DepError(Codes.DEP_GIT, "Unsupported Git ref intent: " + kind, null);
+        };
+        String target = namespace + ref;
+        if (run(List.of("check-ref-format", target), null) != 0)
+            throw new DepError(Codes.DEP_GIT, "Invalid Git " + kind + " name '" + ref + "'", null);
+        List<String> query = new ArrayList<>(List.of("ls-remote", url, target));
+        if (kind.equals("tag")) query.add(target + "^{}");
+        String output = capture(query, null);
         if (output == null) {
-            throw new DepError(Codes.DEP_GIT, "git unavailable: cannot resolve " + redact(url), null);
+            throw new DepError(Codes.DEP_GIT,
+                    "Git " + kind + " lookup failed for " + redact(url)
+                            + "; check the repository URL and network access", null);
         }
+        String tagObjectRevision = null;
         for (String line : output.split("\n")) {
             String trimmed = line.trim();
-            if (trimmed.endsWith("refs/heads/" + branch)) {
-                return trimmed.split("\\s+")[0];
+            String[] parts = trimmed.split("\\s+", 2);
+            if (parts.length != 2) continue;
+            if (parts[1].equals(target + "^{}")) return parts[0];
+            if (parts[1].equals(target)) {
+                if (kind.equals("branch")) return parts[0];
+                tagObjectRevision = parts[0];
             }
         }
-        throw new DepError(Codes.DEP_GIT,
-                "Git branch '" + branch + "' not found in " + redact(url), null);
+        if (tagObjectRevision != null) return tagObjectRevision;
+        throw new DepError(Codes.DEP_GIT, "Git " + kind + " '" + ref + "' not found in "
+                + redact(url), null);
     }
 
     /** Materializes one immutable revision from a bare cache into a checkout. */
@@ -171,7 +217,8 @@ public final class GitCache {
                             bare.toString());
                 }
                 run(List.of("--git-dir=" + bare, "fetch", "--quiet", "origin",
-                        "+refs/heads/*:refs/remotes/origin/*"), null);
+                        "+refs/heads/*:refs/remotes/origin/*",
+                        "+refs/tags/*:refs/tags/*"), null);
                 if (run(List.of("--git-dir=" + bare, "cat-file", "-e", revision + "^{commit}"), null) != 0) {
                     throw new DepError(Codes.DEP_GIT,
                             "Git revision " + revision + " not found in " + redact(url), null);
