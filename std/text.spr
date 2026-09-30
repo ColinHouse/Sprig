@@ -1,4 +1,4 @@
-# UTF-16 indexed helpers, matching the implemented String indexing contract.
+# String position operations use Unicode code points; Java char interop remains UTF-16.
 func join(values: List[String], separator: String) -> String:
     var output = ""
     var index: Int = 0
