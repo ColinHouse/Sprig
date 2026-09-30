@@ -27,6 +27,12 @@ assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
 source_status = next(line.split("=", 1)[1] for line in (ROOT / "compiler/src/main/resources/sprig/compiler/tooling/catalog.properties").read_text().splitlines() if line.startswith("releaseStatus="))
 assert catalog["releaseStatus"] in (source_status, "prerelease; v" + version)
+validation_text = (ROOT / "docs/releases/validation.md").read_text(encoding="utf-8")
+published_match = re.search(r"validation authority for the published `([^`]+)`", validation_text)
+assert published_match, "release validation must identify the latest published tag"
+published_tag = published_match.group(1)
+published_version = published_tag.removeprefix("v")
+assert f"latest published {published_tag}" in source_status or version == published_version
 assert catalog["features"]["mavenDependencies"]
 assert catalog["features"]["projectAwareClasspath"]
 assert catalog["supportedPlatforms"] == ["Linux", "macOS"]
@@ -50,14 +56,14 @@ for item in json.loads(invoke("codes", "--json"))["codes"]:
     assert "| " + item["code"] + " |" in code_rows, item["code"]
 
 required = {
-    "README.md": [version, "v" + version, "Apache"],
+    "README.md": [published_version, published_tag, "Apache"],
     "AGENTS.md": ["sprig api", "Apache-2.0"],
     "docs/language/feature-status.md": ["capabilities", "--classpath"],
-    "docs/language/known-limitations.md": ["Apache-2.0", "v" + version],
-    "website/en/guide/tooling.md": [version, "sprig api"],
-    "website/guide/tooling.md": [version, "sprig api"],
-    "website/en/project/release-status.md": [version, "v" + version],
-    "website/project/release-status.md": [version, "v" + version],
+    "docs/language/known-limitations.md": [version, "v" + version, "experimental Beta", "Apache-2.0"],
+    "website/en/guide/tooling.md": [published_version, "sprig api"],
+    "website/guide/tooling.md": [published_version, "sprig api"],
+    "website/en/project/release-status.md": [published_version, published_tag],
+    "website/project/release-status.md": [published_version, published_tag],
 }
 for name, markers in required.items():
     text = (ROOT / name).read_text()

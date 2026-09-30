@@ -16,8 +16,8 @@ use their installed SDK directly. `sprig resolve` records `stdlib-version` and
 older locks missing these fields, and require explicit re-resolution.
 The digest is SHA256 of each sorted module filename, NUL, exact UTF-8 file bytes,
 NUL concatenated in filename order. LF/CRLF bytes are intentionally distinct.
-The std version follows the compiler/SDK release during Alpha; no independent
-stdlib compatibility promise or invisible upgrade is made.
+The bundled std version follows the compiler/SDK release; there is no
+independent stdlib compatibility promise or invisible upgrade.
 
 | Module | Public operations |
 |---|---|

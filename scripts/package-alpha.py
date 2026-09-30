@@ -50,6 +50,8 @@ def main():
     launcher = ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')
     version = output(launcher, 'version').split()[1]
     tag = 'v' + version
+    maturity = 'Beta' if '-beta.' in version else 'Alpha' if '-alpha.' in version else 'Stable'
+    maturity_label = 'Experimental, ' + maturity if maturity in ('Alpha', 'Beta') else 'Stable'
     expected = os.environ.get('SPRIG_PACKAGE_VERSION')
     if expected and expected != tag:
         raise RuntimeError(f'Tag {expected} does not match compiler {tag}')
@@ -156,7 +158,7 @@ def main():
         (package / 'AGENT_GUIDE.md').write_text(guide, encoding='utf-8')
         (package / 'README.md').write_text(f'''# Sprig {tag} SDK
 
-Experimental, Alpha, JDK 17+, language v0.8-dev. Supported: Linux/macOS.
+{maturity_label}, JDK 17+, language v0.8-dev. Supported: Linux/macOS.
 Windows is an experimental preview, not a release-supported platform. Sprig is a small, explicit
 JVM language for tools, automation and reliable application code. The SDK
 contains the stage-0 compiler/runtime, ANTLR and pinned Maven Resolver libraries.
