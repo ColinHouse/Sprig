@@ -48,6 +48,19 @@ def main():
         home = root / "home"
         home.mkdir()
         env = dict(os.environ, HOME=str(home), JAVA_TOOL_OPTIONS="-Duser.home=" + str(home))
+        usage_human = sprig(root, "add", "--bad-option", env=env)
+        check("usage-error-human-exit-code", usage_human.returncode == 2
+              and "SPR-CLI-OPTION" in usage_human.stderr,
+              usage_human.stdout + usage_human.stderr)
+        usage_json = sprig(root, "add", "--bad-option", "--json", env=env)
+        try:
+            usage_payload = json.loads(usage_json.stdout)
+        except ValueError:
+            usage_payload = {}
+        check("usage-error-json-process-exit-matches-envelope",
+              usage_json.returncode == 2 and usage_payload.get("exitCode") == usage_json.returncode
+              and "SPR-CLI-OPTION" in str(usage_payload.get("diagnostics")),
+              usage_json.stdout + usage_json.stderr)
         project = root / "app"
         write(project / "sprig.toml",
               '# keep this project comment\n[project]\nname = "app"\nversion = "0.1.0"\n'
@@ -210,7 +223,9 @@ def main():
         credentialed = sprig(project, "add", "credentialed", "--git",
                              "https://token@example.invalid/repo.git", "--branch", "main",
                              "--json", env=env)
-        check("credentialed-git-url-rejected", credentialed.returncode == 1
+        credentialed_json = json.loads(credentialed.stdout)
+        check("credentialed-git-url-rejected", credentialed.returncode == 2
+              and credentialed_json.get("exitCode") == credentialed.returncode
               and (project / "sprig.toml").read_bytes() == before_bad_git_manifest
               and (project / "sprig.lock").read_bytes() == before_bad_git_lock
               and "authentication outside the manifest" in credentialed.stdout,

@@ -131,9 +131,10 @@ reuse also requires a valid repository checksum sidecar. A damaged staging cache
 cannot be silently blessed as a new lock. There is no authentication
 or repository-list configuration in this first pass.
 
-Schema **3** records selected coordinates (extension/classifier), direct roots,
+Schema **4** records selected coordinates (extension/classifier), direct roots,
 resolved graph edges, classpath order, repository provenance and SHA-256 of JARs
-and effective-model POM inputs. Schema 1/2 are rejected: run resolve explicitly.
+and effective-model POM inputs. These Maven lock fields were introduced in schema
+3 and remain part of schema 4. Schema 1-3 are rejected: run resolve explicitly.
 An immutable-by-contract content cache stores files by digest. Every consumer
 verifies the locked hashes; missing bytes fail `SPR-DEP-OFFLINE`, changed bytes
 fail `SPR-DEP-CHECKSUM`. Consumers do not re-resolve graphs or silently fetch.
