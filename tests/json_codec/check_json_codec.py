@@ -32,7 +32,7 @@ EXPECTED_TESTS = {
 }
 
 
-def main():
+def run_checks():
     verify("library-layout", (LIB / "sprig.toml").is_file() and (LIB / "src/codec.spr").is_file()
            and (LIB / "README.md").is_file())
     verify("pure-sprig-library", not list(LIB.rglob("*.java")),
@@ -111,6 +111,21 @@ catch problem: Error:
     for name in failed:
         print(f"failed: {name}")
     return 1 if failed else 0
+
+
+def main():
+    # Resolving the library is part of this test, but the generated lock is not
+    # checked in. Keep the checkout unchanged so exact-tag release packaging
+    # can still verify that it came from a clean source tree.
+    lock = LIB / "sprig.lock"
+    original_lock = lock.read_bytes() if lock.exists() else None
+    try:
+        return run_checks()
+    finally:
+        if original_lock is None:
+            lock.unlink(missing_ok=True)
+        else:
+            lock.write_bytes(original_lock)
 
 
 if __name__ == "__main__":
