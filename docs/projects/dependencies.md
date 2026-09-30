@@ -1,4 +1,4 @@
-# Dependency contract — compiler v0.4.0-alpha.1
+# Dependency contract — Sprig v0.5.0-beta.1
 
 `sprig resolve`, `sprig add` and `sprig remove` are explicit dependency
 resolution commands: they may write `sprig.lock` and perform Git/Maven requests.

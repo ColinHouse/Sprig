@@ -9,11 +9,12 @@ curl -fsSL https://raw.githubusercontent.com/ColinHouse/Sprig/main/scripts/insta
 ```
 
 The installer selects the newest published GitHub release. To select a
-specific release, download the script and pass its tag:
+specific release, download the script and pass a tag from the project's
+[release page](https://github.com/ColinHouse/Sprig/releases):
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/ColinHouse/Sprig/main/scripts/install-sprig.sh
-sh install-sprig.sh --version v0.4.0-alpha.1
+sh install-sprig.sh --version vX.Y.Z
 ```
 
 It downloads the release ZIP and its `.sha256` asset from the fixed Sprig

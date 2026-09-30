@@ -1,4 +1,4 @@
-# Known limitations — v0.4.0-alpha.1
+# Known limitations — v0.5.0-beta.1
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the historical design kit in `docs/history/design-kit/`.
@@ -88,7 +88,7 @@ by the historical design kit in `docs/history/design-kit/`.
   applied migration is unsupported by convention, not automatically detected.
   Migration SQL is trusted project code.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig targets v0.4.0-alpha.1, an experimental Alpha under Apache-2.0 (`LICENSE`, `NOTICE`),
+- Sprig targets v0.5.0-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.
 
 ## Callable boundary
