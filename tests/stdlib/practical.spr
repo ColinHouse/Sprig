@@ -1,0 +1,105 @@
+import "@std/files.spr" as files
+import "@std/process.spr" as process
+import "@std/text.spr" as text
+import "@std/time.spr" as time
+import java.io.IOException as IOException
+
+try:
+    let root = process.argument(0)
+    let repo = process.argument(1)
+    files.make_directory(root)
+    let source = files.join(root, "héllo.txt")
+    files.write_utf8(source, "你好 Sprig")
+    print(files.parent(source) == root)
+    print(files.parent("leaf.txt") == null)
+    print(files.parent(files.absolute("/")) == null)
+    print(files.absolute("tests") == files.absolute(repo + "/tests"))
+
+    let copy = files.join(root, "copy.txt")
+    files.copy_file(source, copy)
+    print(files.read_utf8(copy))
+    var copy_rejected = false
+    try:
+        files.copy_file(source, copy)
+    catch problem: IOException:
+        copy_rejected = true
+    print(copy_rejected)
+
+    let moved = files.join(root, "moved.txt")
+    files.move(copy, moved)
+    print(not files.exists(copy))
+    print(files.read_utf8(moved))
+    var move_rejected = false
+    try:
+        files.move(source, moved)
+    catch problem: IOException:
+        move_rejected = true
+    print(move_rejected)
+
+    let directory = files.join(root, "kept")
+    files.make_directory(directory)
+    let child = files.join(directory, "keep.txt")
+    files.write_utf8(child, "keep")
+    var directory_remove_rejected = false
+    try:
+        files.remove_file(directory)
+    catch problem: IOException:
+        directory_remove_rejected = true
+    print(directory_remove_rejected)
+    print(files.read_utf8(child))
+
+    files.atomic_write_utf8(source, "原子写入 ✓")
+    print(files.read_utf8(source))
+    var atomic_rejected = false
+    try:
+        files.atomic_write_utf8(directory, "cannot replace a non-empty directory")
+    catch problem: IOException:
+        atomic_rejected = true
+    print(atomic_rejected)
+    print(files.read_utf8(child))
+    var temp_file_remains = false
+    for item in files.list(root):
+        if text.ends_with(item, ".tmp"):
+            temp_file_remains = true
+    print(not temp_file_remains)
+
+    files.remove_file(moved)
+    print(not files.exists(moved))
+    let temporary = files.temp_file()
+    print(files.is_file(temporary))
+    files.remove_file(temporary)
+    print(not files.exists(temporary))
+
+    let empty: List[String] = []
+    print(text.join(empty, ","))
+    print(text.join(["only"], "--"))
+    print(text.join(["a", "", "c"], "::"))
+    print(text.join(["东", "😀", "e" + String.fromCode(769)], "✓"))
+    print(text.join(["a", "b"], ""))
+
+    print(time.format_utc(0))
+    print(time.format_utc(-1))
+    let leap = time.parse_utc("2024-02-29T12:34:56.789Z")
+    print(leap)
+    print(time.format_utc(leap))
+    print(time.parse_utc("2024-02-29T14:34:56.789+02:00") == leap)
+    var invalid_utc_rejected = false
+    try:
+        time.parse_utc("2023-02-29T12:34:56Z")
+    catch problem: Error:
+        invalid_utc_rejected = true
+    print(invalid_utc_rejected)
+    var missing_zone_rejected = false
+    try:
+        time.parse_utc("2024-02-29T12:34:56")
+    catch problem: Error:
+        missing_zone_rejected = true
+    print(missing_zone_rejected)
+    var epoch_overflow_rejected = false
+    try:
+        time.parse_utc("+1000000000-01-01T00:00:00Z")
+    catch problem: Error:
+        epoch_overflow_rejected = true
+    print(epoch_overflow_rejected)
+catch problem: IOException:
+    print("unexpected IO failure: " + problem.message)

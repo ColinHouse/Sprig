@@ -1,4 +1,14 @@
 # UTF-16 indexed helpers, matching the implemented String indexing contract.
+func join(values: List[String], separator: String) -> String:
+    var output = ""
+    var index: Int = 0
+    while index < values.size():
+        if index > 0:
+            output = output + separator
+        output = output + values.get(index)
+        index += 1
+    return output
+
 func starts_with(value: String, prefix: String) -> Bool:
     if prefix.length() > value.length():
         return false

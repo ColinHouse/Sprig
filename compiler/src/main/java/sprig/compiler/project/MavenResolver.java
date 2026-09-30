@@ -52,7 +52,7 @@ public final class MavenResolver {
             throw failure("Maven repository must be https:// or file:// without credentials/query/fragment");
         return value.endsWith("/") ? value : value + "/";
     }
-    static void validate(String group, String artifact, String version) {
+    public static void validate(String group, String artifact, String version) {
         if (!group.matches("[A-Za-z0-9_]+(?:[.-][A-Za-z0-9_]+)*")
                 || !artifact.matches("[A-Za-z0-9_]+(?:[.-][A-Za-z0-9_]+)*")
                 || !version.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")
@@ -100,7 +100,7 @@ public final class MavenResolver {
             throw new DepError(Codes.PROJECT_LOCK_STALE, "Locked Maven roots do not match project declarations", null)
                     .with("hint", "Run `sprig resolve`.");
     }
-    /** Explicit resolve is the only operation that performs Maven network requests. */
+    /** Called only by explicit dependency-resolution commands; consumers never invoke network resolution. */
     public static void resolve(DependencyResolver.Result graph, boolean offline) {
         List<Project.JvmDependency> declarations = new ArrayList<>();
         for (DependencyResolver.Package pkg : graph.packages) declarations.addAll(pkg.project.jvmDependencies);

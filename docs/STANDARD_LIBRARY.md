@@ -21,10 +21,10 @@ stdlib compatibility promise or invisible upgrade is made.
 
 | Module | Public operations |
 |---|---|
-| `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name` |
+| `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?` |
-| `text` | `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
-| `time` | `epoch_millis() -> Int`, `utc_now() -> String` |
+| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
+| `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 | `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code) |
 
@@ -34,15 +34,32 @@ process helper remains available to a standalone program, but it neither
 invokes a shell nor turns a nonzero child status into an exception. See
 [testing](TESTING.md) for isolation, timeout and failure behavior.
 
-File text always uses UTF-8. Writes replace existing file content, create a file,
-and require an existing parent; `make_directory` creates missing parents.
-Directory listing produces a sorted snapshot of absolute normalized paths in
-`List[String]`. `is_file`, `is_directory` and `exists` do not follow symbolic
-links. Joining/normalizing paths is lexical and does not constrain paths to a
-sandbox. `file_name` requires a path with a filename component. IO failures
-preserve `java.io.IOException`; catch or declare that type. Null guards and
-argument bounds report Sprig `Error`; OS invalid-path failures remain JVM errors.
-The host is unrestricted local IO under the invoking user's permissions.
+File text always uses UTF-8. `write_utf8` replaces existing file content,
+creates a file, and requires an existing parent; `make_directory` creates missing
+parents. Directory listing produces a sorted snapshot of absolute normalized
+paths in `List[String]`. `is_file`, `is_directory` and `exists` do not follow
+symbolic links. Joining/normalizing paths is lexical and does not constrain paths
+to a sandbox. `file_name` requires a path with a filename component. `parent`
+first normalizes lexically, preserves relative paths, and returns `null` for a
+leaf with no parent or a filesystem root. `absolute` returns an absolute
+normalized path without checking existence or resolving symbolic links, so its
+value is based on the process working directory.
+
+`copy_file` and `move` require an existing regular-file source and reject
+symbolic links, directories and existing destinations; neither silently
+overwrites. `remove_file` deletes one regular file and rejects directories and
+symbolic links. `atomic_write_utf8` writes and closes a temporary sibling before
+replacing the target. It requests an atomic same-filesystem replacement; if the
+provider reports atomic moves are unsupported, it falls back to a regular
+replacement move, which is not crash-atomic. Temporary files are removed after
+success or failure. No API here promises fsync or crash durability. `temp_file`
+creates an empty file in the operating system temporary directory; callers can
+remove it with `remove_file`.
+
+IO failures preserve `java.io.IOException`; catch or declare that type. Null
+guards and argument bounds report Sprig `Error`; OS invalid-path failures remain
+JVM errors. The host is unrestricted local IO under the invoking user's
+permissions.
 
 `process.arguments()` contains only arguments after `sprig run --`; the generated
 JVM main copies its argument array before module initialization. An unset
@@ -56,6 +73,25 @@ length 2. Java `char` interop remains a single UTF-16 code unit at the JVM
 boundary. `lines` accepts CRLF/LF and retains the final empty segment; `split` is
 literal, retains empty segments, and rejects an empty separator. `trim` removes
 ASCII space/tab/CR/LF, without claiming full Unicode whitespace handling.
+
+`text.join(values, separator)` returns `""` for an empty list, the item itself
+for a one-item list, and exactly one separator between neighboring items. An
+empty separator concatenates items; a multi-character or Unicode separator is
+preserved literally. Example:
+
+```sprig
+import "@std/text.spr" as text
+print(text.join(["Sprig", "JVM", "✓"], " · "))
+```
+
+`time.format_utc(epoch_millis)` returns the canonical UTC representation from
+`java.time.Instant`, such as `1970-01-01T00:00:00Z`. `time.parse_utc(text)`
+requires an ISO-8601 instant with an explicit `Z` or numeric offset, normalizes
+offsets to UTC, and returns epoch milliseconds. Sub-millisecond precision is
+discarded toward the earlier millisecond. Invalid calendar dates, absent
+offsets, malformed values, and values outside the `Int` epoch-millisecond range
+raise Sprig `Error`. Neither operation consults the machine's local timezone;
+no timezone database or locale parsing is provided.
 
 ## JSON is an ordinary recursive Sprig data model
 

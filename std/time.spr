@@ -8,3 +8,12 @@ func utc_now() -> String throws Error:
     if value != null:
         return value
     throw Error("host utc_now returned null")
+
+func format_utc(epoch_millis: Int) -> String throws Error:
+    let value = HostSystem.formatUtc(epoch_millis)
+    if value != null:
+        return value
+    throw Error("host format_utc returned null")
+
+func parse_utc(value: String) -> Int throws Error:
+    return HostSystem.parseUtc(value)
