@@ -65,7 +65,7 @@ The end-to-end wiring from a real Fabric/Loom dogfood is in
 See [release status](/en/project/release-status), the release assets and the
 checkout's capability output. Sprig is not self-hosted or production ready.
 Publishing/registry, LSP, interfaces and generic inference remain future work.
-See [known limitations](/en/reference/KNOWN_LIMITATIONS).
+See [known limitations](/en/reference/language/known-limitations).
 
 ## Help build Sprig
 

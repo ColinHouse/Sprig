@@ -366,7 +366,7 @@ public final class Explanations {
                         "The artifact is not a JAR or needs unsupported Maven behavior."));
                 out.put("safeFixes", List.of("Verify exact release coordinates in [[jvm]].",
                         "Run sprig resolve with network access.",
-                        "See docs/DEPENDENCIES.md; there is no Maven CLI/plugin path."));
+                        "See docs/projects/dependencies.md; there is no Maven CLI/plugin path."));
                 out.put("relatedCodes", List.of(Codes.DEP_NOT_FOUND, Codes.DEP_OFFLINE));
             }
             case Codes.DEP_NOT_FOUND -> {

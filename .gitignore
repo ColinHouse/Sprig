@@ -3,12 +3,11 @@
 /bin/
 /sprig-build/
 /dist/
-/tools/*.jar
-/tools/resolver/
+# Pinned compiler build dependencies are fetched and checksum-verified.
+/build/deps/
 
-# Acceptance results may include local paths and environment details. The
-# scripts regenerate them under acceptance/results/ for each local run.
-/acceptance/results/
+# Acceptance results may include local paths and environment details.
+/tests/acceptance/results/
 
 # VitePress documentation site
 /website/node_modules/

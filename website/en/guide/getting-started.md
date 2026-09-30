@@ -18,7 +18,7 @@ sprig upgrade
 ```
 
 The full install/upgrade contract is in
-[Install and upgrade](/en/reference/INSTALL).
+[Install and upgrade](/en/reference/projects/install).
 
 ## Manual download and verify
 

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     env = dict(os.environ, PYTHONUTF8="1")
-    gates = ["scripts/build.py", "scripts/test.py", "tools/test-grammar.py", "scripts/check-docs.py", "scripts/check-editor.py"]
+    gates = ["scripts/build.py", "scripts/test.py", "scripts/test-grammar.py", "scripts/check-docs.py", "scripts/check-editor.py"]
     for gate in gates:
         print(f"\n== verify: {gate} ==", flush=True)
         result = subprocess.run([sys.executable, str(ROOT / gate)], cwd=ROOT, env=env)

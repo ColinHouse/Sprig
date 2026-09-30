@@ -4,8 +4,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-python3 "$ROOT/tools/verify-doc-snippets.py"
-python3 "$ROOT/tools/check-tooling-consistency.py"
+python3 "$ROOT/scripts/internal/verify-doc-snippets.py"
+python3 "$ROOT/scripts/internal/check-tooling-consistency.py"
 
 if [[ ! -x "$ROOT/website/node_modules/.bin/vitepress" || -n "${DOCS_FORCE_INSTALL:-}" ]]; then
   echo "Installing website dependencies..."
@@ -13,5 +13,5 @@ if [[ ! -x "$ROOT/website/node_modules/.bin/vitepress" || -n "${DOCS_FORCE_INSTA
 fi
 
 npm --prefix "$ROOT/website" run docs:build
-python3 "$ROOT/tools/check-doc-links.py"
+python3 "$ROOT/scripts/internal/check-doc-links.py"
 echo "Documentation checks passed."

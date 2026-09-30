@@ -8,7 +8,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if sys.platform == "win32" else "sprig")
-VERIFY = ROOT / "tools" / "verify-doc-snippets.py"
+VERIFY = ROOT / "scripts" / "internal" / "verify-doc-snippets.py"
 
 FAILURES = []
 

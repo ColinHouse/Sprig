@@ -14,13 +14,13 @@ def main():
     if not npm:
         print("Node.js 20+ and npm are required for the documentation gate.", file=sys.stderr)
         return 2
-    commands = [[sys.executable, str(ROOT / "tools" / name)] for name in
+    commands = [[sys.executable, str(ROOT / "scripts/internal" / name)] for name in
                 ("verify-doc-snippets.py", "check-tooling-consistency.py")]
     vitepress = ROOT / "website/node_modules/vitepress/bin/vitepress.js"
     if not vitepress.is_file() or os.environ.get("DOCS_FORCE_INSTALL"):
         commands.append([npm, "--prefix", str(ROOT / "website"), "ci"])
     commands += [[npm, "--prefix", str(ROOT / "website"), "run", "docs:build"],
-                 [sys.executable, str(ROOT / "tools/check-doc-links.py")]]
+                 [sys.executable, str(ROOT / "scripts/internal/check-doc-links.py")]]
     for command in commands:
         result = subprocess.run(command, cwd=ROOT)
         if result.returncode:

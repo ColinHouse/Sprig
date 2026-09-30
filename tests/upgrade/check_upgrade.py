@@ -73,10 +73,10 @@ def main():
         shutil.copy2(CLI, version_dir / "bin/sprig")
         (version_dir / "build").mkdir()
         shutil.copy2(ROOT / "build/sprig-compiler.jar", version_dir / "build")
-        (version_dir / "tools/resolver").mkdir(parents=True)
-        shutil.copy2(ROOT / "tools/antlr-4.13.2-complete.jar", version_dir / "tools")
-        for jar in (ROOT / "tools/resolver").glob("*.jar"):
-            shutil.copy2(jar, version_dir / "tools/resolver")
+        (version_dir / "build/deps/resolver").mkdir(parents=True)
+        shutil.copy2(ROOT / "build/deps/antlr-4.13.2-complete.jar", version_dir / "build/deps")
+        for jar in (ROOT / "build/deps/resolver").glob("*.jar"):
+            shutil.copy2(jar, version_dir / "build/deps/resolver")
         (version_dir / "sprig-install.json").write_text(json.dumps({
             "installationKind": "managed", "version": BASE_TAG,
             "sourceReleaseTag": BASE_TAG,

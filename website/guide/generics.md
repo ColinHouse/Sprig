@@ -2,7 +2,7 @@
 
 Sprig 的用户自定义泛型核心原则只有一条：**声明和使用都必须显式**。
 没有类型推断，没有型变，泛型容器也不隐式转换。本页是可直接运行的导览；权威契约见
-[泛型参考（英文）](/en/reference/GENERICS)。
+[泛型参考（英文）](/en/reference/language/generics)。
 
 <<< @/snippets/generics.spr
 
@@ -82,10 +82,10 @@ generic T:
 
 生成的 Java 中泛型被擦除并装箱：类型参数变为 `Object`，泛型类在 JVM 层是原始
 类，编译器在参数位置装箱、在结果位置插入转换与拆箱。完整规则见
-[泛型契约（英文）](/en/reference/GENERICS)。
+[泛型契约（英文）](/en/reference/language/generics)。
 
 ## 尚未包含
 
 类型推断、型变、`Comparable`、用户自定义能力和发布/registry。多类型参数、
 `Equatable` 以及项目清单模型已经实现。见
-[已知限制](/reference/known-limitations)。
+[已知限制](/en/reference/language/known-limitations)。

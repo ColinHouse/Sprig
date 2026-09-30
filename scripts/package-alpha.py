@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import posixpath
 from pathlib import Path
 import re
 import shutil
@@ -16,6 +17,28 @@ from build import ROOT, ANTLR_NAME, write_launchers
 
 def output(*args):
     return subprocess.check_output([str(arg) for arg in args], cwd=ROOT, text=True, stderr=subprocess.STDOUT).strip()
+
+
+def rewrite_archive_links(text, source, archive_target, archive_paths, package):
+    """Map repository-local Markdown links onto the compatibility archive tree."""
+    def replace(match):
+        href = match.group(1)
+        target, separator, anchor = href.partition('#')
+        if not target or re.match(r'^[a-z][a-z0-9+.-]*:', target, re.I) or target.startswith('/'):
+            return match.group(0)
+        source_target = (ROOT / source).parent.joinpath(target).resolve()
+        try:
+            source_rel = source_target.relative_to(ROOT.resolve()).as_posix()
+        except ValueError:
+            return match.group(0)
+        archive_rel = archive_paths.get(source_rel)
+        if archive_rel is None and package.joinpath(source_rel).exists():
+            archive_rel = source_rel
+        if archive_rel is None:
+            return match.group(0)
+        mapped = posixpath.relpath(archive_rel, posixpath.dirname(archive_target) or '.')
+        return match.group(0).replace(href, mapped + (separator + anchor if separator else ''))
+    return re.sub(r'\]\(([^)\s]+)\)', replace, text)
 
 
 def main():
@@ -43,9 +66,9 @@ def main():
         package = Path(temp) / name
         (package / 'lib').mkdir(parents=True)
         shutil.copy2(ROOT / 'build/sprig-compiler.jar', package / 'lib')
-        shutil.copy2(ROOT / 'tools' / ANTLR_NAME, package / 'lib')
-        resolver = sorted((ROOT / 'tools/resolver').glob('*.jar'))
-        resolver_spec = json.loads((ROOT / 'tools/resolver-libraries.json').read_text(encoding='utf-8'))
+        shutil.copy2(ROOT / 'build/deps' / ANTLR_NAME, package / 'lib')
+        resolver = sorted((ROOT / 'build/deps/resolver').glob('*.jar'))
+        resolver_spec = json.loads((ROOT / 'scripts/internal/resolver-libraries.json').read_text(encoding='utf-8'))
         if {file.name for file in resolver} != set(resolver_spec['jars']):
             raise RuntimeError('Resolver libraries missing or unlisted: run scripts/build.py first')
         for file in resolver:
@@ -53,8 +76,8 @@ def main():
                 raise RuntimeError('Resolver library checksum mismatch: ' + file.name)
         for file in resolver:
             shutil.copy2(file, package / 'lib')
-        shutil.copytree(ROOT / 'tools/resolver/legal', package / 'legal/resolver')
-        shutil.copy2(ROOT / 'tools/resolver-libraries.json', package / 'legal/resolver-libraries.json')
+        shutil.copytree(ROOT / 'build/deps/resolver/legal', package / 'legal/resolver')
+        shutil.copy2(ROOT / 'scripts/internal/resolver-libraries.json', package / 'legal/resolver-libraries.json')
         for tree in ('runtime/src/main/java', 'examples', 'website/snippets', 'std', 'libraries'):
             if (ROOT / tree).is_dir():
                 shutil.copytree(ROOT / tree, package / tree,
@@ -64,17 +87,61 @@ def main():
             destination = package / Path(source).parent
             destination.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / source, destination)
-        docs = ['MATCH_EXPRESSIONS', 'MODULE_REEXPORTS', 'FORMATTER', 'INSTALL', 'TESTING', 'QUICK_REFERENCE', 'FEATURE_STATUS_IMPLEMENTED', 'JVM_INTEROP', 'WRAP', 'JVM_CONFORMANCE', 'NUMERIC_SEMANTICS', 'DIAGNOSTIC_CODES', 'KNOWN_LIMITATIONS', 'HOST_SERVICES', 'GENERICS', 'PROJECTS', 'DEPENDENCIES', 'STANDARD_LIBRARY', 'SHOWCASES']
+        docs = {
+            'MATCH_EXPRESSIONS': 'docs/language/match-expressions.md',
+            'MODULE_REEXPORTS': 'docs/language/module-reexports.md',
+            'QUICK_REFERENCE': 'docs/language/quick-reference.md',
+            'FEATURE_STATUS_IMPLEMENTED': 'docs/language/feature-status.md',
+            'KNOWN_LIMITATIONS': 'docs/language/known-limitations.md',
+            'NUMERIC_SEMANTICS': 'docs/language/numeric-semantics.md',
+            'NUMERIC_DESIGN_DECISIONS': 'docs/language/numeric-design-decisions.md',
+            'GENERICS': 'docs/language/generics.md',
+            'INSTALL': 'docs/projects/install.md', 'PROJECTS': 'docs/projects/projects.md',
+            'DEPENDENCIES': 'docs/projects/dependencies.md',
+            'STANDARD_LIBRARY': 'docs/projects/standard-library.md',
+            'FORMATTER': 'docs/tooling/formatter.md', 'TESTING': 'docs/tooling/testing.md',
+            'DIAGNOSTIC_CODES': 'docs/tooling/diagnostic-codes.md',
+            'SHOWCASES': 'docs/tooling/showcases.md',
+            'JVM_INTEROP': 'docs/jvm/interop.md', 'WRAP': 'docs/jvm/wrap.md',
+            'JVM_CONFORMANCE': 'docs/jvm/conformance.md', 'HOST_SERVICES': 'docs/jvm/host-services.md',
+        }
+        archive_paths = {source: 'docs/' + archive_name + '.md'
+                         for archive_name, source in docs.items()}
+        archive_paths.update({
+            'docs/tooling/agent-guide.md': 'AGENT_GUIDE.md',
+            'docs/contributing/license-status.md': 'LICENSE_STATUS.md',
+            'LICENSE': 'LICENSE', 'NOTICE': 'NOTICE',
+            'THIRD_PARTY_NOTICES.md': 'THIRD_PARTY_NOTICES.md',
+            'README.md': 'README.md',
+        })
+        for tree in ('runtime/src/main/java', 'examples', 'website/snippets', 'std', 'libraries'):
+            for source_file in (ROOT / tree).rglob('*.md'):
+                archive_paths[source_file.relative_to(ROOT).as_posix()] = source_file.relative_to(ROOT).as_posix()
         (package / 'docs').mkdir()
-        for doc in docs:
-            file = ROOT / 'docs' / (doc + '.md')
-            if file.is_file():
-                shutil.copy2(file, package / 'docs')
-        notes = ROOT / 'docs/releases' / ('RELEASE_NOTES-' + tag + '.md')
+        for archive_name, source in docs.items():
+            shutil.copy2(ROOT / source, package / 'docs' / (archive_name + '.md'))
+        notes = ROOT / 'docs/releases' / (tag + '.md')
         if notes.is_file():
-            (package / notes.name).write_text(re.sub(r'\]\(\.\./([^)]*\.md)\)', r'](docs/\1)', notes.read_text(encoding='utf-8')), encoding='utf-8')
-        for file in ('AGENT_GUIDE.md', 'LICENSE', 'NOTICE', 'LICENSE_STATUS.md', 'THIRD_PARTY_NOTICES.md'):
-            shutil.copy2(ROOT / file, package)
+            (package / ('RELEASE_NOTES-' + tag + '.md')).write_text(notes.read_text(encoding='utf-8'), encoding='utf-8')
+        for archive_name, source in {'LICENSE_STATUS.md': 'docs/contributing/license-status.md', 'LICENSE': 'LICENSE', 'NOTICE': 'NOTICE', 'THIRD_PARTY_NOTICES.md': 'THIRD_PARTY_NOTICES.md'}.items():
+            shutil.copy2(ROOT / source, package / archive_name)
+        guide = (ROOT / 'docs/tooling/agent-guide.md').read_text(encoding='utf-8')
+        for source_path, archive_path in {
+            'docs/language/quick-reference.md': 'docs/QUICK_REFERENCE.md',
+            'docs/language/feature-status.md': 'docs/FEATURE_STATUS_IMPLEMENTED.md',
+            'docs/language/known-limitations.md': 'docs/KNOWN_LIMITATIONS.md',
+            'docs/language/numeric-semantics.md': 'docs/NUMERIC_SEMANTICS.md',
+            'docs/language/generics.md': 'docs/GENERICS.md',
+            'docs/projects/install.md': 'docs/INSTALL.md', 'docs/projects/projects.md': 'docs/PROJECTS.md',
+            'docs/projects/dependencies.md': 'docs/DEPENDENCIES.md',
+            'docs/projects/standard-library.md': 'docs/STANDARD_LIBRARY.md',
+            'docs/tooling/testing.md': 'docs/TESTING.md', 'docs/tooling/formatter.md': 'docs/FORMATTER.md',
+            'docs/tooling/diagnostic-codes.md': 'docs/DIAGNOSTIC_CODES.md',
+            'docs/jvm/interop.md': 'docs/JVM_INTEROP.md', 'docs/jvm/wrap.md': 'docs/WRAP.md',
+            'docs/jvm/conformance.md': 'docs/JVM_CONFORMANCE.md',
+        }.items():
+            guide = guide.replace(source_path, archive_path)
+        (package / 'AGENT_GUIDE.md').write_text(guide, encoding='utf-8')
         (package / 'README.md').write_text(f'''# Sprig {tag} SDK
 
 Experimental, Alpha, JDK 17+, language v0.8-dev. Supported: Linux/macOS.
@@ -121,6 +188,17 @@ and docs/KNOWN_LIMITATIONS.md before relying on third-party calls.
         info += [hashlib.sha256(file.read_bytes()).hexdigest() + '  lib/' + file.name for file in sorted((package / 'lib').glob('*.jar'))]
         (package / 'BUILD_INFO.txt').write_text('\n'.join(info) + '\n', encoding='utf-8')
         (package / 'LEGAL_STATUS.txt').write_text('Sprig: Apache License 2.0 (LICENSE, NOTICE). ANTLR: BSD (THIRD_PARTY_NOTICES.md). Maven Resolver and bundled libraries: legal/resolver/ and legal/resolver-libraries.json.\n', encoding='utf-8')
+        archive_sources = {target: source for source, target in archive_paths.items()}
+        archive_sources['RELEASE_NOTES-' + tag + '.md'] = 'docs/releases/' + tag + '.md'
+        archive_sources['INSTALL.md'] = 'docs/projects/install.md'
+        for markdown in package.rglob('*.md'):
+            archive_target = markdown.relative_to(package).as_posix()
+            source = archive_sources.get(archive_target, archive_target)
+            if not (ROOT / source).is_file():
+                continue
+            contents = rewrite_archive_links(markdown.read_text(encoding='utf-8'), source,
+                                             archive_target, archive_paths, package)
+            markdown.write_text(contents, encoding='utf-8')
         write_launchers(package, packaged=True)
         archive = dist / (name + '.zip')
         with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zip:

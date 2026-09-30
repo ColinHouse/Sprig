@@ -11,7 +11,7 @@ SPRIG = ROOT / "bin" / ("sprig.cmd" if sys.platform == "win32" else "sprig")
 CODES_JAVA = ROOT / "compiler/src/main/java/sprig/compiler/diag/Codes.java"
 CODE_DOCS = ROOT / "compiler/src/main/java/sprig/compiler/diag/CodeDocs.java"
 EXPLANATIONS = ROOT / "compiler/src/main/java/sprig/compiler/diag/Explanations.java"
-DOC_TABLE = ROOT / "docs/DIAGNOSTIC_CODES.md"
+DOC_TABLE = ROOT / "docs/tooling/diagnostic-codes.md"
 
 HIGH_VALUE = [
     "SPR-MATCH-RESULT", "SPR-MATCH-INFERENCE", "SPR-MODULE-EXPORT", "SPR-MODULE-EXPORT-ORDER",

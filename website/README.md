@@ -25,8 +25,8 @@ snippets through the real compiler and then builds the site.
 | `index.md`, `guide/`, `examples.md`, `reference/`, `project/` | Chinese pages (default locale). |
 | `en/` | English pages. |
 | `scripts/sync-reference.mjs` | Generates English reference/project pages from the authoritative root documents into `generated/en/` on every build. |
-| `snippets/` | Real `.spr` programs shared by both languages, executed by `tools/verify-doc-snippets.py`. |
-| `public/` | Generated brand assets (see `assets/brand/`). |
+| `snippets/` | Real `.spr` programs shared by both languages, executed by `scripts/internal/verify-doc-snippets.py`. |
+| `public/` | Generated brand assets (see `website/assets/brand/`). |
 
 Only the hand-written Chinese pages and the English `en/` pages are committed;
 `generated/` is gitignored and rebuilt by `docs:dev`/`docs:build`. Never edit a
@@ -39,9 +39,9 @@ authoritative in English only; the Chinese site marks it as such in
 ## Brand assets
 
 `public/logo-round.png`, the favicons, `public/apple-touch-icon.png` and
-`public/og-image.png` are produced by `assets/brand/generate.py` from
-`assets/brand/icon-source.png`. The source artwork is only cropped, masked and
-resized. See `assets/brand/README.md` and `THIRD_PARTY_NOTICES.md` for the
+`public/og-image.png` are produced by `website/assets/brand/generate.py` from
+`website/assets/brand/icon-source.png`. The source artwork is only cropped, masked and
+resized. See `website/assets/brand/README.md` and `THIRD_PARTY_NOTICES.md` for the
 provenance note.
 
 ## Base path and deployment

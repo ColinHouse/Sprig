@@ -21,8 +21,8 @@ def write_launchers(home, packaged=False):
     """Both launchers locate their home from their own path, including spaces."""
     bindir = home / 'bin'
     bindir.mkdir(parents=True, exist_ok=True)
-    unix_cp = '$HERE/lib/*' if packaged else '$HERE/build/sprig-compiler.jar:$HERE/tools/' + ANTLR_NAME + ':$HERE/tools/resolver/*'
-    windows_cp = '%SPRIG_HOME%\\lib\\*' if packaged else '%SPRIG_HOME%\\build\\sprig-compiler.jar;%SPRIG_HOME%\\tools\\' + ANTLR_NAME + ';%SPRIG_HOME%\\tools\\resolver\\*'
+    unix_cp = '$HERE/lib/*' if packaged else '$HERE/build/sprig-compiler.jar:$HERE/build/deps/' + ANTLR_NAME + ':$HERE/build/deps/resolver/*'
+    windows_cp = '%SPRIG_HOME%\\lib\\*' if packaged else '%SPRIG_HOME%\\build\\sprig-compiler.jar;%SPRIG_HOME%\\build\\deps\\' + ANTLR_NAME + ';%SPRIG_HOME%\\build\\deps\\resolver\\*'
     (bindir / 'sprig').write_text('#!/bin/sh\nset -eu\nHERE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexec java -Dfile.encoding=UTF-8 -cp "' + unix_cp + '" -Dsprig.home="$HERE" sprig.compiler.cli.Main "$@"\n', encoding='utf-8')
     (bindir / 'sprig').chmod(0o755)
     (bindir / 'sprig.cmd').write_bytes(('@echo off\r\nsetlocal\r\nfor %%I in ("%~dp0..") do set "SPRIG_HOME=%%~fI"\r\njava -Dfile.encoding=UTF-8 -cp "' + windows_cp + '" "-Dsprig.home=%SPRIG_HOME%" sprig.compiler.cli.Main %*\r\nexit /b %errorlevel%\r\n').encode('utf-8'))
@@ -32,7 +32,7 @@ def main():
     for tool in ('java', 'javac', 'jar'):
         if not shutil.which(tool):
             raise RuntimeError('JDK 17+ required on PATH: missing ' + tool)
-    antlr = Path(os.environ.get('ANTLR_JAR', ROOT / 'tools' / ANTLR_NAME)).resolve()
+    antlr = Path(os.environ.get('ANTLR_JAR', ROOT / 'build/deps' / ANTLR_NAME)).resolve()
     if not antlr.is_file():
         print('Downloading pinned ANTLR 4.13.2...', flush=True)
         antlr.parent.mkdir(parents=True, exist_ok=True)
@@ -47,12 +47,12 @@ def main():
     actual = hashlib.sha256(antlr.read_bytes()).hexdigest()
     if actual != ANTLR_SHA256:
         raise RuntimeError(f'ANTLR checksum mismatch: expected {ANTLR_SHA256}, got {actual}')
-    installed_antlr = ROOT / 'tools' / ANTLR_NAME
+    installed_antlr = ROOT / 'build/deps' / ANTLR_NAME
     if antlr != installed_antlr.resolve():
         installed_antlr.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(antlr, installed_antlr)
-    run(sys.executable, ROOT / 'tools/fetch-resolver.py')
-    resolver = sorted((ROOT / 'tools/resolver').glob('*.jar'))
+    run(sys.executable, ROOT / 'scripts/internal/fetch-resolver.py')
+    resolver = sorted((ROOT / 'build/deps/resolver').glob('*.jar'))
     if not resolver:
         raise RuntimeError('No pinned resolver libraries were fetched')
     build = ROOT / 'build'

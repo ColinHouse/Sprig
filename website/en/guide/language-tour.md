@@ -2,12 +2,12 @@
 
 This tour covers the language as the stage-0 compiler actually implements it.
 Every snippet on this page is a real file under `website/snippets/` in the
-repository and is executed by `tools/verify-doc-snippets.py` during
+repository and is executed by `scripts/internal/verify-doc-snippets.py` during
 documentation checks.
 
 The normative documents are the
-[language spec (design contract)](/en/reference/LANGUAGE_SPEC) and the
-[implemented feature status](/en/reference/FEATURE_STATUS_IMPLEMENTED). Where the
+[language spec (design contract)](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/LANGUAGE_SPEC.md) and the
+[implemented feature status](/en/reference/language/feature-status). Where the
 design kit proposes more than the compiler does, this page follows the
 compiler.
 
@@ -117,7 +117,7 @@ supported, bodies are single expressions, and a lambda cannot declare
 `json.find_member` distinguishes `Missing`, `Found(value: json.Value)` and
 `NotObject`. Present JSON null, false, zero and empty strings remain found
 values. Duplicate object keys still raise `Error`; the object member order is
-preserved. The [standard-layer contract](https://github.com/ColinHouse/Sprig/blob/main/docs/STANDARD_LIBRARY.md)
+preserved. The [standard-layer contract](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md)
 explains parsing, lookup and serialization boundaries.
 
 ## Function types
@@ -159,12 +159,12 @@ tuples/destructuring and string interpolation are **not implemented**. Source
 array syntax, varargs and wildcard shapes are outside the JVM interop profile
 (arrays still cross as opaque foreign values; see
 [JVM interoperability](/en/guide/jvm-interop)). See
-[Known limitations](/en/reference/KNOWN_LIMITATIONS) for the full list, and the
-[stage-1 roadmap](/en/reference/STAGE1_ROADMAP) for what comes next.
+[Known limitations](/en/reference/language/known-limitations) for the full list, and the
+[stage-1 roadmap](/en/reference/language/stage1-roadmap) for what comes next.
 
 ## Conservative ergonomics
 
-Use [explicit declaration facades](/en/reference/MODULE_REEXPORTS),
-[value-producing matches](/en/reference/MATCH_EXPRESSIONS) and
-[canonical comment-preserving formatting](/en/reference/FORMATTER).
+Use [explicit declaration facades](/en/reference/language/module-reexports),
+[value-producing matches](/en/reference/language/match-expressions) and
+[canonical comment-preserving formatting](/en/reference/tooling/formatter).
 These add no wildcard exports, block expressions or formatter configuration.

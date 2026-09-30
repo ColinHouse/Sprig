@@ -37,8 +37,9 @@ export default defineConfig({
   // Reference/Project pages are generated from the authoritative root
   // documents by website/scripts/sync-reference.mjs (gitignored).
   rewrites: {
-    'generated/en/reference/:page': 'en/reference/:page',
-    'generated/en/project/:page': 'en/project/:page'
+    'generated/en/project/contributing.md': 'en/project/contributing.md',
+    'generated/en/reference/:category/:page': 'en/reference/:category/:page',
+    'generated/en/project/:category/:page': 'en/project/:category/:page'
   },
   head: [
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: `${base}favicon-32.png` }],
@@ -82,7 +83,7 @@ export default defineConfig({
           { text: '示例', link: '/examples', activeMatch: '^/examples' },
           {
             text: '参考',
-            link: '/reference/implementation-status',
+            link: '/reference/index',
             activeMatch: '^/reference/'
           },
           { text: '项目', link: '/project/release-status', activeMatch: '^/project/' }
@@ -100,7 +101,7 @@ export default defineConfig({
                 { text: 'Fabric / JVM 框架集成', link: '/guide/fabric' },
                 { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
                 { text: '工具与 JSON', link: '/guide/tooling' },
-                { text: '项目测试（英文）', link: '/en/reference/TESTING' },
+                { text: '项目测试（英文）', link: '/en/reference/tooling/testing' },
                 { text: 'VS Code 插件', link: '/guide/editor' }
               ]
             }
@@ -109,14 +110,7 @@ export default defineConfig({
             { text: '示例', items: [{ text: '经过验证的示例', link: '/examples' }] }
           ],
           '/reference/': [
-            {
-              text: '实现状态',
-              items: [
-                { text: '实现状态摘要', link: '/reference/implementation-status' },
-                { text: '已知限制', link: '/reference/known-limitations' },
-                { text: '英文技术参考', link: '/reference/index' }
-              ]
-            }
+            { text: '技术参考', items: [{ text: '分类索引', link: '/reference/index' }] }
           ],
           '/project/': [
             {
@@ -154,7 +148,7 @@ export default defineConfig({
           { text: 'Examples', link: '/en/examples', activeMatch: '^/en/examples' },
           {
             text: 'Reference',
-            link: '/en/reference/FEATURE_STATUS_IMPLEMENTED',
+            link: '/en/reference/language/feature-status',
             activeMatch: '^/en/reference/'
           },
           {
@@ -174,10 +168,10 @@ export default defineConfig({
                 { text: 'Projects', link: '/en/guide/projects' },
                 { text: 'JVM Interoperability', link: '/en/guide/jvm-interop' },
                 { text: 'Fabric / JVM framework integration', link: '/en/guide/fabric' },
-                { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
+                { text: 'Install and upgrade', link: '/en/reference/projects/install' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
                 { text: 'Tooling and JSON', link: '/en/guide/tooling' },
-                { text: 'Testing projects', link: '/en/reference/TESTING' },
+                { text: 'Testing projects', link: '/en/reference/tooling/testing' },
                 { text: 'VS Code Extension', link: '/en/guide/editor' }
               ]
             }
@@ -186,51 +180,22 @@ export default defineConfig({
             { text: 'Examples', items: [{ text: 'Verified examples', link: '/en/examples' }] }
           ],
           '/en/reference/': [
-            {
-              text: 'Language contract',
-              items: [
-                { text: 'Language spec (design contract)', link: '/en/reference/LANGUAGE_SPEC' },
-                { text: 'Generics contract', link: '/en/reference/GENERICS' },
-                { text: 'Quick reference', link: '/en/reference/QUICK_REFERENCE' },
-                { text: 'Numerical semantics', link: '/en/reference/NUMERIC_SEMANTICS' },
-                { text: 'Install and upgrade', link: '/en/reference/INSTALL' },
-                { text: 'Testing projects', link: '/en/reference/TESTING' },
-                {
-                  text: 'Numeric design decisions',
-                  link: '/en/reference/NUMERIC_DESIGN_DECISIONS'
-                },
-                { text: 'Grammar', link: '/en/reference/grammar' }
-              ]
-            },
-            {
-              text: 'Implementation status',
-              items: [
-                {
-                  text: 'Implemented features',
-                  link: '/en/reference/FEATURE_STATUS_IMPLEMENTED'
-                },
-                { text: 'Known limitations', link: '/en/reference/KNOWN_LIMITATIONS' },
-                { text: 'JVM interop', link: '/en/reference/JVM_INTEROP' },
-                { text: 'Wrapper generator', link: '/en/reference/WRAP' },
-                { text: 'Foreign conformance', link: '/en/reference/JVM_CONFORMANCE' },
-                { text: 'Diagnostic codes', link: '/en/reference/DIAGNOSTIC_CODES' },
-                { text: 'Stage-1 roadmap', link: '/en/reference/STAGE1_ROADMAP' },
-                {
-                  text: 'Agent tool protocol (proposed)',
-                  link: '/en/reference/AGENT_TOOL_PROTOCOL'
-                }
-              ]
-            }
+            { text: 'Canonical reference', items: [
+              { text: 'Language and types', link: '/en/reference/language/feature-status' },
+              { text: 'JVM', link: '/en/reference/jvm/interop' },
+              { text: 'Projects and dependencies', link: '/en/reference/projects/projects' },
+              { text: 'Tooling and tests', link: '/en/reference/tooling/testing' }
+            ] }
           ],
           '/en/project/': [
             {
               text: 'Project',
               items: [
                 { text: 'Contributing', link: '/en/project/contributing' },
-                { text: 'AI-assisted development', link: '/en/project/ai-disclosure' },
-                { text: 'License', link: '/en/project/license-status' },
+                { text: 'AI-assisted development', link: '/en/project/contributing/ai-disclosure' },
+                { text: 'License', link: '/en/project/contributing/license-status' },
                 { text: 'Release status', link: '/en/project/release-status' },
-                { text: 'Third-party notices', link: '/en/project/third-party-notices' }
+                { text: 'Third-party notices', link: '/en/project/contributing/third-party-notices' }
               ]
             }
           ]

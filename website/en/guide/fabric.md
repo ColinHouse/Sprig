@@ -115,7 +115,7 @@ The output is ordinary, editable `.spr`. It refuses to overwrite without
 `--json` reports `generatedMembers`/`skippedMembers` with stable reason codes.
 Keep only the members you need and delete the rest: the file is a starting
 point, not a runtime dependency. See the
-[wrapper contract](/en/reference/WRAP).
+[wrapper contract](/en/reference/jvm/wrap).
 
 ## 4. Return generated Java to the host build
 
@@ -185,7 +185,7 @@ join/disconnect callbacks all conformed directly. Notes:
 - `conform` v1 supports Java interfaces only: non-generic source class and
   target interface, no overloaded abstract methods, no renaming or adapters;
   `Short`/`Byte`/`Character` slots are not expressible. See the
-  [conformance contract](/en/reference/JVM_CONFORMANCE).
+  [conformance contract](/en/reference/jvm/conformance).
 
 The Fabric entrypoint class name is `sprig.user.$ModEntry` in
 `fabric.mod.json`.

@@ -1,10 +1,10 @@
 # 语言导览
 
 本页介绍当前 stage-0 编译器实际实现的 Sprig。页面中的每一段示例都是
-`website/snippets/` 下的真实文件，由 `tools/verify-doc-snippets.py` 在文档检查时执行。
+`website/snippets/` 下的真实文件，由 `scripts/internal/verify-doc-snippets.py` 在文档检查时执行。
 
-权威文档是[语言规范（设计契约）](/en/reference/LANGUAGE_SPEC)与
-[已实现功能状态](/en/reference/FEATURE_STATUS_IMPLEMENTED)。当设计稿超出当前实现时，
+权威文档是[语言规范（设计契约）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/LANGUAGE_SPEC.md)与
+[已实现功能状态](/en/reference/language/feature-status)。当设计稿超出当前实现时，
 本页以编译器实际行为为准。
 
 ## 布局与注释
@@ -96,7 +96,7 @@ Lambda 是表达式：`fn(x: Int) => expression`，支持 0 到 3 个参数，�
 `json.find_member` 区分 `Missing`、`Found(value: json.Value)` 与 `NotObject`。
 已存在的 JSON null、false、零和空字符串均是 Found；对象重复键仍抛出 `Error`，
 成员顺序保持不变。完整解析、查找与序列化边界见
-[标准层约定（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/STANDARD_LIBRARY.md)。
+[标准层约定（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md)。
 
 ## 函数类型
 
@@ -129,13 +129,13 @@ JVM 桥接仅针对对应的 Sprig 自有 `sprig.runtime.Fn0`–`Fn3` 形参签�
 泛型推断、variance、语言内继承与接口、`%=`、元组与解构、字符串插值都**尚未实现**；
 source 数组语法、变长参数与 wildcard 形状不在 JVM interop profile 内（数组仍可作为
 不透明外部值传递，见 [JVM 互操作](/guide/jvm-interop)）。完整列表见
-[已知限制](/reference/known-limitations)，后续规划见
-[Stage-1 路线图（英文）](/en/reference/STAGE1_ROADMAP)。
+[已知限制](/en/reference/language/known-limitations)，后续规划见
+[Stage-1 路线图（英文）](/en/reference/language/stage1-roadmap)。
 
 ## 保守的易用性改进
 
 `sprig fmt` 提供确定性、保留注释、无配置的格式化。模块可用
 `export alias.Symbol` 显式重导出声明，且不绕过包的模块导出边界。
 表达式 `match` 每个分支只允许一个表达式；多语句分支继续使用语句 match。
-参见 [格式化](/en/reference/FORMATTER)、[重导出](/en/reference/MODULE_REEXPORTS)
-和 [match 表达式](/en/reference/MATCH_EXPRESSIONS)。不提供通配导出或通用块表达式。
+参见 [格式化](/en/reference/tooling/formatter)、[重导出](/en/reference/language/module-reexports)
+和 [match 表达式](/en/reference/language/match-expressions)。不提供通配导出或通用块表达式。

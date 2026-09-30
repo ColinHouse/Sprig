@@ -26,7 +26,7 @@ The JSON report includes ordered per-file metrics and advisory findings.
 Whitespace, tab indentation and files above 400 physical lines are reported.
 Supported extensions: `.spr`, `.java`, `.md`, `.txt`, `.toml`, `.json`, `.py`, `.sh`.
 Generated directories and symlinks are skipped. IO errors fail execution.
-Line/comment detection is deliberately heuristic; see `docs/SHOWCASES.md`.
+Line/comment detection is deliberately heuristic; see `docs/tooling/showcases.md`.
 
 Modules separate measurements, generic buckets/data, tree walking, exhaustive
 finding/JSON reporting and CLI arguments. Try adding a new extension or a

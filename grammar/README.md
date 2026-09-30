@@ -14,11 +14,11 @@ by the stage-0 compiler in `compiler/`.
 
 The build regenerates the parser into `build/gen` with the pinned ANTLR 4.13.2
 JAR (`scripts/build.sh`). The independent grammar smoke harness lives in
-`tools/grammar-harness/` and is run by `tools/test-grammar.sh`.
+`tests/grammar/fixtures/` and is run by `scripts/test-grammar.sh`.
 
 Grammar audit status (2026-09-25): the grammar covers every syntax form used by
 the compiler and the executable test corpus. No grammar correction was required;
 the earlier duplicate under `output/grammar/` was removed during public-repo
 cleanup. The only defect found was in the separate reference harness adapter
 (synthetic layout tokens without a `TokenSource`), which is fixed in
-`tools/grammar-harness/LayoutTokenSource.java`.
+`tests/grammar/fixtures/LayoutTokenSource.java`.

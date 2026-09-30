@@ -59,7 +59,7 @@ v0.4 在 v0.3 基础上加入 canonical formatter、显式模块 re-export、
 接线见 [Fabric / JVM 框架集成](/guide/fabric)。
 
 Sprig 尚未自举，也不承诺生产可用；发布/registry、LSP、接口与泛型推断仍属未来工作。
-见[已知限制](/reference/known-limitations)。
+见[已知限制](/en/reference/language/known-limitations)。
 
 ## 一起贡献
 

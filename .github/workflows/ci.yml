@@ -34,12 +34,12 @@ jobs:
         run: python scripts/test.py
       - name: Run reference grammar harness
         env:
-          ANTLR_JAR: ${{ github.workspace }}/tools/antlr-4.13.2-complete.jar
-        run: python tools/test-grammar.py
+          ANTLR_JAR: ${{ github.workspace }}/build/deps/antlr-4.13.2-complete.jar
+        run: python scripts/test-grammar.py
       - name: Build and smoke-test offline Agent SDK archive
         run: |
           python scripts/package-alpha.py --skip-build
-          python tools/check-sdk-archive.py
+          python scripts/check-sdk-archive.py
 
   docs:
     name: Documentation site

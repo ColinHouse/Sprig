@@ -5,7 +5,7 @@ available through an explicit import alias. The rules are conservative on
 purpose: where Java gives no nullness information, Sprig assumes a reference
 result may be `null`, and Java reference parameters are treated as non-null.
 
-The authoritative contract is [JVM interop](/en/reference/JVM_INTEROP); this
+The authoritative contract is [JVM interop](/en/reference/jvm/interop); this
 page is the runnable tour. For host build integration (Gradle/Loom, Maven,
 in-house builds), see
 [Fabric / JVM framework integration](/en/guide/fabric).
@@ -155,7 +155,7 @@ sprig api com.example.Client --classpath lib/client.jar --json
 sprig wrap com.example.Client --out src/main/sprig/client.spr --classpath lib/client.jar --json
 ```
 
-See the [wrapper generator contract](/en/reference/WRAP) for the full policy.
+See the [wrapper generator contract](/en/reference/jvm/wrap) for the full policy.
 
 ## What interop does not cover
 
@@ -173,5 +173,5 @@ See the [wrapper generator contract](/en/reference/WRAP) for the full policy.
 - `short`/`byte` formals require an explicit checked conversion that is not
   offered yet; pass an `Int32` instead.
 
-See [Known limitations](/en/reference/KNOWN_LIMITATIONS) and the Chinese
-[已知限制](/reference/known-limitations).
+See [Known limitations](/en/reference/language/known-limitations) and the Chinese
+[已知限制](/en/reference/language/known-limitations).
