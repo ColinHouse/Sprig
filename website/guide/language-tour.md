@@ -1,6 +1,6 @@
-# 语言导览
+# 语言速查
 
-本页介绍当前 stage-0 编译器实际实现的 Sprig。页面中的每一段示例都是
+第一次学习 Sprig？请从[入门教程](/tutorial)开始。本页是当前 stage-0 编译器的快速查阅表。页面中的每一段示例都是
 `website/snippets/` 下的真实文件，由 `scripts/internal/verify-doc-snippets.py` 在文档检查时执行。
 
 权威文档是[语言规范（设计契约）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/LANGUAGE_SPEC.md)与

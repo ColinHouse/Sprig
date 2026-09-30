@@ -1,6 +1,6 @@
-# Fabric / JVM 框架集成
+# Fabric / JVM 框架集成案例
 
-本页把一次真实 Fabric/Loom mod dogfood 提炼成可复用的方法：**host 构建系统是依赖与
+这是一个要求较高的 JVM 框架集成案例，不代表 Sprig 的全部用途。先从[入门教程](/tutorial)和[普通 Java 互操作](/guide/jvm-interop)开始。本页把一次真实 Fabric/Loom mod dogfood 提炼成可复用的方法：**host 构建系统是依赖与
 classpath 的权威，Sprig 负责业务语义，只有 Sprig 当前无法表达的 JVM 形状才交给一个
 窄 Java adapter。**
 

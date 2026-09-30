@@ -19,9 +19,13 @@
     "tutorial/hello.spr",
     "tutorial/numeric_science.spr",
     "tutorial/shapes.spr",
-    "tutorial/word_count.spr"
+    "tutorial/word_count.spr",
+    "tutorial/task_tracker.spr"
   ],
   "import-only": [
     "modules/math_module.spr"
+  ],
+  "compile-fail": [
+    "tutorial/type_error.spr"
   ]
 }

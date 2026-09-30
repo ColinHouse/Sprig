@@ -1,4 +1,6 @@
-# Five-minute first project
+# Install the SDK and create a project
+
+New to Sprig? Start with the [bilingual beginner tutorial](/en/tutorial) and build a local Task Tracker, then return here for installation, project and release details.
 
 Sprig is an experimental JVM language for CLI tools, automation and reliable
 application code. Install **JDK 17+**; both `java` and `javac` must be on `PATH`.

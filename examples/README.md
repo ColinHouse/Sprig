@@ -1,39 +1,38 @@
 # Examples
 
-This directory contains programs and projects with an independent purpose:
-things you can build and run with Sprig. It is not a syntax gallery.
+This directory contains programs with an independent purpose, not a syntax
+gallery. Begin with the [executable bilingual tutorial](../website/tutorial.md).
+Tutorial snippets live under `website/snippets/`; regression fixtures live in
+`tests/`.
 
-Executable tutorials and syntax snippets live under
-[`website/snippets/`](../website/snippets/), where the documentation gate runs
-each program and compares it with a checked `.out` oracle. Regression fixtures
-live under `tests/`. See
-[the classification rule](https://github.com/ColinHouse/Sprig/blob/main/CONTRIBUTING.md#where-code-examples-live)
-for how to choose between them.
+Run `sprig resolve` in each project before checking or running it. Libraries
+used by examples are in [`libraries/`](../libraries/).
 
-## Application projects
+## Start here
 
-Run `sprig resolve` from each project before check/run; the package libraries
-live in [`libraries/`](../libraries/).
+- [task-tracker](task-tracker/README.md) — local JSON CLI; no network service
+  or external package dependency.
+- [json_select](json_select/README.md) — multi-file JSON CLI using
+  `sprig-cli`.
+- [config_summary](config_summary/README.md) — fixture-driven UTF-8 JSON
+  summary with deterministic output and malformed-input evidence.
+- [agent_tools](agent_tools/README.md) — compiler API and diagnostic tools
+  written in Sprig.
 
-- [mini_web](mini_web/README.md) — typed routes, JSON, explicit OpenAPI and
-  Swagger UI.
-- [sqlite](sqlite/README.md) — pinned Maven JDBC driver and persisted prepared
-  SQL.
+## JVM applications
+
+- [application_foundation](application_foundation/README.md) — HTTP, JSON,
+  time and files with first-party libraries.
+- [sqlite](sqlite/README.md) — pinned Maven JDBC driver and prepared SQL.
+- [sqlite_migrations](sqlite_migrations/README.md) — ordered transactional
+  migrations with rollback and retry.
 - [ledger](ledger/README.md) — reduced accounts/categories/transactions HTTP
   backend with integer minor units and restart persistence.
-- [sqlite_migrations](sqlite_migrations/README.md) — ordered, idempotent SQLite
-  migrations with transactional rollback and retry.
-- [json_select](json_select/README.md) — a multi-file JSON CLI using the
-  Sprig option-parsing library.
-- [config_summary](config_summary/README.md) — reads a UTF-8 JSON fixture,
-  decodes typed fields and prints a deterministic configuration summary.
-- [test_runner](test_runner/README.md) — a small project that dogfoods
-  `sprig test` with runtime, table-driven, temporary-file, child-process and
-  expected-diagnostic cases.
+- [mini_web](mini_web/README.md) — typed routes, JSON, OpenAPI and Swagger UI.
+- [test_runner](test_runner/README.md) — runtime, table, temporary-file,
+  subprocess and expected-diagnostic tests using `sprig test`.
 
-## Showcases
-
-Project-oriented programs exercised by the release gates:
+## Compiler and ecosystem cases
 
 - [repository_audit](showcases/repository_audit/README.md) — multi-module tree
   walker that counts source/text files and writes JSON.
@@ -41,13 +40,9 @@ Project-oriented programs exercised by the release gates:
   queries its API and reuses the locked cache offline.
 - [source_analyzer](showcases/source_analyzer/README.md) — Sprig frontend
   tooling with variants and exhaustive traversal.
+- [stage1_frontend_probe](stage1_frontend_probe/frontend.spr) — a bounded
+  source-level probe for bootstrap planning, not a self-hosted compiler.
 
-## Tooling and bootstrap
-
-These have wider SDK and tooling dependencies and are intentionally managed
-separately from the gallery above:
-
-- [agent_tools](agent_tools/README.md) — Sprig-written compiler API and
-  diagnostic tools.
-- [stage1_frontend_probe](stage1_frontend_probe/frontend.spr) — the stage-1
-  frontend subset probe.
+[Fabric/Loom integration](../website/guide/fabric.md) is a separate, demanding
+JVM-framework case study. Each project README lists commands and known limits;
+examples demonstrate only the APIs exercised by their own tests.

@@ -1,6 +1,6 @@
-# Language Tour
+# Language quick reference
 
-This tour covers the language as the stage-0 compiler actually implements it.
+New to Sprig? Start with the [beginner tutorial](/en/tutorial). This page is a quick reference to the language as the stage-0 compiler actually implements it.
 Every snippet on this page is a real file under `website/snippets/` in the
 repository and is executed by `scripts/internal/verify-doc-snippets.py` during
 documentation checks.

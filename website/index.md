@@ -2,15 +2,15 @@
 layout: home
 hero:
   name: Sprig
-  text: 一起编写可预测的 JVM 工具
-  tagline: 小型、显式的语言，面向工具、自动化和可靠应用代码。查询编译器、修改、检查、理解并修复。实验性 Alpha；JDK 17+。
+  text: 少一点猜测，多一点可验证
+  tagline: Sprig 不试图让编码 Agent 更聪明，而是尽量减少它需要猜测的内容。面向人和 Agent；Agent 友好，也应当方便审查。实验性 Alpha；JDK 17+。
   image:
     src: /logo-round.png
     alt: Sprig
   actions:
     - theme: brand
-      text: 五分钟开始
-      link: /guide/getting-started
+      text: 开始教程
+      link: /tutorial
     - theme: alt
       text: 与 Agent 一起贡献
       link: /en/project/contributing
@@ -18,12 +18,12 @@ hero:
       text: GitHub
       link: https://github.com/ColinHouse/Sprig
 features:
-  - title: 可读的工具与 AST
-    details: 缩进式语法、显式泛型、封闭 variant 与穷尽 match，适合命令行工具、配置处理与源码分析。
-  - title: 可查询的编译器反馈
-    details: capabilities、主题帮助、JVM 签名和稳定 JSON 诊断，让人与编码 Agent 共享可验证的语言依据。
-  - title: 显式的运行边界
-    details: 受检整数、精确 Decimal/BigInt、保守 Java 可空性与可复现依赖锁，让失败清晰可见。
+  - title: 先写能读懂的程序
+    details: 显式函数类型、清晰绑定与小型 JVM 程序，让源码便于人类检查与讨论。
+  - title: 用编译器查询代替猜测
+    details: 能力、主题帮助、Java 签名和 JSON 诊断提供可复现的实现证据。
+  - title: 让修改可审查
+    details: 类型检查、穷尽 match、受检数值和锁定依赖帮助尽早暴露具体问题；它们不保证算法本身正确。
 ---
 
 ## 可以做什么？
@@ -31,6 +31,10 @@ features:
 仓库自动化、数据转换、小型 JVM 应用和编译器工具。源代码里程碑的
 [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)
 包括仓库审计器、真实 Maven 库应用与源码分析器；各自 README 提供输入、命令和边界。
+
+## 早期 dogfood：反馈比性能结论更重要
+
+维护者报告曾用一个较低成本的编码模型尝试真实 Sprig 工作流。这是早期、轶事式的产品 dogfood：没有受控实验、等价 Java 对照实现、预注册任务集或生产力指标，因此不能据此声称 Sprig 优于 Java、提升了多少效率或消除了模型错误。它只支持一个较窄的观察：编译器查询和结构化诊断可以为修复提供具体证据。我们欢迎外部用户复现并报告体验。
 
 ## 从一个项目开始
 
