@@ -51,6 +51,11 @@ for topic in help_index["topics"]:
         if example.startswith(("examples/", "tests/", "website/")):
             assert (ROOT / example).is_file(), (topic, example)
 
+dependency_help = " ".join(json.loads(invoke("help", "dependencies", "--json"))["rules"])
+assert "lock schema 5 records compiler identity" in dependency_help
+assert "@std package comes from the installed SDK" in dependency_help
+assert "stdlib-sha256" not in dependency_help
+
 code_rows = (ROOT / "docs/tooling/diagnostic-codes.md").read_text()
 for item in json.loads(invoke("codes", "--json"))["codes"]:
     assert "| " + item["code"] + " |" in code_rows, item["code"]

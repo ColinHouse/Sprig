@@ -94,7 +94,7 @@ def main():
             assert checked['diagnostics']==[]
         deps=json.loads(command(sqlite,'deps','--json'))['jvmDependencies']
         assert any(d['group']=='org.xerial' and d['version']=='3.46.1.0' and d['resolved'] for d in deps)
-        assert 'lock-version = 4' in (sqlite/'sprig.lock').read_text()
+        assert 'lock-version = 5' in (sqlite/'sprig.lock').read_text()
         checked=json.loads(command(sqlite,'check','--offline','--json'))
         classpath=os.pathsep.join([str(ROOT/'build/sprig-compiler.jar'),*checked['environment']['classpath']])
         classes=work/'probe classes';classes.mkdir()

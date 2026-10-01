@@ -60,6 +60,11 @@ def main():
         after = {lock: (ROOT / lock).read_bytes() for lock in locks}
         verify("refresh-canonical-output", after == before,
                "tracked locks differ from canonical resolve output; commit the refresh")
+        verify("all-locks-use-schema-5", all(b"lock-version = 5\n" in content
+                                              for content in after.values()))
+        verify("locks-do-not-carry-sdk-std-identity",
+               all(b"stdlib-version" not in content and b"stdlib-sha256" not in content
+                   for content in after.values()))
 
         second = refresh(temp)
         again = {lock: (ROOT / lock).read_bytes() for lock in locks}

@@ -50,7 +50,7 @@ signatures come from `sprig api @web/app.spr --json` after `sprig resolve`.
 ## SQL stays visible
 
 The SQLite package resolves `org.xerial:sqlite-jdbc:3.46.1.0` through the existing
-Maven Resolver and schema-4 lock. Data parameters are closed Integer/Text/Boolean/
+Maven Resolver and schema-5 lock. Data parameters are closed Integer/Text/Boolean/
 Null cases. SQL structure is trusted application code; values use prepared
 parameters. Queries return typed detached snapshots and adapters close JDBC
 resources and roll back failed query snapshots or batches. No ORM, arrays,

@@ -143,8 +143,8 @@ public final class Explanations {
             }
             case Codes.PROJECT_LOCK_MISSING, Codes.PROJECT_LOCK_STALE -> {
                 out.put("whyMatters", "The lockfile makes dependency resolution deterministic and offline-safe.");
-                out.put("commonCauses", List.of("sprig.toml or a dependency manifest changed after the lock was written.",
-                        "The project was never resolved, or the bundled std version changed.",
+                out.put("commonCauses", List.of("The recorded compiler identity differs from the running compiler.",
+                        "sprig.toml or a dependency manifest changed after the lock was written.",
                         "A build step deleted or replaced sprig.lock."));
                 out.put("safeFixes", List.of("Run sprig resolve in the project root, then retry the command.",
                         "Commit the refreshed sprig.lock when dependencies legitimately change.",

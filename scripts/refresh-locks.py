@@ -3,7 +3,8 @@
 
 Tracked locks are generated artifacts. After a Git conflict take either
 complete side for the lockfile, run this script, and commit the result:
-`sprig resolve` output is the only authority, never ours/theirs.
+`sprig resolve` output is the only authority, never ours/theirs. This is for
+lock-schema or dependency-resolution changes, not bundled SDK std byte changes.
 """
 from pathlib import Path
 import os
