@@ -112,6 +112,7 @@ public final class Catalog {
         testing.put("temporaryDirectoryEnvironment", "SPRIG_TEST_TMPDIR");
         testing.put("processApi", "@std/test.spr");
         testing.put("runtimeTimeoutSeconds", 30);
+        testing.put("externalClasspath", true);
         result.put("testRunner", testing);
         return result;
     }

@@ -7,7 +7,7 @@ function or throw `Error` to fail a test.
 
 ```text
 sprig resolve
-sprig test [PATH] [--filter TEXT] [--json] [--offline]
+sprig test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline]
 ```
 
 Run the command inside a `sprig.toml` project or pass a project path. A current
@@ -17,6 +17,12 @@ runner sorts names lexically relative to `tests/`; `--filter` selects names
 containing the supplied text. It uses the project's normal source imports,
 Sprig dependencies, locked Maven classpath and offline cache rules. `sprig
 test` never resolves or updates a lockfile for you.
+
+`--classpath PATH` adds host Java JARs or output directories to compilation
+and test execution; repeat the option or pass a platform-separated classpath.
+Relative paths use the command's working directory. The Gradle plugin supplies
+the selected source set's real compile classpath so Sprig tests can check
+Java bridge types without building a second classpath by hand.
 
 ## Runtime tests
 

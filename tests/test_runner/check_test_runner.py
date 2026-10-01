@@ -60,6 +60,7 @@ class TestRunnerContract(unittest.TestCase):
         self.assertEqual(capabilities["testRunner"]["compileFailExpectations"],
                          "tests/compile_fail/**/*.expect.toml")
         self.assertTrue(capabilities["testRunner"]["separateJvmPerRuntimeTest"])
+        self.assertTrue(capabilities["testRunner"]["externalClasspath"])
         topic = payload(invoke("help", "testing", "--json", cwd=ROOT))
         self.assertEqual(topic["topic"], "testing")
         self.assertTrue(any("sprig test" in item for item in topic["syntax"]))
@@ -92,6 +93,9 @@ class TestRunnerContract(unittest.TestCase):
             self.assertEqual(explicit["tests"][0]["name"], "zeta.spr")
             wrong_file = payload(invoke("test", root / "sprig.toml", "--json", cwd=root))
             self.assertEqual(wrong_file["exitCode"], 2)
+            missing_cp = payload(invoke("test", "--classpath", "missing classes", "--json", cwd=root))
+            self.assertEqual(missing_cp["exitCode"], 2)
+            self.assertEqual(missing_cp["diagnostics"][0]["code"], "SPR-JVM-CLASSPATH")
             human = invoke("test", "--filter", "zeta", cwd=root)
             self.assertEqual(human.returncode, 0, human.stderr)
             self.assertIn("PASS zeta.spr", human.stdout)

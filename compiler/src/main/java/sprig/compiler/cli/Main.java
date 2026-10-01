@@ -49,7 +49,7 @@ import sprig.runtime.SprigRuntime;
  * <pre>
  *   sprig check file.spr [--json] [--syntax-only]
  *   sprig run file.spr [--json] [--keep] [-- args...]
- *   sprig test [PATH] [--filter TEXT] [--json] [--offline]
+ *   sprig test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline]
  *   sprig build file.spr [-d outDir]
  *   sprig explain SPR-CODE
  * </pre>
@@ -124,7 +124,7 @@ public final class Main {
         out.println();
         out.println("  check <file.spr> [--json] [--syntax-only]   parse and type-check");
         out.println("  run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM");
-        out.println("  test [PATH] [--filter TEXT] [--json] [--offline] run project tests and compile-fail fixtures");
+        out.println("  test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline] run project tests and compile-fail fixtures");
         out.println("  build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
