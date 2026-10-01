@@ -16,6 +16,7 @@ The latest published SDK is [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/
 - [中文教程](https://colinhouse.github.io/Sprig/tutorial)
 - [Try the local Task Tracker](examples/task-tracker/README.md)
 - [Browse application examples](examples/README.md) and [first-party libraries](libraries/README.md)
+- [Gradle/JVM and Fabric integration](website/guide/gradle.md) with a runnable SDK starter
 - [Language, JVM and tooling references](docs/README.md)
 
 Install the published SDK, then create a project:

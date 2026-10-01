@@ -43,6 +43,8 @@ used by examples are in [`libraries/`](../libraries/).
 - [stage1_frontend_probe](stage1_frontend_probe/frontend.spr) — a bounded
   source-level probe for bootstrap planning, not a self-hosted compiler.
 
-[Fabric/Loom integration](../website/guide/fabric.md) is a separate, demanding
-JVM-framework case study. Each project README lists commands and known limits;
-examples demonstrate only the APIs exercised by their own tests.
+[Fabric/Loom integration](../website/guide/fabric.md) has a runnable starter in
+[`libraries/sprig-fabric`](../libraries/sprig-fabric/README.md), backed by the
+generic [`sprig-gradle` plugin](../libraries/sprig-gradle/README.md). Each
+project README lists commands and known limits; examples demonstrate only the
+APIs exercised by their own tests.

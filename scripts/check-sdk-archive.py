@@ -38,12 +38,30 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     for name, digest in resolver["jars"].items():
         assert hashlib.sha256((sdk / "lib" / name).read_bytes()).hexdigest() == digest, name
     assert (sdk / "runtime/src/main/java/sprig/runtime").is_dir()
+    assert (sdk / "libraries/sprig-gradle/build.gradle").is_file()
+    assert (sdk / "libraries/sprig-gradle/src/main/java/dev/sprig/gradle/SprigPlugin.java").is_file()
+    fabric = sdk / "libraries/sprig-fabric/template"
+    for name in ("settings.gradle", "build.gradle", "gradle.properties", "sprig.toml", "sprig.lock",
+                 "gradlew", "gradlew.bat", "gradle/wrapper/gradle-wrapper.jar",
+                 "src/main.spr", "tests/counter.spr"):
+        assert (fabric / name).is_file(), name
+    checkout = str(ROOT).encode("utf-8")
+    for candidate in (sdk / "libraries/sprig-gradle").rglob("*"):
+        if candidate.is_file() and candidate.suffix not in (".jar", ".class"):
+            assert checkout not in candidate.read_bytes(), f"checkout path leaked into {candidate.relative_to(sdk)}"
+    for candidate in fabric.rglob("*"):
+        if candidate.is_file() and candidate.suffix not in (".jar", ".class"):
+            assert checkout not in candidate.read_bytes(), f"checkout path leaked into {candidate.relative_to(sdk)}"
+    for tree in (sdk / "libraries/sprig-gradle", fabric):
+        assert not list(tree.rglob("*.class")), f"generated class files must not ship under {tree.relative_to(sdk)}"
+        assert not list(tree.rglob(".gradle")), f"Gradle caches must not ship under {tree.relative_to(sdk)}"
     assert (sdk / "legal/resolver/LICENSE").is_file()
     assert (sdk / "legal/resolver/NOTICE").is_file()
     for name in ("README.md", "INSTALL.md", "AGENT_GUIDE.md", f"RELEASE_NOTES-v{version}.md",
                  "docs/QUICK_REFERENCE.md", "docs/GENERICS.md",
                  "docs/PROJECTS.md", "docs/DEPENDENCIES.md",
                  "docs/FEATURE_STATUS_IMPLEMENTED.md", "docs/JVM_INTEROP.md",
+                 "docs/GRADLE_INTEGRATION.md", "docs/TYPED_BOUNDARY_ADAPTERS.md",
                  "docs/NUMERIC_SEMANTICS.md", "docs/DIAGNOSTIC_CODES.md",
                  "docs/KNOWN_LIMITATIONS.md", "LICENSE", "NOTICE"):
         assert (sdk / name).is_file(), name

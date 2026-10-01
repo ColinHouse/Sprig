@@ -40,7 +40,8 @@ public final class TestCommand {
 
     private TestCommand() {}
 
-    private record Options(Path path, String filter, boolean json, boolean offline, String error) {}
+    private record Options(Path path, String filter, List<String> classpath,
+                           boolean json, boolean offline, String error) {}
     private record Case(Path source, String name, String mode) {}
     private record Expectation(Set<String> codes, boolean exact) {}
     private record Outcome(String status, List<Diagnostic> diagnostics,
@@ -87,6 +88,7 @@ public final class TestCommand {
             graph = DependencyResolver.load(project, lock, options.offline);
             List<String> entries = new ArrayList<>();
             for (Path path : MavenResolver.load(graph.lock)) entries.add(path.toString());
+            entries.addAll(options.classpath);
             JvmClasspath.configure(entries, projectDiagnostics);
         } catch (DepError e) {
             return globalError(options.json, e.code, e.getMessage(), project.manifest.toUri().toString(), 2);
@@ -138,6 +140,7 @@ public final class TestCommand {
     private static Options parse(String[] args) {
         Path path = null;
         String filter = null;
+        List<String> classpath = new ArrayList<>();
         boolean json = false;
         boolean offline = false;
         String error = null;
@@ -150,6 +153,11 @@ public final class TestCommand {
                         error = "--filter requires text";
                     else filter = args[++i];
                 }
+                case "--classpath" -> {
+                    if (i + 1 >= args.length || args[i + 1].startsWith("--"))
+                        error = "--classpath requires a path or path-separated classpath";
+                    else classpath.add(args[++i]);
+                }
                 default -> {
                     if (args[i].startsWith("-")) error = "Unknown test option: " + args[i];
                     else if (path == null) path = Path.of(args[i]);
@@ -157,7 +165,7 @@ public final class TestCommand {
                 }
             }
         }
-        return new Options(path, filter, json, offline, error);
+        return new Options(path, filter, List.copyOf(classpath), json, offline, error);
     }
 
     private static List<Case> discover(Path target, Path testsRoot, String filter) throws IOException {

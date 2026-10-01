@@ -56,6 +56,14 @@ compiler or runtime:
 
 No dependency listed here is modified by this repository.
 
+## Gradle wrapper (`libraries/sprig-fabric/template/`)
+
+The Fabric starter includes the generated Gradle 9.7.1 wrapper scripts and
+wrapper JAR so a copied template has a pinned Gradle entrypoint. The wrapper
+components are distributed under Apache License 2.0; the scripts retain their
+upstream copyright and SPDX notices. The Gradle distribution is downloaded by
+the wrapper into the user's Gradle cache and is not bundled in the Sprig SDK.
+
 ## Project icon and mascot (`website/assets/brand/icon-source.png`)
 
 The artwork was supplied by the project owner, who approved its use for this

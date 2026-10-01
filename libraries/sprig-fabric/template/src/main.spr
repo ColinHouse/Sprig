@@ -1,0 +1,15 @@
+import dev.sprig.fabric.CounterActions as CounterActions
+
+class Counter:
+    var ticks: Int = 0
+
+    func tick() -> Unit:
+        ticks += 1
+
+    func count() -> Int:
+        return ticks
+
+conform Counter to CounterActions
+
+func new_counter() -> Counter:
+    return Counter()

@@ -132,6 +132,11 @@ see `docs/projects/standard-library.md` and the three `examples/showcases` proje
 For details, see `docs/language/quick-reference.md`, `docs/jvm/interop.md`,
 `docs/language/numeric-semantics.md`, and `docs/language/known-limitations.md` in the archive.
 
+For Gradle host projects, use the SDK-bundled `dev.sprig` plugin rather than
+hand-writing bridge/classpath/generation tasks. `./gradlew sprigInfo` reports
+the selected source set, compiler, runtime, lock and generated output. See
+`libraries/sprig-gradle/README.md` and `libraries/sprig-fabric/README.md`.
+
 Declaration facades use `export alias.Symbol` after imports and before other
 code. Query `sprig api module.spr --json` for exported signatures and origins.
 No wildcard, renaming or implicit reexport exists. See docs/language/module-reexports.md.
