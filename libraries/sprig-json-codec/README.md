@@ -113,6 +113,18 @@ for project in codec.required_array(root, "projects"):
             throw Error(target.path + ".amount: must be positive")
 ```
 
+`required_string_array` validates every element as a string with its
+`$.field[index]` path instead of making callers wrap `as_string` per element.
+The optional nested helpers mirror the leaf helpers: `optional_object`,
+`optional_array` and `optional_string_array` map both a missing field and a
+present `null` to Sprig `null`.
+
+```sprig
+let tags = codec.required_string_array(root, "tags")
+let meta = codec.optional_object(root, "meta")
+let extra = codec.optional_array(root, "extra")
+```
+
 ## Encoding
 
 Small helpers keep construction uniform:
@@ -125,6 +137,7 @@ codec.number("1.25")         # exact number lexeme
 codec.member("name", value)  # json.Member
 codec.object(members)        # json.Value.Object
 codec.array(values)          # json.Value.Array
+codec.string_array(strings)  # json.Value.Array of strings
 ```
 
 Encoding adds no policy: the application builds `json.Value` and calls

@@ -28,7 +28,8 @@ def verify(name, ok, detail=""):
 
 
 EXPECTED_TESTS = {
-    "build_board_config.spr", "encoding.spr", "primitives.spr", "structure.spr", "support.spr",
+    "build_board_config.spr", "collections.spr", "encoding.spr", "primitives.spr",
+    "structure.spr", "support.spr",
 }
 
 

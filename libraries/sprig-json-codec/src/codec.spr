@@ -278,6 +278,12 @@ func required_number_text(reader: Reader, name: String) -> String throws Error:
 func required_array(reader: Reader, name: String) -> List[Reader] throws Error:
     return as_array(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
 
+func required_string_array(reader: Reader, name: String) -> List[String] throws Error:
+    let values: MutableList[String] = []
+    for item in required_array(reader, name):
+        values.append(as_string(item))
+    return values.toList()
+
 func required_object(reader: Reader, name: String) -> Reader throws Error:
     return as_object(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
 
@@ -304,6 +310,27 @@ func optional_decimal(reader: Reader, name: String) -> Decimal? throws Error:
     if value == null:
         return null
     return as_decimal(Reader(path = child_path(reader.path, name), value = value))
+
+func optional_array(reader: Reader, name: String) -> List[Reader]? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_array(Reader(path = child_path(reader.path, name), value = value))
+
+func optional_string_array(reader: Reader, name: String) -> List[String]? throws Error:
+    let values = optional_array(reader, name)
+    if values == null:
+        return null
+    let strings: MutableList[String] = []
+    for item in values:
+        strings.append(as_string(item))
+    return strings.toList()
+
+func optional_object(reader: Reader, name: String) -> Reader? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_object(Reader(path = child_path(reader.path, name), value = value))
 
 func optional_number_text(reader: Reader, name: String) -> String? throws Error:
     let value = optional_value(reader, name)
@@ -355,3 +382,9 @@ func object(members: List[json.Member]) -> json.Value:
 
 func array(values: List[json.Value]) -> json.Value:
     return json.Value.Array(values = values)
+
+func string_array(values: List[String]) -> json.Value:
+    let items: MutableList[json.Value] = []
+    for value in values:
+        items.append(text(value))
+    return array(items.toList())
