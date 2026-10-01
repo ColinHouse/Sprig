@@ -37,6 +37,9 @@ classes and variant cases use named arguments; functions and JVM methods use
 positional arguments. `match` lists every case and has no wildcard.
 
 Use `T?` for expected absence and narrow with `if value != null` before use.
+The right side of a short-circuit `and`/`or` and the guarded block see the
+narrowing: `if box != null and box.value > 0:` narrows `box` for `box.value`,
+and `if text == null or text.length() == 0:` narrows `text` for `text.length()`.
 `List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
 `==`/`!=` compare values; nullable `Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?`
 comparisons are null-safe and widen to the common type (`Int32?` → `Int?`,

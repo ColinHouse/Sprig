@@ -33,6 +33,7 @@ NEGATIVE = {
     'index_assign_list_index_nullable': 'SPR-TYPE-NULLABLE',
     'index_assign_generic_key': 'SPR-TYPE-MISMATCH',
     'index_assign_param_key': 'SPR-TYPE-MISMATCH',
+    'short_circuit_null_branch': 'SPR-TYPE-NULLABLE',
 }
 POSITIVE = {
     'finally_break_override': '42\n', 'finally_continue_override': '42\n',
