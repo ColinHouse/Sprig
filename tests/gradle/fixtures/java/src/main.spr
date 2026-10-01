@@ -1,0 +1,7 @@
+import dev.sprig.fixture.Meter as Meter
+
+class Counter:
+    func current() -> Int:
+        return 42
+
+conform Counter to Meter

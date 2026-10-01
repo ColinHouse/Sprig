@@ -1,0 +1,11 @@
+pluginManagement {
+    def sprigHome = providers.gradleProperty("sprigHome")
+        .orElse(providers.environmentVariable("SPRIG_HOME"))
+        .orNull
+    if (sprigHome == null || sprigHome.isBlank()) {
+        throw new GradleException("Set SPRIG_HOME to an extracted Sprig SDK")
+    }
+    includeBuild(new File(sprigHome, "libraries/sprig-gradle"))
+}
+
+rootProject.name = "ordinary-project"

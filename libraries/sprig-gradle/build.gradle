@@ -1,0 +1,27 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+group = 'dev.sprig'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+gradlePlugin {
+    plugins {
+        sprig {
+            id = 'dev.sprig'
+            implementationClass = 'dev.sprig.gradle.SprigPlugin'
+            displayName = 'Sprig Gradle integration'
+            description = 'Integrates Sprig checking, generation, runtime sources, and tests with Gradle source sets.'
+        }
+    }
+}

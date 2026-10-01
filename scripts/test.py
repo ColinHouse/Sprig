@@ -56,6 +56,7 @@ def main():
     suites = ["tests/formatter/check_formatter.py", "tests/reexports/check_reexports.py", "tests/match_expression/check_match_expression.py", "scripts/check_cases.py", "tests/numeric/check_numeric.py",
               "tests/runtime/check_strings.py", "tests/runtime/check_runtime_diagnostics.py",
               "tests/jvm_interop/check_interop.py",
+              "tests/gradle/check_gradle_plugin.py",
               "tests/wrap/check_wrap.py",
               "tests/correctness/check_correctness.py", "tests/recovery/check_recovery.py",
               "tests/acceptance/scripts/run_acceptance.py", "tests/acceptance/scripts/json_matrix.py",

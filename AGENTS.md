@@ -13,6 +13,7 @@ contributors who change the repository. It is not a language tutorial.
 | Static semantics | `compiler/src/main/java/sprig/compiler/sem/` |
 | Code generation | `compiler/src/main/java/sprig/compiler/gen/` |
 | Runtime | `runtime/src/main/java/sprig/runtime/` |
+| Gradle/JVM build integration | `libraries/sprig-gradle/` and `libraries/sprig-fabric/` |
 | Numeric contract | `docs/language/numeric-semantics.md` |
 | Implemented features | `docs/language/feature-status.md` |
 | Diagnostic codes | `docs/tooling/diagnostic-codes.md` |
@@ -39,8 +40,9 @@ state with `project --json` and `deps --json` inside a project.
 ```
 
 Requires JDK 17+, Python 3.12+, Node.js 20+/npm and Git. It runs portable
-build, full compiler/JVM tests, independent grammar tests, executed docs and
-the VitePress production build, and editor tokenization/CLI/package checks. First use downloads pinned tools/libraries.
+build, full compiler/JVM tests (including the ordinary Java Gradle fixture),
+independent grammar tests, executed docs and the VitePress production build,
+and editor tokenization/CLI/package checks. First use downloads pinned tools/libraries.
 Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work.
 
 | Focus | Fast command after build | Evidence |
@@ -49,6 +51,8 @@ Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work
 | Types/flow/diagnostics | `python3 scripts/check_cases.py .` | static checking |
 | Generation/runtime | `python3 tests/correctness/check_correctness.py` | Java/JVM |
 | CLI/JVM query tools | `python3 tests/agent_tooling/check_tooling.py` | subprocess/API fixtures |
+| Generic Gradle integration | `python3 tests/gradle/check_gradle_plugin.py` | ordinary Java fixture; no Loom/Minecraft dependencies |
+| Fabric/Loom integration | `python3 tests/fabric/check_template.py` | explicit host-framework integration test; downloads may be needed |
 | Projects/dependencies | `python3 tests/project_deps/check_deps.py` | lock/cache/project behavior |
 | Maven graph/cache | `python3 tests/maven/check_resolver.py` | offline effective-model fixtures |
 | Standard modules/showcases | `python3 scripts/test-stdlib.py` / `python3 scripts/test-showcases.py` | real programs on JVM |
@@ -57,6 +61,9 @@ Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work
 
 Generated `build/`, `bin/`, `website/.vitepress/dist/` and
 `website/generated/` are not committed. See `CONTRIBUTING.md` for scope and PR rules.
+The SDK packages `libraries/sprig-gradle` and the version-pinned
+`libraries/sprig-fabric/template`. Its generated `sprig.lock` is intentionally
+included even though other project locks are omitted from the SDK archive.
 
 ## Rules for language changes
 
