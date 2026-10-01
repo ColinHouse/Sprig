@@ -84,7 +84,16 @@ def main():
             if (ROOT / tree).is_dir():
                 shutil.copytree(ROOT / tree, package / tree,
                                 ignore=shutil.ignore_patterns('sprig.lock', '*.sqlite', '*.sqlite-*',
-                                                             '__pycache__', 'sprig-build'))
+                                                             '__pycache__', 'sprig-build',
+                                                             '.gradle', 'build'))
+        # Project locks are generated artifacts and generally stay out of the
+        # SDK. The first-party Fabric template is the exception: its checked-in
+        # seed lock makes `./gradlew check` reproducible without a resolve step.
+        fabric_lock = ROOT / 'libraries/sprig-fabric/template/sprig.lock'
+        if fabric_lock.is_file():
+            packaged_fabric_lock = package / 'libraries/sprig-fabric/template/sprig.lock'
+            packaged_fabric_lock.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(fabric_lock, packaged_fabric_lock)
         # The repository examples index points to VitePress pages, which are
         # not part of the portable SDK archive. Give SDK users links that are
         # present in the package instead of shipping broken relative links.
@@ -117,6 +126,8 @@ def main():
             'DIAGNOSTIC_CODES': 'docs/tooling/diagnostic-codes.md',
             'SHOWCASES': 'docs/tooling/showcases.md',
             'JVM_INTEROP': 'docs/jvm/interop.md', 'WRAP': 'docs/jvm/wrap.md',
+            'GRADLE_INTEGRATION': 'docs/jvm/gradle.md',
+            'TYPED_BOUNDARY_ADAPTERS': 'docs/jvm/typed-boundary-adapters.md',
             'JVM_CONFORMANCE': 'docs/jvm/conformance.md', 'HOST_SERVICES': 'docs/jvm/host-services.md',
         }
         archive_paths = {source: 'docs/' + archive_name + '.md'
@@ -133,7 +144,10 @@ def main():
                 archive_paths[source_file.relative_to(ROOT).as_posix()] = source_file.relative_to(ROOT).as_posix()
         (package / 'docs').mkdir()
         for archive_name, source in docs.items():
-            shutil.copy2(ROOT / source, package / 'docs' / (archive_name + '.md'))
+            content = (ROOT / source).read_text(encoding='utf-8')
+            if source == 'docs/jvm/gradle.md':
+                content = content.replace('(typed-boundary-adapters.md)', '(TYPED_BOUNDARY_ADAPTERS.md)')
+            (package / 'docs' / (archive_name + '.md')).write_text(content, encoding='utf-8')
         notes = ROOT / 'docs/releases' / (tag + '.md')
         if notes.is_file():
             (package / ('RELEASE_NOTES-' + tag + '.md')).write_text(notes.read_text(encoding='utf-8'), encoding='utf-8')
@@ -152,6 +166,7 @@ def main():
             'docs/tooling/testing.md': 'docs/TESTING.md', 'docs/tooling/formatter.md': 'docs/FORMATTER.md',
             'docs/tooling/diagnostic-codes.md': 'docs/DIAGNOSTIC_CODES.md',
             'docs/jvm/interop.md': 'docs/JVM_INTEROP.md', 'docs/jvm/wrap.md': 'docs/WRAP.md',
+            'docs/jvm/gradle.md': 'docs/GRADLE_INTEGRATION.md',
             'docs/jvm/conformance.md': 'docs/JVM_CONFORMANCE.md',
         }.items():
             guide = guide.replace(source_path, archive_path)
@@ -167,6 +182,10 @@ It compiles Sprig to Java, invokes javac, and runs on the JVM.
 Start with INSTALL.md, AGENT_GUIDE.md, `sprig capabilities --json`, and
 `sprig help --json`. See docs/ for static semantics and JVM boundaries.
 Sprig is Apache-2.0; dependency licenses are in THIRD_PARTY_NOTICES.md and legal/.
+
+For host builds, the SDK also includes the `dev.sprig` Gradle plugin and a
+Fabric/Loom starter. See libraries/sprig-gradle/README.md and
+libraries/sprig-fabric/README.md; set SPRIG_HOME to this extracted SDK root.
 ''', encoding='utf-8')
         (package / 'INSTALL.md').write_text('''# Install and run
 

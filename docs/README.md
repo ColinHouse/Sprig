@@ -8,6 +8,7 @@ behavioral authority.
 |---|---|
 | Language, types, numbers, limitations | [`language/`](language/) |
 | Java/JVM calls, host boundaries, wrappers | [`jvm/`](jvm/) |
+| Gradle source-set integration and Fabric tooling | [`jvm/gradle.md`](jvm/gradle.md), [`libraries/sprig-gradle`](../libraries/sprig-gradle/README.md), [`libraries/sprig-fabric`](../libraries/sprig-fabric/README.md) |
 | Projects, dependencies, installation, standard library | [`projects/`](projects/) |
 | CLI tools, diagnostics, formatting, testing | [`tooling/`](tooling/) |
 | Contribution policy and project provenance | [`contributing/`](contributing/) |
