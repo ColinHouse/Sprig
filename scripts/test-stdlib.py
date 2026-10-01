@@ -52,6 +52,14 @@ def main():
         'Missing', 'Found:null', 'Found:false', 'Found:0', 'Found:""',
         'Found:{"x":1}', 'Found:"值"', 'Missing', 'object unchanged',
         'wrong-kind=5', 'duplicate lookup rejected=2', 'parser duplicates unchanged']
+    math_result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/math.spr')],
+                                 cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
+    assert math_result.returncode == 0, (math_result.stdout, math_result.stderr)
+    assert math_result.stdout.splitlines() == [
+        '0', '17', '17', '3', '7', '-1', '0', '1', '10', '0', '5',
+        '1', '-2', '-2', '1', '0', '1', '3', '1000',
+        'clamp rejected', 'division rejected', 'negative sqrt rejected',
+    ], repr(math_result.stdout)
     practical_outputs = []
     for timezone in ('UTC', 'Pacific/Honolulu'):
         with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:

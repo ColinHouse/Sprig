@@ -27,6 +27,7 @@ SDK's exact bytes. See the
 | `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?` |
 | `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
+| `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 | `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code) |
@@ -85,6 +86,20 @@ preserved literally. Example:
 ```sprig
 import "@std/text.spr" as text
 print(text.join(["Sprig", "JVM", "✓"], " · "))
+```
+
+`math` covers exact 64-bit integers only; there are no Float or Decimal
+overloads. `abs`, `min`, `max` and `sign` are total functions. `abs` of the
+minimum `Int` overflows and raises the same checked numeric failure as any
+other overflowing operation. `clamp(value, low, high)` rejects inverted bounds,
+`floor_div(value, divisor)` rejects a zero divisor and floors toward negative
+infinity for either divisor sign, and `isqrt(value)` rejects negative inputs.
+The three rejections are checked `Error`s, not silent zero results. Example:
+
+```sprig
+import "@std/math.spr" as math
+print(math.floor_div(0 - 9, 8))  # -2, unlike / which truncates
+print(math.isqrt(1000000))       # 1000
 ```
 
 `time.format_utc(epoch_millis)` returns the canonical UTC representation from

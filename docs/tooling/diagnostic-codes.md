@@ -121,6 +121,12 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
 - `SPR-MODULE-EXPORT-ORDER`: imports, exports, declarations/statements must appear in that order.
 - Existing `SPR-NAME-IMPORT-CYCLE` also rejects reexport chains containing a cycle.
 
+## Function signatures
+
+- `SPR-SYNTAX-ERROR` reports a `throws` clause without a declared result type
+  with explicit guidance (`-> Unit throws Error`), a hint to add the result type
+  and the `functions` help topic.
+
 ## Expression match results
 
 - `SPR-MATCH-RESULT`: incompatible branch result; expected/actual types and match repair guidance.
