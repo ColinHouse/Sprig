@@ -20,6 +20,13 @@ library through application packages.
 | [`sprig-sqlite`](sprig-sqlite/README.md) | Typed SQLite access with explicit SQL and transactions. |
 | [`sprig-web`](sprig-web/README.md) | Synchronous localhost HTTP server and explicit OpenAPI metadata. |
 
+## Host build integration
+
+| Component | Purpose |
+|---|---|
+| [`sprig-gradle`](sprig-gradle/README.md) | Java Gradle plugin for classpaths, bridge compilation, generated/runtime sources and Sprig tests. |
+| [`sprig-fabric`](sprig-fabric/README.md) | Small Fabric/Loom starter using the SDK-bundled Gradle plugin. |
+
 Packages are local source distributions today. Use Maven coordinates for
 third-party JVM dependencies; Sprig does not yet provide a public registry.
 The v0.5.0-beta.1 SDK includes these first-party packages and their documented

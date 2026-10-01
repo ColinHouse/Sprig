@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "sprig_counter",
+  "version": "${version}",
+  "name": "Sprig Fabric Counter",
+  "description": "A small Fabric client mod with Sprig-owned counter state.",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.sprig.fabric.SprigCounterClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

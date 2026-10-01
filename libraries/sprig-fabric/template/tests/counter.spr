@@ -1,0 +1,7 @@
+import "../src/main.spr" as counter_module
+
+let counter = counter_module.new_counter()
+assert(counter.count() == 0, "counter starts at zero")
+counter.tick()
+counter.tick()
+assert(counter.count() == 2, "Sprig owns the counter state")
