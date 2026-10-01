@@ -1385,7 +1385,16 @@ public final class TypeChecker {
         String op = binary.op;
         if (op.equals("and") || op.equals("or")) {
             Type left = checkExpr(binary.left, NativeType.BOOL);
-            Type right = checkExpr(binary.right, NativeType.BOOL);
+            // Short-circuit context: the right operand runs with the left
+            // operand known true for `and` and known false for `or`, so the
+            // existing null narrowing applies inside the condition itself.
+            narrowing.push(op.equals("and") ? narrowTrue(binary.left) : narrowFalse(binary.left));
+            Type right;
+            try {
+                right = checkExpr(binary.right, NativeType.BOOL);
+            } finally {
+                narrowing.pop();
+            }
             if ((left != NativeType.BOOL && left != NativeType.ERROR)
                     || (right != NativeType.BOOL && right != NativeType.ERROR)) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,

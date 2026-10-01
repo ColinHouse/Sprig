@@ -1,0 +1,40 @@
+# Short-circuit conditions narrow: the right side of and/or sees the left side.
+class Box:
+    let value: Int
+
+func first_positive(box: Box?) -> Int:
+    if box != null and box.value > 0:
+        return box.value
+    return -1
+
+func positive(box: Box?) -> Bool:
+    return box != null and box.value > 0
+
+func sum(left: Box?, right: Box?) -> Int:
+    if left != null and right != null:
+        return left.value + right.value
+    return -1
+
+func label(text: String?) -> String:
+    if text == null or text.length() == 0:
+        return "empty"
+    return text
+
+func has_text(text: String?) -> Bool:
+    return text == null or text.length() > 0
+
+let full = Box(value = 7)
+let empty_box: Box? = null
+print(first_positive(full))
+print(first_positive(empty_box))
+print(positive(full))
+print(positive(empty_box))
+print(sum(Box(value = 2), Box(value = 3)))
+print(sum(Box(value = 2), empty_box))
+print(label("hi"))
+print(label(""))
+let none: String? = null
+print(label(none))
+print(has_text("x"))
+print(has_text(""))
+print(has_text(none))

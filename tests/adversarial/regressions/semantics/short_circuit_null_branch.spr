@@ -1,0 +1,4 @@
+func length_when_null(text: String?) -> Int:
+    if text == null and text.length() > 0:
+        return 1
+    return 0
