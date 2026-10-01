@@ -16,7 +16,8 @@ import sprig.compiler.diag.Codes;
  * {@code sprig resolve} writes it. Unknown schema versions are rejected.
  */
 public final class Lockfile {
-    public static final int VERSION = 4;
+    /** Schema 5 moves bundled {@code @std} out of project lock identity. */
+    public static final int VERSION = 5;
 
     public static String edgeId(String owner, String alias) {
         return owner + "/@" + java.net.URLEncoder.encode(alias, StandardCharsets.UTF_8);
@@ -56,8 +57,6 @@ public final class Lockfile {
     public String language;
     public String compiler;
     public String manifestSha;
-    public String stdlibVersion;
-    public String stdlibSha;
     public final List<SprigEntry> sprig = new ArrayList<>();
     public final List<JvmEntry> jvm = new ArrayList<>();
     public final List<JvmEdge> jvmEdges = new ArrayList<>();
@@ -108,11 +107,9 @@ public final class Lockfile {
         lock.language = toml.scalar("", "language");
         lock.compiler = toml.scalar("", "compiler");
         lock.manifestSha = toml.scalar("", "manifest-sha256");
-        lock.stdlibVersion = toml.scalar("", "stdlib-version");
-        lock.stdlibSha = toml.scalar("", "stdlib-sha256");
-        if ((lock.stdlibVersion == null) != (lock.stdlibSha == null)
-                || (lock.stdlibSha != null && !lock.stdlibSha.matches("[0-9a-f]{64}")))
-            throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid bundled std identity", null);
+        if (toml.scalar("", "stdlib-version") != null || toml.scalar("", "stdlib-sha256") != null)
+            throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
+                    "Lockfile schema 5 must not contain bundled std identity; run `sprig resolve`", null);
         if (lock.manifestSha == null || !lock.manifestSha.matches("[0-9a-f]{64}"))
             throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid root manifest digest", null);
         java.util.Set<String> ids = new java.util.HashSet<>();
@@ -252,10 +249,6 @@ public final class Lockfile {
         sb.append("language = ").append(quote(language == null ? "0.8" : language)).append('\n');
         sb.append("compiler = ").append(quote(compiler == null ? "" : compiler)).append('\n');
         sb.append("manifest-sha256 = ").append(quote(manifestSha == null ? "" : manifestSha)).append('\n');
-        if (stdlibVersion != null) {
-            sb.append("stdlib-version = ").append(quote(stdlibVersion)).append('\n');
-            sb.append("stdlib-sha256 = ").append(quote(stdlibSha)).append('\n');
-        }
         List<SprigEntry> sorted = new ArrayList<>(sprig);
         sorted.sort(Comparator.comparing(e -> e.id));
         for (SprigEntry entry : sorted) {

@@ -119,7 +119,7 @@ For generics, read `docs/language/generics.md`: parameters and uses are explicit
 including multiple parameters. `requires T: Equatable` must lead the function
 body. Generic variant cases use expanded payloads and match case owners omit
 type arguments. `docs/projects/projects.md` defines the strict manifest subset;
-`docs/projects/dependencies.md` describes local/Git/Maven resolution, schema-4 lock identities,
+`docs/projects/dependencies.md` describes local/Git/Maven resolution, schema-5 lock identities,
 exports and offline cache validation. Run `sprig resolve` before project builds.
 Use `import "@alias/module.spr" as module` for an exported dependency module.
 Project compilation refuses missing/stale locks or missing/corrupt locked JARs.

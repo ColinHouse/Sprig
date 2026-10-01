@@ -79,7 +79,7 @@ git = "https://example.com/math.git"
 branch = "main"
 ```
 
-- Schema 4 identifies edges as `root/@a/@util` and records owner-relative locators for relative local dependencies (`portable = true`, the whole workspace can move); absolute declarations keep `portable = false`. Old schemas require resolve.
+- Schema 5 identifies edges as `root/@a/@util` and records owner-relative locators for relative local dependencies (`portable = true`, the whole workspace can move); absolute declarations keep `portable = false`. Schemas 1–4 require explicit resolve. The lock checks compiler identity; bundled `@std` comes from the installed SDK and is not recorded in the project lock.
 - Real paths confine symlinks; exported internal symlinks are allowed.
 - Git cache reuse validates HEAD, marker and tracked/untracked contents; tampering fails.
 - `name` is the package-local import alias; distinct packages may reuse it; the dependency's own
@@ -99,6 +99,6 @@ branch = "main"
 **Maven/JVM dependencies are implemented.**
 Declare exact release coordinates in `[[jvm]]`, run resolve, then use
 check/build/run/api/doctor without manually locating JARs. Apache Resolver handles
-parents/BOMs/transitives. Schema-4 locks record JAR/POM SHA-256, graph, order and local locators (owner-relative `portable = true` for relative declarations, canonical absolute with `portable = false` otherwise).
+parents/BOMs/transitives. Schema-5 locks record JAR/POM SHA-256, graph, order and local locators (owner-relative `portable = true` for relative declarations, canonical absolute with `portable = false` otherwise).
 Warm cache is required offline; consumers never re-resolve. See
 [dependency contract](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/dependencies.md).

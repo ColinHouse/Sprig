@@ -67,7 +67,7 @@ def main():
         lock_text = (app / "sprig.lock").read_text()
         check("local-lock-fields", 'kind = "local"' in lock_text
               and 'project-name = "sprig-linear"' in lock_text
-              and "lock-version = 4" in lock_text
+              and "lock-version = 5" in lock_text
               and "portable = true" in lock_text
               and 'path = "../lib"' in lock_text, lock_text)
         run(app, "resolve")
@@ -99,7 +99,7 @@ def main():
               and "Duplicate dependency name" in duplicate.stdout + duplicate.stderr,
               duplicate.stdout + duplicate.stderr)
 
-        # ------------------------------------- portable relocation (schema 4)
+        # ------------------------------------- portable relocation (schema 5)
         plib = base / "portable/lib"
         project(plib, "portable-lib", exports=["lib.spr"])
         write(plib / "src/lib.spr", "func double(value: Int) -> Int:\n    return value * 2\n")
@@ -110,7 +110,7 @@ def main():
         portable_resolve = run(papp, "resolve")
         portable_lock = (papp / "sprig.lock").read_text()
         check("portable-lock-schema", portable_resolve.returncode == 0
-              and "lock-version = 4" in portable_lock
+              and "lock-version = 5" in portable_lock
               and "portable = true" in portable_lock
               and 'path = "../lib"' in portable_lock,
               portable_resolve.stdout + portable_resolve.stderr + portable_lock)
@@ -146,9 +146,9 @@ def main():
               json.dumps(entry))
 
         (papp / "sprig.lock").write_text(
-            portable_lock.replace("lock-version = 4", "lock-version = 3"))
+            portable_lock.replace("lock-version = 5", "lock-version = 4"))
         rejected = run(papp, "check")
-        check("schema-3-rejected", rejected.returncode == 1
+        check("schema-4-rejected", rejected.returncode == 1
               and "SPR-PROJECT-LOCK-SCHEMA" in rejected.stdout + rejected.stderr,
               rejected.stdout + rejected.stderr)
         (papp / "sprig.lock").write_text(portable_lock)

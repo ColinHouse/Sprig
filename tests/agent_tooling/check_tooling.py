@@ -62,6 +62,11 @@ def main():
                 check("help-example-run-" + topic,
                       executed.returncode == 0 and not obj(executed)["diagnostics"])
     check("help-text", "Syntax:" in run("help", "match").stdout)
+    dependency_help = obj(run("help", "dependencies", "--json"))
+    check("dependency-help-lock-identity",
+          "lock schema 5 records compiler identity" in " ".join(dependency_help["rules"])
+          and "@std package comes from the installed SDK" in " ".join(dependency_help["rules"])
+          and "stdlib-sha256" not in " ".join(dependency_help["rules"]))
     check("help-unknown-json", obj(run("help", "invalid", "--json"))["exitCode"] == 2)
 
     # Every advertised capability must point to executable evidence; every

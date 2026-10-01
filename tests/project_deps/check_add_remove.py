@@ -108,6 +108,9 @@ def main():
         check("add-preserves-manifest-comments", b"# keep this project comment" in manifest_after_add
               and b"# preserve this spacing" in manifest_after_add, manifest_after_add.decode())
         check("add-writes-lock", bool(lock_after_add), added.stdout + added.stderr)
+        check("add-lock-schema-excludes-sdk-std", b"lock-version = 5" in lock_after_add
+              and b"stdlib-version" not in lock_after_add
+              and b"stdlib-sha256" not in lock_after_add, lock_after_add.decode())
         deps = sprig(project, "deps", "--json", env=env)
         check("deps-sees-added-package", deps.returncode == 0 and "lib" in deps.stdout,
               deps.stdout + deps.stderr)
