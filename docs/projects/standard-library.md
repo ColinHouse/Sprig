@@ -19,7 +19,8 @@ compiler version, so moving to a different compiler version requires explicit
 `sprig resolve`. There is no independent stdlib version selection or
 compatibility promise. Release ZIP checksums and archive smoke tests validate
 the published SDK distribution; a project lock does not attest the installed
-SDK's exact bytes. See [release validation](../releases/validation.md).
+SDK's exact bytes. See the
+[published release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
 
 | Module | Public operations |
 |---|---|

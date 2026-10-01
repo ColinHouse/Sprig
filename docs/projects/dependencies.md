@@ -176,5 +176,5 @@ Consumers do require the lock's compiler version to match, so upgrading to a
 different compiler version requires `sprig resolve`. Published SDK archive
 checksums and extracted-archive smoke tests cover distribution integrity; the
 project lock no longer pins the exact installed std bytes. See
-[standard library](../projects/standard-library.md) and
-[release validation](../releases/validation.md).
+[standard library](../projects/standard-library.md) and the
+[published release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
