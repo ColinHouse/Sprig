@@ -3,7 +3,7 @@ layout: home
 hero:
   name: Sprig
   text: 少一点猜测，多一点可验证
-  tagline: Sprig 不试图让编码 Agent 更聪明，而是尽量减少它需要猜测的内容。面向人和 Agent；Agent 友好，也应当方便审查。实验性 Alpha；JDK 17+。
+  tagline: Sprig 不试图让编码 Agent 更聪明，而是尽量减少它需要猜测的内容。面向人和 Agent；Agent 友好，也应当方便审查。实验性 Beta；JDK 17+。
   image:
     src: /logo-round.png
     alt: Sprig
@@ -53,14 +53,12 @@ sprig run
 
 ## 发行状态与限制
 
-公开 SDK 是 [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)。
-v0.4 在 v0.3 基础上加入 canonical formatter、显式模块 re-export、
-表达式 match、Unicode code-point 字符串语义、`sprig api` 模块/项目内省、managed SDK
-升级和一轮对抗正确性修复。已发布 SDK 的功能请查看[发行状态](/project/release-status)、发行资产和 capability 输出。
-当前源码（尚未进入 v0.4.0-alpha.1 发行资产）还包含：显式 Java 具体泛型、opaque
-数组与 `@std/jvm.spr` 显式集合适配器、`sprig wrap` wrapper 生成器、`sprig test`
-项目测试与 schema-4 owner-relative 便携本地锁。真实 Fabric/Loom dogfood 的端到端
-接线见 [Fabric / JVM 框架集成](/guide/fabric)。
+公开 SDK 是实验性 [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1)，
+编译器版本为 `0.5.0-beta.1`，语言版本仍为 `0.8-dev`。Beta 将项目测试、wrapper
+生成、schema-4 依赖锁、明确的 Java 泛型与集合边界，以及 CLI、HTTP、JSON、SQLite
+和 Web 一方库纳入发行 SDK；详细范围以[发行状态](/en/project/release-status)、
+发行资产和已安装 SDK 的 `sprig capabilities --json` 为准。真实 Fabric/Loom
+dogfood 的端到端接线见 [Fabric / JVM 框架集成](/guide/fabric)。
 
 Sprig 尚未自举，也不承诺生产可用；发布/registry、LSP、接口与泛型推断仍属未来工作。
 见[已知限制](/en/reference/language/known-limitations)。

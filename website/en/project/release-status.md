@@ -1,6 +1,10 @@
 # Release status
 
-**Published SDK:** [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1), compiler `0.4.0-alpha.1`, JDK17+, Apache-2.0. Experimental Alpha, not production-ready.
+**Published SDK:** [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1), compiler `0.5.0-beta.1`, language version `0.8-dev`, JDK17+, Apache-2.0. This is an experimental Beta, not a production migration promise. Linux/macOS are release-supported; Windows remains a non-blocking preview.
+
+The Beta SDK includes project testing, wrapper generation, schema-4 dependency locks, bounded and explicit Java/JVM interop, and first-party CLI, HTTP, JSON, SQLite and Web packages. Check the release assets and `sprig capabilities --json` from the installed SDK for exact support. There is no central package registry, and Sprig is not self-hosted.
+
+Downloaded-release ZIP validation across Linux/macOS × JDK 17/26, checksum evidence and the publish workflow are recorded in the [release validation report](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
 
 v0.4 adds the canonical formatter, explicit module re-exports, expression
 `match`, Unicode code-point string semantics, `sprig api` module/project

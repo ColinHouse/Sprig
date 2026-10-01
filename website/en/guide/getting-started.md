@@ -24,22 +24,23 @@ The full install/upgrade contract is in
 
 ## Manual download and verify
 
-The published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
+The published experimental Beta SDK is [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1).
 Download the ZIP and its `.sha256` from that release. On Linux/macOS:
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.4.0-alpha.1/sprig-v0.4.0-alpha.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.4.0-alpha.1/sprig-v0.4.0-alpha.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.4.0-alpha.1-jdk.zip.sha256
-unzip sprig-v0.4.0-alpha.1-jdk.zip
-cd sprig-v0.4.0-alpha.1-jdk
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.5.0-beta.1/sprig-v0.5.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.5.0-beta.1/sprig-v0.5.0-beta.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.5.0-beta.1-jdk.zip.sha256
+unzip sprig-v0.5.0-beta.1-jdk.zip
+cd sprig-v0.5.0-beta.1-jdk
 ```
 
 On Linux, `sha256sum -c` is also available. Stop if the checksum differs.
 Use the release assets and capability output to check which features your SDK
-actually includes. The v0.4 SDK adds the canonical formatter, explicit module
-re-exports and expression `match` on top of the v0.3 base (local/Git/Maven
-dependencies and explicit bundled @std imports).
+actually includes. The Beta adds project testing, wrapper generation, schema-4
+dependency locks, selected explicit Java interop and first-party CLI, HTTP,
+JSON, SQLite and Web packages. It keeps language version `0.8-dev`; see the
+[release notes](/en/project/release-status) for the scope and limits.
 
 ## Initialize, resolve, run
 
@@ -98,7 +99,7 @@ sprig capabilities --json
 sprig help generics --json
 sprig api java.time.LocalDate --json
 sprig check --json
-sprig test --json          # current source checkout; runs project tests/**/*.spr
+sprig test --json          # runs project tests/**/*.spr
 sprig explain SPR-TYPE-NULLABLE --json
 sprig run
 ```
@@ -108,9 +109,9 @@ another language: Java reference results are nullable, integer division is
 explicit and generics use explicit type arguments.
 [Tooling and JSON](/en/guide/tooling) explains the envelopes.
 
-`test`, `wrap` and `run --stacktrace` belong to the current source checkout; the
-published v0.4.0-alpha.1 SDK predates them. Check `capabilities --json`. To
-integrate a third-party JVM library or framework build, read
+The Beta SDK includes `test`, `wrap` and `run --stacktrace`; check
+`capabilities --json` for the full implemented feature set. To integrate a
+third-party JVM library or framework build, read
 [JVM interoperability](/en/guide/jvm-interop) and
 [Fabric / JVM framework integration](/en/guide/fabric).
 

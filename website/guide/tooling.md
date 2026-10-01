@@ -25,9 +25,9 @@ version
 JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 `sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
 
-已发布的 v0.4.0-alpha.1 SDK 包含 `check`/`build`/`run`/`api`/`doctor` 等基础命令；
-`test`、`wrap`、`run --stacktrace` 和 schema-4 便携锁属于**当前源码**能力，尚未进入
-已发布 SDK，请以 `sprig capabilities --json` 和发行资产为准。
+已发布的 v0.5.0-beta.1 SDK 包含上方命令，包括 `test`、`wrap`、`run --stacktrace`
+和 schema-4 便携锁。Sprig 仍处于实验性 Beta；确切能力以发行资产和安装 SDK 的
+`sprig capabilities --json` 为准。
 
 - `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。
 - `run` 支持在 `--` 之后传递程序参数，`--keep` 用于保留生成的中间文件。未捕获的
@@ -36,8 +36,7 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 - `build` 把生成的 Java 与 `.class` 写入 `-d`（默认 `sprig-build`）；检查失败时不会
   留下 class 文件。
 - `test` 将 `tests/**/*.spr` 作为独立 JVM 程序运行，并按同名 `.expect.toml` 核对
-  `tests/compile_fail/` 的诊断码。该命令已在当前源码实现，已发布的 v0.4.0-alpha.1
-  SDK 尚不包含它；详见[测试契约（英文）](/en/reference/tooling/testing)。
+  `tests/compile_fail/` 的诊断码；详见[测试契约（英文）](/en/reference/tooling/testing)。
 - `wrap` 从真实 classpath 生成可编辑的 Sprig source：默认不覆盖已有文件，写出前
   先在同一 classpath 下检查，`--json` 报告生成/跳过成员与稳定原因。
   见 [wrapper 生成器（英文）](/en/reference/jvm/wrap) 与
@@ -54,7 +53,7 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.5.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -68,7 +67,7 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.5.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},

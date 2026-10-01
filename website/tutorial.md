@@ -2,7 +2,7 @@
 
 这门语言面向人和编码 Agent。Sprig 不试图让编码 Agent 更聪明，而是尽量减少它需要猜测的内容。对人也一样：**Agent 友好，也应当方便审查。**教程从可运行的小程序开始，每章都引用仓库中的真实源码；文档门禁会编译、运行并核对输出。
 
-发布 SDK 与当前源码可能包含不同功能。开始前先看[发行状态](/project/release-status)，并用 `sprig capabilities --json` 查询你安装的 SDK。发布资产才是已发布能力的依据。
+已发布实验性 Beta SDK 为 v0.5.0-beta.1。本教程针对发行 SDK 验证；开始前请看[发行状态](/project/release-status)，并用 `sprig capabilities --json` 查询安装版本的准确能力。
 
 ## 1. 安装并运行第一段程序
 
@@ -121,4 +121,4 @@ sprig api java.time.LocalDate --json
 - [项目与依赖](/guide/projects)：本地包、Git/Maven 依赖、锁文件。
 - [示例项目](https://github.com/ColinHouse/Sprig/tree/main/examples)：从 Task Tracker 继续到 JSON CLI、SQLite、Web 和 Maven。
 - [Agent 工作流与诊断参考](/en/reference/tooling/agent-guide)：查询工具、稳定诊断和可复现修复。
-- [功能状态与已知限制](/en/reference/language/feature-status)：区分当前源码与实际发布 SDK。
+- [功能状态与已知限制](/en/reference/language/feature-status)：了解已实现能力与明确限制。

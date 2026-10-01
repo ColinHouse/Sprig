@@ -26,11 +26,10 @@ version
 No dependency is downloaded. Use `sprig api java.time.LocalDate --json` to
 inspect real JDK signatures.
 
-The published v0.4.0-alpha.1 SDK contains the base commands
-(`check`/`build`/`run`/`api`/`doctor` and friends). `test`, `wrap`,
-`run --stacktrace` and schema-4 portable locks belong to the **current source
-checkout** and are not in that SDK; check `sprig capabilities --json` and the
-release assets for the exact range.
+The published v0.5.0-beta.1 SDK includes the commands above, including `test`,
+`wrap`, `run --stacktrace` and schema-4 portable locks. Sprig remains an
+experimental Beta; check the release assets and `sprig capabilities --json`
+from the installed SDK for the exact feature set.
 
 - `check` stops before code generation. `--syntax-only` stops even earlier,
   after lexing, layout and parsing.
@@ -42,8 +41,7 @@ release assets for the exact range.
   `sprig-build`). A failed check produces no class files.
 - `test` runs `tests/**/*.spr` in isolated child JVMs and checks
   `tests/compile_fail/**/*.spr` against sibling diagnostic-code expectations.
-  It is available in the current source checkout; the v0.4.0-alpha.1 SDK
-  predates it. See the [testing contract](/en/reference/tooling/testing).
+  See the [testing contract](/en/reference/tooling/testing).
 - `wrap` generates editable Sprig source from a real classpath: it refuses to
   overwrite without `--force`, checks the file under the same classpath before
   writing, and reports generated/skipped members with stable reasons in
@@ -63,7 +61,7 @@ A successful run:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.5.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -77,7 +75,7 @@ A failed check (path shortened here; the real `uri` is a `file:` URI):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.4.0-alpha.1",
+  "toolVersion": "sprig-compiler 0.5.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},

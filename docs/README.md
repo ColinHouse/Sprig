@@ -16,8 +16,10 @@ behavioral authority.
 
 `website/` contains onboarding and presentation material. Its generated English
 reference pages are copied from these canonical documents; edit the source here.
-The history directory is evidence about earlier states, not a current language
-contract.
+The current release validation is [`releases/validation.md`](releases/validation.md);
+versioned release notes and older validation records preserve historical
+evidence. The history directory is evidence about earlier states, not a current
+language contract.
 
 For the shortest current feature summary, see
 [`language/feature-status.md`](language/feature-status.md). For commands and

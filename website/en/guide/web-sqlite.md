@@ -1,9 +1,9 @@
 # Web and SQLite development milestone
 
-The current source checkout contains `libraries/sprig-web`,
-`libraries/sprig-sqlite`, `examples/mini_web`, `examples/sqlite` and
-`examples/ledger`. This is development work beyond the published SDK, not a
-production framework or a newly published release.
+The published v0.5.0-beta.1 SDK includes `libraries/sprig-web`,
+`libraries/sprig-sqlite` and the `examples/mini_web`, `examples/sqlite` and
+`examples/ledger` projects. This is an experimental Beta application example,
+not a production framework or a production deployment promise.
 
 ## Run the backend
 

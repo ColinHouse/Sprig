@@ -22,3 +22,6 @@ library through application packages.
 
 Packages are local source distributions today. Use Maven coordinates for
 third-party JVM dependencies; Sprig does not yet provide a public registry.
+The v0.5.0-beta.1 SDK includes these first-party packages and their documented
+examples. They remain experimental Beta APIs; check each package guide and the
+installed SDK's capabilities before adopting them.

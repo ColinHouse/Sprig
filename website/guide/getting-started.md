@@ -16,9 +16,9 @@ sprig upgrade --check
 sprig upgrade
 ```
 
-如需手工安装，可从[发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/projects/install)。
+如需手工安装，可从 [v0.5.0-beta.1 发行页](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1)下载 ZIP 与 `.sha256`，校验通过后解压并将 `bin` 加入 `PATH`。安装器适用于 Linux/macOS；Windows 仍为实验性预览。详细契约见[安装与升级](/en/reference/projects/install)。
 
-已发布版本为 v0.4.0-alpha.1；已发布 SDK 与源码功能请分别看发行资产和 capability 输出。v0.4 SDK 在 v0.3 基础（本地/Git/Maven 依赖及显式 @std 内置标准包导入）上加入 canonical formatter、显式模块 re-export 与表达式 `match`。
+当前已发布实验性 Beta 为 v0.5.0-beta.1（编译器 `0.5.0-beta.1`、语言版本 `0.8-dev`）。它包含 `sprig test`、`sprig wrap`、`run --stacktrace`、schema-4 锁及发行说明列出的 JVM 和一方库能力。请以发行资产和 `sprig capabilities --json` 为准，不要把仓库后续源码能力当成已发布功能。
 
 ## 初始化、解析、运行
 
@@ -67,7 +67,7 @@ sprig capabilities --json
 sprig help generics --json
 sprig api java.time.LocalDate --json
 sprig check --json
-sprig test --json          # 当前源码能力；运行项目 tests/**/*.spr
+sprig test --json          # 运行项目 tests/**/*.spr
 sprig explain SPR-TYPE-NULLABLE --json
 sprig run
 ```
@@ -75,8 +75,7 @@ sprig run
 诊断提供稳定码与源位置。Java 引用结果须判空，整数除法和泛型参数须显式。
 JSON 格式见[工具与 JSON](/guide/tooling)。不要从其他语言猜测规则。
 
-`test`/`wrap`/`run --stacktrace` 属于当前源码能力，已发布的 v0.4.0-alpha.1 SDK
-尚未包含；以 `capabilities --json` 为准。要接入第三方 JVM 库或框架构建，先读
+`test`、`wrap` 和 `run --stacktrace` 已包含在 Beta SDK 中。要接入第三方 JVM 库或框架构建，先读
 [JVM 互操作](/guide/jvm-interop) 与 [Fabric / JVM 框架集成](/guide/fabric)。
 
 ## 做一个实用工具

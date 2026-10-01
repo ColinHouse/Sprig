@@ -14,10 +14,10 @@ npm run package
 ```
 
 In VS Code, use Extensions → **Install from VSIX…**. This preview is not on
-Marketplace and is not bundled with the v0.4 SDK ZIP.
+Marketplace and is not bundled with the Beta SDK ZIP.
 
 Highlighting works without a compiler. For checks and execution, install the
-[SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1) and JDK17+,
+[SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1) and JDK17+,
 then set `sprig.compilerPath` to the SDK's `bin/sprig`. A built source checkout
 is also detected through ancestor `bin/` directories after PATH lookup.
 

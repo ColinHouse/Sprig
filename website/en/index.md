@@ -3,7 +3,7 @@ layout: home
 hero:
   name: Sprig
   text: Less to guess. Easier to verify.
-  tagline: Sprig does not try to make coding agents smarter. It tries to give them less to guess. For people and agents; agent-friendly should also mean review-friendly. Experimental Alpha; JDK 17+.
+  tagline: Sprig does not try to make coding agents smarter. It tries to give them less to guess. For people and agents; agent-friendly should also mean review-friendly. Experimental Beta; JDK 17+.
   image:
     src: /logo-round.png
     alt: Sprig
@@ -61,17 +61,14 @@ Output: `Hello, Sprig!`. Then query `sprig capabilities --json`, edit
 
 ## Release and limitations
 
-The published SDK is [v0.4.0-alpha.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.4.0-alpha.1).
-v0.4 adds the canonical formatter, explicit
-module re-exports, expression `match`, Unicode code-point string semantics,
-`sprig api` module/project introspection, managed SDK upgrades and an adversarial
-correctness pass.
-The current source checkout (not yet in the v0.4.0-alpha.1 release assets) also
-includes concrete Java generics, opaque arrays with the explicit
-`@std/jvm.spr` collection adapters, the `sprig wrap` generator, the
-`sprig test` project runner and schema-4 owner-relative portable local locks.
-The end-to-end wiring from a real Fabric/Loom dogfood is in
-[Fabric / JVM framework integration](/en/guide/fabric).
+The published SDK is experimental [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1),
+with compiler version `0.5.0-beta.1` and language version `0.8-dev`. Beta brings
+project testing, wrapper generation, schema-4 dependency locks, explicit Java
+generic and collection boundaries, and first-party CLI, HTTP, JSON, SQLite and
+Web packages into the SDK. See [release status](/en/project/release-status),
+the release assets and `sprig capabilities --json` from the installed SDK for
+the exact feature set. The end-to-end wiring from a real Fabric/Loom dogfood is
+in [Fabric / JVM framework integration](/en/guide/fabric).
 
 See [release status](/en/project/release-status), the release assets and the
 checkout's capability output. Sprig is not self-hosted or production ready.

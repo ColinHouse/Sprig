@@ -2,7 +2,7 @@
 
 Sprig is for people and coding agents. Sprig does not try to make coding agents smarter; it tries to give them less to guess. The same principle helps human readers: **agent-friendly should also mean review-friendly.** This course starts with runnable programs and uses source files from the repository. The docs gate compiles and runs those snippets and checks their output.
 
-The published SDK and current source checkout may expose different features. Start with [release status](/en/project/release-status) and query the installed SDK with `sprig capabilities --json`. Published assets are the authority for released capabilities.
+The published Beta SDK is v0.5.0-beta.1. Start with [release status](/en/project/release-status) and query the installed SDK with `sprig capabilities --json` for its exact feature set. The tutorial is tested against the published SDK.
 
 ## 1. Install and run a first program
 
@@ -121,4 +121,4 @@ Then read the [real interop example](https://github.com/ColinHouse/Sprig/blob/ma
 - [Projects and dependencies](/en/guide/projects): local packages, Git/Maven dependencies and lockfiles.
 - [Example projects](https://github.com/ColinHouse/Sprig/tree/main/examples): continue from Task Tracker to JSON CLI, SQLite, Web and Maven.
 - [Agent workflow and diagnostics reference](/en/reference/tooling/agent-guide): query tools, stable diagnostics and reproducible repairs.
-- [Feature status and known limitations](/en/reference/language/feature-status): distinguish current source from the published SDK.
+- [Feature status and known limitations](/en/reference/language/feature-status): review implemented capabilities and explicit limits.
