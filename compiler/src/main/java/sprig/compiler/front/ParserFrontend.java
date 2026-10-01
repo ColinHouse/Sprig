@@ -45,18 +45,29 @@ public final class ParserFrontend {
             public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line,
                                     int charPositionInLine, String msg, RecognitionException e) {
                 String pretty = msg;
+                String targetedHint = null;
                 if (offendingSymbol instanceof org.antlr.v4.runtime.Token token
                         && token.getType() == org.antlr.v4.runtime.Token.EOF) {
                     pretty = message(msg, "unexpected end of file");
+                } else if (offendingSymbol instanceof org.antlr.v4.runtime.Token token
+                        && token.getType() == SprigLexer.THROWS) {
+                    pretty = "A function that declares 'throws' must also declare its return type; "
+                            + "write '-> Unit throws Error' when nothing is returned.";
+                    targetedHint = "Add the result type before 'throws', for example "
+                            + "'func name(...) -> Unit throws Error:'.";
                 } else if (offendingSymbol instanceof org.antlr.v4.runtime.Token token) {
                     pretty = message(msg, "unexpected '" + token.getText().replace("\n", "\\n") + "'");
                 }
                 Diagnostic diagnostic = Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX, pretty, uri,
                         new Span(line - 1, charPositionInLine, line - 1, charPositionInLine + 1, -1, -1));
-                for (var context = parser.getContext(); context != null; context = context.getParent()) {
-                    if (context instanceof SprigParser.MatchExpressionBranchContext) {
-                        diagnostic.withHint("Expression-match branches contain exactly one expression; use statement match for multi-statement branches.");
-                        break;
+                if (targetedHint != null) {
+                    diagnostic.withHint(targetedHint).withRelatedHelp("functions");
+                } else {
+                    for (var context = parser.getContext(); context != null; context = context.getParent()) {
+                        if (context instanceof SprigParser.MatchExpressionBranchContext) {
+                            diagnostic.withHint("Expression-match branches contain exactly one expression; use statement match for multi-statement branches.");
+                            break;
+                        }
                     }
                 }
                 diagnostics.add(diagnostic);
