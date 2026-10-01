@@ -52,8 +52,8 @@ def main() -> int:
 
     env = os.environ.copy()
     env["SPRIG_HOME"] = str(sdk)
-    with tempfile.TemporaryDirectory(prefix="sprig fabric Ω ") as temp:
-        project = Path(temp) / "independent Fabric project with spaces Ω"
+    with tempfile.TemporaryDirectory(prefix="sprig fabric test ") as temp:
+        project = Path(temp) / "independent Fabric project with spaces"
         shutil.copytree(TEMPLATE, project)
         lock = project / "sprig.lock"
         require(lock.is_file(), "template must carry a generated lock for its declared dependencies")

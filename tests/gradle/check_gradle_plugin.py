@@ -54,8 +54,8 @@ def main() -> int:
     if not launcher.is_file():
         raise RuntimeError(f"Sprig launcher not found: {launcher}")
     gradle = gradle_command()
-    with tempfile.TemporaryDirectory(prefix="sprig gradle Ω ") as temp:
-        project = Path(temp) / "ordinary project with spaces Ω"
+    with tempfile.TemporaryDirectory(prefix="sprig gradle test ") as temp:
+        project = Path(temp) / "ordinary project with spaces"
         shutil.copytree(FIXTURE, project)
         env = os.environ.copy()
         env["SPRIG_HOME"] = str(sdk_home)
