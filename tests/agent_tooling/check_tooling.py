@@ -224,6 +224,15 @@ Objects.requireNonNull(value)
         cli = run("check", "--json")
         check("missing-file-json", cli.returncode == 2 and
               obj(cli)["diagnostics"][0]["code"] == "SPR-CLI-OPTION" and not cli.stderr)
+        missing_return = directory / "missing_return.spr"
+        missing_return.write_text('func bad(value: Int) throws Error:\n    return value\n',
+                                  encoding="utf-8")
+        missing = run("check", missing_return, "--json")
+        check("missing-return-type-guidance", missing.returncode == 1 and any(
+            d["code"] == "SPR-SYNTAX-ERROR"
+            and "declare its return type" in d["message"]
+            and d.get("hint") and "result type" in d["hint"]
+            for d in obj(missing)["diagnostics"]))
         edge_source = directory / "src" / "probe" / "NumericEdges.java"
         edge_source.write_text('''package probe;
 public final class NumericEdges {
