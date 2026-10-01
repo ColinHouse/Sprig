@@ -217,7 +217,6 @@ public final class DependencyResolver {
         lock.lockVersion = Lockfile.VERSION;
         lock.language = project.language;
         lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
-        StdLibrary.record(lock);
         Package root = build(project, "root", "", "root", null, null, null, null, null, false, lock, offline, true,
                 previousLock, new ArrayDeque<>());
         lock.sprig.addAll(new Result(root, lock).entries());
@@ -226,7 +225,9 @@ public final class DependencyResolver {
 
     /** Build mode: uses the existing lockfile and never queries a moving ref. */
     public static Result load(Project project, Lockfile lock, boolean offline) {
-        StdLibrary.verify(lock);
+        if (!sprig.compiler.tooling.Catalog.COMPILER_VERSION.equals(lock.compiler))
+            throw new DepError(Codes.PROJECT_LOCK_STALE,
+                    "Compiler version in sprig.lock does not match this SDK; run `sprig resolve`", null);
         String digest;
         try {
             digest = Lockfile.digest(project.manifest);

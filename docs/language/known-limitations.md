@@ -67,6 +67,9 @@ by the historical design kit in `docs/history/design-kit/`.
 - Portable local locks carry owner-relative locators and survive relocation of the
   whole workspace; absolute-path declarations are not portable and need `resolve`
   after the target moves. The lock does not attest source bytes or symlink targets.
+  It also does not pin bundled `@std` bytes: `@std` comes from the installed SDK,
+  whose published archive is checked separately through release checksums and
+  extracted-archive smoke tests.
   Manifest semantic errors can point to line 1. Cache tree verification adds IO;
   OS locks have no timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after

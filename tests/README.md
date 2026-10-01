@@ -25,7 +25,7 @@ checking, `javac` success, runtime behavior — and are never conflated.
 | `web`, `sqlite`, `stdlib` | real HTTP/JDBC adapters, migrations and standard-module contract fixtures | `check_web.py`, `check_sqlite.py`, `check_migrations.py`, `scripts/test-stdlib.py` |
 | `agent_tooling`, `agent_eval` | `capabilities`/`help`/`api`/`explain`, Sprig-written tools and the deterministic task pack | the sibling `check_*.py` suites |
 | `docs` | documentation snippet role inventory: deleted oracles, unclassified snippets, stale manifest entries and orphan `.out` files fail | `python3 docs/check_doc_roles.py` |
-| `release_hardening` | bundled `@std`, traversal/shadow refusal, lock integrity | `check_hardening.py` |
+| `release_hardening` | installed `@std`, traversal/shadow refusal, schema/compiler identity and std-byte anti-churn | `check_hardening.py` |
 | `ergonomics` | optional mutation gate; rebuilds the compiler per mutation and restores sources, so it is never part of concurrent verification | `python3 ergonomics/check_mutations.py [name ...]` |
 
 The `syntax/` fixtures and the original semantic cases match the design kit in

@@ -35,10 +35,12 @@ normalized owner-relative locator (`portable = true`), so the lock survives movi
 whole workspace unchanged. An absolute declaration keeps a canonical absolute path
 (`portable = false`) and needs `resolve` after the target moves. Canonical filesystem
 paths are runtime facts only; the lock never pins the source tree or a symlink target.
-Schema 4 is current; schema-3 locks are rejected with `SPR-PROJECT-LOCK-SCHEMA` and
-require `sprig resolve` (no automatic migration). Source edits do not stale the lock;
-manifest edits and locator changes do. Absolute package imports, `..` and symlink
-escapes are rejected.
+Schema 5 is current. Schemas 1–4 are rejected with `SPR-PROJECT-LOCK-SCHEMA`;
+run `sprig resolve` to write a new lock (there is no automatic migration).
+The lock records the compiler version and consumers reject a mismatch, so a
+compiler upgrade requires explicit resolution. Source edits do not stale the
+lock; manifest edits and locator changes do. Absolute package imports, `..`
+and symlink escapes are rejected.
 
 Relative file imports are not a general filesystem sandbox.
 
@@ -53,11 +55,10 @@ components. Omitted `subdir` and `subdir = "."` both select the repository
 root. Different package directories in one repository are separate dependency
 edges and each lock entry records its selected subdirectory.
 
-Schema 4 remains current. Its additive Git `subdir` lock field is omitted for
-the repository root; an older schema-4 entry without the field means `.`.
-This preserves existing root-package locks without rewriting or silently
-migrating them. Consumers still verify the selected package manifest and
-exact locked revision.
+The optional Git `subdir` field is omitted for the repository root; an absent
+field means `.`. Schema 5 retains that representation. Schema-4 locks are
+rejected along with older schemas and must be regenerated explicitly. Consumers
+verify the selected package manifest and exact locked revision.
 
 Explicit resolution (`resolve`, `add` and `remove`) follows mutable Git ref intent.
 Builds consume exact SHA and verified
@@ -132,10 +133,10 @@ reuse also requires a valid repository checksum sidecar. A damaged staging cache
 cannot be silently blessed as a new lock. There is no authentication
 or repository-list configuration in this first pass.
 
-Schema **4** records selected coordinates (extension/classifier), direct roots,
+Schema **5** records selected coordinates (extension/classifier), direct roots,
 resolved graph edges, classpath order, repository provenance and SHA-256 of JARs
 and effective-model POM inputs. These Maven lock fields were introduced in schema
-3 and remain part of schema 4. Schema 1-3 are rejected: run resolve explicitly.
+3 and remain part of schema 5. Schemas 1–4 are rejected: run resolve explicitly.
 An immutable-by-contract content cache stores files by digest. Every consumer
 verifies the locked hashes; missing bytes fail `SPR-DEP-OFFLINE`, changed bytes
 fail `SPR-DEP-CHECKSUM`. Consumers do not re-resolve graphs or silently fetch.
@@ -167,7 +168,13 @@ failures. `examples/showcases/maven_slug` supplies a separate real Central examp
 ## Bundled standard package
 
 `import "@std/files.spr" as files` uses the installed SDK without a manifest
-dependency. `std` is a reserved alias. Resolve records the compiler-coupled std
-version and exact module-byte digest; consumers reject missing/different metadata
-with `SPR-PROJECT-LOCK-STALE`. Re-run resolve explicitly after upgrading an SDK
-or migrating an older schema-3 lock. See [standard library](../projects/standard-library.md).
+dependency. `std` is a reserved alias. `@std` is SDK/compiler identity, not a
+project-selected dependency: it cannot be independently resolved or pinned and
+is not recorded in `sprig.lock`. The installed SDK supplies its contents.
+Changing bundled std bytes alone does not stale or rewrite a project lock.
+Consumers do require the lock's compiler version to match, so upgrading to a
+different compiler version requires `sprig resolve`. Published SDK archive
+checksums and extracted-archive smoke tests cover distribution integrity; the
+project lock no longer pins the exact installed std bytes. See
+[standard library](../projects/standard-library.md) and the
+[published release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).

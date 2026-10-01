@@ -11,13 +11,16 @@ import "@std/json.spr" as json
 `@std` belongs to the installed SDK; dependency aliases cannot override it.
 Only the bundled flat `.spr` modules are exported; traversal and symlinks are
 rejected. There are no implicit imports or new grammar forms. Standalone files
-use their installed SDK directly. `sprig resolve` records `stdlib-version` and
-`stdlib-sha256` in schema-4 locks; project consumers fail on mismatch, including
-older locks missing these fields, and require explicit re-resolution.
-The digest is SHA256 of each sorted module filename, NUL, exact UTF-8 file bytes,
-NUL concatenated in filename order. LF/CRLF bytes are intentionally distinct.
-The bundled std version follows the compiler/SDK release; there is no
-independent stdlib compatibility promise or invisible upgrade.
+use their installed SDK directly. `@std` is part of that SDK and is not a
+manifest dependency or an independently pinned project-lock entry. Schema-5
+locks contain neither `stdlib-version` nor `stdlib-sha256`; changing installed
+std bytes alone does not stale a project lock. Consumers do check the recorded
+compiler version, so moving to a different compiler version requires explicit
+`sprig resolve`. There is no independent stdlib version selection or
+compatibility promise. Release ZIP checksums and archive smoke tests validate
+the published SDK distribution; a project lock does not attest the installed
+SDK's exact bytes. See the
+[published release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
 
 | Module | Public operations |
 |---|---|

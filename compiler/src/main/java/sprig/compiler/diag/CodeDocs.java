@@ -48,7 +48,7 @@ public final class CodeDocs {
             Map.entry(Codes.PROJECT_ENTRY, "The requested project entry point does not exist or the named --bin is unknown."),
             Map.entry(Codes.PROJECT_UNSUPPORTED, "The project or a dependency needs project features or a language version this compiler does not support."),
             Map.entry(Codes.PROJECT_LOCK_MISSING, "This project has no sprig.lock; run sprig resolve."),
-            Map.entry(Codes.PROJECT_LOCK_STALE, "sprig.toml or a dependency manifest changed after sprig.lock was written; run sprig resolve."),
+            Map.entry(Codes.PROJECT_LOCK_STALE, "The compiler identity, sprig.toml or a dependency manifest differs from sprig.lock; run sprig resolve."),
             Map.entry(Codes.PROJECT_LOCK_SCHEMA, "The lockfile schema version is not supported by this compiler."),
             Map.entry(Codes.PROJECT_NOT_EXPORTED, "A module was imported from a dependency that does not export it."),
             Map.entry(Codes.DEP_CYCLE, "Sprig project dependencies form a cycle."),
