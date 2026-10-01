@@ -1,0 +1,85 @@
+# String arrays and optional nested values keep exact paths and exact kinds.
+import "@std/json.spr" as json
+import "../src/codec.spr" as codec
+
+func strings_error(text: String) -> String:
+    try:
+        let root = codec.root(json.parse(text))
+        let values = codec.required_string_array(root, "tags")
+        var joined = ""
+        for value in values:
+            if joined != "":
+                joined += ","
+            joined += value
+        return "decoded: " + joined
+    catch problem: Error:
+        return problem.message
+
+func optional_strings_error(text: String) -> String:
+    try:
+        let root = codec.root(json.parse(text))
+        let values = codec.optional_string_array(root, "tags")
+        if values == null:
+            return "null"
+        return "decoded: " + values.size().toString()
+    catch problem: Error:
+        return problem.message
+
+func optional_array_error(text: String) -> String:
+    try:
+        let root = codec.root(json.parse(text))
+        let values = codec.optional_array(root, "tags")
+        if values == null:
+            return "null"
+        return "decoded: " + values.size().toString()
+    catch problem: Error:
+        return problem.message
+
+func optional_object_error(text: String) -> String:
+    try:
+        let root = codec.root(json.parse(text))
+        let child = codec.optional_object(root, "meta")
+        if child == null:
+            return "null"
+        return "decoded: " + codec.required_string(child, "name")
+    catch problem: Error:
+        return problem.message
+
+# Required string arrays.
+assert(strings_error("{\"tags\":[\"a\",\"b\"]}") == "decoded: a,b")
+assert(strings_error("{\"tags\":[]}") == "decoded: ")
+assert(strings_error("{\"tags\":[\"a\",2]}") == "$.tags[1]: expected string, found number")
+assert(strings_error("{\"tags\":\"a\"}") == "$.tags: expected array, found string")
+assert(strings_error("{}") == "$.tags: required field is missing")
+assert(strings_error("{\"tags\":null}") == "$.tags: expected array, found null")
+
+# Optional string arrays map missing and null to Sprig null.
+assert(optional_strings_error("{}") == "null")
+assert(optional_strings_error("{\"tags\":null}") == "null")
+assert(optional_strings_error("{\"tags\":[]}") == "decoded: 0")
+assert(optional_strings_error("{\"tags\":[\"x\",\"y\"]}") == "decoded: 2")
+assert(optional_strings_error("{\"tags\":[1]}") == "$.tags[0]: expected string, found number")
+
+# Optional raw arrays.
+assert(optional_array_error("{}") == "null")
+assert(optional_array_error("{\"tags\":null}") == "null")
+assert(optional_array_error("{\"tags\":[{}]}") == "decoded: 1")
+assert(optional_array_error("{\"tags\":{}}") == "$.tags: expected array, found object")
+
+# Optional objects.
+assert(optional_object_error("{}") == "null")
+assert(optional_object_error("{\"meta\":null}") == "null")
+assert(optional_object_error("{\"meta\":{\"name\":\"ada\"}}") == "decoded: ada")
+assert(optional_object_error("{\"meta\":[]}") == "$.meta: expected object, found array")
+assert(optional_object_error("{\"meta\":{\"name\":2}}") == "$.meta.name: expected string, found number")
+
+# String-array encoding round trips through the exact data model.
+let encoded = codec.object([
+    codec.member("tags", codec.string_array(["a", "b"])),
+    codec.member("empty", codec.string_array([]))])
+assert(json.stringify(encoded) == "{\"tags\":[\"a\",\"b\"],\"empty\":[]}")
+let roundtrip = codec.root(json.parse(json.stringify(encoded)))
+let tags = codec.required_string_array(roundtrip, "tags")
+assert(tags.size() == 2)
+assert(tags[0] == "a" and tags[1] == "b")
+assert(codec.required_string_array(roundtrip, "empty").size() == 0)
