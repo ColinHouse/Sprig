@@ -1,0 +1,45 @@
+import "@std/math.spr" as math
+
+print(math.abs(0))
+print(math.abs(17))
+print(math.abs(0 - 17))
+print(math.min(3, 7))
+print(math.max(3, 7))
+print(math.sign(0 - 42))
+print(math.sign(0))
+print(math.sign(42))
+print(math.clamp(15, 0, 10))
+print(math.clamp(0 - 15, 0, 10))
+print(math.clamp(5, 0, 10))
+print(math.floor_div(9, 8))
+print(math.floor_div(0 - 9, 8))
+print(math.floor_div(9, 0 - 8))
+print(math.floor_div(0 - 9, 0 - 8))
+print(math.isqrt(0))
+print(math.isqrt(1))
+print(math.isqrt(15))
+print(math.isqrt(1000000))
+
+var clamp_rejected = false
+try:
+    math.clamp(5, 10, 0)
+catch problem: Error:
+    clamp_rejected = true
+if clamp_rejected:
+    print("clamp rejected")
+
+var division_rejected = false
+try:
+    math.floor_div(1, 0)
+catch problem: Error:
+    division_rejected = true
+if division_rejected:
+    print("division rejected")
+
+var sqrt_rejected = false
+try:
+    math.isqrt(0 - 1)
+catch problem: Error:
+    sqrt_rejected = true
+if sqrt_rejected:
+    print("negative sqrt rejected")
