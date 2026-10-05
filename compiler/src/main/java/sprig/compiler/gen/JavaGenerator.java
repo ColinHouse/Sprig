@@ -1332,6 +1332,15 @@ public final class JavaGenerator {
         if (op.equals("+") && (binary.type == NativeType.STRING)) {
             return "(sprig.runtime.SprigRuntime.str(" + left + ") + sprig.runtime.SprigRuntime.str(" + right + "))";
         }
+        if (binary.genericOrdering) {
+            String helper = switch (op) {
+                case "<" -> "lessThan";
+                case "<=" -> "lessOrEqual";
+                case ">" -> "greaterThan";
+                default -> "greaterOrEqual";
+            };
+            return "sprig.runtime.SprigRuntime." + helper + "(" + left + ", " + right + ")";
+        }
         if ((op.equals("<") || op.equals("<=") || op.equals(">") || op.equals(">="))
                 && binary.left.type == NativeType.STRING) {
             String call = left + ".compareTo(" + right + ")";

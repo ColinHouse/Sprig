@@ -139,7 +139,6 @@ public final class Catalog {
         guidance(out, "namedFunctionReferences", "functions", "expression lambda forwarding fn(x: T) => named(x)");
         guidance(out, "reflectionDerivedSchemas", "jvm", "explicit typed schema and JSON construction");
         guidance(out, "async", "jvm", "synchronous host adapter");
-        guidance(out, "comparableCapability", "generics", "Equatable value equality", "explicit comparison functions");
         guidance(out, "genericVariance", "generics", "invariant generics", "explicit conversion helpers");
         guidance(out, "operatorOverloading", "language", "named methods");
         guidance(out, "pipeline", "language", "ordinary statements");

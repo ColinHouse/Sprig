@@ -33,7 +33,9 @@
     "guide/generics_equatable.spr",
     "guide/jvm_nullable.spr",
     "guide/jvm_collections.spr",
-    "guide/jvm_bytes.spr"
+    "guide/jvm_bytes.spr",
+    "guide/generics_comparable.spr",
+    "guide/lists_group.spr"
   ],
   "import-only": [
     "modules/math_module.spr"
@@ -47,6 +49,7 @@
     "tutorial/ledger/06_parse_unhandled.spr",
     "home/first_look_missing.spr",
     "guide/generics_missing_args.spr",
-    "guide/tooling_missing_case.spr"
+    "guide/tooling_missing_case.spr",
+    "guide/generics_comparable_bool.spr"
   ]
 }
