@@ -1,14 +1,12 @@
 # JVM 互操作
 
-Sprig 通过生成 Java 源码来编译，因此可以用显式 import 别名调用 JDK 与第三方 JVM 类。
-规则有意保持保守：Java 不提供可空信息时，Sprig 一律假设引用结果可能为 `null`；Java
-引用形参默认为非空。
+Sprig 会先编译成 Java 再运行，所以 JDK 自带的类和 Maven 上的 Java 库都能直接用。这页讲怎么导入、调用 Java 类，以及 Sprig 在和 Java 交接的地方会做哪些检查。
 
-权威契约（英文）见 [JVM interop](/en/reference/jvm/interop)；本页是可运行的导览。
-需要接入 host 构建系统（Gradle/Loom、Maven 等）时，见
-[Fabric / JVM 框架集成](/guide/fabric)。
+总的原则偏保守：Java 没法保证一个返回值不是 `null`，Sprig 就当它可能是 `null`；反过来，你传给 Java 的参数一律不能是 `null`。
 
-## 导入 Java 类
+完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。
+
+## 导入和调用 Java 类
 
 <<< @/snippets/jvm_interop.spr
 
@@ -20,13 +18,27 @@ Sprig!
 25
 ```
 
-`import java.lang.Math as Math` 在当前模块绑定简单名 `Math`。通过别名可以调用构造器、
-静态方法、实例方法和静态字段。重载会根据实参类型解析；无法匹配或存在歧义时分别得到
-`SPR-JVM-MEMBER` 或 `SPR-JVM-AMBIGUOUS`。
+- `import java.lang.Math as Math` 让你在这个文件里用 `Math` 指代这个类。`java.lang` 下的类也要这样导入，不会自动导入。
+- 构造器、静态方法、实例方法和静态字段都能通过这个名字使用。
+- 有重载时，Sprig 按参数类型挑选。没有匹配的方法会报 `SPR-JVM-MEMBER`，有好几个同样合适的会报 `SPR-JVM-AMBIGUOUS`。
 
-## 类型映射
+## Java 返回的值要先判空
 
-| Java | Sprig（原始类型） | Sprig（装箱/引用） |
+Java 方法返回的对象，包括 `String` 和 `Integer` 这类装箱类型，都被当作可能为 `null`，用之前要检查：
+
+<<< @/snippets/guide/jvm_nullable.spr
+
+```text
+true
+```
+
+返回基本类型（`long`、`int`、`double`、`boolean` 等）的方法不会返回 `null`，结果可以直接用。
+
+反过来，传给 Java 的参数一律不能是 `null`，参数类型是 `Object` 也一样。所以 `T?` 类型的值要先检查，再传给 Java。Sprig 不读取 Java 代码里表示可空性的注解。
+
+## 类型对照
+
+| Java | Sprig（基本类型） | Sprig（装箱类型和对象） |
 |---|---|---|
 | `long` | `Int` | `Int?` |
 | `int`、`short`、`byte` | `Int32` | `Int32?` |
@@ -35,26 +47,16 @@ Sprig!
 | `boolean` | `Bool` | `Bool?` |
 | `char` | `String` | `String?` |
 | `void` | `Unit` | — |
-| `String` 及其他引用类型 | — | 可空 Sprig 类型（`T?`） |
+| `String` 和其他对象类型 | — | 对应的可空类型 `T?` |
 
-原始类型结果非空；引用与装箱结果视为可空，使用前必须判空：
+有几处要注意：
 
-```sprig
-let version = System.getProperty("java.version")
-if version != null:
-    print(version.length() > 0)
-```
+- **数字不会自动收窄。** 范围合适的整数字面量可以直接传给 `int`、`short`、`byte` 参数。但变量不会被悄悄收窄，比如 `Int` 变量传给 `int` 参数，要先用 `toInt32Exact()` 转成 `Int32`。`short` 和 `byte` 参数目前只能直接写字面量，因为还没有能转成它们的方法。
+- **`char` 参数只接受一个字符的字面量。** `char` 和 `Character` 参数只接受恰好一个 UTF-16 字符的字符串字面量。`"a"` 可以，`"ab"` 不行，`"😀"` 也不行，因为一个 Java `char` 装不下它。Sprig 自己的字符串则按 Unicode 码点计算位置，详见 `sprig help strings`。
 
-Java 引用形式参数保守地视为非空，因此 `T?` 实参必须先收窄；接受 `null` 的
-`Object` 形式参数是文档中说明的例外。编译器不读取 type-use 可空性注解。
+## 捕获 Java 异常
 
-`char`/`Character` 参数只接受恰好一个 UTF-16 代码单元的 String 字面量：`"a"` 合法，
-`"ab"` 与 `"😀"` 会被拒绝，因为一个 Java `char` 无法表示补充平面码点。这与 Sprig
-String 的 Unicode 码点位置语义不同（见 `sprig help strings --json`）。
-
-## 受检异常
-
-Java 受检异常可以出现在 Sprig 的 `throws` 子句中并被捕获：
+Java 的受检异常可以写进 Sprig 的 `throws`，也可以用 `catch` 捕获：
 
 <<< @/snippets/jvm_exceptions.spr
 
@@ -63,88 +65,80 @@ example.com
 bad uri
 ```
 
-## 数组与字节
+## Java 集合和 Sprig 集合
 
-Java 数组是**不透明的外部值**：可以接收、判空、原样传给需要兼容数组类的 Java 成员，
-也可以经另一次调用返回。重载会区分 `byte[]`、`int[]`、`String[]` 与 `Object[]`，数组
-协变跟随真实 JVM 类。Sprig 没有数组字面量、类型标注、索引、赋值或遍历语法；这些写法
-会在 `javac` 之前被拒绝（`SPR-SYNTAX-ERROR` 或 `SPR-TYPE-OPERAND`）。变长参数是另一种
-调用契约，仍然不支持。
+Java 的 `List`、`Map` 不会自动变成 Sprig 的集合，Sprig 的集合也不会被悄悄当作 Java 集合传进去。需要转换时，用 `@std/jvm.spr` 里的函数：
 
-`byte[]` 是最常见的二进制边界，`sprig.runtime.jvm.HostBytes` 提供显式 helper：
+<<< @/snippets/guide/jvm_collections.spr
 
 ```text
-HostBytes.utf8(String) -> byte[]
-HostBytes.utf8String(byte[]) -> String   # 严格 UTF-8；畸形字节报运行时错误
-HostBytes.length(byte[]) -> Int
-HostBytes.hex(byte[]) -> String          # 小写十六进制
+2
+3
+2
 ```
 
-转换永远是显式的，`byte[]` 始终是 JVM 值。
+- `list_snapshot` 和 `map_snapshot` 把 Java 集合按顺序复制成只读的 Sprig `List` 和 `Map`。之后 Java 那边怎么改，快照都不受影响：上面 `names` 加了第三个名字，`snapshot` 还是两个。
+- `list_copy` 和 `map_copy` 反过来，把 Sprig 集合复制成独立的 Java `ArrayList` 和 `LinkedHashMap`，两边各改各的。
+- Java 集合里如果有 `null` 元素、键或值，复制时会报运行时错误，不会让 `null` 混进不允许为空的 Sprig 集合。
+- 元素类型要和来源一致，写错了在检查阶段就会报错。
+- 这几个函数都声明了 `throws Error`，在函数里调用时记得处理。
 
-## 具体 Java 泛型
+## Java 泛型类
 
-显式类型实参可以应用到导入的 Java 类和泛型方法：
+导入的 Java 类和泛型方法也可以带具体的类型参数，比如上面的 `ArrayList[String]()`。
 
-```sprig
-import java.util.ArrayList as ArrayList
+- 类型参数会完整保留，`List[Map[String, Int32]]`、`Host.method[String](value)` 这样的写法都可以，经由父类或接口传下来的类型参数也能识别。
+- 返回值照样被当作可能为 `null`，所以 `ArrayList[String]` 的 `get` 返回 `String?`。
+- 泛型方法的类型参数不会推断，要自己写出来。
+- 没有类型参数的原始类型（raw type）不能当作带参数的类型使用。`ArrayList[String]` 可以当 `List[String]` 用，`ArrayList[Int32]` 不行。
+- 通配符（`List<?>` 之类）和泛型数组（`T[]`）不支持，用 `sprig api` 查询时会看到对应的原因代码。
 
-let values = ArrayList[String]()
-values.add("x")
-let first = values.get(0)          # String?
+## 数组和字节
+
+Java 数组在 Sprig 里是一个整体，不能拆开用。你可以接收它、判空、原样传给另一个需要同类数组的 Java 方法，但不能在 Sprig 里创建、索引、修改或遍历它。Sprig 没有数组语法，这些写法在调用 javac 之前就会被拒绝，报 `SPR-SYNTAX-ERROR` 或 `SPR-TYPE-OPERAND`。重载匹配时，`byte[]`、`int[]`、`String[]`、`Object[]` 会被区分开，数组之间能否互相传递按 JVM 的实际规则判断。
+
+二进制数据最常见的形式是 `byte[]`，可以用 `sprig.runtime.jvm.HostBytes` 来转换：
+
+<<< @/snippets/guide/jvm_bytes.spr
+
+```text
+5
+5370726967
 ```
 
-`Box[String]`、`List[Map[String, Int32]]` 与 `Host.method[String](value)` 会保留具体
-实参；类类型变量沿接收者的继承层级解析（`Source[String]` 经由 `StringSource` 也成立）。
-Java 引用结果保守可空，因此 `ArrayList[String].get` 是 `String?`。方法类型参数不做推断：
-泛型方法必须显式写实参。raw 证据不会升级成具体证据：raw 泛型值不能赋给或传入具体参数化
-类型，`ArrayList[String]` 可以当 `List[String]` 使用，`ArrayList[Int32]` 不行。wildcard
-与泛型数组（`T[]`）被拒绝并给出稳定 `interopReasonCodes`。
+| 方法 | 作用 |
+|---|---|
+| `HostBytes.utf8(text)` | 字符串转成 UTF-8 字节 |
+| `HostBytes.utf8String(bytes)` | UTF-8 字节转回字符串；不是合法的 UTF-8 时报运行时错误 |
+| `HostBytes.length(bytes)` | 字节数，返回 `Int` |
+| `HostBytes.hex(bytes)` | 转成小写的十六进制字符串 |
 
-## 显式集合适配器
+转换都要你自己调用，Sprig 不会自动转换。
 
-Java 集合不会隐式转换为 Sprig 集合，Sprig `List`/`Map` 也不会被悄悄当作 Java 集合传入。
-适配器在 `@std/jvm.spr` 中显式调用：
+## 先查，再写
 
-```sprig
-import "@std/jvm.spr" as jvm
-
-let foreign = SomeJavaApi.names()
-if foreign != null:
-    let names = jvm.list_snapshot[String](foreign)   # 不可变 Sprig List[String]
-    let copy = jvm.list_copy[String](names)          # 独立的 java.util.ArrayList
-    SomeJavaApi.acceptNames(copy)
-```
-
-`list_snapshot`/`map_snapshot` 按顺序复制并校验非空内容：Java 的 null 元素/键/值会报
-运行时错误，而不是泄漏进非空 Sprig 集合。`list_copy`/`map_copy` 生成独立的
-`ArrayList`/`LinkedHashMap`；之后任意一侧的修改都不会影响另一侧。元素类型与源绑定，
-类型不符会在检查阶段被拒绝。
-
-## 先查询，再包装
-
-写集成代码前先查 `sprig api`：它会给出 `interopLevel`、`interopReasonCodes`、
-`adaptation` 与递归泛型形状。需要把生态类带进 Sprig 时用 `sprig wrap` 生成**普通可
-编辑源码**（默认不覆盖，`--force` 才替换，写出前先在同一 classpath 下检查）：
+写调用代码之前，先用 `sprig api` 看看 Sprig 是怎么理解这个类的。它会列出每个成员在 Sprig 里的签名，能不能用，不能用的原因是什么。加 `--json` 时，这些信息在 `interopLevel`、`interopReasonCodes` 和 `adaptation` 等字段里：
 
 ```bash
+sprig api java.time.LocalDate --member parse
 sprig api com.example.Client --classpath lib/client.jar --json
-sprig wrap com.example.Client --out src/main/sprig/client.spr --classpath lib/client.jar --json
 ```
 
-完整策略见 [wrapper 生成器（英文）](/en/reference/jvm/wrap)。
+如果要频繁使用某个 Java 类，可以用 `sprig wrap` 生成一个 Sprig 包装文件。生成的是普通源码，你可以随意修改：
 
-## 尚未覆盖的部分
+```bash
+sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
+```
 
-- **变长参数**：仍是不同的调用契约，不支持。
-- **source 数组语法**：没有数组字面量/标注/索引/遍历；数组只能作为不透明值传递。
-- **wildcard 形状**：当前 profile 不表达，含 wildcard 的成员以结构化原因被拒绝；
-  Brigadier 等嵌套 builder 需要一个窄 Java adapter（见
-  [框架集成](/guide/fabric)）。
-- **泛型推断**：没有推断与型变，类型实参必须显式。
-- **注解**：不读取 Java type-use 可空性注解。
-- **JVM 内部运算**：Java 方法里的 `int` 溢出不会触发 Sprig 的受检数值错误。
-- `short`/`byte` 形参需要显式受检转换，目前尚未提供；请改传 `Int32`。
+`wrap` 写文件之前，会先用同一个 classpath 检查生成的代码。已有的文件默认不会被覆盖，要覆盖得加 `--force`。完整规则见[包装生成器（英文）](/en/reference/jvm/wrap)。
 
-完整边界见[已知限制](/en/reference/language/known-limitations)与
-[已知限制（英文原文）](/en/reference/language/known-limitations)。
+## 还不支持的
+
+- **变长参数**：调用方式不同，暂不支持。
+- **数组语法**：没有数组字面量、数组类型标注、下标和遍历，数组只能原样传递。
+- **通配符类型**：带通配符的成员会被拒绝，并给出原因。像 Brigadier 这样层层嵌套的 builder API，需要你写一个简单的 Java 适配层，见 [Fabric 模组](/guide/fabric)。
+- **泛型推断**：类型参数要自己写，也没有协变和逆变。
+- **可空性注解**：不读取 Java 的可空性注解。
+- **Java 内部的计算**：Java 方法里发生的 `int` 溢出，不会触发 Sprig 的数值错误。
+
+完整列表见[已知限制（英文）](/en/reference/language/known-limitations)。

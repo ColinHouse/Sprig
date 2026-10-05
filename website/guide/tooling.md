@@ -1,54 +1,68 @@
 # 工具与 JSON
 
-stage-0 编译器只提供一个可执行文件 `bin/sprig`，由 `scripts/build.sh` 生成。
-没有守护进程或语言服务器。[VS Code 预览插件](./editor) 提供高亮、CLI
-诊断、运行和生成 Java 查看。
+Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，也没有语言服务器。编辑器里的支持见 [VS Code 插件](/guide/editor)。
 
-## 命令
+这页列出的命令，已发布的 v0.5.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
 
-```text
-check <file.spr> [--json] [--syntax-only]   parse and type-check
-run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM
-test [PATH] [--filter TEXT] [--json]        运行普通项目测试程序
-build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files
-help [topic] [--json]                      带版本的语言参考
-capabilities [--json]                     已实现能力清单
-api <Java.Class> [--member NAME] [--classpath JAR] [--json] 查询 JVM 签名
-wrap <Java.Class> --out FILE.spr [--member NAME] [--force] [--json] 生成可编辑的 Sprig wrapper
-doctor [--classpath JAR] [--json]         环境检查
-explain <SPR-CODE> [--json]                 结构化诊断说明
-codes [--json]                              list every diagnostic code
-version
-```
+## 命令一览
 
-`check`、`build`、`run`、`api`、`wrap`、`doctor` 可重复使用 `--classpath` 指定本地
-JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
-`sprig api java.time.LocalDate --json` 查询实际 JDK 签名。
+写代码时最常用的：
 
-已发布的 v0.5.0-beta.1 SDK 包含上方命令，包括 `test`、`wrap`、`run --stacktrace`
-和 schema-4 便携锁。Sprig 仍处于实验性 Beta；确切能力以发行资产和安装 SDK 的
-`sprig capabilities --json` 为准。
+| 命令 | 作用 |
+|---|---|
+| `sprig check [文件]` | 只检查、不运行，一次列出所有错误 |
+| `sprig run [文件] [-- 参数]` | 检查、编译并运行，`--` 后面的内容会传给程序 |
+| `sprig test [路径]` | 运行项目测试，可以用 `--filter` 按名字筛选 |
+| `sprig build [文件]` | 生成 Java 源码和 class 文件 |
+| `sprig fmt <文件或目录>` | 格式化代码，加 `--check` 只检查、不修改 |
 
-- `check` 在代码生成之前停止；`--syntax-only` 更早，只做词法、缩进与解析。
-- `run` 支持在 `--` 之后传递程序参数，`--keep` 用于保留生成的中间文件。未捕获的
-  运行时错误使用稳定诊断码（`SPR-RUNTIME-ERROR`/`SPR-RUNTIME-EXCEPTION`），
-  携带包装后的消息与源码范围；`--stacktrace` 额外输出原始 JVM 堆栈用于调试。
-- `build` 把生成的 Java 与 `.class` 写入 `-d`（默认 `sprig-build`）；检查失败时不会
-  留下 class 文件。
-- `test` 将 `tests/**/*.spr` 作为独立 JVM 程序运行，并按同名 `.expect.toml` 核对
-  `tests/compile_fail/` 的诊断码；详见[测试契约（英文）](/en/reference/tooling/testing)。
-- `wrap` 从真实 classpath 生成可编辑的 Sprig source：默认不覆盖已有文件，写出前
-  先在同一 classpath 下检查，`--json` 报告生成/跳过成员与稳定原因。
-  见 [wrapper 生成器（英文）](/en/reference/jvm/wrap) 与
-  [Fabric / JVM 框架集成](/guide/fabric)。
-- `explain` 与 `codes` 对应[诊断码（英文）](/en/reference/tooling/diagnostic-codes)。
+项目和依赖：
 
-## JSON 结果
+| 命令 | 作用 |
+|---|---|
+| `sprig init [目录]` | 新建项目 |
+| `sprig resolve` | 解析依赖，写入 `sprig.lock` |
+| `sprig add`、`sprig remove` | 添加、删除依赖，见[项目](/guide/projects) |
+| `sprig project` | 查看项目信息 |
+| `sprig deps` | 列出声明的依赖 |
 
-加 `--json` 后，stdout 恰好包含一个 JSON 文档，即使程序本身运行失败也是如此。
-`programOutput` 保存程序输出，`diagnostics` 保存结构化错误。
+查资料：
 
-成功运行：
+| 命令 | 作用 |
+|---|---|
+| `sprig explain <错误码>` | 解释一个错误码：原因、修法、正反例 |
+| `sprig codes` | 列出所有错误码 |
+| `sprig help [主题]` | 语法速查；不带主题时会列出所有主题 |
+| `sprig api <Java 类>` | 查看一个 Java 类在 Sprig 里的签名 |
+| `sprig api <模块.spr>` | 查看一个 Sprig 模块对外提供哪些声明 |
+| `sprig capabilities` | 查看当前编译器实现了哪些功能 |
+| `sprig doctor` | 检查 JDK 和编译器等环境 |
+
+其他：
+
+| 命令 | 作用 |
+|---|---|
+| `sprig wrap <Java 类> --out <文件>` | 为 Java 类生成 Sprig 包装代码，见 [JVM 互操作](/guide/jvm-interop) |
+| `sprig upgrade` | 升级 SDK；加 `--check` 只看有没有新版本 |
+| `sprig version` | 显示版本号 |
+
+在项目里，`check`、`run`、`build` 可以不写文件名，默认使用项目的入口。`check`、`build`、`run`、`api`、`wrap` 和 `doctor` 都能用 `--classpath` 加入本地的 JAR 或目录，可以写多次。这个参数只使用你给的路径，不会下载任何东西。
+
+## 几个常用选项
+
+- **`check --syntax-only`**：`check` 本来就不生成代码；加上这个选项更快，只检查词法、缩进和语法。
+- **`run --keep`**：保留生成的 Java 文件，方便查看。
+- **`run --stacktrace`**：程序运行时出了没被捕获的错误，Sprig 会报 `SPR-RUNTIME-ERROR` 或 `SPR-RUNTIME-EXCEPTION`，并指出是源码的哪一行。需要完整的 JVM 堆栈时，加上这个选项。
+- **`build -d <目录>`**：`build` 默认输出到 `sprig-build/`，`-d` 可以换个目录。检查没通过时不会生成 class 文件。
+- **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。
+
+每个错误码的含义都可以用 `sprig explain` 查，完整列表见[错误码（英文）](/en/reference/tooling/diagnostic-codes)。
+
+## JSON 输出
+
+几乎每个命令都能加 `--json`。加了以后，标准输出里只有一个 JSON 文档，程序运行失败时也是这样。程序打印的内容放在 `programOutput` 里，错误放在 `diagnostics` 里，两者不会混在一起。
+
+成功运行一个打招呼的小程序：
 
 ```json
 {
@@ -62,7 +76,19 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 }
 ```
 
-失败的检查（此处缩短了路径；实际 `uri` 是 `file:` URI）：
+再看一个检查失败的例子。下面这段代码漏掉了 `Square`：
+
+<<< @/snippets/guide/tooling_missing_case.spr
+
+普通输出是这样的：
+
+```text
+SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
+  hint: Add 'case Shape.Square:' (there is no default case)
+1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
+```
+
+加上 `--json` 以后（`uri` 本来是完整的 `file:` 路径，这里缩短了）：
 
 ```json
 {
@@ -76,13 +102,18 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
       "code": "SPR-MATCH-NONEXHAUSTIVE",
       "phase": "FLOW",
       "severity": "error",
-      "uri": "file:///project/tests/semantics/missing_case.spr",
+      "uri": "file:///.../main.spr",
       "range": {
-        "start": { "line": 4, "character": 4 },
-        "end": { "line": 6, "character": 29 }
+        "start": {"line": 5, "character": 11},
+        "end": {"line": 7, "character": 51}
       },
-      "message": "Missing case: Expr.Add",
-      "hint": "Add 'case Expr.Add:' (there is no default case)",
+      "message": "Missing case: Shape.Square",
+      "hint": "Add 'case Shape.Square:' (there is no default case)",
+      "relatedHelp": "match",
+      "repair": {
+        "kind": "add-explicit-case-for-every-missing-case",
+        "machineApplicable": false
+      },
       "related": [],
       "suggestedEdits": []
     }
@@ -90,40 +121,32 @@ JAR 或目录，并采用同一解析路径；不自动下载依赖。比如用
 }
 ```
 
-位置从 0 开始计数。CLI 参数与工具错误使用退出码 `2`，源码和运行时失败通常使用
-`1`。`run` 会原样转发程序进程状态，因此程序显式退出也可能返回 `2` 或其他值；
-非零状态且没有 JVM 异常诊断时会报告 `SPR-PROGRAM-EXIT`，并在 JSON 的
-`data.programExitCode` 中记录程序状态。诊断 code 用于区分工具失败与程序退出。
+注意 JSON 里的行号和列号从 0 开始，所以 `"line": 5, "character": 11` 就是普通输出里的第 6 行第 12 列。`relatedHelp` 告诉你该看 `sprig help` 的哪个主题。
 
-## 尚未提供的工具
+退出码的规则：
 
-以下能力都是**提案，尚未实现**：
+- 命令行参数写错，或者工具本身出错，返回 `2`。
+- 源码错误和运行时错误，一般返回 `1`。
+- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。程序以非零状态退出、又没有抛出 JVM 异常时，Sprig 会报 `SPR-PROGRAM-EXIT`，程序的退出码记在 JSON 的 `data.programExitCode` 里。
 
-- LSP / IDE 语言服务器、
-- 发布或模块仓库、
-- 增量检查。
+## 给 AI 助手用
 
-历史[Agent 工具协议（英文，提案）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md)
-还包含未来接口。当前能力以 `sprig capabilities --json` 为准；`api` 边界见
-[JVM 互操作（英文）](/en/reference/jvm/interop)。
+- 运行之前先跑 `sprig check --json`。它只做解析、名字和类型检查，不生成也不执行代码，是最快、最可靠的一道检查。
+- 每个错误都带着固定的错误码、所属阶段（`LEX`、`SYNTAX`、`NAME`、`TYPE`、`FLOW`、`JVM`、`RUNTIME`）和准确的位置，很多还带有 `hint`，说明下一步该怎么改。
+- `run --json` 把程序输出和错误分开，程序运行失败时也能拿到可以解析的结果。
 
-## 面向 agent 的工作流
+完整的工作方式见[和 AI 助手一起写代码](/guide/agent-workflow)。
 
-- 在 `run` 之前，`sprig check --json` 是最便宜的可靠门槛：解析、解析名称、类型检查，
-  不生成也不执行代码。
-- 诊断带有稳定码、阶段（`LEX`、`SYNTAX`、`NAME`、`TYPE`、`FLOW`、`JVM`、`RUNTIME`）、
-  范围，并且常常带有指出下一步修复的 `hint`。
-- `run --json` 把程序输出与诊断分开，程序失败时仍能得到可解析的结果。
-- 仓库的质量门槛是有意设计的，见
-  [AI 辅助开发声明（英文）](/en/project/contributing/ai-disclosure)。
+## 格式化
 
-`sprig build file.spr --emit-java-only -d generated --json` 完成静态检查后写出
-Java，不调用 javac。JSON 包含 `javaSources`、`mainClass` 和
-`javacInvoked=false`。通过显式 `import "@std/files.spr" as files` 使用 SDK
-内置标准包。Windows 仍为实验性预览。
+`sprig fmt 文件.spr` 会直接格式化文件；`sprig fmt --check . --json` 只检查、不修改，适合放进 CI。格式化会保留注释，结果是确定的，没有配置项，也不会激进地折行。除了 `fmt`，其他命令都不会改动你的源码。详见[格式化（英文）](/en/reference/tooling/formatter)。
 
-## Canonical formatting
+## 还没有的
 
-Use `sprig fmt file.spr` or `sprig fmt --check . --json`. Formatting is
-comment-preserving, deterministic and configless, with no aggressive wrapping.
-See [formatter contract](/en/reference/tooling/formatter). Other commands never rewrite source.
+下面这些都还在计划中，目前没有实现：
+
+- 语言服务器（LSP），以及基于它的补全、跳转等编辑器功能
+- 包的发布和模块仓库
+- 增量检查
+
+早期的设计提案见 [Agent 工具协议（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md)。它只是历史提案，不代表现状。`sprig api` 能查到什么、查不到什么，见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。

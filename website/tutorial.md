@@ -301,7 +301,7 @@ staticMethods:
 ## 下一步
 
 - 想看更大一点的程序：[任务清单示例](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)是一个完整的命令行工具，用 JSON 文件保存数据。
-- 想把语法系统过一遍：[语言导览](/guide/language-tour)。
+- 想把语法系统过一遍：[语言速查](/guide/language-tour)。
 - 想用别人写好的库：[项目与依赖](/guide/projects)讲本地包、Git 和 Maven 依赖；[JVM 互操作](/guide/jvm-interop)讲怎么调用 Java 库。
 - 想做点更大的东西：[Web 与 SQLite](/guide/web-sqlite)，或者[用 Sprig 写 Minecraft 模组的逻辑](/guide/fabric)。
 - 遇到问题，或者觉得哪里设计得别扭：欢迎[开一个 issue](https://github.com/ColinHouse/Sprig/issues)。

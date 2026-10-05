@@ -301,7 +301,7 @@ All of these commands accept `--json` and return structured results: the error c
 ## Next steps
 
 - A bigger program: the [task tracker example](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker) is a complete command-line tool that keeps its data in a JSON file.
-- The rest of the syntax: the [language tour](/en/guide/language-tour).
+- The rest of the syntax: the [language quick reference](/en/guide/language-tour).
 - Using other people's code: [projects and dependencies](/en/guide/projects) covers local packages and Git and Maven dependencies; [JVM interop](/en/guide/jvm-interop) covers calling Java libraries.
 - Something bigger: [web and SQLite](/en/guide/web-sqlite), or [writing Minecraft mod logic in Sprig](/en/guide/fabric).
 - Found a problem, or something feels awkward? [Open an issue](https://github.com/ColinHouse/Sprig/issues).

@@ -1,55 +1,53 @@
 # Projects
 
-A project is a directory with a `sprig.toml` manifest. Single-file mode is
-available: explicit files outside a project source root bypass the manifest;
-files inside that root retain its dependency graph and require a current lock.
+For a single file, `sprig run hello.spr` is all you need. Once the code grows, or you want to use someone else's package or a Java library, it's time for a project: a directory with a `sprig.toml` in it.
 
-## Layout and defaults
+## What a project looks like
+
+`sprig init my-tool` creates two files:
 
 ```text
-project/
-├── sprig.toml
-├── src/
-│   └── main.spr
-└── build/
+my-tool/
+├── sprig.toml        # project settings
+└── src/
+    └── main.spr      # entry point
 ```
+
+After `sprig resolve` you'll also have a lock file, `sprig.lock`. `sprig build` puts its output in `sprig-build/`, and tests go under `tests/`.
+
+`sprig.toml` starts out like this:
 
 ```toml
 [project]
-name = "hello"
+name = "my-tool"
 version = "0.1.0"
 language = "0.8"
 ```
 
-`source` defaults to `src` and `entry` to `src/main.spr`; both can be
-overridden in `[project]`. Package identity comes from the manifest — Sprig
-source files do not declare `package`.
+- The source directory defaults to `src` and the entry point to `src/main.spr`. You can change them with `source` and `entry` in `[project]`.
+- The package's identity comes from `sprig.toml`; `.spr` files don't declare a `package`.
+- Misspelled fields, repeated fields and values of the wrong kind are all rejected.
 
-## Creating and inspecting
+## Everyday commands
 
-```bash
-sprig init          # creates sprig.toml and src/main.spr, never overwriting
-sprig project       # human-readable summary
-sprig project --json
-```
-
-`project --json` reports root, name, version, language, source root, entry,
-binaries, exports, manifest and lockfile paths, lock status and declared
-dependencies, so agents do not have to parse TOML themselves.
-
-## Running a project
+You can run these from any subdirectory of the project; Sprig walks up until it finds `sprig.toml`:
 
 ```bash
-sprig check         # checks the project entry
-sprig build
-sprig run
-sprig run --bin server
-sprig run path/to/file.spr   # explicit file always wins over discovery
-sprig test                   # ordinary programs under tests/
+sprig check                  # checks the entry point and every file it imports
+sprig run                    # checks and runs
+sprig build                  # generates Java and class files
+sprig test                   # runs the tests under tests/
+sprig project                # shows project information
+sprig run path/to/file.spr   # a file you name explicitly always wins
 ```
 
-Discovery walks upward from the current directory. `[[bin]]` declares named
-entries:
+`sprig project --json` reports the project's root, name, version, entry point, lock status and dependencies, so scripts and AI assistants don't have to parse TOML themselves.
+
+Each `.spr` file under `tests/` is an ordinary program, and `sprig test` runs each one in its own JVM. Files under `tests/compile_fail/` are supposed to fail to compile, and a `.expect.toml` file next to each one lists the expected error codes. See [testing projects](/en/reference/tooling/testing).
+
+## More than one entry point
+
+A project can have several runnable entry points, declared with `[[bin]]`:
 
 ```toml
 [[bin]]
@@ -57,48 +55,95 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-The Beta SDK's `sprig test` uses the same locked dependencies and checks
-expected compile failures by diagnostic code; see the
-[testing contract](/en/reference/tooling/testing).
+Run it with `sprig run --bin server`. If you declare several bins and the project has no `entry` of its own, `--bin` is required.
 
-## Dependencies
+## Adding dependencies
 
-Local and Git Sprig dependencies resolve for real. Edit `sprig.toml`, then run
-`sprig resolve`:
+The easiest way is `sprig add`. It edits `sprig.toml` and updates the lock file right away:
+
+```bash
+sprig add math --path ../math                                     # a Sprig package in a local directory
+sprig add math --git https://example.com/math.git --branch main   # a Sprig package in a Git repository
+sprig add --jvm org.apache.commons:commons-text:1.12.0            # a Java library from Maven
+sprig remove math
+```
+
+`add` and `remove` only touch the dependency block in question and leave the rest of `sprig.toml` as it was.
+
+You can also edit `sprig.toml` by hand and run `sprig resolve` afterwards. The three kinds of dependency look like this:
 
 ```toml
+# A local directory
 [[dependency]]
 name = "math"
 path = "../math"
 ```
 
 ```toml
+# A Git repository: pick one of branch, tag or rev; subdir is optional and
+# names the package's directory inside the repository
 [[dependency]]
 name = "math"
 git = "https://example.com/math.git"
 branch = "main"
 ```
 
-- Schema 5 identifies edges as `root/@a/@util` and records owner-relative locators for relative local dependencies (`portable = true`, the whole workspace can move); absolute declarations keep `portable = false`. Schemas 1–4 require explicit resolve. The lock checks compiler identity; bundled `@std` comes from the installed SDK and is not recorded in the project lock.
-- Real paths confine symlinks; exported internal symlinks are allowed.
-- Git cache reuse validates HEAD, marker and tracked/untracked contents; tampering fails.
-- `name` is the package-local import alias; distinct packages may reuse it; the dependency's own
-  `[project] name` is separate identity metadata.
-- `sprig resolve` writes a deterministic `sprig.lock` (commit it). `check`,
-  `build` and `run` refuse a missing or stale lock and never move a Git branch
-  themselves — only `resolve` does.
-- A Git dependency is locked to an exact commit SHA; a later branch move does
-  not change a locked build.
-- Import exported modules with `import "@math/vector.spr" as vector`. Only
-  modules listed in the dependency's `exports` are importable; paths are
-  canonicalized and cannot escape the dependency source root.
-- `--offline` uses the Git cache only (`~/.sprig/git`); a missing cached
-  revision fails with `SPR-DEP-OFFLINE`.
-- Cycles and duplicate aliases are rejected with structured diagnostics.
+```toml
+# Maven: exact versions only
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-text"
+version = "1.12.0"
+```
 
-**Maven/JVM dependencies are implemented.**
-Declare exact release coordinates in `[[jvm]]`, run resolve, then use
-check/build/run/api/doctor without manually locating JARs. Apache Resolver handles
-parents/BOMs/transitives. Schema-5 locks record JAR/POM SHA-256, graph, order and local locators (owner-relative `portable = true` for relative declarations, canonical absolute with `portable = false` otherwise).
-Warm cache is required offline; consumers never re-resolve. See
-[dependency contract](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/dependencies.md).
+`name` is the name you import the package by in your own code. It has nothing to do with the `name` in the dependency's own `[project]`. Different packages can use the same name for a dependency, but one package can't use a name twice.
+
+## Using modules from a dependency
+
+A dependency lists, in its own `sprig.toml`, which modules other packages may import:
+
+```toml
+[project]
+name = "math"
+version = "0.1.0"
+language = "0.8"
+exports = ["vector.spr"]
+```
+
+In your project, import them with `@` and the dependency's name:
+
+```sprig
+import "@math/vector.spr" as vector
+
+print(vector.length_squared(3, 4))
+```
+
+Only modules listed in `exports` can be imported. Paths are normalized first, so `..` can't take you outside the dependency's source directory.
+
+## The lock file
+
+`sprig resolve` (and `add` and `remove`) writes `sprig.lock`, which records the exact version and checksum each dependency resolved to.
+
+- **Commit it.** That way everyone who builds the project gets exactly what you got.
+- **Only three commands change it.** `check`, `build` and `run` just read the lock file. If it's missing or doesn't match `sprig.toml`, they stop with an error instead of resolving dependencies on their own. Only `resolve`, `add` and `remove` update it.
+- **Git dependencies are locked to a commit.** Wherever the branch moves later, a locked build stays the same. To pick up changes, run `sprig resolve` again.
+- **Resolve again after switching SDKs.** The lock file records the compiler version. With a different one, `check` reports `SPR-PROJECT-LOCK-STALE`; running `sprig resolve` once fixes it.
+- **The lock format is version 5.** Local dependencies declared with relative paths are stored as relative locations (`portable = true`), so you can move the whole workspace; absolute paths are stored as `portable = false`. The bundled `@std` library comes from the SDK you installed and isn't written to the lock file.
+- **The published v0.5.0-beta.1 uses version 4.** That version also records the `@std` version in the lock file. Run `sprig resolve` before using an older lock file with a newer compiler.
+
+## Working offline
+
+- With `--offline`, Sprig uses only its local caches. The Git cache lives in `~/.sprig/git`; if the version you need isn't cached, you get `SPR-DEP-OFFLINE`.
+- Resolving Maven dependencies the first time needs a network connection. After that, a complete cache is enough to build offline.
+- The Git cache is verified each time it's used (HEAD, a marker file, and tracked and untracked files); if anything was tampered with, you get an error.
+- Symbolic links are checked by their real path, so they can't lead outside the dependency's directory. Links that stay inside the dependency and are exported are allowed.
+
+## More about Maven dependencies
+
+Maven dependencies are resolved with Apache Maven Resolver, which handles parent POMs, BOMs and transitive dependencies. The lock file records the SHA-256 of every JAR and POM, the dependency graph and the classpath order. After that, `check`, `build`, `run`, `api` and `doctor` use those JARs automatically, so you never have to locate files by hand, and none of them resolve dependencies again.
+
+Dependency cycles and duplicate names are rejected with structured errors. The [dependency notes](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/dependencies.md) have the complete rules.
+
+## You don't always need a project
+
+A `.spr` file that isn't inside any project runs as-is, with no `sprig.toml`. If the file sits inside a project's source directory, though, Sprig treats it as part of that project: it uses the project's dependencies and needs an up-to-date lock file.

@@ -1,144 +1,117 @@
 # Language quick reference
 
-New to Sprig? Start with the [beginner tutorial](/en/tutorial). This page is a quick reference to the language as the stage-0 compiler actually implements it.
-Every snippet on this page is a real file under `website/snippets/` in the
-repository and is executed by `scripts/internal/verify-doc-snippets.py` during
-documentation checks.
+This page walks through Sprig's syntax from top to bottom. It's meant for people who already know another programming language and want to get going quickly. If Sprig is your first contact with the language, do the [tutorial](/en/tutorial) first and come back here to look things up.
 
-The normative documents are the
-[language spec (design contract)](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/LANGUAGE_SPEC.md) and the
-[implemented feature status](/en/reference/language/feature-status). Where the
-design kit proposes more than the compiler does, this page follows the
-compiler.
+Every piece of code on this page is a real file under `website/snippets/` in the repository, and the docs check compiles and runs each one. To find out whether a feature is implemented, the [feature status](/en/reference/language/feature-status) page has the final word.
 
-## Layout and comments
+## Indentation and comments
 
-Blocks are indentation-based. The first code line starts at column 1, one
-indent level is any consistent number of spaces, and tabs are rejected with
-`SPR-LEX-TAB`. Newlines inside `()`, `[]` and `{}` are ignored, so calls and
-literals may span lines. `#` starts a comment.
+Blocks are defined by indentation, as in Python:
 
-## Bindings
+- Indent with spaces only; a tab is rejected with `SPR-LEX-TAB`. Keep the indentation within a block consistent; how many spaces you use is up to you.
+- The first line of code in a file starts in column 1.
+- Inside parentheses, brackets and braces you can break lines freely, so long calls and literals can span several lines.
+- `#` starts a comment.
+
+## Variables: let and var
 
 <<< @/snippets/variables.spr
 
-`let` binds once and cannot be reassigned; `var` can. Local bindings infer
-their type from the initializer, while class fields always need an explicit
-type. There is no implicit truthiness: conditions must be `Bool`.
+- A `let` binding can't be changed after it's set; a `var` can.
+- Local variables can leave out the type, and Sprig infers it from the right-hand side. Class fields always need a type.
+- Conditions must be `Bool`. Neither `0` nor an empty string counts as false, and `if count:` is rejected with `SPR-TYPE-CONDITION`.
 
 ## Functions
 
 <<< @/snippets/functions.spr
 
-Every named function and method declares parameter types and a return type,
-including `-> Unit`. Calls use positional arguments. A function that can fail
-adds `throws ErrorType` (see [errors](#errors) below).
+- Parameters and return values always have types. A function that returns nothing says `-> Unit`.
+- You call functions with positional arguments. Creating an object is different: you name the fields (see Classes below).
+- A function that can fail says `throws` in its signature (see Errors).
 
 ## Classes
 
 <<< @/snippets/classes.spr
 
-A class declares `let` (immutable) and `var` (mutable) fields with optional
-defaults. Construction is always named: `Hero(name="Ada", health=80)`.
-Missing, unknown or duplicate fields are compile errors. Methods access the
-current instance's fields without a prefix; parameters and locals may not
-shadow a field.
+- Fields are declared with `let` (fixed once the object exists) or `var` (can change), optionally with a default.
+- You create objects with field names: `Hero(name="Ada", health=80)`. Missing, misspelled or repeated fields are compile errors.
+- Inside a method, a field's bare name refers to the current object's field; there's no prefix.
+- Parameters and local variables can't have the same name as a field.
 
-## Enums, variants and match
+## enum, variant and match
 
 <<< @/snippets/variants.spr
 
-`enum` cases carry no payload. `variant` declares a sealed sum type whose
-cases have immutable named fields. Statement `match` allows multi-statement suites; expression `match` produces a
-value with exactly one expression per branch. Each case names
-one enum or variant case, optionally binding the payload with `as node`.
-Missing, duplicate, wrong-type and unreachable branches are compile errors;
-there is no `default` or wildcard, and no fallthrough. Because the match is
-exhaustive by construction, adding a case to a variant forces every visitor to
-handle it — the property the compiler itself relies on in
-`tests/visitor/ast_visitor.spr`, a multi-visitor AST interpreter written in
-Sprig and run by the test suite.
+- An `enum` value carries no data, for example `Mode.Fast`.
+- Each case of a `variant` can carry its own fields, which are immutable. `Expr.Add`, for example, carries `left` and `right`.
+- `case Expr.Add as node:` binds the matched value to `node` so you can read its fields.
+- A `match` must handle every case. There's no `default`, no wildcard branch and no fallthrough. Missing, repeated and impossible branches are all compile errors.
+- `match` works as a statement, where a branch can hold several lines, and as an expression (as in `return match ...`), where each branch is a single expression.
+
+Exhaustive matching pays off when code changes. Add a case to a variant, and every `match` that doesn't handle it fails to compile, so none slip through. `tests/visitor/ast_visitor.spr` in the repository, a small AST interpreter written in Sprig and run by the test suite, relies on exactly that.
 
 ## Collections
 
 <<< @/snippets/collections.spr
 
-`List[T]` and `Map[K,V]` are read-only; `MutableList[T]` and `MutableMap[K,V]`
-are mutable. `toMutableList()`, `toList()`, `toMutableMap()` and `toMap()`
-produce new outer collections. Mutation through an immutable type is rejected
-with `SPR-COLLECTION-IMMUTABLE`. Indexing, `in`, `get`, `set`, `append`,
-`sort` and the higher-order `map`/`filter`/`forEach` methods are implemented.
-Floating-point map keys are rejected because IEEE equality and hashing
-disagree for `NaN` and signed zero.
+- `List[T]` and `Map[K, V]` are read-only; to change a collection, use `MutableList[T]` or `MutableMap[K, V]`. Modifying a read-only collection is rejected with `SPR-COLLECTION-IMMUTABLE`.
+- `toMutableList()`, `toList()`, `toMutableMap()` and `toMap()` copy the collection (the outer layer only), so the original stays as it was.
+- A list declared with `let` and no type is a `MutableList`, which you can't pass where a `List` is expected. For a read-only list, write `let xs: List[Int] = [1, 2]`. A literal written directly as an argument is fine.
+- Looking up a key in a `Map` gives you a nullable value: `null` when the key isn't there.
+- Indexing, `in`, `get`, `set`, `append`, `sort` and the lambda-taking methods `map`, `filter` and `forEach` all work.
+- Floating-point numbers can't be `Map` keys, because `NaN` and signed zero don't behave consistently under equality and hashing.
 
-## Nullability
+## Nullable values
 
 <<< @/snippets/nullable.spr
 
-`null` is only assignable to `T?`. A value narrows to non-null inside a proven
-`!= null` branch; using a possibly-null value where non-null is required is
-`SPR-TYPE-NULLABLE`. Mutable fields are not narrowed across calls. Java
-reference results are conservatively nullable (see
-[JVM interoperability](/en/guide/jvm-interop)).
+- A type that might have no value is written `T?`. Only `T?` accepts `null`.
+- Check before you use it. Inside `if x != null:`, `x` has a value. In versions newer than v0.5.0-beta.1, `if x != null and x.length() > 3:` works too.
+- Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present.
+- Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
+- A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
+- Objects returned by Java methods are always treated as possibly `null`; see [JVM interop](/en/guide/jvm-interop).
 
 ## Errors
 
 <<< @/snippets/errors.spr
 
-A function declares the error types it can raise with `throws`. Callers must
-either handle them with `try`/`catch` (plus optional `finally`) or declare the
-same effect; `SPR-FLOW-THROWS` is reported otherwise. `Error` values expose a
-`message` field. Java checked exceptions can be caught as the imported Java
-exception class.
+- A function lists the errors it can throw with `throws` in its signature.
+- The caller has two options: handle the error with `try` / `catch` (optionally with `finally`), or add `throws` to its own signature. Doing neither is rejected with `SPR-FLOW-THROWS`.
+- An `Error` has a `message` field.
+- Java checked exceptions are caught the same way: name the imported Java exception class after `catch`.
 
-## Explicit generics
+## Generics
 
 <<< @/snippets/generics.spr
 
-User-defined classes, variants and functions support `generic T:` or
-`generic K, V:` blocks. Every use writes explicit type arguments, such as
-`Box[Int](value=42)`; parameters are invariant and there is no inference.
-Equality on a parameter requires `requires T: Equatable`. See the
-[generics guide](/en/guide/generics) for the implemented contract.
+Your own classes, variants and functions can go inside a `generic T:` (or `generic K, V:`) block. Every use spells out the type arguments, as in `Box[Int](value=42)`. Sprig doesn't infer type arguments, and generics have no variance. To compare values of a type parameter with `==`, start the function with `requires T: Equatable`. The [generics guide](/en/guide/generics) has the details.
 
 ## Lambdas
 
 <<< @/snippets/lambdas.spr
 
-Lambdas are expressions: `fn(x: Int) => expression`. Arities 0 through 3 are
-supported, bodies are single expressions, and a lambda cannot declare
-`throws`. A lambda that captures a `var` local is rejected
-(`SPR-TYPE-CAPTURE`); copy it into a `let` binding first.
-
-## JSON object lookup
-
-<<< @/snippets/json_lookup.spr
-
-`json.find_member` distinguishes `Missing`, `Found(value: json.Value)` and
-`NotObject`. Present JSON null, false, zero and empty strings remain found
-values. Duplicate object keys still raise `Error`; the object member order is
-preserved. The [standard-layer contract](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md)
-explains parsing, lookup and serialization boundaries.
+- A lambda is an expression: `fn(x: Int) => x * 2`.
+- It takes 0 to 3 parameters, its body is a single expression, and it can't declare `throws`.
+- A lambda can't capture a `var` local; that's rejected with `SPR-TYPE-CAPTURE`. Copy the value into a `let` first.
 
 ## Function types
 
-A function type spells parameter types and result types:
-
 <<< @/snippets/function_types.spr
 
-`fn(Int) -> Int` is a **type**; `fn(x: Int) => x + 1` is a **value expression**.
-Arity is 0–3. Parameters and results are invariant: there is no function
-subtyping, implicit conversion or untyped fallback. Use parentheses for outer
-nullability, `(fn(Int) -> Int)?`; `fn(Int) -> Int?` has a nullable result.
-Ordinary null narrowing applies before invoking a nullable function value.
-Function types may annotate locals, fields, parameters and results, or occur in
-explicit generic arguments. Function types cannot declare `throws`; checked
-errors must be handled inside a non-throwing callable.
+- `fn(Int) -> Int` is a **type**; `fn(x: Int) => x + 1` is a **value**.
+- Function types take 0 to 3 parameters. Parameter and result types must match exactly: there's no function subtyping and no automatic conversion.
+- To make the whole function nullable, add parentheses: `(fn(Int) -> Int)?`. `fn(Int) -> Int?` means the result is nullable. Check a nullable function value before calling it, like any nullable value.
+- Function types can be used for variables, fields, parameters and results, and as explicit generic arguments.
+- A function type can't declare `throws`, so checked errors have to be handled inside the function.
 
-The JVM bridge accepts corresponding Sprig-owned `sprig.runtime.Fn0`–`Fn3`
-formal signatures with supported concrete type arguments. It does not convert
-functions to arbitrary Java `Function`, `Consumer`, `Runnable` or interfaces.
-Ask `sprig api <Class> --json` about the actual formal signature.
+When you pass a function value to Java, the Java parameter has to be one of Sprig's own `sprig.runtime.Fn0` to `Fn3` types. Sprig doesn't convert functions to Java's `Function`, `Consumer`, `Runnable` or any other interface. If you're not sure, `sprig api <Class> --json` shows the actual signature.
+
+## Looking up JSON fields
+
+<<< @/snippets/json_lookup.spr
+
+`json.find_member` has three outcomes: `Missing` (no such key), `Found` (the value is in `value`) and `NotObject` (you didn't look inside an object). A key whose value is `null`, `false`, `0` or an empty string is still `Found`, so it never gets confused with a missing key. Duplicate keys in an object throw an `Error`, and members keep their order. The [standard library notes](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md) cover parsing, lookup and serialization in full.
 
 ## Modules
 
@@ -146,25 +119,28 @@ Ask `sprig api <Class> --json` about the actual formal signature.
 
 <<< @/snippets/modules/math_module.spr
 
-`import "./file.spr" as alias` imports another Sprig file. Imports must appear
-before any declaration or statement. The imported module initializes once;
-import cycles are rejected with `SPR-NAME-IMPORT-CYCLE`. Importing Java
-classes uses the same syntax with a qualified class name:
-`import java.time.LocalDate as LocalDate`.
+- `import "./file.spr" as alias` imports another Sprig file.
+- Imports go at the top of the file, before any declaration or statement.
+- Each module is initialized once. Two modules importing each other (an import cycle) is rejected with `SPR-NAME-IMPORT-CYCLE`.
+- Java classes are imported the same way, with the full class name: `import java.time.LocalDate as LocalDate`.
+- The standard library starts with `@std`, as in `import "@std/json.spr" as json`.
 
-## What is not in the language
+## A few smaller features
 
-Generic inference, variance, inheritance and interfaces, `%=`,
-tuples/destructuring and string interpolation are **not implemented**. Source
-array syntax, varargs and wildcard shapes are outside the JVM interop profile
-(arrays still cross as opaque foreign values; see
-[JVM interoperability](/en/guide/jvm-interop)). See
-[Known limitations](/en/reference/language/known-limitations) for the full list, and the
-[stage-1 roadmap](/en/reference/language/stage1-roadmap) for what comes next.
+- `sprig fmt` formats code in one standard style. It keeps your comments and has no options. See [formatter](/en/reference/tooling/formatter).
+- A module can re-export an imported declaration with `export alias.Symbol`, but that can't be used to get around a dependency's exports. There's no `export *`. See [re-exports](/en/reference/language/module-reexports).
+- An expression `match` allows one expression per branch; for several lines, use a statement `match`. See [match expressions](/en/reference/language/match-expressions).
 
-## Conservative ergonomics
+## Not in the language yet
 
-Use [explicit declaration facades](/en/reference/language/module-reexports),
-[value-producing matches](/en/reference/language/match-expressions) and
-[canonical comment-preserving formatting](/en/reference/tooling/formatter).
-These add no wildcard exports, block expressions or formatter configuration.
+None of these exist yet:
+
+- generic inference and variance
+- inheritance and interfaces
+- `%=`
+- tuples and destructuring
+- string interpolation: `"${name}"` is just text, and you join strings with `+`
+
+When working with Java, Sprig has no array syntax and doesn't support varargs or wildcard types. Java arrays themselves can still be received and passed along as they are; see [JVM interop](/en/guide/jvm-interop).
+
+The full list is in [known limitations](/en/reference/language/known-limitations), and what comes next is in the [roadmap](/en/reference/language/stage1-roadmap).

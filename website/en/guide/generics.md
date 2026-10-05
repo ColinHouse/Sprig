@@ -1,9 +1,8 @@
 # Generics
 
-Sprig user-defined generics follow one guiding rule: **declaration and
-use are explicit**. There is no inference, no variance and no hidden
-conversion. This page is the runnable tour; the authoritative contract is the
-[generics reference](/en/reference/language/generics).
+Sprig's generics follow one rule: **be explicit where you declare them and where you use them.** The compiler doesn't infer type arguments, generics have no variance, and one generic type never converts into another behind your back.
+
+Here's a complete example first:
 
 <<< @/snippets/generics.spr
 
@@ -11,7 +10,9 @@ conversion. This page is the runnable tour; the authoritative contract is the
 42
 ```
 
-## Declaration
+## Declaring a generic
+
+Put a class, variant or function inside a `generic` block:
 
 ```sprig
 generic T:
@@ -19,41 +20,51 @@ generic T:
         let value: T
 ```
 
-`generic T:` wraps one class, variant or function. Blocks can declare any
-number of parameters (`generic K, V:`), duplicate names are rejected, and
-parameters are visible only inside the block — using one after the block is
-`SPR-NAME-UNRESOLVED`.
+- A block can declare several type parameters, as in `generic K, V:`. The names have to be distinct.
+- Type parameters only exist inside the block; using `T` outside it is rejected with `SPR-NAME-UNRESOLVED`.
 
-Concrete generics on imported Java classes (`ArrayList[String]`, `List[Map[String, Int32]]` and explicit generic methods) are covered in [JVM interoperability](/en/guide/jvm-interop); raw generic evidence never becomes concrete.
-
-## Use sites write `[Type]`
+## Writing the type arguments
 
 ```sprig
-let box = Box[Int](value=42)          # generic constructor
+let box = Box[Int](value=42)          # generic class
 let value = identity[Int](42)          # generic function
 let entry = Entry[String, Int](key="age", value=18)
 let some: Option[Int] = Option[Int].Some(value=1)
 let none: Option[Int] = Option[Int].None
 ```
 
-`identity(42)` or `Box(value=42)` without type arguments fail with
-`SPR-TYPE-GENERIC-ARGS-REQUIRED`; the compiler will not guess. Wrong counts,
-including a bare `Box` in a type position or arguments on a non-generic type,
-report `SPR-TYPE-GENERIC-ARITY`.
+Leave the type arguments out, and the compiler won't guess them for you:
 
-## What a bare `T` can do
+<<< @/snippets/guide/generics_missing_args.spr
 
-Inside a generic declaration, `T` can be assigned, passed, returned and stored
-in compatible generic containers. It has **no operators, ordering or
-methods**: `value + value` is `SPR-TYPE-OPERAND`. Equality needs an explicit
-capability: `requires K: Equatable` makes `==`/`!=` on that parameter legal
-with value equality. `requires K: Comparable` is parsed but not implemented
-(`SPR-GENERIC-CONSTRAINT`).
+```text
+SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:5:7: Function 'identity' is generic; a call requires explicit type arguments, e.g. identity[Type](...)
+SPR-TYPE-MISMATCH [TYPE] main.spr:5:16: Type mismatch in argument 1 of identity (expected T, actual Int)
+2 error(s); run 'sprig explain <code>' for details on a diagnostic code.
+```
 
-## Nullable arguments
+The second error follows from the first. Write `identity[Int](42)` and both go away.
 
-`Box[String?]` is fine when the declaration stores `T` directly. If the
-declaration applies `?` itself:
+The wrong number of type arguments is rejected with `SPR-TYPE-GENERIC-ARITY`. That includes a bare `Box` in a type position and type arguments on a type that isn't generic.
+
+## What you can do with a type parameter
+
+Inside a generic declaration, a value of type `T` can be assigned, passed, returned and stored in a compatible generic container. It has no operators, no ordering and no methods: `value + value` is rejected with `SPR-TYPE-OPERAND`.
+
+The one capability you can add today is equality. Start the function with `requires T: Equatable`, and `==` and `!=` work on `T`, comparing by value:
+
+<<< @/snippets/guide/generics_equatable.spr
+
+```text
+true
+false
+```
+
+`requires` has to come first in the function body. `requires T: Comparable` parses, but it isn't implemented yet and is rejected with `SPR-GENERIC-CONSTRAINT`.
+
+## Nullable type arguments
+
+When the declaration stores `T` directly, `Box[String?]` is fine. But if the declaration already writes `T?`:
 
 ```sprig
 generic T:
@@ -61,38 +72,31 @@ generic T:
         let value: T?
 ```
 
-then `Box[String?]` is rejected with `SPR-TYPE-GENERIC-NULLABLE`, because the
-declaration already owns the nullable position. `Box[String]` works.
+then `Box[String?]` is rejected with `SPR-TYPE-GENERIC-NULLABLE`, because the declaration already decides whether that spot can be null. Write `Box[String]` instead.
 
 ## Generic variants
 
-```sprig
-generic T:
-    variant Option:
-        Some:
-            value: T
-        None:
+Variants can be generic too. You write the type argument when you create a value, and only the case name in a `match` branch:
+
+<<< @/snippets/guide/generics_option.spr
+
+```text
+some 1
+none
 ```
 
-Construct with `Option[Int].Some(value=1)` and `Option[Int].None`; `match`
-stays exhaustive, including for instantiations. Adding a case still breaks
-every match that misses it with `SPR-MATCH-NONEXHAUSTIVE`.
+The `match` still has to be exhaustive. Add a case to `Option` later, and every `match` that misses it is rejected with `SPR-MATCH-NONEXHAUSTIVE`.
 
-## Indexing still works
+## When brackets mean indexing
 
-`values[index]` is indexing, not a type application. The compiler decides from
-symbol kinds: a bracket whose base names a generic declaration is a generic
-use, otherwise a single plain name is an index. Index-then-call
-(`handler[0](arg)`) is not a valid form.
+`values[index]` is still indexing, not a type argument. The compiler decides by the name in front of the brackets: if it names a generic declaration, the brackets hold type arguments; otherwise they're an index. Indexing and then calling the result (`handler[0](arg)`) isn't supported.
 
-## JVM lowering
+## What it compiles to
 
-Generics are erased and boxed in generated Java: a type parameter becomes
-`Object`, generic classes are raw at the JVM level, and the compiler inserts
-boxing/casts. See the [contract](/en/reference/language/generics) for the exact rules.
+In the generated Java, generics are erased: a type parameter becomes `Object`, generic classes are raw types on the JVM, and the compiler adds boxing and casts where needed. The [generics reference](/en/reference/language/generics) has the exact rules.
 
-## Not implemented
+Imported Java classes can take concrete type arguments too, such as `ArrayList[String]`; see [JVM interop](/en/guide/jvm-interop).
 
-Inference, variance, `Comparable`, user-defined capabilities and publishing/registry. Multiple parameters, `Equatable` and the project manifest model
-are implemented. See
-[Known limitations](/en/reference/language/known-limitations).
+## Not implemented yet
+
+Type inference, variance, `Comparable` and user-defined capabilities don't exist yet. The full list is in [known limitations](/en/reference/language/known-limitations).

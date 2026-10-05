@@ -1,10 +1,12 @@
-# Agent workflow
+# Working with AI assistants
 
-Sprig is for people and coding agents. The goal is to make implementation evidence, failure locations and repair decisions inspectable, not to promise that an agent always writes correct code. **Agent-friendly should also mean review-friendly.**
+Sprig was designed with AI coding assistants in mind. Compiler errors carry a stable code, an exact location and a hint for the fix, and they're also available as JSON. An assistant can act on them directly instead of guessing what a paragraph of text means.
 
-## Query the compiler you have
+To be clear about what that does and doesn't buy you: it doesn't guarantee that AI-written code is correct. What it does give you is that when something goes wrong, both you and the assistant can see where and why, and every fix stays easy for a person to review.
 
-SDK versions and capabilities change. Ask the installed tools first:
+## Ask the installed compiler first
+
+Different SDK versions support different things. Have the assistant learn about the compiler it actually has, rather than writing code from memory:
 
 ```sh
 sprig version
@@ -13,33 +15,50 @@ sprig help language --json
 sprig api java.time.LocalDate --json
 ```
 
-`capabilities` is the feature inventory for that SDK. Parser acceptance alone does not establish static semantics, Java generation or JVM execution; test every stage your change relies on.
+`capabilities` lists what this SDK really implements. Keep in mind that code which parses isn't necessarily fine at every later stage. Type checking, Java generation and running on the JVM each count only once you've actually run them, for every stage your change depends on.
 
-## Start from a small failure
+## A loop for fixing errors
 
-1. Read `AGENTS.md`, the relevant reference page and nearby tests.
-2. Write a small positive program and run `sprig check --json path/to/file.spr`.
-3. On failure, read the stable code, source range, expected/actual types and repair hint. Then run `sprig explain SPR-CODE --json`.
-4. Change source only after deciding what the repair means. The compiler will not choose a lossy conversion or expand API support for the agent.
-5. Run `sprig test --json` when the installed SDK reports it, focused independent tests and the contributor gate. Review the diff and generated-file status.
+1. Read the relevant reference page and the existing tests nearby. If you're working in the Sprig repository, read `AGENTS.md` first.
+2. Write a small program that shows the problem and run `sprig check --json path/to/file.spr`.
+3. When there's an error, read its code, its location, the expected and actual types, and the hint. If it's still unclear, run `sprig explain <code> --json`.
+4. Work out what the error means before changing anything. The compiler won't choose a lossy conversion for you, and it won't relax its rules for a Java API just because you need it.
+5. Run `sprig test --json` (if your SDK has that command) and the relevant tests. When contributing to the Sprig repository, run the full contributor check as well. Finally, read through the change yourself and make sure no generated files are part of it.
 
-See the [agent tooling reference](/en/reference/tooling/agent-guide) for JSON fields and version boundaries, and the [diagnostic catalog](/en/reference/tooling/diagnostic-codes) for stable codes.
+The [agent tooling reference](/en/reference/tooling/agent-guide) explains each JSON field, and every error code is listed in [diagnostic codes](/en/reference/tooling/diagnostic-codes).
 
-## Repair a type error
+## Example: fixing a type error
 
-Assigning a string to an integer reports `SPR-TYPE-ASSIGN` with `expectedType: Int` and `actualType: String`. Keep that machine-readable evidence. Depending on intent, change the value to an integer or declare the binding as `String`; do not add a conversion solely to make the build pass.
+Assign a string to an integer:
 
-The tutorial's [expected-failure snippet](/en/tutorial#_1-values-and-types) is checked by the docs gate. New semantics should have both positive and negative programs so tests prove rejection as well as acceptance.
+<<< @/snippets/tutorial/type_error.spr
 
-## Limits of early dogfooding
+The error from `sprig check --json` includes these fields (the rest are left out here):
 
-The maintainer reports trying a Sprig workflow with a lower-cost coding model. This is an early anecdote, not a controlled benchmark: there is no equivalent Java control, public task set or productivity measurement. It does not show that Sprig beats Java, makes agent output more correct or produces a measured speed-up.
+```json
+{
+  "code": "SPR-TYPE-ASSIGN",
+  "phase": "TYPE",
+  "message": "Type mismatch in initializer",
+  "expectedType": "Int",
+  "actualType": "String",
+  "relatedHelp": "types"
+}
+```
 
-The narrower product hypothesis is that stable type errors, Java API queries and a capability inventory give repair work checkable information. External users can reproduce the workflow above. Please include the SDK version, minimal source, command and full diagnostic with feedback.
+`expectedType` and `actualType` spell it out: an `Int` is needed here, but a `String` was given. How to fix it depends on what you meant: either change the value to an integer or declare the variable as a `String`. Don't add a conversion just to make the build pass.
 
-## Continue
+The tutorial has several deliberate mistakes like this one, starting with [step 1](/en/tutorial#_1-values-and-types), and the docs check verifies every one of them. The same goes for new Sprig features: add programs that should pass and programs that should be rejected, so the tests prove that the compiler really refuses the wrong code.
 
-- [Beginner tutorial](/en/tutorial)
-- [Published release and source feature status](/en/reference/language/feature-status)
-- [Project tests](/en/reference/tooling/testing)
-- [Sprig contribution guide](/en/project/contributing)
+## How well does AI write Sprig?
+
+The maintainer has tried this workflow with a lower-cost coding model. It was an early experiment: no controlled comparison, no Java baseline, no productivity measurement. So it doesn't show that Sprig suits AI better than Java does, or that AI writes Sprig more correctly or faster.
+
+The idea the project wants to test is narrower: stable error codes, a queryable Java API and a feature inventory make every step of fixing an error something you can check. You're welcome to try the workflow above yourself. When you send feedback, please include the SDK version, the smallest source that shows the problem, the command you ran and the full error output.
+
+## Where to go next
+
+- [Tutorial](/en/tutorial)
+- [Feature status for the release and the source](/en/reference/language/feature-status)
+- [Testing projects](/en/reference/tooling/testing)
+- [Contributing](/en/project/contributing)
