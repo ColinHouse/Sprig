@@ -102,6 +102,12 @@ exports.run=async()=>{
  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(path.join(tested,'src','main.spr')));
  const testResult=await vscode.commands.executeCommand('sprig.runTests');
  assert.deepEqual(testResult.summary,{total:3,passed:2,failed:1});
+ // Project commands: create, resolve and the registered command set.
+ const created=await vscode.commands.executeCommand('sprig.newProject',folder,'created app');
+ assert.equal(created,path.join(folder,'created app'));assert.ok(fs.existsSync(path.join(created,'src','main.spr')));assert.ok(fs.existsSync(path.join(created,'sprig.lock')));
+ const resolved=await vscode.commands.executeCommand('sprig.resolveDependencies');assert.equal(resolved.exitCode,0);
+ const registered=await vscode.commands.getCommands(true);
+ for(const id of ['sprig.newProject','sprig.resolveDependencies','sprig.runTests','sprig.openDocumentation','sprig.showActions','sprig.showHelp'])assert.ok(registered.includes(id),id);
  // Actual integrated terminal invokes normal Run without the finite JSON adapter.
  await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
  const terminalSource=path.join(folder,'terminal 中文 $;.spr'), marker=path.join(folder,'terminal-marker.txt');

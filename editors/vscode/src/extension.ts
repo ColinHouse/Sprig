@@ -2,11 +2,12 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { CompilerResult, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
+import { CompilerResult, capture, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
 import { mapRange } from './diagnostics';
-import { DIAGNOSTIC_DOCS_URL, ExplainJson, HelpJson, explainMarkdown, helpMarkdown } from './markdown';
+import { DIAGNOSTIC_DOCS_URL, DOCS_URL, ExplainJson, HelpJson, explainMarkdown, helpMarkdown } from './markdown';
 import { registerLanguageFeatures } from './language';
 import { Queries } from './queries';
+import { registerStatus } from './status';
 import { registerTesting } from './testing';
 
 const HELP_TOPICS_LIST = ['language','types','strings','functions','classes','variants','match','nullability','errors','collections',
@@ -171,6 +172,63 @@ export function activate(context: vscode.ExtensionContext): void {
     const summary = result.summary as {total:number; passed:number} | undefined;
     if(summary) vscode.window.setStatusBarMessage(`Sprig tests: ${summary.passed}/${summary.total} passed`, 5000);
     return result;
+  }));
+  const status = registerStatus(context, queries, query);
+  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+    if(event.affectsConfiguration('sprig')) void status.refresh();
+  }));
+  /** Runs a project command with the user's command time limit. */
+  const project = async (args: string[], root: string): Promise<CompilerResult> => {
+    const config = settings(vscode.Uri.file(root));
+    const timeoutMs = Math.max(1,Math.min(3600,config.get<number>('commandTimeoutSeconds',120)))*1000;
+    const result = await invoke(resolveCompiler(config.get<string>('compilerPath',''), root), args, root, {timeoutMs});
+    if(result.stderr) output.appendLine(result.stderr);
+    return result.json;
+  };
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.resolveDependencies', async () => {
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to resolve Sprig dependencies.');return;}
+    const doc = vscode.window.activeTextEditor?.document;
+    if(!doc || doc.uri.scheme!=='file') {void vscode.window.showWarningMessage('Open a file in a Sprig project first.');return;}
+    const root = projectRoot(doc.uri.fsPath);
+    try {
+      const result = await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:'Sprig: Resolve Dependencies'},()=>project(['resolve','--json'],root));
+      queries.clear(); void status.refresh();
+      if(result.exitCode===0) void vscode.window.showInformationMessage('Sprig: sprig.lock is up to date.');
+      else void vscode.window.showErrorMessage(`Sprig: ${(result.diagnostics??[]).map(d=>d.message).join('; ') || 'resolve failed'}`);
+      return result;
+    } catch(e) {void vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));return;}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.newProject', async (parent?: string, name?: string) => {
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to create a Sprig project.');return;}
+    parent ??= (await vscode.window.showOpenDialog({canSelectFolders:true,canSelectFiles:false,canSelectMany:false,openLabel:'Create Sprig project here'}))?.[0]?.fsPath;
+    if(!parent) return;
+    name ??= await vscode.window.showInputBox({prompt:'Project folder name',value:'my-sprig-app',
+      validateInput:value=>value.trim()===value && value && !/[\\/:*?"<>|]/.test(value) && value!=='.' && value!=='..' ? undefined : 'Enter a folder name without / \\ : * ? " < > |.'});
+    if(!name) return;
+    const target = path.join(parent, name);
+    try {
+      const executable = resolveCompiler(settings(vscode.Uri.file(parent)).get<string>('compilerPath',''), parent);
+      const init = await capture(executable, ['init', target], parent, {timeoutMs: 60000});
+      if(init.code!==0) throw new Error((init.stderr || init.stdout).trim() || `sprig init exited with ${init.code}`);
+      // An explicit create: also write the empty lock so the new project checks immediately.
+      const resolved = await project(['resolve','--json'], target);
+      if(resolved.exitCode!==0) throw new Error((resolved.diagnostics??[]).map(d=>d.message).join('; ') || 'sprig resolve failed');
+      await vscode.window.showTextDocument(vscode.Uri.file(path.join(target,'src','main.spr')));
+      void vscode.window.showInformationMessage(`Created Sprig project ${name}.`, 'Open Folder').then(choice => {
+        if(choice) void vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(target), {forceNewWindow: true});
+      });
+      return target;
+    } catch(e) {void vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));return;}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.openDocumentation', () =>
+    vscode.env.openExternal(vscode.Uri.parse(vscode.env.language.toLowerCase().startsWith('zh') ? DOCS_URL : DOCS_URL + 'en/'))));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.showActions', async () => {
+    const actions = [['Check','sprig.check'],['Run','sprig.run'],['Run in Terminal','sprig.runInTerminal'],['Run Tests','sprig.runTests'],
+      ['Format Document','editor.action.formatDocument'],['Resolve Dependencies','sprig.resolveDependencies'],['Show Generated Java','sprig.showGeneratedJava'],
+      ['Show Help Topic','sprig.showHelp'],['Explain Diagnostic','sprig.explainDiagnostic'],['Show Capabilities','sprig.showCapabilities'],
+      ['New Project','sprig.newProject'],['Open Documentation','sprig.openDocumentation']];
+    const picked = await vscode.window.showQuickPick(actions.map(([label, command]) => ({label, command})), {placeHolder: 'Sprig'});
+    return picked && vscode.commands.executeCommand(picked.command);
   }));
 
   for(const [name,command] of [['check','check'],['run','run'],['build','build'],['showGeneratedJava','java']]) {
