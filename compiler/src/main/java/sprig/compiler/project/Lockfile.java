@@ -79,6 +79,20 @@ public final class Lockfile {
         return digest(Files.readAllBytes(file));
     }
 
+    /**
+     * Manifest identity reads CRLF line endings as LF, so a Git checkout that
+     * converts newlines ({@code core.autocrlf} on Windows) does not stale a lock
+     * written elsewhere. Every other byte, including a lone CR, still counts.
+     */
+    public static String manifestDigest(Path manifest) throws IOException {
+        byte[] bytes = Files.readAllBytes(manifest);
+        java.io.ByteArrayOutputStream text = new java.io.ByteArrayOutputStream(bytes.length);
+        for (int i = 0; i < bytes.length; i++) {
+            if (bytes[i] != '\r' || i + 1 == bytes.length || bytes[i + 1] != '\n') text.write(bytes[i]);
+        }
+        return digest(text.toByteArray());
+    }
+
     /** Parses a lockfile; schema problems raise structured errors. */
     public static Lockfile parse(String content) throws DepError {
         Toml toml;
@@ -104,9 +118,9 @@ public final class Lockfile {
             throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                     "Unsupported lockfile schema " + lock.lockVersion + "; expected " + VERSION + "; run `sprig resolve`", null);
         }
-        lock.language = toml.scalar("", "language");
-        lock.compiler = toml.scalar("", "compiler");
-        lock.manifestSha = toml.scalar("", "manifest-sha256");
+        lock.language = unquote(toml.scalar("", "language"));
+        lock.compiler = unquote(toml.scalar("", "compiler"));
+        lock.manifestSha = unquote(toml.scalar("", "manifest-sha256"));
         if (toml.scalar("", "stdlib-version") != null || toml.scalar("", "stdlib-sha256") != null)
             throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                     "Lockfile schema 5 must not contain bundled std identity; run `sprig resolve`", null);
@@ -115,19 +129,19 @@ public final class Lockfile {
         java.util.Set<String> ids = new java.util.HashSet<>();
         for (var entry : toml.entries("sprig")) {
             SprigEntry sprig = new SprigEntry();
-            sprig.id = entry.get("id");
-            sprig.owner = entry.get("owner");
-            sprig.name = entry.get("name");
-            sprig.kind = entry.get("kind");
-            sprig.path = entry.get("path");
-            sprig.url = entry.get("url");
-            sprig.requested = entry.get("requested");
-            sprig.revision = entry.get("revision");
-            sprig.subdir = entry.get("subdir");
-            sprig.projectName = entry.get("project-name");
-            sprig.manifestSha = entry.get("manifest-sha256");
-            sprig.source = entry.get("source");
-            String portableRaw = entry.get("portable");
+            sprig.id = text(entry, "id");
+            sprig.owner = text(entry, "owner");
+            sprig.name = text(entry, "name");
+            sprig.kind = text(entry, "kind");
+            sprig.path = text(entry, "path");
+            sprig.url = text(entry, "url");
+            sprig.requested = text(entry, "requested");
+            sprig.revision = text(entry, "revision");
+            sprig.subdir = text(entry, "subdir");
+            sprig.projectName = text(entry, "project-name");
+            sprig.manifestSha = text(entry, "manifest-sha256");
+            sprig.source = text(entry, "source");
+            String portableRaw = text(entry, "portable");
             if (portableRaw == null || !(portableRaw.equals("true") || portableRaw.equals("false")))
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
                         "sprig.lock entry '" + sprig.name + "' is missing a boolean portable field", null);
@@ -202,15 +216,15 @@ public final class Lockfile {
         java.util.Set<Integer> orders = new java.util.HashSet<>();
         for (var entry : toml.entries("jvm")) {
             JvmEntry jvm = new JvmEntry();
-            jvm.group = entry.get("group");
-            jvm.artifact = entry.get("artifact");
-            jvm.version = entry.get("version");
-            jvm.repository = entry.get("repository");
-            jvm.sha256 = entry.get("sha256");
-            jvm.direct = "true".equals(entry.get("direct"));
-            jvm.extension = entry.get("extension");
-            jvm.classifier = entry.get("classifier");
-            try { jvm.classpathOrder = Integer.parseInt(entry.get("classpath-order")); }
+            jvm.group = text(entry, "group");
+            jvm.artifact = text(entry, "artifact");
+            jvm.version = text(entry, "version");
+            jvm.repository = text(entry, "repository");
+            jvm.sha256 = text(entry, "sha256");
+            jvm.direct = "true".equals(text(entry, "direct"));
+            jvm.extension = text(entry, "extension");
+            jvm.classifier = text(entry, "classifier");
+            try { jvm.classpathOrder = Integer.parseInt(text(entry, "classpath-order")); }
             catch (RuntimeException e) { throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Invalid Maven classpath order", null); }
             if (jvm.group == null || jvm.artifact == null || jvm.version == null) {
                 throw new DepError(Codes.PROJECT_LOCK_SCHEMA,
@@ -232,7 +246,7 @@ public final class Lockfile {
             throw new DepError(Codes.PROJECT_LOCK_SCHEMA, "Maven classpath order must be contiguous", null);
         java.util.Set<JvmEdge> edges = new java.util.HashSet<>();
         for (var e : toml.entries("jvm-edge")) {
-            JvmEdge edge = new JvmEdge(e.get("parent"), e.get("child"));
+            JvmEdge edge = new JvmEdge(text(e, "parent"), text(e, "child"));
             if (edge.parent() == null || edge.child() == null
                     || !(edge.parent().equals("root") || coordinates.contains(edge.parent()))
                     || !coordinates.contains(edge.child()) || !edges.add(edge))
@@ -240,6 +254,26 @@ public final class Lockfile {
             lock.jvmEdges.add(edge);
         }
         return lock;
+    }
+
+    private static String text(java.util.Map<String, String> entry, String key) {
+        return unquote(entry.get(key));
+    }
+
+    /** Inverse of {@link #quote}: a Windows path in a lock holds escaped backslashes. */
+    private static String unquote(String value) {
+        if (value == null || value.indexOf('\\') < 0) return value;
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '\\' && i + 1 < value.length()) {
+                char escaped = value.charAt(++i);
+                sb.append(escaped == 'n' ? '\n' : escaped);
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     /** Renders the canonical, deterministic lockfile text. */

@@ -67,7 +67,7 @@ server.
 | References | Every use of a declaration. Locals and parameters are searched in their file. Other declarations are also searched in the open files and in the files of the same project that mention the name, up to 200 files. |
 | Document symbols | Classes with fields and methods, enums and variants with their cases, functions and top-level variables. |
 | Completion | After `.`: members of the value's type, a module's declarations, enum and variant cases, built-in methods and public Java members. Elsewhere: names in scope, module declarations, imports, built-ins and keywords. In a type position, it offers types and the module names that qualify them. |
-| Formatting | The output of `sprig fmt`, as one edit. A file that does not parse is left unchanged. |
+| Formatting | The output of `sprig fmt`, as one edit. A file that does not parse is left unchanged. A CRLF document (common on Windows) keeps CRLF line endings, and needs no edit when only its line endings differ from `sprig fmt`. |
 | Rename | Local variables and parameters only. See below. |
 
 ## Projects and unsaved files

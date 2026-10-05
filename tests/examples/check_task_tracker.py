@@ -8,7 +8,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "examples" / "task-tracker"
-SPRIG = Path(os.environ.get("SPRIG_BIN", ROOT / "bin" / "sprig"))
+SPRIG = Path(os.environ.get("SPRIG_BIN", ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")))
 CHECKS = 0
 
 

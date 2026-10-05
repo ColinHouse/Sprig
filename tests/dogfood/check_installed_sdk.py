@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Package, install and dogfood only through the managed SDK PATH launcher."""
+"""Package, install and dogfood only through the managed SDK PATH launcher.
+
+Windows has no managed installer; it dogfoods the extracted release ZIP launcher.
+"""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import hashlib
 import json
@@ -41,8 +44,12 @@ class Releases(BaseHTTPRequestHandler):
         pass
 
 
+# The managed installer covers Linux/macOS; Windows dogfoods the extracted ZIP launcher.
+LAUNCHER = 'sprig'
+
+
 def installed(*args, cwd, env, ok=True, timeout=120):
-    result = subprocess.run(['sprig', *map(str, args)], cwd=cwd, env=env, text=True,
+    result = subprocess.run([LAUNCHER, *map(str, args)], cwd=cwd, env=env, text=True,
                             encoding='utf-8', capture_output=True, timeout=timeout)
     if ok and result.returncode:
         raise AssertionError((args, result.returncode, result.stdout, result.stderr))
@@ -71,7 +78,11 @@ class WebServer:
 
     def close(self):
         if self.proc.poll() is None:
-            self.proc.terminate()
+            if os.name == 'nt':
+                # Terminating sprig.cmd alone would orphan the compiler and program JVMs.
+                subprocess.run(['taskkill', '/PID', str(self.proc.pid), '/T', '/F'], capture_output=True)
+            else:
+                self.proc.terminate()
             try:
                 self.proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
@@ -95,6 +106,7 @@ class WebServer:
 
 
 def main():
+    global LAUNCHER
     compiler_version = subprocess.check_output(
         [str(ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")), "version"],
         text=True).split()[-1]
@@ -120,13 +132,21 @@ def main():
                             'SPRIG_TEST_RELEASES_API_URL': f'http://127.0.0.1:{server.server_port}/releases',
                             'SPRIG_TEST_RELEASE_BASE_URL': f'http://127.0.0.1:{server.server_port}/download'})
         try:
-            install = subprocess.run(['sh', str(ROOT / 'scripts/install-sprig.sh'), '--version', Releases.version],
-                                     env=fixture_env, text=True, capture_output=True, timeout=120)
-            if install.returncode:
-                raise AssertionError(('managed install', install.stdout, install.stderr))
-            launcher_dir = home / '.local/bin'
-            installed_path = str(launcher_dir) + os.pathsep + str(Path(shutil.which('java')).parent) + os.pathsep + '/usr/bin:/bin'
+            java_dir = str(Path(shutil.which('java')).parent)
             sdk_home = home / '.sprig'
+            if os.name == 'nt':
+                with zipfile.ZipFile(archive) as packaged:
+                    packaged.extractall(sdk_home)
+                (sdk_home / f'sprig-{release_tag}-jdk').rename(sdk_home / 'current')
+                LAUNCHER = str(sdk_home / 'current/bin/sprig.cmd')
+                installed_path = java_dir + os.pathsep + os.path.join(os.environ['SystemRoot'], 'System32')
+            else:
+                install = subprocess.run(['sh', str(ROOT / 'scripts/install-sprig.sh'), '--version', Releases.version],
+                                         env=fixture_env, text=True, capture_output=True, timeout=120)
+                if install.returncode:
+                    raise AssertionError(('managed install', install.stdout, install.stderr))
+                launcher_dir = home / '.local/bin'
+                installed_path = str(launcher_dir) + os.pathsep + java_dir + os.pathsep + '/usr/bin:/bin'
             shared_cache = Path.home() / '.sprig/maven'
             cache = sdk_home / 'maven'
             if shared_cache.is_dir():
@@ -153,7 +173,7 @@ def main():
             installed('resolve', '--offline', cwd=ledger, env=env)
             installed('check', '--offline', '--json', cwd=ledger, env=env)
             ledger_db = work / 'installed ledger.sqlite'
-            web = WebServer(['sprig', 'run', '--offline', '--', str(ledger_db), '0'], ledger, ledger_db, env)
+            web = WebServer([LAUNCHER, 'run', '--offline', '--', str(ledger_db), '0'], ledger, ledger_db, env)
             try:
                 status, accounts = web.request('GET', '/api/accounts')
                 assert status == 200 and accounts == []
@@ -214,7 +234,11 @@ def main():
                                 cwd=tools, env=env)
             assert 'SPR-TYPE-NULLABLE: 1' in summary.stdout
 
-            installed('upgrade', '--check', cwd=work, env=env)
+            if os.name == 'nt':
+                refused = installed('upgrade', '--check', cwd=work, env=env, ok=False)
+                assert 'Windows' in refused.stderr, refused.stderr
+            else:
+                installed('upgrade', '--check', cwd=work, env=env)
         finally:
             server.shutdown()
             server.server_close()

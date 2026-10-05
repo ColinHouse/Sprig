@@ -35,8 +35,11 @@ completion; the Testing view needs 0.5.0-beta.1 or newer.
 }
 ```
 
-Windows SDK `bin/sprig.cmd` is experimental. The extension invokes its JVM
-entrypoint directly; custom batch wrappers are unsupported. Remote SSH/containers
+Windows SDK `bin/sprig.cmd` (a source build or an extracted release ZIP) is
+experimental. The extension starts the same JVM entrypoint and classpath
+directly, so paths never pass through `cmd.exe`; custom batch wrappers are
+unsupported. `java.exe` still reads its command line in the Windows ANSI code
+page, so a file whose path uses characters outside it cannot be checked or run. Remote SSH/containers
 need the SDK and JDK installed on the remote workspace host. Browser-only VS Code
 and virtual filesystems are unsupported.
 
@@ -96,8 +99,8 @@ not fed back into Sprig. Java output is opened using compiler-provided paths.
 
 Run currently supports finite **non-interactive** programs. stdin is closed,
 output is displayed on completion, the default limit is 120 seconds and 8 MB.
-Cancel the progress notification to stop the process group on Linux/macOS;
-Windows preview cancellation may not stop child JVM processes. For persistent servers or interactive programs, select **Sprig: Run in Terminal**.
+Cancel the progress notification to stop the compiler and the program it
+started: the process group on Linux/macOS, the process tree on Windows. For persistent servers or interactive programs, select **Sprig: Run in Terminal**.
 It starts normal `sprig run <saved-file>` with the nearest project root as cwd;
 output and stdin belong to the integrated terminal. There is no JSON buffering,
 120-second command limit or 8 MB adapter cap. Use Ctrl+C or close the terminal

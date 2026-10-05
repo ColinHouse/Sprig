@@ -64,6 +64,14 @@ echo "fake sdk {output_version}"
 
 def main():
     assert CLI.is_file(), "build Sprig before running this integration suite"
+    if os.name == "nt":
+        # The managed layout (symlinked current, POSIX launchers) is Linux/macOS
+        # only; Windows must refuse instead of touching anything.
+        refused = subprocess.run([str(CLI), "upgrade", "--check"], capture_output=True, text=True,
+                                 timeout=60)
+        assert refused.returncode == 1 and "py -3 scripts/build.py" in refused.stderr, refused
+        print("SKIP managed upgrade fixtures: documented Linux/macOS only; Windows checkout refused")
+        return
     with tempfile.TemporaryDirectory(prefix="sprig-upgrade-test-") as temporary:
         temp = Path(temporary)
         home = temp / "managed home with spaces"

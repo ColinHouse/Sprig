@@ -77,6 +77,12 @@ class Lexer:
             return ""
         return source.char_at(pos)
 
+    # A CR directly before LF belongs to the line end (Windows CRLF sources).
+    func at_newline() -> Bool:
+        if current() == "\n":
+            return true
+        return current() == "\r" and pos + 1 < source.length() and source.char_at(pos + 1) == "\n"
+
     func advance() -> Unit:
         if at_end():
             return
@@ -110,7 +116,7 @@ class Lexer:
             else:
                 width += 1
             advance()
-        if at_end() or current() == "\n" or current() == "#":
+        if at_end() or at_newline() or current() == "#":
             return
         let top = indents.get(indents.size() - 1)
         if width > top:
@@ -162,10 +168,10 @@ class Lexer:
         let start_column = column
         advance()
         var closed = false
-        while not at_end() and current() != "\n":
+        while not at_end() and not at_newline():
             if current() == "\\":
                 advance()
-                if not at_end() and current() != "\n":
+                if not at_end() and not at_newline():
                     advance()
             elif current() == "\"":
                 advance()
@@ -178,7 +184,7 @@ class Lexer:
         emit("STRING", source.text.substring(start, pos), start, start_line, start_column)
 
     func scan_comment() -> Unit:
-        while not at_end() and current() != "\n":
+        while not at_end() and not at_newline():
             advance()
 
     func scan_symbol() -> Unit:
@@ -208,7 +214,7 @@ class Lexer:
                 let start_column = column
                 advance()
                 emit("NEWLINE", "", start, start_line, start_column)
-            elif ch == " ":
+            elif ch == " " or (ch == "\r" and at_newline()):
                 advance()
             elif ch == "#":
                 scan_comment()

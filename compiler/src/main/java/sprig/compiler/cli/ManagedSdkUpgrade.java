@@ -74,8 +74,13 @@ final class ManagedSdkUpgrade {
         if (configured == null || configured.isBlank())
             throw new UpgradeFailure("cannot locate this SDK; run the user-scoped installer first");
         Path home = Path.of(configured).toAbsolutePath().normalize();
+        boolean windows = System.getProperty("os.name", "").startsWith("Windows");
         if (Files.exists(home.resolve(".git"), LinkOption.NOFOLLOW_LINKS))
-            throw new UpgradeFailure("this is a source checkout; update it with Git and rebuild with scripts/build.sh");
+            throw new UpgradeFailure("this is a source checkout; update it with Git and rebuild with "
+                    + (windows ? "py -3 scripts/build.py" : "scripts/build.sh"));
+        if (windows)
+            throw new UpgradeFailure("managed installation and upgrade support Linux and macOS; on Windows, "
+                    + "download and verify a newer release ZIP and extract it in place of this SDK");
 
         Path root;
         Path parent = home.getParent();

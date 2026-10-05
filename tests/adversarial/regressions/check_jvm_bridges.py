@@ -112,12 +112,15 @@ def main():
         for name, source in JAVA.items():
             (folder / name).write_text(source)
         compile_java = subprocess.run(["javac", "-d", temp, *map(str, folder.glob("*.java"))],
-                                      capture_output=True, text=True, timeout=60)
+                                      capture_output=True, text=True, errors="replace", timeout=60)
         record("javac-fixture", compile_java.returncode == 0, compile_java.stderr)
         if compile_java.returncode != 0:
             return 1
-        oracle = subprocess.run(["java", "-cp", temp, "audit.Oracle"], capture_output=True,
-                                text=True, timeout=60)
+        # Plain Java prints with the platform charset unless told otherwise
+        # (JDK 17 reads file.encoding, JDK 19+ stdout.encoding).
+        oracle = subprocess.run(["java", "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8",
+                                 "-cp", temp, "audit.Oracle"], capture_output=True,
+                                text=True, encoding="utf-8", timeout=60)
         record("java-oracle", oracle.returncode == 0 and oracle.stdout == EXPECTED,
                oracle.stdout + oracle.stderr)
         source = folder / "main.spr"
@@ -131,7 +134,7 @@ def main():
         bad_java = folder / "Bad.java"
         bad_java.write_text('class Bad { Object value() throws Exception { return new audit.Sink().echo(1L); } }')
         rejected_java = subprocess.run(["javac", "-cp", temp, str(bad_java)],
-                                       capture_output=True, text=True, timeout=60)
+                                       capture_output=True, text=True, errors="replace", timeout=60)
         record("javac-erased-bridge-rejected", rejected_java.returncode != 0, rejected_java.stderr)
         for owner in ("Sink", "InterfaceSink"):
             source.write_text(f'import audit.{owner} as Target\nprint(Target().echo(1))\n')

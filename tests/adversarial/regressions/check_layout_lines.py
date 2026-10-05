@@ -13,7 +13,7 @@ SPRIG = ROOT / 'bin' / ('sprig.cmd' if sys.platform == 'win32' else 'sprig')
 
 def command(args, **kwargs):
     return subprocess.run(list(map(str, args)), capture_output=True, text=True,
-                          timeout=60, **kwargs)
+                          errors='replace', timeout=60, **kwargs)
 
 
 def cli(verb, path, *flags):
@@ -65,7 +65,7 @@ def main():
                 rc, body = cli('check', path)
                 stages['static'] = rc == 0 and not body['diagnostics']
                 rc, body = cli('run', path)
-                stages['jvm'] = rc == 0 and not body['diagnostics'] and body['programOutput'] == '1\n'
+                stages['jvm'] = rc == 0 and not body['diagnostics'] and body['programOutput'].replace('\r\n', '\n') == '1\n'
                 rc, body = cli('fmt', path)
                 stages['format'] = rc == 0 and not body['diagnostics']
                 if rc == 0:
@@ -74,7 +74,7 @@ def main():
                     rc, body = cli('fmt', path, '--check')
                     stages['idempotent'] = rc == 0 and path.read_bytes() == before
                     rc, body = cli('run', path)
-                    stages['formatted-jvm'] = rc == 0 and body['programOutput'] == '1\n'
+                    stages['formatted-jvm'] = rc == 0 and body['programOutput'].replace('\r\n', '\n') == '1\n'
                 count += 1
                 bad = [stage for stage, passed in stages.items() if not passed]
                 print('FAIL' if bad else 'PASS', label, ', '.join(bad))

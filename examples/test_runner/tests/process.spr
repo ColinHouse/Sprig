@@ -5,6 +5,7 @@ assert(version.exit_code == 0)
 assert(version.stdout.length() > 0)
 assert(version.stderr == "")
 
-let missing = testing.run_process(["java", "no.such.SprigTestClass"])
+# English launcher text keeps stderr valid UTF-8 on every system locale.
+let missing = testing.run_process(["java", "-Duser.language=en", "no.such.SprigTestClass"])
 assert(missing.exit_code != 0)
 assert(missing.stderr.length() > 0)

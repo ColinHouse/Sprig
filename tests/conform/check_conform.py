@@ -544,7 +544,7 @@ def main():
         classes.mkdir()
         compile_java = subprocess.run(
             ["javac", "-d", str(classes), *map(str, sources.glob("*.java"))],
-            capture_output=True, text=True, timeout=120)
+            capture_output=True, text=True, errors="replace", timeout=120)
         record("javac-fixtures", compile_java.returncode == 0, compile_java.stderr)
         if compile_java.returncode != 0:
             return 1

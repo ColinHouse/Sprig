@@ -21,11 +21,13 @@ def gradle_command() -> list[str]:
     found = shutil.which("gradle")
     if found:
         return [found]
-    template_wrapper = ROOT / "libraries" / "sprig-fabric" / "template" / "gradlew"
+    script = "gradlew.bat" if os.name == "nt" else "gradlew"
+    template_wrapper = ROOT / "libraries" / "sprig-fabric" / "template" / script
     if template_wrapper.is_file():
         return [str(template_wrapper)]
     wrapper_cache = Path.home() / ".gradle" / "wrapper" / "dists" / f"gradle-{GRADLE_VERSION}-bin"
-    for candidate in sorted(wrapper_cache.glob(f"*/gradle-{GRADLE_VERSION}/bin/gradle")):
+    launcher = "gradle.bat" if os.name == "nt" else "gradle"
+    for candidate in sorted(wrapper_cache.glob(f"*/gradle-{GRADLE_VERSION}/bin/{launcher}")):
         if candidate.is_file():
             return [str(candidate)]
     raise RuntimeError(
@@ -115,6 +117,21 @@ def main() -> int:
         require(second.returncode == 0, "unchanged Gradle check must remain successful")
         require("sprigGenerate UP-TO-DATE" in second.stdout,
                 "unchanged Sprig generation must be Gradle up-to-date")
+
+        # Without SPRIG_HOME the platform launcher is found on PATH; an SDK bin
+        # directory holds both, and Windows must pick sprig.cmd. The fixture's
+        # settings read SPRIG_HOME, so name the plugin build directly here.
+        settings = project / "settings.gradle"
+        fixture_settings = settings.read_text(encoding="utf-8")
+        settings.write_text("pluginManagement {\n    includeBuild('"
+                            + (sdk_home / "libraries/sprig-gradle").as_posix()
+                            + "')\n}\n\nrootProject.name = \"ordinary-project\"\n", encoding="utf-8")
+        path_env = {key: value for key, value in env.items() if key.upper() != "SPRIG_HOME"}
+        path_env["PATH"] = str(sdk_home / "bin") + os.pathsep + env.get("PATH", "")
+        via_path = run([*gradle, "--offline", "--no-daemon", "sprigInfo"], cwd=project, env=path_env)
+        settings.write_text(fixture_settings, encoding="utf-8")
+        require(via_path.returncode == 0 and f"Compiler home: {sdk_home}" in via_path.stdout,
+                "sprigInfo must find the SDK launcher on PATH\n" + via_path.stdout + via_path.stderr)
 
         lock = project / "sprig.lock"
         lock.unlink()

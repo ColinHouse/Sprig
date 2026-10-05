@@ -130,7 +130,7 @@ public class Client {
             (e['artifact'], e.get('classifier') or '', e['version'], e['sha256']) for e in jars
         ], 'Maven artifact identity/classpath order changed across reads'
         invoke('check'); invoke('build', '-d', base/'output with spaces')
-        assert invoke('run')['programOutput'] == 'transitive:one:resource-one:two:resource-two\n'
+        assert invoke('run')['programOutput'].replace('\r\n', '\n') == 'transitive:one:resource-one:two:resource-two\n'
         assert invoke('api', 'fixture.Client')['className'] == 'fixture.Client'
         doctor = invoke('doctor')
         assert len(doctor['classpath']) == len(jars), doctor
@@ -185,7 +185,7 @@ public class Client {
         shutil.rmtree(repository)
         invoke('resolve', '--offline')
         invoke('check', '--offline')
-        assert invoke('run', '--offline')['programOutput'] == 'transitive:one:resource-one:two:resource-two\n'
+        assert invoke('run', '--offline')['programOutput'].replace('\r\n', '\n') == 'transitive:one:resource-one:two:resource-two\n'
         invoke('api', 'fixture.Client', '--offline'); invoke('doctor', '--offline')
         artifact = cache/'artifacts'/(jars[0]['sha256']+'.jar')
         original = artifact.read_bytes()

@@ -88,7 +88,7 @@ def main():
         check("agent-flow-test", workflow_test.returncode == 0, workflow_test.stdout + workflow_test.stderr)
         workflow_run = sprig(workflow, "run", "--json", env=env)
         check("agent-flow-run", workflow_run.returncode == 0
-              and json.loads(workflow_run.stdout).get("programOutput") == "3\n",
+              and json.loads(workflow_run.stdout).get("programOutput", "").replace("\r\n", "\n") == "3\n",
               workflow_run.stdout + workflow_run.stderr)
         original = (project / "sprig.toml").read_bytes()
         added = sprig(project, "add", "lib", "--path", "../local-lib", "--json", env=env)
@@ -193,7 +193,7 @@ def main():
               git_workflow_test.stdout + git_workflow_test.stderr)
         git_workflow_run = sprig(git_workflow, "run", "--json", env=maven_env)
         check("agent-flow-git-run", git_workflow_run.returncode == 0
-              and json.loads(git_workflow_run.stdout).get("programOutput") == "Sprig\n",
+              and json.loads(git_workflow_run.stdout).get("programOutput", "").replace("\r\n", "\n") == "Sprig\n",
               git_workflow_run.stdout + git_workflow_run.stderr)
 
         branch_add = sprig(project, "add", "branch-codec", "--git", git_url,

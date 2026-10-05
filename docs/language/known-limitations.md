@@ -101,11 +101,21 @@ by the historical design kit in `docs/history/design-kit/`.
 - `tests/agent_eval` provides deterministic fixtures and scoring only. No LLM
   run has been performed, and no model performance is claimed.
 - The managed SDK installer/upgrader is supported only on Linux/macOS and
-  targets public GitHub releases. Published SHA-256 assets detect archive
-  mismatch but do not provide signed provenance. Older SDKs are retained.
+  targets public GitHub releases; on Windows `sprig upgrade` refuses and the
+  extracted release ZIP is replaced by hand. Published SHA-256 assets detect
+  archive mismatch but do not provide signed provenance. Older SDKs are retained.
   SQLite migrations record filenames without content digests; changing an
   applied migration is unsupported by convention, not automatically detected.
   Migration SQL is trusted project code.
+- On Windows, `java.exe` reads its command line in the ANSI code page, so a
+  command-line argument outside that code page, such as a source path or program
+  argument with an emoji, or with Chinese text on a Western European system, is
+  replaced before any Sprig code runs. `bin\sprig.cmd`
+  forwards correctly quoted arguments unchanged, including under inherited
+  delayed expansion; quoting for `cmd.exe` remains the caller's job. A
+  Windows console shows output in its own code page, while redirected output
+  is UTF-8 as on Linux and macOS. `print` ends lines with the JVM line
+  separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
 - Sprig targets v0.5.0-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.
@@ -120,9 +130,3 @@ preserve callable types; raw, wildcard or unresolved type variables are rejected
 `Character`/`Short`/`Byte` callable slots and arbitrary parameterized Java slots
 are unsupported because they would require additional erased-value adapters.
 Nullable callable values use `(fn(A) -> R)?`; `fn(A) -> R?` means nullable result.
-
-Project discovery currently compares normalized source-root prefixes rather than
-canonicalizing alternate symlink spellings. On macOS an explicit absolute /var
-source while cwd discovers /private/var can be treated as standalone and lose
-package aliases. Use project-relative source paths from the project directory;
-this existing path-alias behavior was reproduced during the SDK web experiment.

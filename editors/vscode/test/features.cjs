@@ -7,7 +7,8 @@ const root=path.resolve(__dirname,'../../..');
 const compiler=path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig');
 const {invoke}=require('../out/compiler.js');
 const run=async(args,cwd)=>(await invoke(compiler,args,cwd)).json;
-function fixture(t){const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'Sprig 功能 $; ')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
+const {nonAscii}=require('./platform-text.cjs');
+function fixture(t){const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),`Sprig ${nonAscii} $; `)));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
 
 test('formatSource returns canonical text and refuses broken source',async()=>{
  const {formatSource}=require('../out/format.js');
@@ -44,8 +45,11 @@ test('every snippet expands to Sprig that parses',async t=>{
  }
 });
 test('test outcomes map pass, runtime failure and compile-fail fixtures by file',async t=>{
- const {outcomes,testLabel}=require('../out/testResults.js');
+ const {canonical,outcomes,testLabel}=require('../out/testResults.js');
  const dir=fixture(t);
+ // Look up files the way testing.ts names test items. A Windows temp directory can be
+ // spelled with 8.3 short names (C:\Users\RUNNER~1), which only the native realpath expands.
+ const item=(...parts)=>canonical(path.join(dir,...parts));
  fs.writeFileSync(path.join(dir,'sprig.toml'),'[project]\nname = "outcomes"\nversion = "0.1.0"\nlanguage = "0.8"\n');
  fs.mkdirSync(path.join(dir,'src'));fs.writeFileSync(path.join(dir,'src','main.spr'),'print("main")\n');
  fs.mkdirSync(path.join(dir,'tests','compile_fail'),{recursive:true});
@@ -56,12 +60,12 @@ test('test outcomes map pass, runtime failure and compile-fail fixtures by file'
  assert.equal((await run(['resolve','--json'],dir)).exitCode,0);
  const all=await run(['test','--json'],dir);assert.equal(all.exitCode,1);
  const map=outcomes(all);
- assert.equal(map.get(path.join(dir,'tests','pass.spr')).status,'passed');
- const fail=map.get(path.join(dir,'tests','fail.spr'));
- assert.equal(fail.status,'failed');assert.equal(fail.programOutput,'before\n');
+ assert.equal(map.get(item('tests','pass.spr')).status,'passed');
+ const fail=map.get(item('tests','fail.spr'));
+ assert.equal(fail.status,'failed');assert.equal(fail.programOutput.replace(/\r\n/g,'\n'),'before\n');
  assert.equal(fail.diagnostics[0].code,'SPR-RUNTIME-ERROR');assert.equal(fail.diagnostics[0].range.start.line,1);
- assert.equal(map.get(path.join(dir,'tests','compile_fail','wrong.spr')).status,'passed');
+ assert.equal(map.get(item('tests','compile_fail','wrong.spr')).status,'passed');
  const single=await run(['test',path.join(dir,'tests','pass.spr'),'--json'],dir);
- assert.deepEqual([...outcomes(single).keys()],[path.join(dir,'tests','pass.spr')]);
+ assert.deepEqual([...outcomes(single).keys()],[item('tests','pass.spr')]);
  assert.equal(testLabel(dir,path.join(dir,'tests','compile_fail','wrong.spr')),'compile_fail/wrong.spr');
 });

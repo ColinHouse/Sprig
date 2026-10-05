@@ -105,7 +105,7 @@ def main():
                 'Begin with the [Sprig Agent Guide](../AGENT_GUIDE.md).')
             examples_index = examples_index.replace(
                 '../website/guide/fabric.md', '../docs/SHOWCASES.md')
-            examples_readme.write_text(examples_index, encoding='utf-8')
+            examples_readme.write_text(examples_index, encoding='utf-8', newline='\n')
         for source in ('tests/visitor/ast_visitor.spr', 'tests/runtime/20_string_codepoints.spr'):
             destination = package / Path(source).parent
             destination.mkdir(parents=True, exist_ok=True)
@@ -148,10 +148,10 @@ def main():
             content = (ROOT / source).read_text(encoding='utf-8')
             if source == 'docs/jvm/gradle.md':
                 content = content.replace('(typed-boundary-adapters.md)', '(TYPED_BOUNDARY_ADAPTERS.md)')
-            (package / 'docs' / (archive_name + '.md')).write_text(content, encoding='utf-8')
+            (package / 'docs' / (archive_name + '.md')).write_text(content, encoding='utf-8', newline='\n')
         notes = ROOT / 'docs/releases' / (tag + '.md')
         if notes.is_file():
-            (package / ('RELEASE_NOTES-' + tag + '.md')).write_text(notes.read_text(encoding='utf-8'), encoding='utf-8')
+            (package / ('RELEASE_NOTES-' + tag + '.md')).write_text(notes.read_text(encoding='utf-8'), encoding='utf-8', newline='\n')
         for archive_name, source in {'LICENSE_STATUS.md': 'docs/contributing/license-status.md', 'LICENSE': 'LICENSE', 'NOTICE': 'NOTICE', 'THIRD_PARTY_NOTICES.md': 'THIRD_PARTY_NOTICES.md'}.items():
             shutil.copy2(ROOT / source, package / archive_name)
         guide = (ROOT / 'docs/tooling/agent-guide.md').read_text(encoding='utf-8')
@@ -171,7 +171,7 @@ def main():
             'docs/jvm/conformance.md': 'docs/JVM_CONFORMANCE.md',
         }.items():
             guide = guide.replace(source_path, archive_path)
-        (package / 'AGENT_GUIDE.md').write_text(guide, encoding='utf-8')
+        (package / 'AGENT_GUIDE.md').write_text(guide, encoding='utf-8', newline='\n')
         (package / 'README.md').write_text(f'''# Sprig {tag} SDK
 
 {maturity_label}, JDK 17+, language v0.8-dev. Supported: Linux/macOS.
@@ -187,7 +187,7 @@ Sprig is Apache-2.0; dependency licenses are in THIRD_PARTY_NOTICES.md and legal
 For host builds, the SDK also includes the `dev.sprig` Gradle plugin and a
 Fabric/Loom starter. See libraries/sprig-gradle/README.md and
 libraries/sprig-fabric/README.md; set SPRIG_HOME to this extracted SDK root.
-''', encoding='utf-8')
+''', encoding='utf-8', newline='\n')
         (package / 'INSTALL.md').write_text('''# Install and run
 
 The supported managed installer for Linux/macOS is documented in
@@ -212,7 +212,7 @@ Maven dependencies need network access on first resolve; a complete cache can
 be reused with `sprig resolve --offline` and `sprig run --offline`.
 `sprig api java.time.LocalDate --json` inspects JVM APIs. Read docs/JVM_INTEROP.md
 and docs/KNOWN_LIMITATIONS.md before relying on third-party calls.
-''', encoding='utf-8')
+''', encoding='utf-8', newline='\n')
         try:
             revision = output('git', 'rev-parse', 'HEAD')
             clean = not output('git', 'status', '--porcelain')
@@ -220,8 +220,8 @@ and docs/KNOWN_LIMITATIONS.md before relying on third-party calls.
             revision, clean = 'no Git metadata', False
         info = [f'Package version: {tag}', f'Source revision: {revision}', 'Working tree clean: ' + ('yes' if clean else 'no (development archive; revision alone does not identify all contents)'), 'Build Java:', output('java', '-version'), 'Bundled JAR SHA-256:']
         info += [hashlib.sha256(file.read_bytes()).hexdigest() + '  lib/' + file.name for file in sorted((package / 'lib').glob('*.jar'))]
-        (package / 'BUILD_INFO.txt').write_text('\n'.join(info) + '\n', encoding='utf-8')
-        (package / 'LEGAL_STATUS.txt').write_text('Sprig: Apache License 2.0 (LICENSE, NOTICE). ANTLR: BSD (THIRD_PARTY_NOTICES.md). Maven Resolver and bundled libraries: legal/resolver/ and legal/resolver-libraries.json.\n', encoding='utf-8')
+        (package / 'BUILD_INFO.txt').write_text('\n'.join(info) + '\n', encoding='utf-8', newline='\n')
+        (package / 'LEGAL_STATUS.txt').write_text('Sprig: Apache License 2.0 (LICENSE, NOTICE). ANTLR: BSD (THIRD_PARTY_NOTICES.md). Maven Resolver and bundled libraries: legal/resolver/ and legal/resolver-libraries.json.\n', encoding='utf-8', newline='\n')
         archive_sources = {target: source for source, target in archive_paths.items()}
         archive_sources['RELEASE_NOTES-' + tag + '.md'] = 'docs/releases/' + tag + '.md'
         archive_sources['INSTALL.md'] = 'docs/projects/install.md'
@@ -232,7 +232,7 @@ and docs/KNOWN_LIMITATIONS.md before relying on third-party calls.
                 continue
             contents = rewrite_archive_links(markdown.read_text(encoding='utf-8'), source,
                                              archive_target, archive_paths, package)
-            markdown.write_text(contents, encoding='utf-8')
+            markdown.write_text(contents, encoding='utf-8', newline='\n')
         write_launchers(package, packaged=True)
         archive = dist / (name + '.zip')
         with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
@@ -240,7 +240,7 @@ and docs/KNOWN_LIMITATIONS.md before relying on third-party calls.
                 if file.is_file():
                     zip.write(file, file.relative_to(Path(temp)).as_posix())
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
-        Path(str(archive) + '.sha256').write_text(digest + '  ' + archive.name + '\n', encoding='utf-8')
+        Path(str(archive) + '.sha256').write_text(digest + '  ' + archive.name + '\n', encoding='utf-8', newline='\n')
         print('Created ' + str(archive))
         print(digest + '  ' + archive.name)
 

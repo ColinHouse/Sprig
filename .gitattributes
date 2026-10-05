@@ -1,18 +1,22 @@
-# Normalize line endings for text sources; keep binary assets untouched.
-* text=auto
+# Every checkout holds the same text bytes as Linux and macOS, including on
+# Windows with core.autocrlf: goldens, sprig.lock files, manifests, fixtures
+# and the bundled std digest are byte-defined, and `sprig fmt` writes LF.
+# CRLF input is still covered by explicit fixtures in the test suite.
+* text=auto eol=lf
 
 *.spr text
 *.g4 text
 *.java text
 *.md text
-*.sh text eol=lf
+*.sh text
 *.mts text
 *.json text
 *.yml text
 
+# cmd.exe needs CRLF to parse batch labels reliably.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 *.png binary
 *.jar binary
 *.zip binary
-
-# Bundled std digest is byte-defined and portable across source checkouts.
-std/*.spr text eol=lf

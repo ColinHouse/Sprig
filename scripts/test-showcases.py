@@ -79,10 +79,12 @@ def main():
         assert document['files'][0]['lines'] == 3
         assert document['files'][0]['code'] == 1
         assert document['findings'] == ['.git: skipped generated or dependency directory', 'test.spr: trailing whitespace on 1 lines', 'test.spr: tab indentation on 1 lines']
-        bad = work / 'bad source.spr'
-        bad.write_text('print(missing)\n', encoding='utf-8')
-        diagnostics = run(projects / 'source_analyzer', 'run', '--offline', '--', str(bad))
-        assert 'diagnostics=1\n' in diagnostics and "PROBE-NAME" in diagnostics and "unknown name 'missing'" in diagnostics
+        # LF and Windows CRLF line ends produce the same single diagnostic.
+        for name, source in (('bad source.spr', b'print(missing)\n'), ('bad crlf source.spr', b'print(missing)\r\n')):
+            bad = work / name
+            bad.write_bytes(source)
+            diagnostics = run(projects / 'source_analyzer', 'run', '--offline', '--', str(bad))
+            assert 'diagnostics=1\n' in diagnostics and "PROBE-NAME" in diagnostics and "unknown name 'missing'" in diagnostics, diagnostics
         article = work / 'article with spaces.html'
         rendered = run(projects / 'maven_slug', 'run', '--offline', '--', 'hello <JVM> & sprig', str(article))
         expected = '<article id="hello-jvm-sprig"><h1>Hello &lt;jvm&gt; &amp; Sprig</h1></article>\n'

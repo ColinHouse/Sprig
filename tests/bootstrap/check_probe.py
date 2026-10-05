@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix="sprig-stage1-probe-") as temp:
 executed = call("run", PROGRAM, "--json")
 data = json.loads(executed.stdout)
 assert executed.returncode == 0, executed.stdout
-assert data["programOutput"] == GOLDEN, (data["programOutput"], GOLDEN)
+assert data["programOutput"].replace("\r\n", "\n") == GOLDEN, (data["programOutput"], GOLDEN)
 assert "diagnostics=0" in GOLDEN
 assert "PROBE-LEX 3:1 [22,24)" in GOLDEN
 assert "PROBE-PARSE 1:5 [4,5)" in GOLDEN

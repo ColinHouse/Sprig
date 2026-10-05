@@ -91,7 +91,7 @@ code --install-extension dist/sprig-language-0.2.0.vsix
 - 代码有语法错误时不能格式化。
 - 没有重命名、查找引用和调试。插件还没有接入 Sprig 的语言服务器；其他编辑器已经可以用开发版里的 [`sprig lsp`](/guide/tooling#语言服务器)。
 - 在受限模式（未信任的工作区）下，只保留高亮、大纲、代码片段和关键字补全。检查、运行、格式化、悬停提示和测试都需要信任这个工作区。
-- 支持 Linux 和 macOS。Windows 只是预览，取消运行时可能停不掉子进程。
+- 支持 Linux 和 macOS。Windows 只是预览。
 - 用 Remote SSH 或容器开发时，SDK 和 JDK 要装在远程那一端。不支持浏览器版 VS Code 和虚拟文件系统。
 
 完整的配置、开发和限制说明见[插件 README（英文）](https://github.com/ColinHouse/Sprig/blob/main/editors/vscode/README.md)。

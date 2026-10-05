@@ -6,10 +6,10 @@ acceptance commands and semantic constraints. Check current open/closed status
 before starting; pick an `agent-friendly` issue, read AGENTS.md, run verify,
 review the patch, then submit a PR.
 
-Status checked 2026-09-28: every issue below is still open. `#18`'s
-`find_member`/`Lookup` helpers now exist in `std/json.spr`, and `#17`'s
-`text.join` does not exist in `std/text.spr`; review the original scope before
-closing or re-scoping either one.
+Status checked 2026-10-05: every issue below is closed; #25 closed with the
+Windows launcher argument suite (`tests/launcher/check_windows_arguments.py`).
+They remain examples of the contract format. Find current work among the
+[open agent-friendly issues](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-friendly).
 
 | Issue | Scope |
 |---|---|

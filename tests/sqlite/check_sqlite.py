@@ -17,6 +17,19 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 CLI = ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')
+# java.exe reads its command line in the Windows ANSI code page, so a
+# non-ASCII path argument must be one that code page can carry.
+NON_ASCII = '世界'
+if os.name == 'nt':
+    import ctypes
+    _code_page = ctypes.windll.kernel32.GetACP()
+    for _sample in ('世界', 'café', 'Ωμέγα', 'Привет'):
+        try:
+            _sample.encode(f'cp{_code_page}')
+            NON_ASCII = _sample
+            break
+        except (LookupError, UnicodeEncodeError):
+            pass
 
 
 def command(project, *args):
@@ -99,11 +112,11 @@ def main():
         classpath=os.pathsep.join([str(ROOT/'build/sprig-compiler.jar'),*checked['environment']['classpath']])
         classes=work/'probe classes';classes.mkdir()
         subprocess.run(['javac','--release','17','-cp',classpath,'-d',str(classes),str(ROOT/'runtime/src/main/java/sprig/runtime/SprigError.java'),*map(str,(ROOT/'runtime/src/main/java/sprig/runtime/sqlite').glob('*.java')),str(ROOT/'tests/sqlite/AdapterProbe.java')],check=True)
-        subprocess.run(['java','-Dfile.encoding=UTF-8','-cp',os.pathsep.join([str(classes),classpath]),'AdapterProbe',str(work/'adapter 世界.sqlite')],check=True)
+        subprocess.run(['java','-Dfile.encoding=UTF-8','-cp',os.pathsep.join([str(classes),classpath]),'AdapterProbe',str(work/f'adapter {NON_ASCII}.sqlite')],check=True)
         path=work/'demo notes.sqlite'
         assert command(sqlite,'run','--offline','--',path)=='persisted notes=1\n'
         assert command(sqlite,'run','--offline','--',path)=='persisted notes=2\n'
-        database=work/'ledger 世界.sqlite';server=None
+        database=work/f'ledger {NON_ASCII}.sqlite';server=None
         try:
             server=Server(ledger,database)
             def request(method,path,value=None,expected=200,raw=None):

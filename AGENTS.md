@@ -122,9 +122,11 @@ change touches, as applicable:
 ## Release support
 
 Linux/macOS × JDK17/26 and Docs are required. Windows is an experimental
-non-blocking preview. `@std` is a reserved bundled package; never add a manifest
-dependency named std. `build --emit-java-only` performs the static pipeline and
-writes Java without javac. Do not claim a development catalog is a published SDK.
+preview: its CI job runs the build, test, grammar, SDK archive, docs and editor
+gates and fails when one fails, but it is not a required check. `@std` is a
+reserved bundled package; never add a manifest dependency named std.
+`build --emit-java-only` performs the static pipeline and writes Java without
+javac. Do not claim a development catalog is a published SDK.
 
 ## VS Code adapter
 

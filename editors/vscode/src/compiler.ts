@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { ChildProcess, spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -46,19 +46,37 @@ export function resolveCompiler(configured: string, cwd: string): string {
   throw new Error('Sprig compiler not found. Install the SDK and set sprig.compilerPath to its bin/sprig launcher.');
 }
 
-/** Shared direct-process plan for finite JSON commands and integrated terminals. */
+/**
+ * Shared direct-process plan for finite JSON commands and integrated terminals.
+ * On Windows the JVM is started with the classpath bin/sprig.cmd would use, so
+ * no argument passes through cmd.exe quoting.
+ */
 export function compilerCommand(executable: string, args: string[],
   platform: NodeJS.Platform = process.platform): { command: string; args: string[] } {
   if (platform === 'win32' && /\.(cmd|bat)$/i.test(executable)) {
     const home = path.dirname(path.dirname(executable));
-    if (!fs.existsSync(path.join(home, 'build', 'sprig-compiler.jar'))) {
+    let classpath: string[];
+    if (fs.existsSync(path.join(home, 'lib', 'sprig-compiler.jar'))) {
+      classpath = [path.join(home, 'lib', '*')]; // extracted release SDK
+    } else if (fs.existsSync(path.join(home, 'build', 'sprig-compiler.jar'))) {
+      classpath = [path.join(home, 'build', 'sprig-compiler.jar'), // source checkout build
+        path.join(home, 'build', 'deps', 'antlr-4.13.2-complete.jar'), path.join(home, 'build', 'deps', 'resolver', '*')];
+    } else {
       throw new Error('Windows preview requires the SDK bin/sprig.cmd launcher; arbitrary batch wrappers are unsupported.');
     }
-    return {command: 'java', args: ['-Dfile.encoding=UTF-8', '-cp', [path.join(home,'build','sprig-compiler.jar'),
-      path.join(home,'tools','antlr-4.13.2-complete.jar'), path.join(home,'tools','resolver','*')].join(';'),
+    return {command: 'java', args: ['-Dfile.encoding=UTF-8', '-cp', classpath.join(';'),
       `-Dsprig.home=${home}`, 'sprig.compiler.cli.Main', ...args]};
   }
   return {command: executable, args};
+}
+
+/**
+ * Windows has no process groups: ending the compiler JVM alone would leave the
+ * program JVM it started running, so stop the whole tree.
+ */
+function killTree(child: ChildProcess): void {
+  spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {windowsHide: true, stdio: 'ignore'})
+    .on('error', () => { try { child.kill(); } catch { /* exited */ } });
 }
 
 /** Runs one compiler process with the shared cancel, timeout and output limits. */
@@ -74,7 +92,7 @@ export function capture(executable: string, args: string[], cwd: string, options
     const stop = (error: Error) => {
       failure ??= error;
       if (child.pid) {
-        try { if (process.platform === 'win32') child.kill(); else process.kill(-child.pid, 'SIGKILL'); } catch { /* exited */ }
+        try { if (process.platform === 'win32') killTree(child); else process.kill(-child.pid, 'SIGKILL'); } catch { /* exited */ }
       }
     };
     const abort = () => stop(new Error('Sprig command canceled.'));

@@ -176,7 +176,7 @@ if value != null:
         check("classpath-build", built.returncode == 0 and not marker.exists())
         executed = run("run", program, "--classpath", jar, "--json", env=env)
         check("classpath-run", executed.returncode == 0
-              and obj(executed)["programOutput"] == "ok\n" and marker.exists())
+              and obj(executed)["programOutput"].replace("\r\n", "\n") == "ok\n" and marker.exists())
         alt_source = directory / "alt" / "probe" / "Widget.java"
         alt_source.parent.mkdir(parents=True)
         alt_source.write_text('''package probe;
@@ -194,8 +194,8 @@ public final class Widget {
         second = run("run", program, "--classpath", alt_jar, "--classpath", jar,
                      "--json", env=env)
         check("classpath-duplicate-order", first.returncode == 0 and second.returncode == 0
-              and obj(first)["programOutput"] == "ok\n"
-              and obj(second)["programOutput"] == "second\n")
+              and obj(first)["programOutput"].replace("\r\n", "\n") == "ok\n"
+              and obj(second)["programOutput"].replace("\r\n", "\n") == "second\n")
         joined = run("check", program, "--classpath", os.pathsep.join([str(jar), str(alt_jar)]),
                      "--json", env=env)
         check("classpath-path-separator", joined.returncode == 0 and
@@ -316,7 +316,7 @@ if booleanBoxed != null:
         check("jvm-scalars-check", checked_edges.returncode == 0)
         run_edges = run("run", edges, "--classpath", edge_jar, "--json")
         check("jvm-scalars-run", run_edges.returncode == 0 and
-              obj(run_edges)["programOutput"] ==
+              obj(run_edges)["programOutput"].replace("\r\n", "\n") ==
               "A\nZ\nnull\n9\n10\nR\nB\n7\n8\n11\n12\n13\n14\n15\n16\n1.25\n2.5\n3.5\n4.5\ntrue\nfalse\n")
         dynamic_char = directory / "dynamic_char.spr"
         dynamic_char.write_text('''import probe.NumericEdges as NumericEdges
@@ -347,7 +347,7 @@ NumericEdges.shortValue = 2
     executed = run("run", top_level_checked, "--json")
     check("top-level-checked-java-is-runtime-propagation", checked.returncode == 0
           and obj(checked)["diagnostics"] == [] and executed.returncode == 0
-          and obj(executed)["programOutput"] == "true\n")
+          and obj(executed)["programOutput"].replace("\r\n", "\n") == "true\n")
     print(f"agent tooling: {COUNT} passed, 0 failed")
 
 

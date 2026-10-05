@@ -59,6 +59,29 @@ First Maven dependency resolution is a separate project action and may need
 network access. See [dependency behavior](../projects/dependencies.md) and the
 [Agent guide](../tooling/agent-guide.md).
 
+## Windows
+
+Windows is an experimental preview without a managed installer. The release
+ZIP contains `bin\sprig.cmd`; verify and unpack it, then run that launcher or
+put its `bin` directory on `PATH`:
+
+```powershell
+$Zip = "sprig-vX.Y.Z-jdk.zip"   # the release asset you downloaded
+(Get-FileHash $Zip -Algorithm SHA256).Hash.ToLower() -eq (Get-Content "$Zip.sha256").Split()[0]
+Expand-Archive $Zip -DestinationPath .
+& ".\$($Zip -replace '\.zip$')\bin\sprig.cmd" version
+```
+
+The comparison must print `True`. `sprig upgrade` refuses on Windows; replace
+the extracted SDK with a newer verified ZIP instead. Building from source works
+too: `py -3 scripts/build.py` creates `bin\sprig.cmd` in the checkout.
+
+`sprig.cmd` forwards arguments exactly as `cmd.exe` passes them. Programs that
+start it themselves must quote for `cmd.exe`; a C runtime argument list (for
+example Python's `subprocess` list form) leaves `&`, `|` and `^` unquoted. See
+[known limitations](../language/known-limitations.md) for the JDK's
+command-line code page.
+
 ## Compiler JVM options
 
 `bin/sprig` and `bin\sprig.cmd` start the compiler JVM with

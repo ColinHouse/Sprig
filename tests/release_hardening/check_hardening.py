@@ -32,7 +32,7 @@ def main():
         source.write_text('import "@std/text.spr" as text\nprint(text.trim("  hello  "))\n', encoding='utf-8')
         checked = run('run', source, '--json', cwd=home)
         assert checked.returncode == 0, checked.stdout + checked.stderr
-        assert json.loads(checked.stdout)['programOutput'] == 'hello\n'
+        assert json.loads(checked.stdout)['programOutput'].replace('\r\n', '\n') == 'hello\n'
         output = home / 'generated'
         built = run('build', source, '--emit-java-only', '-d', output, '--json', cwd=home)
         assert built.returncode == 0, built.stdout + built.stderr

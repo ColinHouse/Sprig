@@ -50,6 +50,10 @@ public final class JavaRunner {
         List<String> command = new ArrayList<>();
         command.add(javaBinary());
         command.add("-Dfile.encoding=UTF-8");
+        // Captured streams are decoded as UTF-8 below; JDK 19+ would otherwise
+        // encode them with the platform code page (JDK 17 ignores these names).
+        command.add("-Dstderr.encoding=UTF-8");
+        if (!streamOutput || StandardStreams.utf8Stdout()) command.add("-Dstdout.encoding=UTF-8");
         command.add("-cp");
         command.add(classesDir + (JvmClasspath.entries().isEmpty() ? ""
                 : java.io.File.pathSeparator + JvmClasspath.forProcess()));
@@ -85,11 +89,13 @@ public final class JavaRunner {
             process.destroy();
             Runtime.getRuntime().removeShutdownHook(cleanup);
         }
+        // A program (or a Java library it calls) may write bytes that are not
+        // UTF-8; report them as replacement characters instead of failing.
         if (!streamOutput && Files.exists(outFile)) {
-            result.stdout = Files.readString(outFile, StandardCharsets.UTF_8);
+            result.stdout = new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8);
         }
         if (Files.exists(errFile)) {
-            result.stderr = Files.readString(errFile, StandardCharsets.UTF_8);
+            result.stderr = new String(Files.readAllBytes(errFile), StandardCharsets.UTF_8);
         }
         return result;
     }

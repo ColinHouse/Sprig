@@ -55,12 +55,14 @@ def javac_json_probe():
         jar = ROOT / "build" / "sprig-compiler.jar"
         probe = ROOT / "tests" / "correctness" / "JavacJsonProbe.java"
         compile_probe = subprocess.run(["javac", "-cp", str(jar), "-d", temp, str(probe)],
-                                       capture_output=True, text=True)
+                                       capture_output=True, text=True, errors="replace")
         if compile_probe.returncode != 0:
             check("json-javac-diagnostic", False, compile_probe.stderr)
             return
-        proc = subprocess.run(["java", "-cp", f"{temp}:{jar}", "JavacJsonProbe"],
-                              capture_output=True, text=True)
+        # A localized javac message must arrive as UTF-8 (JDK 19+ otherwise uses the ANSI code page).
+        proc = subprocess.run(["java", "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8",
+                               "-cp", os.pathsep.join([temp, str(jar)]), "JavacJsonProbe"],
+                              capture_output=True, text=True, encoding="utf-8")
         try:
             data = json.loads(proc.stdout)
             diagnostics = data.get("diagnostics", [])
@@ -104,7 +106,9 @@ def main():
     check("java-platform-nullable-checks", nullable_call.returncode != 0 and
           diagnostic_codes(nullable_call) == ["SPR-TYPE-NULLABLE"])
     narrowed = run("run", CASES / "java_nullable_narrowing.spr")
-    check("java-null-check-narrows-result", narrowed.returncode == 0 and narrowed.stdout.strip() == "1",
+    # The fixture prints the length of the JVM line separator: 2 (CRLF) on Windows.
+    check("java-null-check-narrows-result", narrowed.returncode == 0
+          and narrowed.stdout.strip() == str(len(os.linesep)),
           f"exit={narrowed.returncode}, {narrowed.stdout}{narrowed.stderr}")
     java_nullable = run("run", CASES / "java_reference_nullable_assignment.spr")
     check("java-reference-result-assigns-to-explicit-nullable", java_nullable.returncode == 0 and
