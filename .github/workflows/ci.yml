@@ -2,7 +2,18 @@ name: CI
 
 on:
   push:
+    branches: [main]
+    tags: ['v*']
   pull_request:
+  workflow_dispatch:
+
+# Pull requests are tested once, through pull_request; a branch push alone
+# does not start a second copy. A newer commit on the same pull request,
+# including "Update branch", cancels the run it replaces. Every main and tag
+# run has a group of its own, so none of them is ever cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: true
 
 env:
   PYTHONUTF8: "1"

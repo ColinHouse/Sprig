@@ -1,7 +1,13 @@
 name: Windows experimental
 on:
   push:
+    branches: [main]
+    tags: ['v*']
   pull_request:
+  workflow_dispatch:
+concurrency:
+  group: windows-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: true
 env:
   PYTHONUTF8: "1"
 permissions:
