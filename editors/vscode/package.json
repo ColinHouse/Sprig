@@ -33,7 +33,7 @@
   "scripts": {
     "compile": "tsc -p .",
     "test:grammar": "node --test test/grammar.cjs",
-    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs",
+    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs test/symbols.cjs",
     "test:host": "npm run compile && node test/run-host.cjs",
     "vscode:prepublish": "npm run compile",
     "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
