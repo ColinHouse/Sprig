@@ -24,6 +24,7 @@ import sprig.compiler.project.DependencyResolver;
 import sprig.compiler.project.Lockfile;
 import sprig.compiler.project.MavenResolver;
 import sprig.compiler.project.Project;
+import sprig.compiler.project.StdLibrary;
 import sprig.compiler.project.Toml;
 import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
@@ -275,7 +276,15 @@ public final class Main {
         Project project = null;
         DependencyResolver.Result graph = null;
         Path source;
-        if (raw.startsWith("@")) {
+        if (raw.startsWith("@std/")) {
+            // Bundled modules belong to the SDK: they are the same with or
+            // without a project, and no manifest or lock is involved.
+            source = StdLibrary.resolve(raw, diagnostics, null, null);
+            if (source == null) {
+                report(diagnostics, options.json, "api", 1, null);
+                return 1;
+            }
+        } else if (raw.startsWith("@")) {
             try {
                 project = Project.discover(Path.of(""));
             } catch (Toml.TomlException e) {

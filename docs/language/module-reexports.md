@@ -28,7 +28,9 @@ modules. Consumers still cannot import those internal paths directly. Neither
 facades nor API queries bypass the manifest boundary.
 
 `sprig api public.spr --json` includes reexported declarations and values with
-`reexported: true` and `originModule` relative to the facade. `--member` uses the
+`reexported: true` and `originModule` relative to the facade. A declaration that
+comes from the bundled standard library is named by its import instead, such as
+`@std/json_codec.spr`, which is the same on every machine. `--member` uses the
 same names and signatures as local declarations.
 
 There are no wildcard exports, export-import statements, export renaming,

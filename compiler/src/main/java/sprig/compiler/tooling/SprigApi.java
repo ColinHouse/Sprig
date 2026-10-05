@@ -1,5 +1,6 @@
 package sprig.compiler.tooling;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -7,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import sprig.compiler.ast.Decl;
 import sprig.compiler.ast.Module;
+import sprig.compiler.project.DepError;
+import sprig.compiler.project.StdLibrary;
 import sprig.compiler.sem.ImportNames;
 import sprig.compiler.sem.Symbol;
 import sprig.compiler.types.Type;
@@ -87,9 +90,24 @@ public final class SprigApi {
     private static void exportOrigin(Module module, Symbol symbol, Map<String,Object> item) {
         if (symbol.module != null && symbol.module != module) {
             item.put("reexported",true);
-            String origin = module.path.toAbsolutePath().getParent().relativize(symbol.module.path.toAbsolutePath()).toString().replace('\\','/');
-            item.put("originModule",origin.startsWith(".") ? origin : "./" + origin);
+            item.put("originModule",originModule(module.path,symbol.module.path));
         }
+    }
+
+    /**
+     * A bundled module is named by its import, which is the same on every
+     * machine; a path from the facade to the SDK would not be. Other origins
+     * stay relative to the facade.
+     */
+    private static String originModule(Path facade, Path origin) {
+        Path absolute = origin.toAbsolutePath().normalize();
+        try {
+            if (absolute.getParent().equals(StdLibrary.root().toRealPath())) return "@std/" + absolute.getFileName();
+        } catch (DepError | IOException e) {
+            // No bundled std in this launch, so the origin is an ordinary file.
+        }
+        String relative = facade.toAbsolutePath().getParent().relativize(absolute).toString().replace('\\','/');
+        return relative.startsWith(".") ? relative : "./" + relative;
     }
 
     private static Map<String, Object> declaration(Decl decl) {
