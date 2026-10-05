@@ -67,5 +67,5 @@ func optional_string_error(reader: codec.Reader, name: String) -> String:
 
 # The helper module is also a discovered test; assert its own contract.
 assert(codec.kind(json.Value.Null) == "null")
-assert(codec.kind(json.Value.Object(members = [])) == "object")
+assert(codec.kind(json.Value.Object(members=[])) == "object")
 assert(root_error(json.parse("{\"a\": 1}")) == "decoded")

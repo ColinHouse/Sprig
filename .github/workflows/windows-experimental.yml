@@ -24,9 +24,74 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - run: python scripts/build.py
-      - run: python scripts/test.py
-      - run: python scripts/test-grammar.py
-      - run: |
+      # Windows is an experimental, non-blocking preview: these steps may fail
+      # without failing the job. The final step lists every failed or skipped
+      # step in the job summary and as a warning annotation.
+      - name: Build (scripts/build.py)
+        id: build
+        continue-on-error: true
+        run: python scripts/build.py
+      - name: Tests (scripts/test.py)
+        id: tests
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: python scripts/test.py
+      - name: Grammar tests (scripts/test-grammar.py)
+        id: grammar
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: python scripts/test-grammar.py
+      - name: SDK archive (scripts/package-alpha.py + scripts/check-sdk-archive.py)
+        id: archive
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
           python scripts/package-alpha.py --skip-build
           python scripts/check-sdk-archive.py
+      - name: Report preview results
+        if: ${{ !cancelled() }}
+        shell: bash
+        env:
+          JAVA_VERSION: ${{ matrix.java }}
+          BUILD: ${{ steps.build.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          GRAMMAR: ${{ steps.grammar.outcome }}
+          ARCHIVE: ${{ steps.archive.outcome }}
+        run: |
+          failed=()
+          skipped=()
+          {
+            echo "### Windows experimental preview / JDK $JAVA_VERSION"
+            echo
+            echo "Non-blocking: a failed step is reported here and as a warning instead of failing the job."
+            echo
+            echo "| Step | Outcome |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          report() {
+            local step="$1" outcome="${2:-not run}"
+            echo "| $step | $outcome |" >> "$GITHUB_STEP_SUMMARY"
+            case "$outcome" in
+              success) ;;
+              failure) failed+=("$step") ;;
+              *) skipped+=("$step") ;;
+            esac
+          }
+          report "Build (scripts/build.py)" "$BUILD"
+          report "Tests (scripts/test.py)" "$TESTS"
+          report "Grammar tests (scripts/test-grammar.py)" "$GRAMMAR"
+          report "SDK archive (scripts/package-alpha.py + scripts/check-sdk-archive.py)" "$ARCHIVE"
+          joined() { local text; text=$(printf '%s; ' "$@"); echo "${text%; }"; }
+          if [ ${#failed[@]} -eq 0 ] && [ ${#skipped[@]} -eq 0 ]; then
+            printf '\nAll preview steps passed.\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          message="Windows preview on JDK $JAVA_VERSION did not pass (non-blocking)."
+          if [ ${#failed[@]} -gt 0 ]; then
+            message="$message Failed: $(joined "${failed[@]}")."
+          fi
+          if [ ${#skipped[@]} -gt 0 ]; then
+            message="$message Not run: $(joined "${skipped[@]}")."
+          fi
+          printf '\n**%s**\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Windows experimental / JDK $JAVA_VERSION::$message"

@@ -290,6 +290,7 @@ public final class AstBuilder {
                 }
                 Expr.FieldAccess access = new Expr.FieldAccess(current, ident.getText());
                 access.span = span(ctx);
+                access.nameSpan = span(ident);
                 current = access;
             } else if (child instanceof SprigParser.ExpressionContext exprCtx) {
                 Expr.Index idx = new Expr.Index(current, buildExpression(exprCtx));
@@ -497,6 +498,7 @@ public final class AstBuilder {
                     if (next instanceof TerminalNode ident) {
                         Expr.FieldAccess access = new Expr.FieldAccess(current, ident.getText());
                         access.span = span(ctx);
+                        access.nameSpan = span(ident);
                         current = access;
                     }
                 }

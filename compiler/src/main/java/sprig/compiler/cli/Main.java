@@ -175,7 +175,7 @@ public final class Main {
             for (String line : (List<String>) data.get("syntax")) System.out.println("  " + line);
             System.out.println("Rules:");
             for (String line : (List<String>) data.get("rules")) System.out.println("  - " + line);
-            System.out.println("Example: " + String.join(", ", (List<String>) data.get("examples")));
+            System.out.println("Example (Sprig source repository): " + String.join(", ", (List<String>) data.get("examples")));
         }
         return 0;
     }
@@ -1513,6 +1513,9 @@ public final class Main {
         if (className.equals("sprig.runtime.SprigNumericError")) {
             return raw == null || raw.isBlank() ? "Numeric operation failed" : "Numeric error: " + raw;
         }
+        if (className.equals("sprig.runtime.SprigInitializationError")) {
+            return raw == null || raw.isBlank() ? "Top-level binding used before its initializer ran" : raw;
+        }
         if (raw != null) {
             Matcher stringIndex = STRING_INDEX.matcher(raw);
             if (stringIndex.find()) {
@@ -1565,6 +1568,11 @@ public final class Main {
         if (className.equals("sprig.runtime.SprigNumericError")) {
             return new RuntimeOrigin("checked-arithmetic",
                     "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.");
+        }
+        if (className.equals("sprig.runtime.SprigInitializationError")) {
+            return new RuntimeOrigin("init-order",
+                    "Top-level statements run in source order; declare the binding above the first top-level "
+                            + "statement that calls code using it.");
         }
         if (className.equals("java.lang.StringIndexOutOfBoundsException")) {
             return new RuntimeOrigin("string-bounds",
@@ -1727,12 +1735,25 @@ public final class Main {
         if (json) System.out.println(ToolJson.encode(detail));
         else {
             System.out.println(args[1] + ": " + detail.get("meaning"));
-            System.out.println("Common causes: " + detail.get("commonCauses"));
-            System.out.println("Safe fixes: " + detail.get("safeFixes"));
-            if (detail.get("goodExample") != null) System.out.println("Good: " + detail.get("goodExample"));
-            if (detail.get("badExample") != null) System.out.println("Bad: " + detail.get("badExample"));
+            if (detail.get("whyMatters") != null) System.out.println("Why it matters: " + detail.get("whyMatters"));
+            printExplainList("Common causes", detail.get("commonCauses"));
+            printExplainList("Safe fixes", detail.get("safeFixes"));
+            printExplainBlock("Good", detail.get("goodExample"));
+            printExplainBlock("Bad", detail.get("badExample"));
         }
         return 0;
+    }
+
+    private static void printExplainList(String label, Object items) {
+        if (!(items instanceof List<?> list) || list.isEmpty()) return;
+        System.out.println(label + ":");
+        for (Object item : list) System.out.println("  - " + item);
+    }
+
+    private static void printExplainBlock(String label, Object code) {
+        if (code == null) return;
+        System.out.println(label + ":");
+        for (String line : String.valueOf(code).split("\\R", -1)) System.out.println("  " + line);
     }
 
     private static int filterApiMembers(Map<String, Object> data, String member) {

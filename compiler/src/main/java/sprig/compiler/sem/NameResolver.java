@@ -289,6 +289,14 @@ public final class NameResolver {
 
     /** Lexical generic parameters of the function/class body being resolved. */
     private Map<String, Type> bodyTypeParams = Map.of();
+    /**
+     * Index of the top-level statement being resolved, or -1 inside functions,
+     * methods and field defaults. Top-level statements run once in source order,
+     * so straight-line top-level code may only use bindings declared above it.
+     */
+    private int topStatementIndex = -1;
+    private int lambdaNesting;
+    private final Map<Symbol, Integer> topVarIndex = new java.util.HashMap<>();
 
     private Map<String, Type> typeParamsOf(Module module, Decl decl) {
         Map<String, Type> map = new HashMap<>();
@@ -415,9 +423,16 @@ public final class NameResolver {
             }
         }
         Scope topScope = new Scope(null, module, null, null);
-        for (Stmt stmt : module.topStatements) {
-            resolveStmt(module, topScope, stmt);
+        for (int i = 0; i < module.topStatements.size(); i++) {
+            if (module.topStatements.get(i) instanceof Stmt.VarDecl varDecl && varDecl.symbol != null) {
+                topVarIndex.put(varDecl.symbol, i);
+            }
         }
+        for (int i = 0; i < module.topStatements.size(); i++) {
+            topStatementIndex = i;
+            resolveStmt(module, topScope, module.topStatements.get(i));
+        }
+        topStatementIndex = -1;
     }
 
     private void resolveFieldDefault(Module module, Decl.ClassDecl owner, Decl.Field field) {
@@ -667,7 +682,10 @@ public final class NameResolver {
                     lambdaScope.locals.put(param.name, symbol);
                 }
             }
+            // A lambda body runs when it is called, not where it is written.
+            lambdaNesting++;
             resolveExpr(module, lambdaScope, lambda.body);
+            lambdaNesting--;
         }
     }
 
@@ -710,6 +728,17 @@ public final class NameResolver {
             symbol = errorSymbol(name.name, name.span);
         }
         name.symbol = symbol;
+        if (topStatementIndex >= 0 && lambdaNesting == 0 && symbol.kind == Symbol.Kind.TOP_VAR
+                && symbol.module == module) {
+            Integer declared = topVarIndex.get(symbol);
+            if (declared != null && declared >= topStatementIndex) {
+                diagnostics.add(Diagnostic.error(Codes.NAME_FORWARD_REFERENCE, Phase.NAME,
+                        "Top-level '" + name.name + "' is used before its declaration; top-level statements "
+                                + "run once, in source order", module.uri, name.span)
+                        .withHint("Move the declaration of '" + name.name + "' above this statement.")
+                        .withRelated("Declared here", symbol.span));
+            }
+        }
     }
 
     private static Symbol errorSymbol(String name, Span span) {

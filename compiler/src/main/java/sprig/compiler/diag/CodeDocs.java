@@ -23,6 +23,7 @@ public final class CodeDocs {
             Map.entry(Codes.NAME_DUPLICATE_MEMBER, "A class/variant declares the same member twice."),
             Map.entry(Codes.NAME_FIELD_SHADOW, "A parameter/local cannot shadow a current-class field."),
             Map.entry(Codes.NAME_LET_ASSIGN, "let bindings and let fields cannot be reassigned."),
+            Map.entry(Codes.NAME_FORWARD_REFERENCE, "Top-level code uses a top-level binding before its declaration runs."),
             Map.entry(Codes.NAME_NOT_A_TYPE, "A value name was used where a type is required."),
             Map.entry(Codes.NAME_NOT_A_VALUE, "A type or module name was used as a value."),
             Map.entry(Codes.NAME_MODULE, "Module import/alias problem."),

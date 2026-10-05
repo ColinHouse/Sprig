@@ -7,8 +7,10 @@ when no project/source tree exists.
 Both commands accept `--json`, using the standard diagnostic envelope plus
 `checkedFiles`, `changedFiles` and `checkOnly`.
 
-The formatter uses four spaces per block, one space around binary operators,
-commas followed by a space, and no spaces inside delimiters. Inline comments
+The formatter uses four spaces per block, one space around binary operators
+and assignments, commas followed by a space, and no spaces inside delimiters.
+Named arguments are written without spaces around `=`, like Python keyword
+arguments: `Hero(name="Ada", health=80)`. Inline comments
 are separated by two spaces; standalone comments retain their physical order
 and indentation relative to the surrounding block. Repeated blank lines are
 reduced to one. Strings and numeric literal spellings are preserved exactly.

@@ -29,6 +29,7 @@ public final class Codes {
     public static final String NAME_DUPLICATE_MEMBER = "SPR-NAME-DUPLICATE-MEMBER";
     public static final String NAME_FIELD_SHADOW = "SPR-NAME-FIELD-SHADOW";
     public static final String NAME_LET_ASSIGN = "SPR-NAME-LET-ASSIGN";
+    public static final String NAME_FORWARD_REFERENCE = "SPR-NAME-FORWARD-REFERENCE";
     public static final String NAME_NOT_A_TYPE = "SPR-NAME-NOT-A-TYPE";
     public static final String NAME_NOT_A_VALUE = "SPR-NAME-NOT-A-VALUE";
     public static final String NAME_MODULE = "SPR-NAME-MODULE";

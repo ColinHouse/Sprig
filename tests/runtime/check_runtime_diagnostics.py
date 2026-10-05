@@ -47,6 +47,33 @@ CASES = {
     "program-exit": (
         "import java.lang.System\nSystem.exit(3)\n",
         "SPR-PROGRAM-EXIT", "Program exited with status 3", None, None),
+    # A following statement must not take over the failing statement's range:
+    # every case above fails in the last statement, which hid an off-by-one.
+    "overflow-before-next-statement": (
+        "let big: Int = 9223372036854775807\nlet next = big + 1\nprint(next)\n",
+        "SPR-RUNTIME-EXCEPTION", "Numeric error: Int addition overflow", "checked-arithmetic", 2),
+    "list-index-before-next-statement": (
+        "let xs: List[Int] = [1, 2]\nlet value = xs[5]\nprint(value)\n",
+        "SPR-RUNTIME-EXCEPTION", "List index 5 is out of bounds; size is 2", "list-bounds", 2),
+    # A function, method default or lambda can run before a later top-level
+    # binding is initialized; that use must fail instead of seeing 0 or null.
+    "init-order-int": (
+        "func double_limit() -> Int:\n    return limit * 2\n\nlet early = double_limit()\n"
+        "let limit: Int = 21\nprint(early)\n",
+        "SPR-RUNTIME-EXCEPTION", "Top-level 'limit' was used before its initializer ran", "init-order", 2),
+    "init-order-string": (
+        'func greet() -> Int:\n    return name.length()\n\nlet n = greet()\nlet name: String = "sprig"\nprint(n)\n',
+        "SPR-RUNTIME-EXCEPTION", "Top-level 'name' was used before its initializer ran", "init-order", 2),
+    "init-order-write": (
+        "func bump() -> Unit:\n    counter += 1\n\nbump()\nvar counter: Int = 0\nprint(counter)\n",
+        "SPR-RUNTIME-EXCEPTION", "Top-level 'counter' was used before its initializer ran", "init-order", 2),
+    "init-order-field-default": (
+        "class Config:\n    let limit: Int = max_limit\n\nlet config = Config()\nlet max_limit: Int = 10\n"
+        "print(config.limit)\n",
+        "SPR-RUNTIME-EXCEPTION", "Top-level 'max_limit' was used before its initializer ran", "init-order", 4),
+    "overflow-mid-function": (
+        "func bump(x: Int) -> Int:\n    let y = x + 1\n    return y\n\nprint(bump(9223372036854775807))\n",
+        "SPR-RUNTIME-EXCEPTION", "Numeric error: Int addition overflow", "checked-arithmetic", 2),
 }
 
 with tempfile.TemporaryDirectory(prefix="sprig-runtime-diag-") as work:

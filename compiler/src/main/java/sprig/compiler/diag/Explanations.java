@@ -72,7 +72,9 @@ public final class Explanations {
                 out.put("whyMatters", "Numeric conversions can lose range or precision; Sprig names the loss instead of hiding it.");
                 out.put("confusedWith", List.of("Java implicit numeric promotion", "C integer promotion"));
                 out.put("commonCauses", List.of("Implicit conversion could lose range, precision, or numeric meaning."));
-                out.put("safeFixes", List.of("Use an explicit exact conversion (toIntExact, toFloatExact) or an explicitly lossy one after deciding the precision."));
+                out.put("safeFixes", List.of("Use an explicit exact conversion (toIntExact, toFloatExact) or an explicitly lossy one after deciding the precision.",
+                        "Float to Int: toIntExact() requires a whole value, toIntTrunc() drops the fraction, java.lang.Math.round(x) rounds to the nearest Int.",
+                        "Int to Float: toFloat() fails on precision loss; toFloatLossy() rounds."));
                 out.put("relatedCodes", List.of(Codes.NUM_RANGE, Codes.NUM_DIVISION));
             }
             case Codes.COLLECTION_IMMUTABLE -> {
@@ -430,6 +432,19 @@ public final class Explanations {
                 out.put("safeFixes", List.of("Rename one declaration or member.",
                         "Move the competing declaration into another module if both are needed."));
                 out.put("relatedCodes", List.of(Codes.NAME_FIELD_SHADOW, Codes.NAME_UNRESOLVED));
+            }
+            case Codes.NAME_FORWARD_REFERENCE -> {
+                out.put("whyMatters", "Top-level statements run once, in source order; reading a binding before its "
+                        + "declaration would observe 0, false or null instead of its value.");
+                out.put("confusedWith", List.of("Function declarations, which are visible before their position",
+                        "Java static fields, whose forward references javac also rejects"));
+                out.put("commonCauses", List.of("A top-level statement uses a binding declared further down.",
+                        "An initializer refers to its own binding or to a later one."));
+                out.put("safeFixes", List.of("Move the declaration above its first top-level use.",
+                        "Wrap the code in a function and call it after the declaration."));
+                out.put("relatedCodes", List.of(Codes.NAME_UNRESOLVED, Codes.RUNTIME_EXCEPTION));
+                out.put("badExample", "print(limit)\nlet limit: Int = 21");
+                out.put("goodExample", "let limit: Int = 21\nprint(limit)");
             }
             case Codes.NAME_LET_ASSIGN -> {
                 out.put("whyMatters", "let bindings and let fields are immutable; mutation is visible in the declaration.");

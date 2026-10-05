@@ -1,0 +1,18 @@
+# A `while true` loop without break completes only through return or throw.
+func first_square_above(limit: Int) -> Int:
+    var n = 1
+    while true:
+        if n * n > limit:
+            return n * n
+        n += 1
+
+func countdown(start: Int) -> Int:
+    var n = start
+    while true:
+        n -= 1
+        if n == 0:
+            break
+    return n
+
+print(first_square_above(50))
+print(countdown(3))

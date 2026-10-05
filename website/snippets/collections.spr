@@ -7,7 +7,7 @@ print(immutable.contains(2))
 print(2 in immutable)
 print(mutable)
 print(mutable[0])
-print(immutable) # toMutableList returns a new outer collection
+print(immutable)  # toMutableList returns a new outer collection
 
 let ages: Map[String, Int] = {"ada": 36, "bob": 41}
 print(ages.get("ada"))

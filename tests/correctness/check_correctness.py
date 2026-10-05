@@ -76,7 +76,25 @@ def javac_json_probe():
                   f"invalid JSON ({exc}), stdout={proc.stdout!r}, stderr={proc.stderr!r}")
 
 
+def sealed_variant_lowering():
+    """feature-status documents variants as a sealed interface with final cases."""
+    with tempfile.TemporaryDirectory(prefix="sprig-sealed-") as work:
+        source = Path(work) / "shape.spr"
+        source.write_text("variant Shape:\n    Circle(radius: Float)\n    Point\n\nprint(Shape.Point)\n",
+                          encoding="utf-8")
+        out = Path(work) / "out"
+        result = run("build", source, "--emit-java-only", "-d", out)
+        generated = list(out.rglob("$Shape.java"))
+        java = generated[0].read_text(encoding="utf-8") if generated else ""
+        check("variant-lowers-to-sealed-interface", result.returncode == 0
+              and "public sealed interface $Shape" in java
+              and "final class Circle implements $Shape" in java
+              and "final class Point implements $Shape" in java,
+              f"exit={result.returncode} {result.stdout}{result.stderr}{java[:400]}")
+
+
 def main():
+    sealed_variant_lowering()
     null_assignment = run("check", "--json", CASES / "java_nonnull_null.spr")
     check("java-null-rejected", null_assignment.returncode != 0 and
           diagnostic_codes(null_assignment) == ["SPR-TYPE-NULL"] and

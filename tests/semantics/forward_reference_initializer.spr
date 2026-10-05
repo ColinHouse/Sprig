@@ -1,0 +1,3 @@
+let a: Int = b + 1
+let b: Int = 41
+print(a)

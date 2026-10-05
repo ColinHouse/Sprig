@@ -39,6 +39,47 @@ public final class SprigRuntime {
         }
     }
 
+    /**
+     * Initialization-order guard for a top-level binding that code may reach
+     * before its initializer ran. It throws here, inside the runtime, so the
+     * reported Sprig location is the use site rather than a generated helper.
+     */
+    public static void requireInitialized(boolean ready, String name) {
+        if (!ready) {
+            throw new SprigInitializationError("Top-level '" + name + "' was used before its initializer ran");
+        }
+    }
+
+    public static long initialized(boolean ready, String name, long value) {
+        requireInitialized(ready, name);
+        return value;
+    }
+
+    public static int initialized(boolean ready, String name, int value) {
+        requireInitialized(ready, name);
+        return value;
+    }
+
+    public static double initialized(boolean ready, String name, double value) {
+        requireInitialized(ready, name);
+        return value;
+    }
+
+    public static float initialized(boolean ready, String name, float value) {
+        requireInitialized(ready, name);
+        return value;
+    }
+
+    public static boolean initialized(boolean ready, String name, boolean value) {
+        requireInitialized(ready, name);
+        return value;
+    }
+
+    public static <T> T initialized(boolean ready, String name, T value) {
+        requireInitialized(ready, name);
+        return value;
+    }
+
     /** Sprig {@code print}: one line, Sprig value formatting. */
     public static void print(Object value) {
         System.out.println(format(value));

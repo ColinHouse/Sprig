@@ -2458,9 +2458,14 @@ public final class TypeChecker {
         if (receiver == null || receiver == NativeType.ERROR) {
             resolved = errorField(access);
         } else if (receiver.isNullable()) {
+            // Point at the member: in a chain such as a.b().c() every access
+            // shares the chain's span, so the name tells the errors apart.
             diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
-                    "Cannot access '" + access.name + "' on a value that may be null",
-                    module.uri, access.span));
+                    "Cannot access '" + access.name + "' on a value that may be null (receiver type "
+                            + receiver.display() + ")",
+                    module.uri, access.nameSpan != null ? access.nameSpan : access.span)
+                    .withHint("Bind the receiver to a let and check it with 'if value != null:' before using '"
+                            + access.name + "'."));
             receiver = receiver.nonNull();
             resolved = memberOf(receiver, access);
         } else {
@@ -3980,11 +3985,33 @@ public final class TypeChecker {
                     "Cannot implicitly convert " + actual.display() + " to " + target.display()
                             + " in " + what + "; precision or range may change",
                     module.uri, span).withTypes(target.display(), actual.display())
-                    .withHint("Use an explicit exact conversion, or a method named Lossy/Trunc when intended."));
+                    .withHint(conversionHint(target.nonNull(), actual.nonNull())));
             return;
         }
         diagnostics.add(Diagnostic.error(code, Phase.TYPE,
                 "Type mismatch in " + what, module.uri, span).withTypes(expected, got));
+    }
+
+    /** Names the explicit conversion methods that exist for this numeric pair. */
+    private static String conversionHint(Type target, Type actual) {
+        if (actual == NativeType.FLOAT && target == NativeType.INT) {
+            return "Use toIntExact() if the value must be whole, toIntTrunc() to drop the fraction, "
+                    + "or java.lang.Math.round(x) to round to the nearest Int.";
+        }
+        if (actual == NativeType.INT && target == NativeType.FLOAT) {
+            return "Use toFloat() (fails if precision would be lost) or toFloatLossy() to round to the nearest Float.";
+        }
+        if (actual == NativeType.INT && target == NativeType.INT32) {
+            return "Use toInt32Exact(), which fails outside the Int32 range.";
+        }
+        if (actual == NativeType.FLOAT && target == NativeType.FLOAT32) {
+            return "Use toFloat32Exact() or toFloat32Lossy().";
+        }
+        if ((actual == NativeType.DECIMAL || actual == NativeType.BIGINT)
+                && (target == NativeType.INT || target == NativeType.FLOAT)) {
+            return "Use toIntExact(), toFloatExact() or toFloatLossy().";
+        }
+        return "Use an explicit exact conversion, or a method named Lossy/Trunc when intended.";
     }
 
     // ------------------------------------------------------------------
@@ -4033,9 +4060,16 @@ public final class TypeChecker {
         }
         if (statement instanceof Stmt.WhileStmt loop) {
             Set<Completion> out = completions(loop.body);
-            out.remove(Completion.BREAK);
+            // A break in the body (not in a nested loop) leaves this loop normally.
+            boolean breaks = out.remove(Completion.BREAK);
             out.remove(Completion.CONTINUE);
-            out.add(Completion.NORMAL); // conservatively allow zero iterations
+            if (loop.cond instanceof Expr.BoolLit literal && literal.value && !breaks) {
+                // `while true` without break completes only through return or throw,
+                // like Java's constant-true loops.
+                out.remove(Completion.NORMAL);
+            } else {
+                out.add(Completion.NORMAL); // conservatively allow zero iterations
+            }
             return out;
         }
         if (statement instanceof Stmt.ForStmt loop) {

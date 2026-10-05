@@ -1,0 +1,2 @@
+print(total)
+let total: Int = 3
