@@ -2,14 +2,27 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { CompilerResult, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
+import { CompilerResult, capture, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
 import { mapRange } from './diagnostics';
+import { DIAGNOSTIC_DOCS_URL, DOCS_URL, ExplainJson, HelpJson, explainMarkdown, helpMarkdown } from './markdown';
+import { registerLanguageFeatures } from './language';
+import { Queries } from './queries';
+import { registerStatus } from './status';
+import { registerTesting } from './testing';
+
+const HELP_TOPICS_LIST = ['language','types','strings','functions','classes','variants','match','nullability','errors','collections',
+  'numerics','modules','jvm','conform','generics','projects','dependencies','agents','upgrade','fmt','testing','wrap'];
+
+/** The plain code of a diagnostic, whether or not it carries a documentation link. */
+export const codeOf = (code: vscode.Diagnostic['code']): string | undefined =>
+  code === undefined ? undefined : typeof code === 'object' ? String(code.value) : String(code);
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Sprig');
   const diagnostics = vscode.languages.createDiagnosticCollection('sprig');
   const jobs = new Map<string, AbortController>();
   const groups = new Map<string, Map<string, vscode.Diagnostic[]>>();
+  const helpTopics = new Map<string, string>();
   const saved = (doc: vscode.TextDocument) => doc.languageId === 'sprig' && doc.uri.scheme === 'file';
   const settings = (uri: vscode.Uri) => vscode.workspace.getConfiguration('sprig', uri);
   context.subscriptions.push(output, diagnostics, {dispose: () => {for(const job of jobs.values()) job.abort();}});
@@ -31,9 +44,10 @@ export function activate(context: vscode.ExtensionContext): void {
       if(d.expectedType || d.actualType) message += `\nExpected: ${d.expectedType ?? '?'}; actual: ${d.actualType ?? '?'}.`;
       if(d.hint) message += `\n${d.hint}`;
       const item = new vscode.Diagnostic(range,message,d.severity==='warning' ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error);
-      item.source = 'Sprig'; item.code = d.code;
+      item.source = 'Sprig'; item.code = {value: d.code, target: vscode.Uri.parse(DIAGNOSTIC_DOCS_URL)};
+      if(d.relatedHelp) helpTopics.set(d.code, d.relatedHelp);
       const list = entries.get(uri.toString()) ?? [];
-      if(!list.some(x=>x.code===item.code && x.message===item.message && x.range.isEqual(item.range))) list.push(item);
+      if(!list.some(x=>codeOf(x.code)===d.code && x.message===item.message && x.range.isEqual(item.range))) list.push(item);
       entries.set(uri.toString(),list);
     }
     if(owner.signal.aborted || jobs.get(key)!==owner) return;
@@ -126,6 +140,95 @@ export function activate(context: vscode.ExtensionContext): void {
     } finally {if(jobs.get(cwd)===controller) jobs.delete(cwd);}
   }
 
+  // Read-only compiler queries for editor features; never run without workspace trust.
+  const query = async (args: string[], cwd: string, root = cwd): Promise<CompilerResult> => {
+    if(!vscode.workspace.isTrusted) throw new Error('Workspace is not trusted.');
+    const executable = resolveCompiler(settings(vscode.Uri.file(root)).get<string>('compilerPath',''), root);
+    const result = await invoke(executable, args, cwd, {timeoutMs: 30000});
+    if(result.stderr) output.appendLine(result.stderr);
+    return result.json;
+  };
+  const queries = new Queries(query);
+  registerLanguageFeatures(context, queries, query);
+  const testing = registerTesting(context, async (args, cwd, signal) => {
+    const config = settings(vscode.Uri.file(cwd));
+    const executable = resolveCompiler(config.get<string>('compilerPath',''), cwd);
+    const timeoutMs = Math.max(1, Math.min(7200, config.get<number>('testTimeoutSeconds', 600))) * 1000;
+    const result = await invoke(executable, args, cwd, {signal, timeoutMs});
+    if(result.stderr) output.appendLine(result.stderr);
+    return result.json;
+  });
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.runTests', async () => {
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to run Sprig tests.');return;}
+    const doc = vscode.window.activeTextEditor?.document;
+    const root = doc?.uri.scheme==='file' ? projectRoot(doc.uri.fsPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if(!root) {void vscode.window.showWarningMessage('Open a file in a Sprig project first.');return;}
+    for(const d of vscode.workspace.textDocuments) if(saved(d) && d.isDirty && projectRoot(d.uri.fsPath)===root) await d.save();
+    const result = await testing.runProject(root);
+    if(!result) {void vscode.window.showInformationMessage('No Sprig tests found under tests/.');return;}
+    const summary = result.summary as {total:number; passed:number} | undefined;
+    if(summary) vscode.window.setStatusBarMessage(`Sprig tests: ${summary.passed}/${summary.total} passed`, 5000);
+    return result;
+  }));
+  const status = registerStatus(context, queries, query);
+  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+    if(!event.affectsConfiguration('sprig')) return;
+    queries.clear(); void status.refresh();
+  }));
+  /** Runs a project command with the user's command time limit. */
+  const project = async (args: string[], root: string): Promise<CompilerResult> => {
+    const config = settings(vscode.Uri.file(root));
+    const timeoutMs = Math.max(1,Math.min(3600,config.get<number>('commandTimeoutSeconds',120)))*1000;
+    const result = await invoke(resolveCompiler(config.get<string>('compilerPath',''), root), args, root, {timeoutMs});
+    if(result.stderr) output.appendLine(result.stderr);
+    return result.json;
+  };
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.resolveDependencies', async () => {
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to resolve Sprig dependencies.');return;}
+    const doc = vscode.window.activeTextEditor?.document;
+    if(!doc || doc.uri.scheme!=='file') {void vscode.window.showWarningMessage('Open a file in a Sprig project first.');return;}
+    const root = projectRoot(doc.uri.fsPath);
+    try {
+      const result = await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:'Sprig: Resolve Dependencies'},()=>project(['resolve','--json'],root));
+      queries.clear(); void status.refresh();
+      if(result.exitCode===0) void vscode.window.showInformationMessage('Sprig: sprig.lock is up to date.');
+      else void vscode.window.showErrorMessage(`Sprig: ${(result.diagnostics??[]).map(d=>d.message).join('; ') || 'resolve failed'}`);
+      return result;
+    } catch(e) {void vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));return;}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.newProject', async (parent?: string, name?: string) => {
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to create a Sprig project.');return;}
+    parent ??= (await vscode.window.showOpenDialog({canSelectFolders:true,canSelectFiles:false,canSelectMany:false,openLabel:'Create Sprig project here'}))?.[0]?.fsPath;
+    if(!parent) return;
+    name ??= await vscode.window.showInputBox({prompt:'Project folder name',value:'my-sprig-app',
+      validateInput:value=>value.trim()===value && value && !/[\\/:*?"<>|]/.test(value) && value!=='.' && value!=='..' ? undefined : 'Enter a folder name without / \\ : * ? " < > |.'});
+    if(!name) return;
+    const target = path.join(parent, name);
+    try {
+      const executable = resolveCompiler(settings(vscode.Uri.file(parent)).get<string>('compilerPath',''), parent);
+      const init = await capture(executable, ['init', target], parent, {timeoutMs: 60000});
+      if(init.code!==0) throw new Error((init.stderr || init.stdout).trim() || `sprig init exited with ${init.code}`);
+      // An explicit create: also write the empty lock so the new project checks immediately.
+      const resolved = await project(['resolve','--json'], target);
+      if(resolved.exitCode!==0) throw new Error((resolved.diagnostics??[]).map(d=>d.message).join('; ') || 'sprig resolve failed');
+      await vscode.window.showTextDocument(vscode.Uri.file(path.join(target,'src','main.spr')));
+      void vscode.window.showInformationMessage(`Created Sprig project ${name}.`, 'Open Folder').then(choice => {
+        if(choice) void vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(target), {forceNewWindow: true});
+      });
+      return target;
+    } catch(e) {void vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));return;}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.openDocumentation', () =>
+    vscode.env.openExternal(vscode.Uri.parse(vscode.env.language.toLowerCase().startsWith('zh') ? DOCS_URL : DOCS_URL + 'en/'))));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.showActions', async () => {
+    const actions = [['Check','sprig.check'],['Run','sprig.run'],['Run in Terminal','sprig.runInTerminal'],['Run Tests','sprig.runTests'],
+      ['Format Document','editor.action.formatDocument'],['Resolve Dependencies','sprig.resolveDependencies'],['Show Generated Java','sprig.showGeneratedJava'],
+      ['Show Help Topic','sprig.showHelp'],['Explain Diagnostic','sprig.explainDiagnostic'],['Show Capabilities','sprig.showCapabilities'],
+      ['New Project','sprig.newProject'],['Open Documentation','sprig.openDocumentation']];
+    const picked = await vscode.window.showQuickPick(actions.map(([label, command]) => ({label, command})), {placeHolder: 'Sprig'});
+    return picked && vscode.commands.executeCommand(picked.command);
+  }));
+
   for(const [name,command] of [['check','check'],['run','run'],['build','build'],['showGeneratedJava','java']]) {
     context.subscriptions.push(vscode.commands.registerCommand(`sprig.${name}`,()=>{
       const doc = vscode.window.activeTextEditor?.document;
@@ -162,21 +265,46 @@ export function activate(context: vscode.ExtensionContext): void {
       output.appendLine(JSON.stringify(result.json,null,2));output.show(true);
     } catch(e) {void vscode.window.showErrorMessage(String(e));}
   }));
+  // Rendered explanations and help open as read-only Markdown pages.
+  const pages = new Map<string, string>(), changed = new vscode.EventEmitter<vscode.Uri>();
+  context.subscriptions.push(changed, vscode.workspace.registerTextDocumentContentProvider('sprig-doc', {
+    onDidChange: changed.event, provideTextDocumentContent: uri => pages.get(uri.path) ?? '',
+  }));
+  async function showPage(name: string, markdown: string): Promise<string> {
+    const uri = vscode.Uri.from({scheme: 'sprig-doc', path: `/${name}.md`});
+    pages.set(uri.path, markdown); changed.fire(uri);
+    try { await vscode.commands.executeCommand('markdown.showPreviewToSide', uri); }
+    catch { await vscode.window.showTextDocument(uri, {viewColumn: vscode.ViewColumn.Beside, preview: true, preserveFocus: true}); }
+    return markdown;
+  }
+  const queryRoot = () => {
+    const doc = vscode.window.activeTextEditor?.document;
+    return doc?.uri.scheme==='file' ? projectRoot(doc.uri.fsPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+  };
   context.subscriptions.push(vscode.commands.registerCommand('sprig.explainDiagnostic',async(code?: string)=>{
     if(!code) code=await vscode.window.showInputBox({prompt:'Sprig diagnostic code',placeHolder:'SPR-TYPE-ASSIGN'});
-    if(!code)return;
-    if(!vscode.workspace.isTrusted)return;
-    const doc=vscode.window.activeTextEditor?.document;if(!doc||!/^SPR-[A-Z0-9-]+$/.test(code))return;
-    try {
-      const cwd=projectRoot(doc.uri.fsPath);const executable=resolveCompiler(settings(doc.uri).get<string>('compilerPath',''),cwd);
-      const result=await invoke(executable,['explain',code,'--json'],cwd);output.appendLine(JSON.stringify(result.json,null,2));output.show(true);
-    } catch(e) {void vscode.window.showErrorMessage(String(e));}
+    if(!code || !/^SPR-[A-Z0-9-]+$/.test(code)) return;
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to query the Sprig compiler.');return;}
+    try { return await showPage(code, explainMarkdown(await query(['explain',code,'--json'],queryRoot()) as unknown as ExplainJson)); }
+    catch(e) {void vscode.window.showErrorMessage(String(e));return;}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.showHelp',async(topic?: string)=>{
+    topic ??= await vscode.window.showQuickPick(HELP_TOPICS_LIST,{placeHolder:'Sprig help topic'});
+    if(!topic) return;
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to query the Sprig compiler.');return;}
+    try { return await showPage(`help-${topic}`, helpMarkdown(await query(['help',topic,'--json'],queryRoot()) as unknown as HelpJson)); }
+    catch(e) {void vscode.window.showErrorMessage(String(e));return;}
   }));
   context.subscriptions.push(vscode.languages.registerCodeActionsProvider('sprig',{
     provideCodeActions(_doc,_range,ctx) {
-      return ctx.diagnostics.filter(d=>d.source==='Sprig' && typeof d.code==='string').map(d=>{
-        const action=new vscode.CodeAction(`Explain ${d.code}`,vscode.CodeActionKind.QuickFix);
-        action.command={command:'sprig.explainDiagnostic',title:action.title,arguments:[d.code]};action.diagnostics=[d];return action;
+      return ctx.diagnostics.filter(d=>d.source==='Sprig' && codeOf(d.code)).flatMap(d=>{
+        const code=codeOf(d.code)!, explain=new vscode.CodeAction(`Explain ${code}`,vscode.CodeActionKind.QuickFix);
+        explain.command={command:'sprig.explainDiagnostic',title:explain.title,arguments:[code]};explain.diagnostics=[d];
+        const topic=helpTopics.get(code);
+        if(!topic) return [explain];
+        const help=new vscode.CodeAction(`Show sprig help ${topic}`,vscode.CodeActionKind.QuickFix);
+        help.command={command:'sprig.showHelp',title:help.title,arguments:[topic]};help.diagnostics=[d];
+        return [explain,help];
       });
     }
   },{providedCodeActionKinds:[vscode.CodeActionKind.QuickFix]}));

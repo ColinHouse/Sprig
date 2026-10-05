@@ -1,8 +1,8 @@
 {
   "name": "sprig-language",
   "displayName": "Sprig",
-  "description": "Sprig syntax highlighting, compiler diagnostics, Run, terminal execution and generated Java.",
-  "version": "0.1.0",
+  "description": "Sprig language support: highlighting, diagnostics, formatting, outline, hover, completion, navigation, tests, Run and generated Java.",
+  "version": "0.2.0",
   "publisher": "ColinHouse",
   "license": "Apache-2.0",
   "repository": {
@@ -23,7 +23,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Highlighting is available; compiler processes require workspace trust.",
+      "description": "Highlighting, outline, snippets and keyword completion are available; compiler processes, formatting, hover details and tests require workspace trust.",
       "restrictedConfigurations": [
         "sprig.compilerPath"
       ]
@@ -33,10 +33,10 @@
   "scripts": {
     "compile": "tsc -p .",
     "test:grammar": "node --test test/grammar.cjs",
-    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs",
+    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs test/symbols.cjs test/markdown.cjs test/features.cjs",
     "test:host": "npm run compile && node test/run-host.cjs",
     "vscode:prepublish": "npm run compile",
-    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
+    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.2.0.vsix"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -48,7 +48,8 @@
     "vscode-oniguruma": "^2.0.1"
   },
   "activationEvents": [
-    "onLanguage:sprig"
+    "onLanguage:sprig",
+    "workspaceContains:**/sprig.toml"
   ],
   "contributes": {
     "languages": [
@@ -69,6 +70,12 @@
         "language": "sprig",
         "scopeName": "source.sprig",
         "path": "./syntaxes/sprig.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "sprig",
+        "path": "./snippets/sprig.json"
       }
     ],
     "commands": [
@@ -99,6 +106,30 @@
       {
         "command": "sprig.explainDiagnostic",
         "title": "Sprig: Explain Diagnostic"
+      },
+      {
+        "command": "sprig.runTests",
+        "title": "Sprig: Run Tests"
+      },
+      {
+        "command": "sprig.showHelp",
+        "title": "Sprig: Show Help Topic"
+      },
+      {
+        "command": "sprig.newProject",
+        "title": "Sprig: New Project"
+      },
+      {
+        "command": "sprig.resolveDependencies",
+        "title": "Sprig: Resolve Dependencies"
+      },
+      {
+        "command": "sprig.openDocumentation",
+        "title": "Sprig: Open Documentation"
+      },
+      {
+        "command": "sprig.showActions",
+        "title": "Sprig: Show Actions"
       }
     ],
     "configuration": {
@@ -121,6 +152,13 @@
           "minimum": 1,
           "maximum": 3600,
           "description": "Time limit for compiler commands and non-interactive runs."
+        },
+        "sprig.testTimeoutSeconds": {
+          "type": "number",
+          "default": 600,
+          "minimum": 1,
+          "maximum": 7200,
+          "description": "Time limit for one sprig test run from the Testing view."
         }
       }
     },
