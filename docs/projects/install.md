@@ -58,3 +58,13 @@ the shipped installer intentionally targets the official project release.
 First Maven dependency resolution is a separate project action and may need
 network access. See [dependency behavior](../projects/dependencies.md) and the
 [Agent guide](../tooling/agent-guide.md).
+
+## Compiler JVM options
+
+`bin/sprig` and `bin\sprig.cmd` start the compiler JVM with
+`-XX:TieredStopAtLevel=1`. A Sprig command ends before the C2 JIT pays off, so
+the C1 JIT alone finishes it sooner: in local measurements on JDK 17 and 25,
+`sprig build` and `sprig test` took 30–40% less time. `sprig lsp` runs for a
+whole editor session and keeps tiered compilation. Programs started by
+`sprig run` and `sprig test` run in their own JVM with the JDK's defaults.
+JVMs without this HotSpot option, such as OpenJ9, ignore it.

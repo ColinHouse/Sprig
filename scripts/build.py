@@ -23,9 +23,12 @@ def write_launchers(home, packaged=False):
     bindir.mkdir(parents=True, exist_ok=True)
     unix_cp = '$HERE/lib/*' if packaged else '$HERE/build/sprig-compiler.jar:$HERE/build/deps/' + ANTLR_NAME + ':$HERE/build/deps/resolver/*'
     windows_cp = '%SPRIG_HOME%\\lib\\*' if packaged else '%SPRIG_HOME%\\build\\sprig-compiler.jar;%SPRIG_HOME%\\build\\deps\\' + ANTLR_NAME + ';%SPRIG_HOME%\\build\\deps\\resolver\\*'
-    (bindir / 'sprig').write_text('#!/bin/sh\nset -eu\nHERE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexec java -Dfile.encoding=UTF-8 -cp "' + unix_cp + '" -Dsprig.home="$HERE" sprig.compiler.cli.Main "$@"\n', encoding='utf-8')
+    # A Sprig command ends before the C2 JIT pays off, so the compiler JVM uses
+    # C1 alone. `sprig lsp` lives for an editor session and keeps tiered
+    # compilation (the default, passed so the argument count stays fixed).
+    (bindir / 'sprig').write_text('#!/bin/sh\nset -eu\nHERE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nJIT=-XX:TieredStopAtLevel=1\nif [ "${1:-}" = lsp ]; then JIT=-XX:+TieredCompilation; fi\nexec java -Dfile.encoding=UTF-8 "$JIT" -cp "' + unix_cp + '" -Dsprig.home="$HERE" sprig.compiler.cli.Main "$@"\n', encoding='utf-8')
     (bindir / 'sprig').chmod(0o755)
-    (bindir / 'sprig.cmd').write_bytes(('@echo off\r\nsetlocal\r\nfor %%I in ("%~dp0..") do set "SPRIG_HOME=%%~fI"\r\njava -Dfile.encoding=UTF-8 -cp "' + windows_cp + '" "-Dsprig.home=%SPRIG_HOME%" sprig.compiler.cli.Main %*\r\nexit /b %errorlevel%\r\n').encode('utf-8'))
+    (bindir / 'sprig.cmd').write_bytes(('@echo off\r\nsetlocal\r\nfor %%I in ("%~dp0..") do set "SPRIG_HOME=%%~fI"\r\nset "SPRIG_JIT=-XX:TieredStopAtLevel=1"\r\nif /i "%~1"=="lsp" set "SPRIG_JIT=-XX:+TieredCompilation"\r\njava -Dfile.encoding=UTF-8 %SPRIG_JIT% -cp "' + windows_cp + '" "-Dsprig.home=%SPRIG_HOME%" sprig.compiler.cli.Main %*\r\nexit /b %errorlevel%\r\n').encode('utf-8'))
 
 
 def main():
