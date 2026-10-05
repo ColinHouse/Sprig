@@ -736,22 +736,26 @@ public final class LanguageServer {
         if (document == null) {
             return null;
         }
+        // Editors on Windows usually keep CRLF documents, while `sprig fmt`
+        // writes LF: compare in LF and answer in the document's line endings.
         String text = document.lines.text;
+        boolean crlf = text.contains("\r\n");
+        String lf = crlf ? text.replace("\r\n", "\n") : text;
         String formatted;
         try {
-            formatted = SourceFormatter.format(document.path, text, new Diagnostics());
+            formatted = SourceFormatter.format(document.path, lf, new Diagnostics());
         } catch (RuntimeException e) {
             formatted = null;
         }
         if (formatted == null) {
             return null;
         }
-        if (formatted.equals(text)) {
+        if (formatted.equals(lf)) {
             return List.of();
         }
         Map<String, Object> edit = new LinkedHashMap<>();
         edit.put("range", document.lines.fullRange());
-        edit.put("newText", formatted);
+        edit.put("newText", crlf ? formatted.replace("\n", "\r\n") : formatted);
         return List.of(edit);
     }
 

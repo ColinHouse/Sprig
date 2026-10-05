@@ -408,6 +408,54 @@ def check_workspace(directory):
     check("exit-without-shutdown", unclean.stop(shutdown=False) == 1)
 
 
+def check_line_endings(directory):
+    """Editors on Windows keep CRLF documents and send VS Code's URI spelling."""
+    client = Client(directory)
+    try:
+        initialize(client, directory)
+        source = "func twice(x: Int) -> Int:\n    return x * 2\n\nprint(twice(21))\n"
+        crlf = source.replace("\n", "\r\n")
+        path = directory / "crlf.spr"
+        client.open(path, crlf)
+        check("crlf-clean", client.wait_diagnostics(path) == [])
+        format_params = {"textDocument": {"uri": uri(path)}, "options": {"tabSize": 4, "insertSpaces": True}}
+        edits = client.request("textDocument/formatting", format_params)["result"]
+        check("crlf-formatting-canonical", edits == [], edits)
+        client.change(path, crlf.replace("x * 2", "x  *  2"), 2)
+        edits = client.request("textDocument/formatting", format_params)["result"]
+        check("crlf-formatting-keeps-line-endings", len(edits) == 1 and edits[0]["newText"] == crlf, edits)
+        client.change(path, 'let a = 1\r\nlet b: Int = "x"\r\n', 3)
+        diagnostics = client.wait_diagnostics(path, lambda d: d != [])
+        check("crlf-diagnostic-position", diagnostics[0]["range"]["start"] == {"line": 1, "character": 13},
+              diagnostics)
+        if os.name == "nt":
+            # VS Code writes a lowercase drive and an escaped colon; diagnostics
+            # must come back under that exact URI.
+            other = directory / "vscode uri.spr"
+            plain = uri(other)
+            spelled = "file:///" + plain[8].lower() + "%3A" + plain[10:]
+            client.notify("textDocument/didOpen", {"textDocument": {
+                "uri": spelled, "languageId": "sprig", "version": 1, "text": 'let n: Int = "x"\r\n'}})
+            deadline = time.time() + TIMEOUT
+            published = None
+            while published is None and time.time() < deadline:
+                published = next((m["params"] for m in client.notifications
+                                  if m.get("method") == "textDocument/publishDiagnostics"
+                                  and m["params"]["uri"] == spelled and m["params"]["diagnostics"]), None)
+                if published is None:
+                    client._next(deadline)
+            check("vscode-windows-uri", published is not None
+                  and published["diagnostics"][0]["code"] == "SPR-TYPE-ASSIGN", published)
+        check("crlf-shutdown", client.stop() == 0, "".join(client.stderr))
+    finally:
+        # A live server keeps its working directory locked on Windows, where
+        # sprig.cmd's JVM survives killing the launcher alone.
+        if client.proc.poll() is None:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(client.proc.pid), "/T", "/F"], capture_output=True)
+            client.proc.kill()
+
+
 def check_project(directory):
     project = directory / "lspdemo"
     project.mkdir()
@@ -445,6 +493,9 @@ def main():
         workspace = Path(temp).resolve() / "workspace"
         workspace.mkdir()
         check_workspace(workspace)
+        line_endings = Path(temp).resolve() / "line endings"
+        line_endings.mkdir()
+        check_line_endings(line_endings)
         check_project(Path(temp).resolve())
     print(f"language server: {COUNT} passed, 0 failed")
 
