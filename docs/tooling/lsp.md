@@ -61,7 +61,7 @@ server.
 
 | LSP request | Behavior |
 |---|---|
-| Diagnostics | The errors `sprig check` reports for the open file, with their stable codes. They are refreshed 300 ms after you stop typing, right away on open and save, and for open files that import a changed file. An error inside an imported file is shown on the `import` that leads to it, with a link to the real location. |
+| Diagnostics | The errors `sprig check` reports for the open file, with their stable codes. They are refreshed 300 ms after you stop typing, right away on open and save, and for open files that import a changed file. An error inside an imported file is shown on the `import` that leads to it, with a link to the real location. Each diagnostic's `data.relatedHelp` names the `sprig help` topic about it, the `relatedHelp` of `sprig check --json`. |
 | Hover | The declaration in Sprig syntax with its type, plus comment lines written directly above it. A local that a null check narrowed also shows its type at that point. Built-in methods show their result type. |
 | Go to definition | Functions, methods, classes, enums, variants and their cases, fields, parameters and locals, across modules. On an `import` it opens the imported file. |
 | References | Every use of a declaration. Locals and parameters are searched in their file. Other declarations are also searched in the open files and in the files of the same project that mention the name, up to 200 files. |

@@ -267,6 +267,12 @@ def check_workspace(directory):
     check("imported-module-error", len(imported) == 1 and imported[0]["range"]["start"]["line"] == 0
           and imported[0]["message"].startswith("bad.spr:2:")
           and related.get("uri") == uri(bad) and related["range"]["start"]["line"] == 1, imported)
+    # Each diagnostic names its `sprig help` topic, as `sprig check --json` does.
+    cli = subprocess.run([str(SPRIG), "check", str(bad), "--json"], capture_output=True, text=True,
+                         encoding="utf-8", cwd=directory)
+    topic = json.loads(cli.stdout)["diagnostics"][0].get("relatedHelp")
+    check("diagnostic-help-topic", topic is not None and imported[0].get("data") == {"relatedHelp": topic},
+          (topic, imported))
     client.notify("textDocument/didClose", {"textDocument": {"uri": uri(uses_bad)}})
     check("close-clears-diagnostics", client.wait_diagnostics(uses_bad, lambda d: d == []) == [])
 
