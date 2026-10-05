@@ -19,11 +19,11 @@ func main() -> Unit throws IOException, Error:
     let summary = outline.Summary()
     summary.program(statements)
     print("Sprig subset source outline")
-    print("statements=" + summary.statements.toString() + " expressions=" + summary.expressions.toString() + " functions=" + summary.functions.toString() + " bindings=" + summary.bindings.toString())
+    print("statements=" + summary.statements + " expressions=" + summary.expressions + " functions=" + summary.functions + " bindings=" + summary.bindings)
     for item in summary.outline:
         print(item)
-    print("references=" + summary.references.toList().toString())
-    print("diagnostics=" + reports.count().toString())
+    print("references=" + summary.references.toList())
+    print("diagnostics=" + reports.count())
     for issue in reports.list():
         print(issue.describe())
 

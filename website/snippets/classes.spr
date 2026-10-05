@@ -6,7 +6,7 @@ class Hero:
         health += amount
 
     func describe() -> String:
-        return name + " (" + health.toString() + " hp)"
+        return name + " (" + health + " hp)"
 
 # Class construction uses named fields only.
 let hero = Hero(name="Ada", health=80)

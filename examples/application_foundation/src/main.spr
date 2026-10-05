@@ -12,7 +12,7 @@ try:
     let output_path = process.argument(1)
     let response = http.get(url, [], 3000)
     if response.status < 200 or response.status >= 300:
-        throw Error("service returned HTTP " + response.status.toString())
+        throw Error("service returned HTTP " + response.status)
     let root = codec.root(json.parse(response.body))
     let label = codec.required_string(root, "label")
     let received = time.parse_utc(codec.required_string(root, "receivedAt"))

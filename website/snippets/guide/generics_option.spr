@@ -7,7 +7,7 @@ generic T:
 func describe(option: Option[Int]) -> String:
     return match option:
         case Option.Some as some:
-            "some " + some.value.toString()
+            "some " + some.value
         case Option.None:
             "none"
 

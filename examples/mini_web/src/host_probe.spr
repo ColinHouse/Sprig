@@ -22,4 +22,4 @@ func handle(req: HostRequest) -> HostResponse:
     return HostResponse(404, "Not found", "text/plain; charset=utf-8")
 
 let server = HostServer(0, fn(req: HostRequest) => handle(req))
-print("PORT=" + server.port().toString())
+print("PORT=" + server.port())

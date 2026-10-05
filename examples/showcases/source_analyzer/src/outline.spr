@@ -45,7 +45,7 @@ class Summary:
                     statement(child, prefix + "  ")
             case frontend.Stmt.Function as node:
                 functions += 1
-                outline.append(prefix + "function " + node.name + "(" + node.params.size().toString() + " params) -> " + node.resultType)
+                outline.append(prefix + "function " + node.name + "(" + node.params.size() + " params) -> " + node.resultType)
                 for child in node.body:
                     statement(child, prefix + "  ")
             case frontend.Stmt.Return as node:

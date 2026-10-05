@@ -21,8 +21,8 @@ func format_money(cents: Int) -> String:
     let units = cents.divTrunc(100)
     let rest = cents % 100
     if rest < 10:
-        return units.toString() + ".0" + rest.toString()
-    return units.toString() + "." + rest.toString()
+        return units + ".0" + rest
+    return units + "." + rest
 
 func parse_amount(text: String) -> Int throws Error:
     let parts = text.split(".")

@@ -11,11 +11,11 @@ func file_json(stats: model.FileStats) -> json.Value:
 func finding_message(finding: model.Finding) -> String:
     match finding:
         case model.Finding.TrailingWhitespace as item:
-            return item.path + ": trailing whitespace on " + item.count.toString() + " lines"
+            return item.path + ": trailing whitespace on " + item.count + " lines"
         case model.Finding.TabIndent as item:
-            return item.path + ": tab indentation on " + item.count.toString() + " lines"
+            return item.path + ": tab indentation on " + item.count + " lines"
         case model.Finding.LargeFile as item:
-            return item.path + ": large file (" + item.lines.toString() + " lines)"
+            return item.path + ": large file (" + item.lines + " lines)"
         case model.Finding.Skipped as item:
             return item.path + ": skipped " + item.reason
 
@@ -47,14 +47,14 @@ func code_total(values: List[model.FileStats]) -> Int:
 
 func summary(inventory: model.Inventory) -> String:
     let values = inventory.files.toList()
-    return "files=" + values.size().toString() + " directories=" + inventory.directories.toString() + " lines=" + line_total(values).toString() + " code=" + code_total(values).toString() + " skipped=" + inventory.ignored.toString()
+    return "files=" + values.size() + " directories=" + inventory.directories + " lines=" + line_total(values) + " code=" + code_total(values) + " skipped=" + inventory.ignored
 
 func print_report(inventory: model.Inventory) -> Unit:
     print("Sprig repository audit")
     print(summary(inventory))
     for bucket in groups(inventory):
-        print(bucket.key + ": files=" + bucket.items.size().toString() + " lines=" + line_total(bucket.values()).toString())
-    print("findings=" + inventory.findings.size().toString())
+        print(bucket.key + ": files=" + bucket.items.size() + " lines=" + line_total(bucket.values()))
+    print("findings=" + inventory.findings.size())
     for finding in inventory.findings:
         print(finding_message(finding))
 

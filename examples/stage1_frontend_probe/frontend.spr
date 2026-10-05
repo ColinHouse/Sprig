@@ -20,7 +20,7 @@ class Span:
     let column: Int
 
     func describe() -> String:
-        return line.toString() + ":" + column.toString() + " [" + start.toString() + "," + end.toString() + ")"
+        return line + ":" + column + " [" + start + "," + end + ")"
 
 class Issue:
     let code: String
@@ -552,9 +552,9 @@ func run_source(label: String, source: String) -> Unit:
     let statements = Parser(tokens=tokens, reports=reports).parse_program()
     SymbolChecker(reports=reports).program(statements)
     print("CASE " + label)
-    print("tokens=" + tokens.size().toString())
+    print("tokens=" + tokens.size())
     print(PrettyPrinter().program(statements))
-    print("diagnostics=" + reports.count().toString())
+    print("diagnostics=" + reports.count())
     for issue in reports.list():
         print(issue.describe())
 

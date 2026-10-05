@@ -27,4 +27,4 @@ app.route(web.Route(method=web.Method.POST, path="/echo", handler=fn(req: web.Re
 app.get("/fail", fn(req: web.Request) => fail(req))
 app.route(web.Route(method=web.Method.DELETE, path="/delete/{id}", handler=fn(req: web.Request) => web.text("deleted", 204), response_status=204))
 app.run(0)
-print("PORT=" + app.port().toString())
+print("PORT=" + app.port())
