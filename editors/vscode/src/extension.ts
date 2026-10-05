@@ -150,9 +150,6 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   const queries = new Queries(query);
   registerLanguageFeatures(context, queries, query);
-  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-    if(event.affectsConfiguration('sprig')) queries.clear();
-  }));
   const testing = registerTesting(context, async (args, cwd, signal) => {
     const config = settings(vscode.Uri.file(cwd));
     const executable = resolveCompiler(config.get<string>('compilerPath',''), cwd);
@@ -175,7 +172,8 @@ export function activate(context: vscode.ExtensionContext): void {
   }));
   const status = registerStatus(context, queries, query);
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-    if(event.affectsConfiguration('sprig')) void status.refresh();
+    if(!event.affectsConfiguration('sprig')) return;
+    queries.clear(); void status.refresh();
   }));
   /** Runs a project command with the user's command time limit. */
   const project = async (args: string[], root: string): Promise<CompilerResult> => {
