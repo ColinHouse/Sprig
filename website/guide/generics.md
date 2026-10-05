@@ -49,9 +49,9 @@ SPR-TYPE-MISMATCH [TYPE] main.spr:5:16: Type mismatch in argument 1 of identity 
 
 ## 类型参数能做什么
 
-在泛型声明里面，`T` 类型的值可以赋值、传参、返回，也可以放进兼容的泛型容器。但它没有运算符，不能排序，也没有方法。`value + value` 会报 `SPR-TYPE-OPERAND`。
+在泛型声明里面，`T` 类型的值可以赋值、传参、返回，也可以放进兼容的泛型容器。但默认它没有运算符，也没有方法。`value + value` 会报 `SPR-TYPE-OPERAND`。
 
-目前唯一能额外开放的能力是相等比较。在函数开头写上 `requires T: Equatable`，就可以对 `T` 用 `==` 和 `!=`，按值比较：
+能额外开放的能力有两种，都写在函数体的最前面。第一种是相等比较：写上 `requires T: Equatable`，就可以对 `T` 用 `==` 和 `!=`，按值比较：
 
 <<< @/snippets/guide/generics_equatable.spr
 
@@ -60,7 +60,28 @@ true
 false
 ```
 
-`requires` 要写在函数体的最前面。`requires T: Comparable` 写出来不会有语法错误，但功能还没有实现，会报 `SPR-GENERIC-CONSTRAINT`。
+第二种是比较大小：写上 `requires T: Comparable`，就可以对 `T` 用 `<`、`<=`、`>`、`>=`，也可以对 `MutableList[T]` 调用 `sort()`：
+
+<<< @/snippets/guide/generics_comparable.spr
+
+```text
+9
+pear
+[0.5, 1.0, 2.5]
+```
+
+- 能比较大小的类型是 `Int`、`Int32`、`Float`、`Float32`、`Decimal`、`BigInt` 和 `String`，也就是本来就能用 `<` 的那些类型。另外，如果调用方自己的类型参数也写了 `requires X: Comparable`，也可以传进去。
+- 比较的结果和直接比较具体类型完全一样，比如浮点数和 NaN 比较一律是 false。
+- 每次调用都会检查。传了不能比较大小的类型，会在调用的地方报错：
+
+<<< @/snippets/guide/generics_comparable_bool.spr
+
+```text
+SPR-GENERIC-CONSTRAINT [TYPE] main.spr:8:13: Type argument 'Bool' for T is not Comparable, which 'larger' requires (expected Comparable type, actual Bool)
+  hint: Comparable types are Int, Int32, Float, Float32, Decimal, BigInt and String; for other types, pass an explicit comparison function.
+```
+
+两种能力互不包含：写了 `Comparable` 不代表能用 `==`，两样都要用就写两行 `requires`。除了这两种，写别的能力名会报 `SPR-GENERIC-CONSTRAINT`。
 
 ## 可空的类型参数
 
@@ -99,4 +120,4 @@ none
 
 ## 还没有的
 
-类型推断、协变和逆变、`Comparable` 以及自定义的能力约束，目前都还没有实现。完整列表见[已知限制（英文）](/en/reference/language/known-limitations)。
+类型推断、协变和逆变，以及自定义的能力约束，目前都还没有实现。完整列表见[已知限制（英文）](/en/reference/language/known-limitations)。

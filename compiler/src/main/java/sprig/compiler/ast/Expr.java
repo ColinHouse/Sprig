@@ -167,6 +167,7 @@ public abstract class Expr extends Node {
         public boolean stringConcat;
         public boolean valueEquality; // use equals() instead of ==
         public Type comparisonType; // null-safe scalar equality target decided by the checker
+        public boolean genericOrdering; // < <= > >= on a Comparable type parameter
 
         public Binary(String op, Expr left, Expr right) {
             this.op = op;

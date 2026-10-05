@@ -1,0 +1,65 @@
+import java.lang.Double as Double
+
+generic T:
+    func biggest(a: T, b: T) -> T:
+        requires T: Comparable
+        if a >= b:
+            return a
+        return b
+
+generic T:
+    func relation(a: T, b: T) -> String:
+        requires T: Comparable
+        if a < b:
+            return "less"
+        if a > b:
+            return "greater"
+        if a <= b and a >= b:
+            return "equal"
+        return "unordered"
+
+generic T:
+    func sorted_copy(items: List[T]) -> List[T]:
+        requires T: Comparable
+        let copy = items.toMutableList()
+        copy.sort()
+        return copy.toList()
+
+generic T:
+    func forward(a: T, b: T) -> T:
+        requires T: Comparable
+        return biggest[T](a, b)
+
+generic T:
+    class Box:
+        let value: T
+
+        func bigger(other: T) -> Bool:
+            requires T: Comparable
+            return value > other
+
+print(biggest[Int](3, 9))
+print(biggest[Int32](7, 2))
+print(biggest[Float](1.5, 0.25))
+print(biggest[Float32](0.5, 2.5))
+print(biggest[String]("pear", "apple"))
+print(biggest[Decimal](Decimal.parse("1.10"), Decimal.parse("1.2")))
+print(biggest[BigInt](BigInt.parse("123456789012345678901234567890"), BigInt.parse("99")))
+print(relation[Int](2, 2))
+print(relation[Float](0.0, -0.0))
+print(relation[Float](Double.NaN, 1.0))
+print(relation[String]("Zebra", "apple"))
+print(relation[Decimal](Decimal.parse("2.50"), Decimal.parse("2.5")))
+print(sorted_copy[Int]([3, 1, 2]))
+print(sorted_copy[String](["pear", "apple", "fig"]))
+print(sorted_copy[Float]([2.5, Double.NaN, 0.0, -0.0, 1.0]))
+print(forward[String]("b", "c"))
+let box = Box[Int](value=5)
+print(box.bigger(3))
+print(box.bigger(8))
+let small: MutableList[Int32] = [3, 1, 2]
+small.sort()
+print(small)
+let amounts: MutableList[Decimal] = [Decimal.parse("2.5"), Decimal.parse("0.75"), Decimal.parse("10")]
+amounts.sort()
+print(amounts)

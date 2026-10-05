@@ -305,5 +305,47 @@
     "expected_diagnostic": "SPR-FLOW-MISSING-RETURN",
     "status": "future semantic checker only",
     "source": "while-true completion"
+  },
+  {
+    "file": "generic_comparable_argument.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "Comparable capability"
+  },
+  {
+    "file": "generic_comparable_nullable.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "Comparable capability"
+  },
+  {
+    "file": "generic_ordering_needs_comparable.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "Comparable capability"
+  },
+  {
+    "file": "generic_equality_needs_equatable.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "Comparable capability"
+  },
+  {
+    "file": "generic_comparable_method.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "Comparable capability"
+  },
+  {
+    "file": "generic_comparable_forwarding.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "Comparable capability"
+  },
+  {
+    "file": "generic_sort_needs_comparable.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "Comparable capability"
   }
 ]

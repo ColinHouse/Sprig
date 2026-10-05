@@ -1,0 +1,10 @@
+generic T:
+    func biggest(a: T, b: T) -> T:
+        requires T: Comparable
+        if a > b:
+            return a
+        return b
+
+generic T:
+    func pick(a: T, b: T) -> T:
+        return biggest[T](a, b)

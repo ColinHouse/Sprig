@@ -1,0 +1,5 @@
+generic T:
+    func sorted_copy(items: List[T]) -> List[T]:
+        let copy = items.toMutableList()
+        copy.sort()
+        return copy.toList()

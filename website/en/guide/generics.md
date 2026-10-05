@@ -49,9 +49,9 @@ The wrong number of type arguments is rejected with `SPR-TYPE-GENERIC-ARITY`. Th
 
 ## What you can do with a type parameter
 
-Inside a generic declaration, a value of type `T` can be assigned, passed, returned and stored in a compatible generic container. It has no operators, no ordering and no methods: `value + value` is rejected with `SPR-TYPE-OPERAND`.
+Inside a generic declaration, a value of type `T` can be assigned, passed, returned and stored in a compatible generic container. By default it has no operators and no methods: `value + value` is rejected with `SPR-TYPE-OPERAND`.
 
-The one capability you can add today is equality. Start the function with `requires T: Equatable`, and `==` and `!=` work on `T`, comparing by value:
+There are two capabilities you can add, both written first in the function body. The first is equality: start the function with `requires T: Equatable`, and `==` and `!=` work on `T`, comparing by value:
 
 <<< @/snippets/guide/generics_equatable.spr
 
@@ -60,7 +60,28 @@ true
 false
 ```
 
-`requires` has to come first in the function body. `requires T: Comparable` parses, but it isn't implemented yet and is rejected with `SPR-GENERIC-CONSTRAINT`.
+The second is ordering: with `requires T: Comparable`, you can use `<`, `<=`, `>` and `>=` on `T`, and call `sort()` on a `MutableList[T]`:
+
+<<< @/snippets/guide/generics_comparable.spr
+
+```text
+9
+pear
+[0.5, 1.0, 2.5]
+```
+
+- The Comparable types are `Int`, `Int32`, `Float`, `Float32`, `Decimal`, `BigInt` and `String`, the types that already have `<`. A type parameter of the calling function qualifies too, if that function also declares `requires X: Comparable`.
+- A comparison means exactly what it means on the concrete type; for example, every comparison with a Float NaN is false.
+- Every call is checked. Passing a type without ordering is an error at the call:
+
+<<< @/snippets/guide/generics_comparable_bool.spr
+
+```text
+SPR-GENERIC-CONSTRAINT [TYPE] main.spr:8:13: Type argument 'Bool' for T is not Comparable, which 'larger' requires (expected Comparable type, actual Bool)
+  hint: Comparable types are Int, Int32, Float, Float32, Decimal, BigInt and String; for other types, pass an explicit comparison function.
+```
+
+The two capabilities are independent: `Comparable` doesn't grant `==`, so a function that needs both writes both `requires` lines. Any other capability name is rejected with `SPR-GENERIC-CONSTRAINT`.
 
 ## Nullable type arguments
 
@@ -99,4 +120,4 @@ Imported Java classes can take concrete type arguments too, such as `ArrayList[S
 
 ## Not implemented yet
 
-Type inference, variance, `Comparable` and user-defined capabilities don't exist yet. The full list is in [known limitations](/en/reference/language/known-limitations).
+Type inference, variance and user-defined capabilities don't exist yet. The full list is in [known limitations](/en/reference/language/known-limitations).

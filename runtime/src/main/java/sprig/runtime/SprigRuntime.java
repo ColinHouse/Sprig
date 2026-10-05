@@ -266,6 +266,40 @@ public final class SprigRuntime {
         return a.equals(b);
     }
 
+    // Ordering on a Comparable type parameter, with the same meaning as the
+    // operator on the concrete type: IEEE comparison for Float/Float32 (false
+    // with NaN, -0.0 equal to 0.0), natural order for Int, Int32, Decimal,
+    // BigInt and String. The checker admits no other argument types.
+
+    public static boolean lessThan(Object a, Object b) {
+        if (a instanceof Double x && b instanceof Double y) return x.doubleValue() < y.doubleValue();
+        if (a instanceof Float x && b instanceof Float y) return x.floatValue() < y.floatValue();
+        return compareOrdered(a, b) < 0;
+    }
+
+    public static boolean lessOrEqual(Object a, Object b) {
+        if (a instanceof Double x && b instanceof Double y) return x.doubleValue() <= y.doubleValue();
+        if (a instanceof Float x && b instanceof Float y) return x.floatValue() <= y.floatValue();
+        return compareOrdered(a, b) <= 0;
+    }
+
+    public static boolean greaterThan(Object a, Object b) {
+        if (a instanceof Double x && b instanceof Double y) return x.doubleValue() > y.doubleValue();
+        if (a instanceof Float x && b instanceof Float y) return x.floatValue() > y.floatValue();
+        return compareOrdered(a, b) > 0;
+    }
+
+    public static boolean greaterOrEqual(Object a, Object b) {
+        if (a instanceof Double x && b instanceof Double y) return x.doubleValue() >= y.doubleValue();
+        if (a instanceof Float x && b instanceof Float y) return x.floatValue() >= y.floatValue();
+        return compareOrdered(a, b) >= 0;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int compareOrdered(Object a, Object b) {
+        return ((Comparable) a).compareTo(b);
+    }
+
     /** Hash consistent with Sprig's numeric equality, including signed zero. */
     public static int hashValue(Object value) {
         if (value instanceof Double d && d == 0.0d) return Double.hashCode(0.0d);

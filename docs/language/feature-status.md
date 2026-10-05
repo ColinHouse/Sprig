@@ -26,7 +26,7 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | User generics: `generic K, V:` blocks (one or more parameters) for class/variant/function, explicitly applied as `Entry[String, Int]`, erased and boxed in generated Java | yes | yes (`SPR-TYPE-GENERIC-*`) | raw Java classes + compiler-controlled boxing/unboxing | runtime 19, visitor generic_stack, semantics 8 cases, syntax 08 |
 | Generic variant expanded payloads + exhaustive `match` on instantiations | yes | yes | raw nested case classes | runtime 19 |
 | `requires X: Equatable` equality capability | yes | equality on the parameter allowed only with the clause; value equality in codegen | boxed `Objects`-style equality | visitor generic_stack, runtime 19 |
-| `requires X: Comparable` | parsed | rejected as not implemented (`SPR-GENERIC-CONSTRAINT`) | — | semantics |
+| `requires X: Comparable` ordering capability | yes | `< <= > >=` and `sort()` on the parameter only with the clause; type arguments checked at every call (`SPR-GENERIC-CONSTRAINT`) | `SprigRuntime` ordering helpers that keep each concrete type's semantics | runtime 26, capabilities suite |
 | Project model: `sprig.toml` discovery, defaults, `init`, `project --json`, `deps --json`, explicit-file priority, `run --bin` | yes | validated (`SPR-PROJECT-*`) | default entry compiled with the normal pipeline | project model suite |
 | Local and Git Sprig dependencies: recursive resolution, `@alias/module.spr` imports, `exports` enforcement, cycle detection, `sprig.lock`, stale/missing lock refusal | yes | yes (`SPR-DEP-*`, `SPR-PROJECT-*`) | dependency source modules compile through the normal pipeline | dependency resolver suite |
 | Offline mode for local/Git dependencies (`--offline`, warm cache required) | yes | `SPR-DEP-OFFLINE` when the cache is incomplete | `~/.sprig/git` verified detached checkouts | dependency resolver |
@@ -67,7 +67,7 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | Agent task pack | deterministic fixtures and runner under `tests/agent_eval` | acceptance is mechanical; no model run claimed | initial states fail, known solutions pass | task-pack gate |
 
 Not implemented (honest status): generic type inference, variance,
-`Comparable` and user-defined capabilities, inheritance or interfaces,
+user-defined capabilities, inheritance or interfaces,
 nested/positional patterns, `%=`,
 tuples/destructuring, varargs and source array syntax/annotations in interop,
 wildcard typing or Java generic inference, publishing/registry,
