@@ -4,6 +4,7 @@
 Source: website/assets/brand/icon-source.png (owner-supplied, 1254x1254, opaque RGB).
 Outputs (committed, served by VitePress):
   website/public/logo-round.png      512px circular mark, transparent corners
+  website/public/logo-mono.png       96px monogram (navigation bar)
   website/public/favicon-32.png      32px monogram
   website/public/favicon-16.png      16px monogram
   website/public/apple-touch-icon.png 180px rounded-square artwork
@@ -20,8 +21,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "assets" / "brand" / "icon-source.png"
+ROOT = Path(__file__).resolve().parents[3]
+SOURCE = ROOT / "website" / "assets" / "brand" / "icon-source.png"
 OUT = ROOT / "website" / "public"
 
 SLATE = (76, 81, 101, 255)
