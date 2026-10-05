@@ -49,30 +49,45 @@ public final class Compiler {
         load(mainFile.toAbsolutePath().normalize(), modules, order, new ArrayList<>());
         Module main = modules.get(mainFile.toAbsolutePath().normalize());
         if (main == null || diagnostics.hasErrors()) {
-            return new Compilation(main, order);
+            return new Compilation(main, order, Compilation.Stage.LOADED);
         }
         for (Module module : order) {
             new NameResolver(diagnostics).declare(module);
         }
         if (diagnostics.hasErrors()) {
-            return new Compilation(main, order);
+            return new Compilation(main, order, Compilation.Stage.DECLARED);
         }
         for (Module module : order) {
             NameResolver resolver = new NameResolver(diagnostics);
             resolver.resolveBodies(module);
         }
         if (diagnostics.hasErrors()) {
-            return new Compilation(main, order);
+            return new Compilation(main, order, Compilation.Stage.RESOLVED);
         }
         TypeChecker checker = new TypeChecker(diagnostics);
         for (Module module : order) {
             checker.check(module);
         }
-        return new Compilation(main, order);
+        return new Compilation(main, order, Compilation.Stage.CHECKED);
+    }
+
+    /**
+     * Unsaved editor buffers: a module whose absolute path is a key is read
+     * from this map instead of the file system. Paths must be absolute and
+     * normalized.
+     */
+    private Map<Path, String> overlays = Map.of();
+
+    public Compiler setOverlays(Map<Path, String> overlays) {
+        this.overlays = Map.copyOf(overlays);
+        return this;
     }
 
     private Module parseFile(Path file) throws IOException {
-        var tree = ParserFrontend.parseFile(file, diagnostics);
+        String overlay = overlays.get(file);
+        var tree = overlay != null
+                ? ParserFrontend.parse(file, file.toUri().toString(), overlay, diagnostics)
+                : ParserFrontend.parseFile(file, diagnostics);
         if (diagnostics.hasErrors()) {
             // ANTLR error recovery can leave incomplete parse trees whose child
             // nodes are absent (e.g. `let x = ` has no expression). Never hand
@@ -100,7 +115,7 @@ public final class Compiler {
                     "Circular module import: " + cycle, abs.toUri().toString(), null));
             return null;
         }
-        if (!Files.isRegularFile(abs)) {
+        if (!overlays.containsKey(abs) && !Files.isRegularFile(abs)) {
             diagnostics.add(Diagnostic.error(Codes.NAME_IMPORT, Phase.NAME,
                     "Cannot find imported module: " + abs, abs.toUri().toString(), null));
             return null;
