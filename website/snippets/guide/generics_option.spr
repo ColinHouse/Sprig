@@ -1,0 +1,15 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+func describe(option: Option[Int]) -> String:
+    return match option:
+        case Option.Some as some:
+            "some " + some.value.toString()
+        case Option.None:
+            "none"
+
+print(describe(Option[Int].Some(value=1)))
+print(describe(Option[Int].None))

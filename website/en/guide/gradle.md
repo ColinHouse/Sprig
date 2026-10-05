@@ -1,8 +1,25 @@
-# Gradle / JVM integration
+# Gradle integration
 
-The first-party `dev.sprig` plugin integrates a Sprig project with a Java source set. It reads the host's actual compile classpath, compiles the optional Java bridge, runs Sprig checks and tests, registers generated Java and runtime sources, and connects them to the normal Gradle lifecycle.
+Already have a Java project built with Gradle? The official `dev.sprig` plugin lets you add Sprig code to it. The plugin reads the project's real compile classpath, compiles the optional Java bridge code, runs Sprig's checks and tests, adds the generated Java and runtime sources to the project, and hooks all of it into Gradle's usual build.
 
-The plugin ships in the Sprig SDK as an included build. Set `SPRIG_HOME` to the extracted SDK root; a new project needs neither a sibling Sprig source checkout nor a Gradle Plugin Portal account.
+::: warning Needs a version newer than v0.5.0-beta.1
+The plugin was added after v0.5.0-beta.1 was released, so the published SDK doesn't include it yet. Until the next release, clone the Sprig repository, build it with `python3 scripts/build.py`, and point `SPRIG_HOME` below at that checkout.
+:::
+
+## Adding the plugin
+
+The plugin ships as source in the SDK's `libraries/sprig-gradle/` directory and is used through Gradle's included-build mechanism, so you don't need a Gradle Plugin Portal account. Set the `SPRIG_HOME` environment variable to the SDK's root (or pass `-PsprigHome=<path>` to Gradle), then bring the plugin in from `settings.gradle`:
+
+```groovy
+pluginManagement {
+    def home = providers.gradleProperty('sprigHome')
+        .orElse(providers.environmentVariable('SPRIG_HOME')).get()
+    includeBuild(new File(home, 'libraries/sprig-gradle'))
+    repositories { gradlePluginPortal(); mavenCentral() }
+}
+```
+
+Then apply it in `build.gradle`:
 
 ```groovy
 plugins {
@@ -15,15 +32,23 @@ sprig {
 }
 ```
 
-For Loom, select `client`; the [Fabric starter guide](/en/guide/fabric) shows a complete project. Then use ordinary commands:
+For a Minecraft mod built with Loom, set `targetSourceSet` to `client`; [Fabric mods](/en/guide/fabric) walks through a complete project.
+
+## Everyday use
+
+Use Gradle as usual:
 
 ```sh
 ./gradlew check
 ./gradlew build
 ```
 
-`check` includes `sprigCheck` and `sprigTest`. `build` generates and compiles checked Java and runtime sources. Java boundary code defaults to `src/sprigBridge/java/`; generated Java is inspectable under `build/generated/sprig/<sourceSet>/java/`.
+- `check` runs `sprigCheck` and `sprigTest`.
+- `build` generates Java from your checked Sprig code and compiles it along with the runtime sources.
+- Java bridge code goes in `src/sprigBridge/java/` by default. The generated Java ends up in `build/generated/sprig/<sourceSet>/java/`, where you can read it.
+- Sprig's tasks only read `sprig.lock` and never go online. To update dependencies, run `./gradlew sprigResolve` explicitly.
+- `./gradlew sprigInfo` shows which compiler and runtime are in use, the target source set, the bridge code, the generated and test directories, the lock status and the size of the classpath.
 
-Sprig operations consume `sprig.lock` offline. Dependency updates remain explicit through `./gradlew sprigResolve`. `./gradlew sprigInfo` reports compiler/runtime selection, target source set, bridge, generated directory, test directory, lock status and classpath size.
+The plugin looks for the `sprig` compiler in this order: an explicit setting such as `sprig { executable = ... }`, then `SPRIG_HOME`, then your `PATH`, and finally an SDK installed under `~/.sprig`.
 
-Read the canonical [`dev.sprig` guide](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md) for extension options, discovery order, compatibility and task details. This plugin removes repeated build plumbing; it does not replace Gradle, Loom or Java, and it is not evidence of a productivity advantage over Java.
+The [`dev.sprig` plugin guide](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md) covers the remaining options, compatibility and every task in detail. The plugin saves you from writing the same build setup in every project. It doesn't replace Gradle, Loom or Java, and it says nothing about whether Sprig is more productive than Java.

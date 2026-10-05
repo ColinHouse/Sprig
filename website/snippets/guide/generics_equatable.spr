@@ -1,0 +1,7 @@
+generic T:
+    func same(a: T, b: T) -> Bool:
+        requires T: Equatable
+        return a == b
+
+print(same[String]("a", "a"))
+print(same[Int](1, 2))

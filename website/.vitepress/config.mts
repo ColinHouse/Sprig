@@ -65,7 +65,7 @@ export default defineConfig({
       lang: 'zh-CN',
       title: 'Sprig',
       description:
-        '面向人类与编码 Agent 的静态类型 JVM 语言。Sprig 让程序和编译器反馈更少依赖猜测；当前为实验性 Beta。',
+        'Sprig 是一门跑在 JVM 上的静态类型小语言，语法像 Python。写错了，编译器会告诉你错在哪、为什么错、怎么改。当前为实验性 Beta。',
       head: [['meta', { property: 'og:locale', content: 'zh_CN' }]],
       markdown: {
         container: {
@@ -91,24 +91,24 @@ export default defineConfig({
         ],
         sidebar: {
           '/tutorial': [
-            { text: '从零开始', items: [{ text: 'Sprig 入门教程', link: '/tutorial' }] }
+            { text: '从零开始', items: [{ text: '入门教程：记账小工具', link: '/tutorial' }] }
           ],
           '/guide/': [
             {
               text: '指南',
               items: [
                 { text: '快速开始', link: '/guide/getting-started' },
-                { text: 'Agent 工作流', link: '/guide/agent-workflow' },
-                { text: '语言导览', link: '/guide/language-tour' },
+                { text: '语言速查', link: '/guide/language-tour' },
                 { text: '泛型', link: '/guide/generics' },
                 { text: '项目', link: '/guide/projects' },
+                { text: '工具与 JSON', link: '/guide/tooling' },
+                { text: 'VS Code 插件', link: '/guide/editor' },
+                { text: '和 AI 助手一起写代码', link: '/guide/agent-workflow' },
                 { text: 'JVM 互操作', link: '/guide/jvm-interop' },
                 { text: 'Gradle 集成', link: '/guide/gradle' },
-                { text: 'Fabric / JVM 框架集成', link: '/guide/fabric' },
+                { text: 'Fabric 模组', link: '/guide/fabric' },
                 { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
-                { text: '工具与 JSON', link: '/guide/tooling' },
-                { text: '项目测试（英文）', link: '/en/reference/tooling/testing' },
-                { text: 'VS Code 插件', link: '/guide/editor' }
+                { text: '项目测试（英文）', link: '/en/reference/tooling/testing' }
               ]
             }
           ],
@@ -124,9 +124,9 @@ export default defineConfig({
               items: [
                 { text: '发布状态', link: '/project/release-status' },
                 { text: '参与贡献（英文）', link: '/en/project/contributing' },
-                { text: 'AI 辅助开发（英文）', link: '/en/project/ai-disclosure' },
-                { text: '许可证（英文）', link: '/en/project/license-status' },
-                { text: '第三方说明（英文）', link: '/en/project/third-party-notices' }
+                { text: 'AI 辅助开发（英文）', link: '/en/project/contributing/ai-disclosure' },
+                { text: '许可证（英文）', link: '/en/project/contributing/license-status' },
+                { text: '第三方说明（英文）', link: '/en/project/contributing/third-party-notices' }
               ]
             }
           ]
@@ -142,7 +142,7 @@ export default defineConfig({
       lang: 'en-US',
       title: 'Sprig',
       description:
-        'A statically typed JVM language for people and coding agents. Sprig makes programs and compiler feedback easier to verify; currently experimental Beta.',
+        'A small, statically typed JVM language with Python-like syntax. When something is wrong, the compiler tells you where, why and how to fix it. Experimental Beta.',
       head: [['meta', { property: 'og:locale', content: 'en_US' }]],
       themeConfig: {
         nav: [
@@ -166,25 +166,25 @@ export default defineConfig({
         ],
         sidebar: {
           '/en/tutorial': [
-            { text: 'Start here', items: [{ text: 'Sprig tutorial', link: '/en/tutorial' }] }
+            { text: 'Start here', items: [{ text: 'Tutorial: expense tracker', link: '/en/tutorial' }] }
           ],
           '/en/guide/': [
             {
               text: 'Guide',
               items: [
-                { text: 'Getting Started', link: '/en/guide/getting-started' },
-                { text: 'Agent workflow', link: '/en/guide/agent-workflow' },
-                { text: 'Language Tour', link: '/en/guide/language-tour' },
+                { text: 'Getting started', link: '/en/guide/getting-started' },
+                { text: 'Install and upgrade', link: '/en/reference/projects/install' },
+                { text: 'Language quick reference', link: '/en/guide/language-tour' },
                 { text: 'Generics', link: '/en/guide/generics' },
                 { text: 'Projects', link: '/en/guide/projects' },
-                { text: 'JVM Interoperability', link: '/en/guide/jvm-interop' },
+                { text: 'Tools and JSON', link: '/en/guide/tooling' },
+                { text: 'VS Code extension', link: '/en/guide/editor' },
+                { text: 'Working with AI assistants', link: '/en/guide/agent-workflow' },
+                { text: 'JVM interop', link: '/en/guide/jvm-interop' },
                 { text: 'Gradle integration', link: '/en/guide/gradle' },
-                { text: 'Fabric / JVM framework integration', link: '/en/guide/fabric' },
-                { text: 'Install and upgrade', link: '/en/reference/projects/install' },
+                { text: 'Fabric mods', link: '/en/guide/fabric' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
-                { text: 'Tooling and JSON', link: '/en/guide/tooling' },
-                { text: 'Testing projects', link: '/en/reference/tooling/testing' },
-                { text: 'VS Code Extension', link: '/en/guide/editor' }
+                { text: 'Testing projects', link: '/en/reference/tooling/testing' }
               ]
             }
           ],

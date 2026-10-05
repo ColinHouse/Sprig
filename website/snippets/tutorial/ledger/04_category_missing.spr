@@ -1,0 +1,11 @@
+variant Category:
+    Food
+    Transport
+    Other(label: String)
+
+func describe(category: Category) -> String:
+    return match category:
+        case Category.Food:
+            "food"
+        case Category.Transport:
+            "transport"

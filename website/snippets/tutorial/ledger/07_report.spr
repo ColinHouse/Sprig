@@ -1,0 +1,105 @@
+# region imports
+import "@std/files.spr" as files
+import "@std/text.spr" as strings
+import java.io.IOException as IOException
+# endregion imports
+
+# region model
+variant Category:
+    Food
+    Transport
+    Other
+
+class Expense:
+    let item: String
+    let cents: Int
+    let category: Category
+# endregion model
+
+# region money
+func format_money(cents: Int) -> String:
+    let units = cents.divTrunc(100)
+    let rest = cents % 100
+    if rest < 10:
+        return units.toString() + ".0" + rest.toString()
+    return units.toString() + "." + rest.toString()
+
+func parse_amount(text: String) -> Int throws Error:
+    let parts = text.split(".")
+    let units = parts.get(0).toIntOrNull()
+    if units == null or parts.size() > 2:
+        throw Error("not an amount: " + text)
+    if parts.size() == 1:
+        return units * 100
+    let cents = parts.get(1).toIntOrNull()
+    if cents == null or parts.get(1).length() != 2:
+        throw Error("not an amount: " + text)
+    return units * 100 + cents
+# endregion money
+
+# region categories
+func category_of(name: String) -> Category:
+    if name == "food":
+        return Category.Food
+    if name == "transport":
+        return Category.Transport
+    return Category.Other
+
+func label(category: Category) -> String:
+    return match category:
+        case Category.Food:
+            "Food"
+        case Category.Transport:
+            "Transport"
+        case Category.Other:
+            "Other"
+# endregion categories
+
+# region parse
+func parse_line(line: String) -> Expense throws Error:
+    let fields = line.split(",")
+    if fields.size() != 3:
+        throw Error("expected item, amount, category: " + line)
+    let item = strings.trim(fields.get(0))
+    let cents = parse_amount(strings.trim(fields.get(1)))
+    let category = category_of(strings.trim(fields.get(2)))
+    return Expense(item=item, cents=cents, category=category)
+# endregion parse
+
+# region report
+func report(expenses: List[Expense]) -> Unit:
+    let totals: MutableMap[String, Int] = {}
+    var sum = 0
+    for expense in expenses:
+        let name = label(expense.category)
+        let previous = totals[name]
+        if previous == null:
+            totals[name] = expense.cents
+        else:
+            totals[name] = previous + expense.cents
+        sum += expense.cents
+    for name in ["Food", "Transport", "Other"]:
+        let amount = totals[name]
+        if amount != null:
+            print(name + ": " + format_money(amount))
+    print("Total: " + format_money(sum))
+# endregion report
+
+# region main
+func main() -> Unit throws IOException, Error:
+    let path = files.temp_file()
+    files.write_utf8(path, "Coffee, 12.50, food\nTaxi, 36.00, transport\nNoodles, 18.00, food\nMovie, 45.00, fun\n")
+    let expenses: MutableList[Expense] = []
+    for line in strings.lines(files.read_utf8(path)):
+        if strings.trim(line) != "":
+            expenses.append(parse_line(line))
+    files.remove_file(path)
+    report(expenses.toList())
+
+try:
+    main()
+catch problem: IOException:
+    print("could not read the file: " + problem.message)
+catch problem: Error:
+    print("bad data: " + problem.message)
+# endregion main

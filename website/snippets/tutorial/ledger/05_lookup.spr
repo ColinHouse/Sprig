@@ -1,0 +1,25 @@
+import java.time.LocalDate as LocalDate
+
+class Expense:
+    let item: String
+    let cents: Int
+
+func find(expenses: List[Expense], item: String) -> Expense?:
+    for expense in expenses:
+        if expense.item == item:
+            return expense
+    return null
+
+let expenses: List[Expense] = [Expense(item="Coffee", cents=1250), Expense(item="Taxi", cents=3600)]
+
+let taxi = find(expenses, "Taxi")
+if taxi != null:
+    print(taxi.cents)
+
+let tea = find(expenses, "Tea")
+if tea == null:
+    print("no tea today")
+
+let day = LocalDate.parse("2026-10-05")
+if day != null:
+    print(day.getDayOfWeek())

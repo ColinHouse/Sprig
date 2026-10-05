@@ -1,10 +1,12 @@
-# 面向 Agent 的工作流
+# 和 AI 助手一起写代码
 
-Sprig 面向人和编码 Agent。目标是让实现依据、失败位置和修复决定可以检查，而不是承诺 Agent 总能写对程序。**Agent 友好也应当方便审查。**
+Sprig 在设计时就考虑到了 AI 编程助手。编译器的报错有固定的错误码、准确的位置和修改提示，还能输出成 JSON，助手可以照着改，不用去猜一段文字是什么意思。
 
-## 先查询本机编译器
+不过要说清楚：这并不能保证 AI 写出来的代码就是对的。它能保证的是，出错时你和助手都能看清错在哪里、为什么错，修改的过程也方便人来检查。
 
-版本和 SDK 能力会变化。先用安装中的工具回答问题：
+## 先问问装好的编译器
+
+不同版本的 SDK 功能不一样。让助手先用这几条命令了解手上的编译器，不要凭记忆写代码：
 
 ```sh
 sprig version
@@ -13,33 +15,50 @@ sprig help language --json
 sprig api java.time.LocalDate --json
 ```
 
-`capabilities` 是该 SDK 的 feature inventory。语法能解析不代表静态语义、Java 生成和 JVM 运行都可用；用实际 `check`、`build`、`run` 验证你依赖的阶段。
+`capabilities` 列出的是这个 SDK 实际实现了的功能。注意，一段代码能通过语法解析，不代表后面每一步都没问题。类型检查、生成 Java、在 JVM 上运行，你的改动依赖哪一步，就要实际跑过哪一步才算数。
 
-## 从最小失败开始
+## 一个修错的循环
 
-1. 读 `AGENTS.md`、相关参考页和同目录的现有测试。
-2. 编写一个小的正向程序，运行 `sprig check --json path/to/file.spr`。
-3. 发生错误时，读取稳定 code、源码范围、expected/actual 类型及 repair 说明；再运行 `sprig explain SPR-CODE --json`。
-4. 只在理解修复语义后改源码。编译器不会替 Agent 决定有损转换或扩大 API 支持范围。
-5. 运行 `sprig test --json`（若当前 SDK 声明支持）、相关独立测试和完整贡献 gate；最后审查 diff 与生成文件状态。
+1. 先读相关的参考页和附近已有的测试。如果是在 Sprig 仓库里工作，还要先读 `AGENTS.md`。
+2. 写一个能说明问题的小程序，运行 `sprig check --json path/to/file.spr`。
+3. 出错时，读错误码、位置、期望的类型和实际的类型，以及修改提示。还不清楚的话，运行 `sprig explain <错误码> --json`。
+4. 想明白这个错误意味着什么，再动手改。编译器不会替你选择有损的转换，也不会因为你需要就放宽对 Java API 的限制。
+5. 运行 `sprig test --json`（前提是你的 SDK 支持这个命令），再跑相关的测试。给 Sprig 仓库贡献代码时，还要跑完整的贡献检查。最后自己看一遍改动，确认没有把生成的文件提交进去。
 
-JSON 诊断结构和命令版本边界见[Agent 工具参考](/en/reference/tooling/agent-guide)；稳定诊断码见[诊断码表](/en/reference/tooling/diagnostic-codes)。
+JSON 里各个字段的含义见 [Agent 工具参考（英文）](/en/reference/tooling/agent-guide)，所有错误码见[错误码（英文）](/en/reference/tooling/diagnostic-codes)。
 
-## 修复类型错误示例
+## 例子：修一个类型错误
 
-如果把字符串赋给整数，编译器报 `SPR-TYPE-ASSIGN`，并给出 `expectedType: Int` 与 `actualType: String`。保留这个机器可读证据；根据意图将值改成整数，或把变量类型改成 `String`。不要仅为通过构建而转换。
+把字符串赋给整数：
 
-本教程的[预期错误片段](/tutorial#9-让编译器提供证据)由文档门禁实际检查。新语义应同时添加正向和反向程序，防止测试只证明它“能过”而没有验证拒绝路径。
+<<< @/snippets/tutorial/type_error.spr
 
-## 早期 dogfood 的边界
+`sprig check --json` 返回的错误里有这些字段（省略了其余部分）：
 
-维护者报告曾用一个较低成本的编码模型尝试 Sprig 工作流。记录性质是早期轶事：没有受控 benchmark、等价 Java 对照程序、公开任务集或 productivity measurement。我们不据此声称 Sprig 优于 Java、Agent 输出更正确或开发速度有定量提升。
+```json
+{
+  "code": "SPR-TYPE-ASSIGN",
+  "phase": "TYPE",
+  "message": "Type mismatch in initializer",
+  "expectedType": "Int",
+  "actualType": "String",
+  "relatedHelp": "types"
+}
+```
 
-目前可陈述的产品假设较窄：稳定的类型错误、Java API 查询与 capability inventory 能给修复提供可核对的信息。外部用户可按上面的流程复现；提交反馈时请附 SDK 版本、最小源文件、命令及完整诊断。
+`expectedType` 和 `actualType` 说得很清楚：这里需要 `Int`，给的却是 `String`。接下来怎么改，取决于你本来想做什么：要么把值改成整数，要么把变量声明成 `String`。不要只是为了让编译通过，就随手加一个类型转换。
 
-## 延伸阅读
+入门教程里也有好几个故意写错的例子，比如[第 1 步](/tutorial#_1-值和类型)，它们都由文档检查实际验证过。给 Sprig 加新功能时也是这样：既要有能通过的程序，也要有应该被拒绝的程序，测试才能证明编译器真的会拒绝错误的写法。
 
-- [从零开始的教程](/tutorial)
-- [已发布与源码功能状态](/en/reference/language/feature-status)
-- [项目测试](/en/reference/tooling/testing)
-- [Sprig contribution guide（英文）](/en/project/contributing)
+## 用 AI 写 Sprig，效果怎么样
+
+维护者用一个比较便宜的编程模型试过上面的工作方式。这只是一次早期的尝试：没有对照实验，没有拿 Java 做对比，也没有测量效率。所以它说明不了 Sprig 比 Java 更适合 AI，也说明不了 AI 用 Sprig 写得更对、更快。
+
+这个项目想验证的想法范围更小：固定的错误码、可以查询的 Java API 和功能清单，能让修错的每一步都有据可查。欢迎你按上面的流程自己试试。反馈时请附上 SDK 版本、能复现问题的最小源码、运行的命令和完整的报错。
+
+## 接下来
+
+- [入门教程](/tutorial)
+- [已发布版本和源码的功能状态（英文）](/en/reference/language/feature-status)
+- [项目测试（英文）](/en/reference/tooling/testing)
+- [参与贡献（英文）](/en/project/contributing)

@@ -1,30 +1,30 @@
-# 应用程序示例
+# 示例程序
 
-先做完[可执行入门教程](/tutorial)。这里按学习进阶列出有实际用途的程序；教程源码在 `website/snippets/`，独立项目在 `examples/`，测试夹具仍放 `tests/`。
+做完[入门教程](/tutorial)以后，可以看看这些更完整的程序。它们都放在仓库的 `examples/` 目录里，每个目录的 README 都写了怎么运行、用到了哪些依赖，以及还有哪些限制。
 
-## 从本地程序开始
+## 先从本地小工具看起
 
-- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：本地 JSON CLI、文件 I/O、类型化模型；不访问网络。
-- [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：多文件 JSON 命令行程序，使用 `sprig-cli`。
-- [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary)：从小型 JSON 配置文件生成可重复的摘要，并展示错误输入的诊断。
-- [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：查询 Java/Sprig API、诊断摘要与 API 差异工具。
+- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：命令行任务清单，数据存在本地的 JSON 文件里。演示文件读写和带类型的数据模型，不需要联网。
+- [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：从 JSON 里挑选字段的命令行工具，由多个文件组成，用 `sprig-cli` 库解析命令行选项。
+- [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary)：读取一个小的 JSON 配置文件，输出格式固定的摘要；输入有误时会给出清楚的错误信息。
+- [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：三个用 Sprig 写的小工具，读取编译器输出的 JSON，用来查询 Java 和 Sprig API、汇总错误信息、比较 API 的差异。
 
-## JVM 应用与库
+## 用到 Java 库的应用
 
-- [application_foundation](https://github.com/ColinHouse/Sprig/tree/main/examples/application_foundation)：HTTP、JSON codec、UTC 时间与文件处理。
-- [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) 与 [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations)：Maven JDBC、事务、持久化和迁移。
-- [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger)：精简账户/交易 HTTP 后端与重启后持久化。
-- [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web)：类型化路由、JSON 与 OpenAPI。
+- [application_foundation](https://github.com/ColinHouse/Sprig/tree/main/examples/application_foundation)：HTTP、JSON 编解码、UTC 时间和文件处理。
+- [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) 和 [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations)：通过 Maven 使用 JDBC，演示事务、数据持久化和数据库迁移。
+- [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger)：精简的记账 HTTP 后端，重启后数据还在。详见 [Web 与 SQLite](/guide/web-sqlite)。
+- [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web)：带类型的路由、JSON 和 OpenAPI 文档。
 
-第三方库仍由普通 Maven 坐标与锁文件管理。请查看[首方库目录](https://github.com/ColinHouse/Sprig/tree/main/libraries)和[JVM 互操作指南](/guide/jvm-interop)。
+第三方 Java 库照常用 Maven 坐标加进项目，由锁文件固定版本，见[项目](/guide/projects)和 [JVM 互操作](/guide/jvm-interop)。Sprig 自己维护的库都在 [`libraries/`](https://github.com/ColinHouse/Sprig/tree/main/libraries) 目录里。
 
-## 面向编译器与生态的案例
+## 更大一些的程序
 
-- [repository_audit](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/repository_audit)：遍历仓库并生成 JSON 报告。
-- [maven_slug](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/maven_slug)：锁定 Maven 库、查询 API、离线复用缓存。
-- [source_analyzer](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/source_analyzer)：使用 Sprig frontend API 分析受支持的源码子集。
-- [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner)：普通 Sprig 项目中的 runtime、table、临时文件、子进程和 expected-diagnostic 测试。
+- [repository_audit](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/repository_audit)：遍历一个代码仓库，生成 JSON 报告。
+- [maven_slug](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/maven_slug)：锁定一个 Maven 库，查询它的 API，离线时复用缓存。
+- [source_analyzer](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases/source_analyzer)：用 Sprig 写的源码分析工具，遍历语法树，列出函数、变量和引用。它只覆盖语言的一部分，不是完整的编译器 API。
+- [test_runner](https://github.com/ColinHouse/Sprig/tree/main/examples/test_runner)：在普通的 Sprig 项目里写各种测试，包括运行时测试、表格式测试、临时文件、子进程，以及预期会编译失败的测试。
 
-[Fabric/Loom dogfood](/guide/fabric) 是单独的高要求框架集成案例，展示 host-owned classpath 和窄 Java adapter 的边界。
+另外，[Fabric 模组](/guide/fabric)是一个单独的案例：在 Minecraft 模组里用 Sprig 写逻辑，Gradle 和 Loom 负责构建，Java 那边只保留很薄的一层接口。
 
-示例覆盖了有限的已测场景，不代表所有库 API 或生产工作负载都受支持。每个目录的 README 说明启动命令、锁文件和已知边界。
+这些示例只覆盖了测试过的场景，不代表所有库 API 或者生产环境的负载都能支持。

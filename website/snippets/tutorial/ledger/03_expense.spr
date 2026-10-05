@@ -1,0 +1,14 @@
+class Expense:
+    let item: String
+    let cents: Int
+    var note: String = ""
+
+    func is_big() -> Bool:
+        return cents >= 10000
+
+let coffee = Expense(item="Coffee", cents=1250)
+let rent = Expense(item="Rent", cents=320000, note="October")
+
+print(coffee)
+print(rent.note)
+print(rent.is_big())

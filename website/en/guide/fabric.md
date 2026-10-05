@@ -1,12 +1,14 @@
-# Sprig with Fabric/Loom: move build wiring into tooling
+# Fabric mods: writing Minecraft mod logic in Sprig
 
-A Quest Board dogfood showed that Sprig could own the model, state, persistence and application logic. The repeated cost in the hybrid project came from Gradle/Loom: compiling a Java bridge, exporting the client classpath, generating and registering Java, adding the runtime, and connecting `check`. That was not a missing Sprig language feature. New projects should start with the first-party `dev.sprig` plugin and Fabric template.
+Sprig can take care of a mod's data model, state, saving and game logic, while the parts that talk to Minecraft and Fabric stay in Java. For a new project, start from the Fabric template that ships with the SDK; it already has the official `dev.sprig` Gradle plugin set up.
 
-The goal is to put repeated build wiring in reusable tooling while keeping the Java host boundary and Sprig application logic visible. See the [Gradle integration guide](/en/guide/gradle) for the plugin contract and [`libraries/sprig-fabric`](https://github.com/ColinHouse/Sprig/tree/main/libraries/sprig-fabric) for the starter files.
+::: warning Needs a version newer than v0.5.0-beta.1
+The template and the Gradle plugin were added after v0.5.0-beta.1 was released, so the published SDK doesn't include them yet. Until the next release, clone the Sprig repository, build it with `python3 scripts/build.py`, and point `SPRIG_HOME` below at that checkout.
+:::
 
-## Start from the SDK template
+## Start from the template
 
-The Sprig SDK includes the template and the `libraries/sprig-gradle` included build. Set `SPRIG_HOME` to the extracted SDK root:
+The SDK includes the template and the `libraries/sprig-gradle` plugin it uses. Set `SPRIG_HOME` to the SDK's root, then run:
 
 ```sh
 cp -R "$SPRIG_HOME/libraries/sprig-fabric/template" ./my-mod
@@ -16,9 +18,13 @@ cd my-mod
 ./gradlew runClient
 ```
 
-The template settings load the plugin from the SDK. No Sprig repository clone or personal absolute path is required. `check` runs Sprig static checks, Sprig tests and normal Java checks; `build` generates and compiles Sprig Java, runtime and bridge code; `runClient` uses the same generated output.
+The template loads the plugin from the SDK, so you don't need to clone the Sprig repository or hard-code any path on your machine.
 
-The consumer's Sprig configuration only selects a source set:
+- `check` runs Sprig's static checks, the Sprig tests and the usual Java checks.
+- `build` generates and compiles the Java for your Sprig code, the runtime and the bridge code.
+- `runClient` starts the game client from that same generated output.
+
+The only Sprig-specific setting in `build.gradle` picks the source set:
 
 ```groovy
 plugins {
@@ -31,24 +37,30 @@ sprig {
 }
 ```
 
-Fabric dependencies, split source sets, mod entrypoint and Java release remain ordinary Loom configuration. The Sprig plugin owns bridge compilation, the real classpath, generated sources, runtime sources and Gradle lifecycle wiring.
+Fabric dependencies, split source sets, the mod entry point and the Java version are all ordinary Loom configuration. The Sprig plugin compiles the bridge code, supplies the real classpath, generates sources, adds the runtime sources and hooks all of it into Gradle's build.
 
-## Project boundary
+## Who does what
 
-| Path | Responsibility |
+| Path | What goes there |
 |---|---|
-| `src/main.spr` | Sprig domain state and logic |
-| `tests/*.spr` | Project tests run by `sprigTest` |
-| `src/sprigBridge/java/` | Narrow Java interface consumed by Sprig |
-| `src/client/java/` | Fabric client initializer and callback registration |
-| `build/generated/sprig/client/java/` | Inspectable generated Java |
+| `src/main.spr` | State and logic written in Sprig |
+| `tests/*.spr` | Project tests, run by `sprigTest` |
+| `src/sprigBridge/java/` | A thin Java interface for Sprig to call |
+| `src/client/java/` | The Fabric client entry point and callback registration |
+| `build/generated/sprig/client/java/` | The generated Java, which you can read |
 
-Gradle/Loom owns dependencies, source sets, `javac` and the jar. Sprig owns type checking, generation, lock validation and Sprig tests. The plugin connects the two. Dependency resolution stays explicit: `check`/`build` consume the current `sprig.lock`; only `./gradlew sprigResolve` updates it.
+Gradle and Loom handle dependencies, source sets, javac and the jar. Sprig handles type checking, code generation, lock validation and the Sprig tests. The plugin connects the two. Dependencies never update by themselves: `check` and `build` only read the current `sprig.lock`, and only an explicit `./gradlew sprigResolve` updates it.
 
-## Verified scope
+## Tested versions
 
-The starter is tested with Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3, Fabric Loom 1.18.2, Gradle 9.7.1 and OpenJDK 26.0.1 (`javac --release 25`). This is a tested combination, not a compatibility promise for all Fabric or Loom versions.
+The template is tested with Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3, Fabric Loom 1.18.2, Gradle 9.7.1 and OpenJDK 26.0.1 (targeting Java 25). That's one combination that has actually been tested, not a promise that every Fabric or Loom version works.
 
-In the earlier Java-only / Sprig hybrid Quest Board comparison, both versions built and ran. Java-only production was 707 LOC; hybrid production was 760 LOC, including about 470 LOC of Sprig application code. This was one uninstrumented project, with no time or token measurement, and was not a controlled productivity benchmark; Java-only was selected under the manual wiring setup. The plugin removes the observed Gradle/Loom setup cost. **It does not prove that Sprig is more productive than Java.** It makes a future comparison possible with fewer integration confounders.
+## Where this template came from
 
-See [`libraries/sprig-fabric/README.md`](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-fabric/README.md) and [`libraries/sprig-gradle/README.md`](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md) for details and limits.
+An earlier comparison used a Quest Board mod built twice with the same features: once in Java only, and once in Java plus Sprig. Both versions built and ran. The Java-only version had 707 lines of production code; the mixed version had 760, about 470 of them Sprig application logic.
+
+What kept costing effort that time was the Gradle and Loom setup: compiling the Java bridge, exporting the client classpath, generating and registering Java code, adding the runtime and wiring up `check`. None of that was something missing from the Sprig language, so it became the plugin and this template.
+
+That's the experience of a single project, with no time or token measurements, so it isn't a rigorous productivity comparison. And with the manual setup it needed back then, the Java-only version was the one picked in the end. The plugin removes the setup cost seen in that project. **It does not prove that Sprig is more productive than Java.** It only means a future comparison has fewer distractions that have nothing to do with the language.
+
+For more details and limitations, see [`libraries/sprig-fabric/README.md`](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-fabric/README.md) and [`libraries/sprig-gradle/README.md`](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md).
