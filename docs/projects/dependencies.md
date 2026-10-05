@@ -156,7 +156,7 @@ numeric, nullability and exception contracts.
 ## Limits
 
 Publishing/registry, Maven plugins, dependency authentication, non-JAR runtime
-artifacts, full Java generic/array/varargs adapters and an LSP are not implemented.
+artifacts and full Java generic/array/varargs adapters are not implemented.
 Git cache materialization waits up to five seconds for its cooperative process
 lock, then reports `SPR-DEP-GIT` with retry guidance; it never steals the lock.
 The Maven cache lock still uses a blocking cooperative wait. Hostile concurrent

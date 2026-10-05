@@ -92,10 +92,13 @@ public final class AstBuilder {
         if (ctx.STRING() != null) {
             String text = ctx.STRING().getText();
             result = new Decl.Import(unquote(text), true, ctx.IDENT() == null ? null : ctx.IDENT().getText());
+            result.targetSpan = span(ctx.STRING());
         } else {
             result = new Decl.Import(ctx.qualifiedName().getText(), false,
                     ctx.IDENT() == null ? null : ctx.IDENT().getText());
+            result.targetSpan = span(ctx.qualifiedName());
         }
+        result.aliasSpan = ctx.IDENT() == null ? null : span(ctx.IDENT());
         result.span = span(ctx);
         return result;
     }
@@ -108,18 +111,21 @@ public final class AstBuilder {
                     buildTypeRef(field.typeRef()),
                     field.expression() == null ? null : buildExpression(field.expression())));
             fields.get(fields.size() - 1).span = span(field);
+            fields.get(fields.size() - 1).nameSpan = span(field.IDENT());
         }
         for (SprigParser.FunctionDefinitionContext method : ctx.classSuite().functionDefinition()) {
             methods.add(buildFunction(method));
         }
         Decl.ClassDecl decl = new Decl.ClassDecl(ctx.IDENT().getText(), fields, methods);
         decl.span = span(ctx);
+        decl.nameSpan = span(ctx.IDENT());
         return decl;
     }
 
     private Decl buildConform(SprigParser.ConformDefinitionContext ctx) {
         Decl.Conform decl = new Decl.Conform(ctx.IDENT(0).getText(), ctx.IDENT(1).getText());
         decl.span = span(ctx);
+        decl.nameSpan = span(ctx.IDENT(0));
         return decl;
     }
 
@@ -129,7 +135,11 @@ public final class AstBuilder {
             cases.add(ident.getText());
         }
         Decl.EnumDecl decl = new Decl.EnumDecl(ctx.IDENT().getText(), cases);
+        for (TerminalNode ident : ctx.enumSuite().IDENT()) {
+            decl.caseSpans.add(span(ident));
+        }
         decl.span = span(ctx);
+        decl.nameSpan = span(ctx.IDENT());
         return decl;
     }
 
@@ -146,14 +156,17 @@ public final class AstBuilder {
                 Decl.Field field = new Decl.Field(fieldCtx.IDENT().getText(), false,
                         buildTypeRef(fieldCtx.typeRef()), null);
                 field.span = span(fieldCtx);
+                field.nameSpan = span(fieldCtx.IDENT());
                 fields.add(field);
             }
             Decl.VariantCase variantCase = new Decl.VariantCase(caseCtx.IDENT().getText(), fields);
             variantCase.span = span(caseCtx);
+            variantCase.nameSpan = span(caseCtx.IDENT());
             cases.add(variantCase);
         }
         Decl.VariantDecl decl = new Decl.VariantDecl(ctx.IDENT().getText(), cases);
         decl.span = span(ctx);
+        decl.nameSpan = span(ctx.IDENT());
         return decl;
     }
 
@@ -163,6 +176,7 @@ public final class AstBuilder {
             for (SprigParser.ParameterContext param : ctx.parameters().parameter()) {
                 Decl.Param p = new Decl.Param(param.IDENT().getText(), buildTypeRef(param.typeRef()));
                 p.symbol = null;
+                p.nameSpan = span(param.IDENT());
                 params.add(p);
             }
         }
@@ -173,6 +187,7 @@ public final class AstBuilder {
         Decl.Func func = new Decl.Func(ctx.IDENT().getText(), params, buildTypeRef(ctx.typeRef(0)),
                 throwsRefs, buildSuite(ctx.suite()));
         func.span = span(ctx);
+        func.nameSpan = span(ctx.IDENT());
         return func;
     }
 
@@ -196,6 +211,8 @@ public final class AstBuilder {
         }
         TypeRef ref = new TypeRef(parts, args, ctx.QUESTION() != null);
         ref.span = span(ctx);
+        List<TerminalNode> idents = ctx.qualifiedName().IDENT();
+        ref.nameSpan = span(idents.get(idents.size() - 1));
         return ref;
     }
 
@@ -233,6 +250,7 @@ public final class AstBuilder {
                     decl.typeAnnotation() == null ? null : buildTypeRef(decl.typeAnnotation().typeRef()),
                     buildExpression(decl.expression()));
             stmt.span = span(ctx);
+            stmt.nameSpan = span(decl.IDENT());
             return stmt;
         }
         if (ctx.assignment() != null) {
@@ -327,14 +345,17 @@ public final class AstBuilder {
         Stmt.ForStmt stmt = new Stmt.ForStmt(ctx.IDENT().getText(), buildExpression(ctx.expression()),
                 buildSuite(ctx.suite()));
         stmt.span = span(ctx);
+        stmt.nameSpan = span(ctx.IDENT());
         return stmt;
     }
 
     private Stmt buildTry(SprigParser.TryStatementContext ctx) {
         List<Stmt.Try.CatchClause> catches = new ArrayList<>();
         for (SprigParser.CatchClauseContext catchCtx : ctx.catchClause()) {
-            catches.add(new Stmt.Try.CatchClause(catchCtx.IDENT().getText(), buildTypeRef(catchCtx.typeRef()),
-                    buildSuite(catchCtx.suite())));
+            Stmt.Try.CatchClause clause = new Stmt.Try.CatchClause(catchCtx.IDENT().getText(),
+                    buildTypeRef(catchCtx.typeRef()), buildSuite(catchCtx.suite()));
+            clause.nameSpan = span(catchCtx.IDENT());
+            catches.add(clause);
         }
         List<Stmt> finallyBody = null;
         if (ctx.FINALLY() != null) {
@@ -357,9 +378,13 @@ public final class AstBuilder {
             List<String> typeParts = parts.subList(0, parts.size() - 1);
             TypeRef caseType = new TypeRef(typeParts, List.of(), false);
             caseType.span = span(branchCtx.qualifiedName());
-            branches.add(new Stmt.Match.Branch(caseType, caseName,
+            caseType.nameSpan = idents.size() < 2 ? null : span(idents.get(idents.size() - 2));
+            Stmt.Match.Branch branch = new Stmt.Match.Branch(caseType, caseName,
                     branchCtx.IDENT() == null ? null : branchCtx.IDENT().getText(),
-                    buildSuite(branchCtx.suite())));
+                    buildSuite(branchCtx.suite()));
+            branch.caseSpan = span(idents.get(idents.size() - 1));
+            branch.binderSpan = branchCtx.IDENT() == null ? null : span(branchCtx.IDENT());
+            branches.add(branch);
         }
         Stmt.Match stmt = new Stmt.Match(buildExpression(ctx.expression()), branches);
         stmt.span = span(ctx);
@@ -373,13 +398,18 @@ public final class AstBuilder {
             var matchCtx = ctx.matchExpression();
             List<Stmt.Match.Branch> branches = new ArrayList<>();
             for (var branchCtx : matchCtx.matchExpressionBranch()) {
-                List<String> parts = branchCtx.qualifiedName().IDENT().stream().map(TerminalNode::getText).toList();
+                List<TerminalNode> idents = branchCtx.qualifiedName().IDENT();
+                List<String> parts = idents.stream().map(TerminalNode::getText).toList();
                 TypeRef owner = new TypeRef(parts.subList(0,parts.size()-1),List.of(),false);
                 owner.span = span(branchCtx.qualifiedName());
+                owner.nameSpan = idents.size() < 2 ? null : span(idents.get(idents.size() - 2));
                 Stmt.ExprStmt value = new Stmt.ExprStmt(buildExpression(branchCtx.expression()));
                 value.span = span(branchCtx.expression());
-                branches.add(new Stmt.Match.Branch(owner,parts.get(parts.size()-1),
-                    branchCtx.IDENT() == null ? null : branchCtx.IDENT().getText(),List.of(value)));
+                Stmt.Match.Branch branch = new Stmt.Match.Branch(owner, parts.get(parts.size() - 1),
+                        branchCtx.IDENT() == null ? null : branchCtx.IDENT().getText(), List.of(value));
+                branch.caseSpan = span(idents.get(idents.size() - 1));
+                branch.binderSpan = branchCtx.IDENT() == null ? null : span(branchCtx.IDENT());
+                branches.add(branch);
             }
             Stmt.Match cases = new Stmt.Match(buildExpression(matchCtx.expression()),branches);
             cases.span = span(matchCtx);
@@ -515,7 +545,9 @@ public final class AstBuilder {
             }
         } else if (ctx.namedArguments() != null) {
             for (SprigParser.NamedArgumentContext named : ctx.namedArguments().namedArgument()) {
-                args.add(new Expr.Arg(named.IDENT().getText(), buildExpression(named.expression())));
+                Expr.Arg arg = new Expr.Arg(named.IDENT().getText(), buildExpression(named.expression()));
+                arg.nameSpan = span(named.IDENT());
+                args.add(arg);
             }
         }
         return args;
@@ -560,7 +592,9 @@ public final class AstBuilder {
         List<Decl.Param> params = new ArrayList<>();
         if (ctx.parameters() != null) {
             for (SprigParser.ParameterContext param : ctx.parameters().parameter()) {
-                params.add(new Decl.Param(param.IDENT().getText(), buildTypeRef(param.typeRef())));
+                Decl.Param p = new Decl.Param(param.IDENT().getText(), buildTypeRef(param.typeRef()));
+                p.nameSpan = span(param.IDENT());
+                params.add(p);
             }
         }
         Expr.Lambda lambda = new Expr.Lambda(params, buildExpression(ctx.expression()));

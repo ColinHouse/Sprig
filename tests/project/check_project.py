@@ -41,6 +41,20 @@ def main():
         check("init-refuses-overwrite", again.returncode == 2
               and "Refusing to overwrite" in again.stderr)
 
+        # "." and ".." name the directory they resolve to.
+        dotted = Path(temp) / "dotted"
+        dotted.mkdir()
+        here = run(dotted, "init", ".")
+        check("init-dot-uses-directory-name", here.returncode == 0
+              and 'name = "dotted"' in (dotted / "sprig.toml").read_text()
+              and "/./" not in here.stdout.replace("\\", "/"), here.stdout + here.stderr)
+        parent = Path(temp) / "parent"
+        (parent / "child").mkdir(parents=True)
+        up = run(parent, "init", "child/..")
+        check("init-dotdot-uses-directory-name", up.returncode == 0
+              and 'name = "parent"' in (parent / "sprig.toml").read_text()
+              and not (parent / "child" / "sprig.toml").exists(), up.stdout + up.stderr)
+
         locked = run(work, "run")
         check("lock-required-before-resolve", locked.returncode == 1
               and "SPR-PROJECT-LOCK-MISSING" in locked.stdout + locked.stderr,

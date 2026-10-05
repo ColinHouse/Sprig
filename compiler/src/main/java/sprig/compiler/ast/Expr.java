@@ -78,6 +78,7 @@ public abstract class Expr extends Node {
     public static final class Arg {
         public final String name; // null for positional
         public final Expr value;
+        public Span nameSpan;
 
         public Arg(String name, Expr value) {
             this.name = name;

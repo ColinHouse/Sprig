@@ -51,6 +51,7 @@ Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work
 | Types/flow/diagnostics | `python3 scripts/check_cases.py .` | static checking |
 | Generation/runtime | `python3 tests/correctness/check_correctness.py` | Java/JVM |
 | CLI/JVM query tools | `python3 tests/agent_tooling/check_tooling.py` | subprocess/API fixtures |
+| Language server | `python3 tests/lsp/check_lsp.py` | JSON-RPC over stdio against `bin/sprig lsp` |
 | Generic Gradle integration | `python3 tests/gradle/check_gradle_plugin.py` | ordinary Java fixture; no Loom/Minecraft dependencies |
 | Fabric/Loom integration | `python3 tests/fabric/check_template.py` | explicit host-framework integration test; downloads may be needed |
 | Projects/dependencies | `python3 tests/project_deps/check_deps.py` | lock/cache/project behavior |
@@ -106,9 +107,9 @@ change touches, as applicable:
 - Do not treat `docs/history/design-kit/` as a current contract.
 - Do not commit generated code, class files, the ANTLR JAR, local paths,
   credentials or personal configuration.
-- `sprig api`, `capabilities`, `doctor`, and topic help are available; query
-  `capabilities --json` for the checkout's dependency and feature support.
-  Publishing/registry, LSP remains future work.
+- `sprig api`, `capabilities`, `doctor`, `lsp` and topic help are available;
+  query `capabilities --json` for the checkout's dependency and feature
+  support. Publishing/registry remains future work.
 - This milestone does not authorize grammar, type, numeric, nullability,
   generic or effect redesign. Open a `design-required` issue with a motivating
   program before changing those contracts.

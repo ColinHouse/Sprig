@@ -1,8 +1,8 @@
 # Tools and JSON
 
-Sprig comes as one command-line program, `sprig`, and everything it does is a subcommand. There's no background process and no language server. For editor support, see the [VS Code extension](/en/guide/editor).
+Sprig comes as one command-line program, `sprig`, and everything it does is a subcommand. There's no background process: even the language server is a subcommand, `sprig lsp`, which your editor starts itself. For VS Code, see the [VS Code extension](/en/guide/editor).
 
-Every command on this page is in the published v0.5.0-beta.1. For exactly what your installed SDK supports, run `sprig capabilities --json`.
+Every command on this page except `sprig lsp` is in the published v0.5.0-beta.1. For exactly what your installed SDK supports, run `sprig capabilities --json`.
 
 ## The commands
 
@@ -44,6 +44,7 @@ Everything else:
 |---|---|
 | `sprig wrap <Java class> --out <file>` | Generates Sprig wrapper code for a Java class; see [JVM interop](/en/guide/jvm-interop) |
 | `sprig upgrade` | Upgrades the SDK; with `--check` it only looks for a newer version |
+| `sprig lsp` | Runs the language server for your editor; see [language server](#language-server) |
 | `sprig version` | Prints the version |
 
 Inside a project, `check`, `run` and `build` don't need a file name; they use the project's entry point. `check`, `build`, `run`, `api`, `wrap` and `doctor` accept `--classpath` to add local JARs or directories, as many times as you need. The option only uses the paths you give it; it never downloads anything.
@@ -141,11 +142,18 @@ The full approach is in [working with AI assistants](/en/guide/agent-workflow).
 
 `sprig fmt file.spr` formats a file in place; `sprig fmt --check . --json` only checks and changes nothing, which suits CI. Formatting keeps your comments, always gives the same result, has no options and doesn't wrap lines aggressively. No command other than `fmt` ever changes your source. See [formatter](/en/reference/tooling/formatter).
 
+## Language server
+
+`sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly. It's new in the development version, so the published v0.5.0-beta.1 doesn't have it yet.
+
+It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, and rename for local variables and parameters. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. While your code doesn't parse, the server answers with nothing rather than a guess.
+
+Editor setup and the details of each feature are in the [language server reference](/en/reference/tooling/lsp).
+
 ## Not there yet
 
 These are planned but not implemented:
 
-- a language server (LSP), and the editor features built on one, such as completion and go-to-definition
 - publishing packages, and a module registry
 - incremental checking
 

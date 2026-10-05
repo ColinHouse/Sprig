@@ -113,6 +113,7 @@ public final class Main {
             case "wrap" -> wrap(args);
             case "doctor" -> doctor(args);
             case "upgrade" -> ManagedSdkUpgrade.run(args);
+            case "lsp" -> sprig.compiler.lsp.LanguageServer.run(args);
             default -> {
                 System.err.println("sprig: unknown command '" + args[0] + "'");
                 usage(System.err);
@@ -147,6 +148,7 @@ public final class Main {
         out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");
         out.println("  check/build/run/api/wrap accept repeated --classpath JAR_OR_DIR");
         out.println("  fmt <file.spr|directory> [--check] [--json] canonical comment-preserving formatting");
+        out.println("  lsp [--stdio] [--classpath PATH]            language server on standard input/output");
         out.println("  version");
     }
 
@@ -983,14 +985,7 @@ public final class Main {
 
     private static DependencyResolver.Result loadProjectGraph(Project project, Options options)
             throws IOException {
-        Path lockPath = project.lockPath();
-        if (!Files.isRegularFile(lockPath)) {
-            throw new DepError(Codes.PROJECT_LOCK_MISSING,
-                    "Project '" + project.name + "' has no sprig.lock", project.manifest.toString())
-                    .with("hint", "Run `sprig resolve`.");
-        }
-        Lockfile lock = Lockfile.parse(Files.readString(lockPath));
-        return DependencyResolver.load(project, lock, options.offline);
+        return DependencyResolver.loadLocked(project, options.offline);
     }
 
     private static Diagnostic depDiagnostic(DepError error) {
@@ -1139,7 +1134,8 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "init");
         if (prepared != 0) return prepared;
-        Path dir = options.file == null ? Path.of("").toAbsolutePath() : options.file.toAbsolutePath();
+        // Normalize so that "." and ".." name the directory they point to.
+        Path dir = (options.file == null ? Path.of("") : options.file).toAbsolutePath().normalize();
         Path manifest = dir.resolve(Project.MANIFEST);
         Path entry = dir.resolve("src/main.spr");
         if (Files.exists(manifest) || Files.exists(entry)) {

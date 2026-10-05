@@ -153,7 +153,8 @@ Sprig Output; manual commands also show an actionable error notification.
   file, and top-level variables whose type the compiler reports for the saved
   file. Members of local variables and parameters are not offered.
 - Formatting needs code that parses; otherwise the document is left unchanged.
-- No rename, find references, semantic highlighting, debugger or LSP.
+- No rename, find references, semantic highlighting or debugger. The extension
+  does not use the `sprig lsp` language server yet.
 
 ## Development / 开发
 

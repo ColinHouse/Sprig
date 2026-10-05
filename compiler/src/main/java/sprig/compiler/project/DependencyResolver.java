@@ -226,6 +226,18 @@ public final class DependencyResolver {
         return new Result(root, lock);
     }
 
+    /** Build mode for a discovered project: reads its sprig.lock, which must exist. */
+    public static Result loadLocked(Project project, boolean offline) throws IOException {
+        Path lockPath = project.lockPath();
+        if (!Files.isRegularFile(lockPath)) {
+            throw new DepError(Codes.PROJECT_LOCK_MISSING,
+                    "Project '" + project.name + "' has no sprig.lock", project.manifest.toString())
+                    .with("hint", "Run `sprig resolve`.");
+        }
+        Lockfile lock = Lockfile.parse(Files.readString(lockPath));
+        return load(project, lock, offline);
+    }
+
     /** Build mode: uses the existing lockfile and never queries a moving ref. */
     public static Result load(Project project, Lockfile lock, boolean offline) {
         if (!sprig.compiler.tooling.Catalog.COMPILER_VERSION.equals(lock.compiler))

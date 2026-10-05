@@ -79,6 +79,9 @@
   "feature.testRunner": [
     "tests/test_runner/check_test_runner.py"
   ],
+  "feature.languageServer": [
+    "tests/lsp/check_lsp.py"
+  ],
   "feature.bundledStd": [
     "tests/release_hardening/check_hardening.py",
     "scripts/test-stdlib.py"

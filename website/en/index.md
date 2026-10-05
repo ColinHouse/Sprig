@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## Can I use it yet?
 
-Sprig is young. The current release is the experimental v0.5.0-beta.1. Everything listed above works today, and each item has an example you can run. It doesn't have generic type inference, interfaces or an LSP yet, and it isn't meant for production use. The full list is in [known limitations](/en/reference/language/known-limitations).
+Sprig is young. The current release is the experimental v0.5.0-beta.1. Everything listed above works today, and each item has an example you can run. It doesn't have generic type inference or interfaces yet, and it isn't meant for production use. The full list is in [known limitations](/en/reference/language/known-limitations).
 
 ## Up and running in five minutes
 

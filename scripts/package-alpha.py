@@ -124,6 +124,7 @@ def main():
             'STANDARD_LIBRARY': 'docs/projects/standard-library.md',
             'FORMATTER': 'docs/tooling/formatter.md', 'TESTING': 'docs/tooling/testing.md',
             'DIAGNOSTIC_CODES': 'docs/tooling/diagnostic-codes.md',
+            'LANGUAGE_SERVER': 'docs/tooling/lsp.md',
             'SHOWCASES': 'docs/tooling/showcases.md',
             'JVM_INTEROP': 'docs/jvm/interop.md', 'WRAP': 'docs/jvm/wrap.md',
             'GRADLE_INTEGRATION': 'docs/jvm/gradle.md',
