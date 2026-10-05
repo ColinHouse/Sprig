@@ -7,14 +7,20 @@ export interface SourceRange { start: Point; end: Point }
 export interface CompilerDiagnostic {
   code: string; severity: string; message: string; uri: string | null;
   range: SourceRange | null; expectedType?: string; actualType?: string; hint?: string;
+  relatedHelp?: string;
 }
 export interface CompilerResult {
   schemaVersion: number; exitCode: number; diagnostics?: CompilerDiagnostic[];
   programOutput?: string; javaSources?: string[]; javacInvoked?: boolean;
-  project?: { root: string; entry: string };
+  project?: { root: string; entry: string; name?: string; lockStatus?: string };
   [key: string]: unknown;
 }
 export interface Invocation { json: CompilerResult; stderr: string }
+export interface Captured { code: number | null; stdout: string; stderr: string }
+export interface RunOptions { signal?: AbortSignal; timeoutMs?: number; maxOutput?: number }
+
+// Query commands print a JSON document without exitCode when they succeed.
+const QUERIES = ['capabilities', 'explain', 'api', 'help', 'doctor'];
 
 export function projectRoot(file: string): string {
   for (let dir = path.dirname(file); ; dir = path.dirname(dir)) {
@@ -55,8 +61,8 @@ export function compilerCommand(executable: string, args: string[],
   return {command: executable, args};
 }
 
-export function invoke(executable: string, args: string[], cwd: string,
-  options: { signal?: AbortSignal; timeoutMs?: number; maxOutput?: number } = {}): Promise<Invocation> {
+/** Runs one compiler process with the shared cancel, timeout and output limits. */
+export function capture(executable: string, args: string[], cwd: string, options: RunOptions = {}): Promise<Captured> {
   if (options.signal?.aborted) return Promise.reject(new Error('Sprig command canceled.'));
   let invocation: ReturnType<typeof compilerCommand>;
   try { invocation = compilerCommand(executable, args); }
@@ -83,19 +89,24 @@ export function invoke(executable: string, args: string[], cwd: string,
       cleanup();
       if(failure) return reject(failure);
       if(signal) return reject(new Error(`Sprig compiler terminated by ${signal}.`));
-      let json: CompilerResult;
-      try { json = JSON.parse(stdout); } catch {
-        return reject(new Error(`Sprig did not return JSON (exit ${code}). ${stderr || stdout}`.slice(0,2000)));
-      }
-      if(!json || typeof json !== 'object' || Array.isArray(json)) return reject(new Error('Invalid Sprig JSON response: expected an object.'));
-      if(json.exitCode === undefined && ['capabilities','explain'].includes(args[0]) && Number.isInteger(code)) json.exitCode = code!;
-      if(json.schemaVersion !== 1 || !Number.isInteger(json.exitCode) || json.exitCode !== code) {
-        return reject(new Error('Unsupported or inconsistent Sprig JSON response; compiler 0.3.0-alpha.1+ is required.'));
-      }
-      if(json.diagnostics !== undefined && !Array.isArray(json.diagnostics)) return reject(new Error('Invalid Sprig diagnostics response.'));
-      resolve({json,stderr});
+      resolve({code, stdout, stderr});
     });
     // Handle an abort racing with spawn/listener registration.
     if(options.signal?.aborted) abort();
   });
+}
+
+export async function invoke(executable: string, args: string[], cwd: string, options: RunOptions = {}): Promise<Invocation> {
+  const {code, stdout, stderr} = await capture(executable, args, cwd, options);
+  let json: CompilerResult;
+  try { json = JSON.parse(stdout); } catch {
+    throw new Error(`Sprig did not return JSON (exit ${code}). ${stderr || stdout}`.slice(0,2000));
+  }
+  if(!json || typeof json !== 'object' || Array.isArray(json)) throw new Error('Invalid Sprig JSON response: expected an object.');
+  if(json.exitCode === undefined && QUERIES.includes(args[0]) && Number.isInteger(code)) json.exitCode = code!;
+  if(json.schemaVersion !== 1 || !Number.isInteger(json.exitCode) || json.exitCode !== code) {
+    throw new Error('Unsupported or inconsistent Sprig JSON response; compiler 0.4.0-alpha.1+ is required.');
+  }
+  if(json.diagnostics !== undefined && !Array.isArray(json.diagnostics)) throw new Error('Invalid Sprig diagnostics response.');
+  return {json, stderr};
 }
