@@ -1,0 +1,85 @@
+# Sorting, grouping and folding for List[T]. Each function returns a new list
+# and leaves its input unchanged.
+import sprig.runtime.host.HostOrder as HostOrder
+
+generic K, T:
+    class Group:
+        let key: K
+        let items: List[T]
+
+# Stable: items with equal keys keep their input order. Keys use the same
+# order as MutableList.sort(), so Float keys put -0.0 before 0.0 and NaN last.
+generic T, K:
+    func sort_by(items: List[T], key: fn(T) -> K) -> List[T]:
+        requires K: Comparable
+        let keys: MutableList[K] = []
+        var order: MutableList[Int] = []
+        for item in items:
+            order.append(keys.size())
+            keys.append(key(item))
+        let count = keys.size()
+        var width = 1
+        while width < count:
+            let merged: MutableList[Int] = []
+            var start = 0
+            while start < count:
+                var middle = start + width
+                if middle > count:
+                    middle = count
+                var end = middle + width
+                if end > count:
+                    end = count
+                var left = start
+                var right = middle
+                while left < middle or right < end:
+                    if right >= end or (left < middle and HostOrder.compare(keys.get(order.get(right)), keys.get(order.get(left))) >= 0):
+                        merged.append(order.get(left))
+                        left += 1
+                    else:
+                        merged.append(order.get(right))
+                        right += 1
+                start = end
+            order = merged
+            width = width * 2
+        let sorted: MutableList[T] = []
+        for index in order:
+            sorted.append(items.get(index))
+        return sorted.toList()
+
+# Groups appear in first-seen key order and keep input order inside each group.
+# Keys match with Sprig ==, so a NaN key never joins another group and -0.0
+# joins 0.0; the group keeps the first key it saw.
+generic T, K:
+    func group_by(items: List[T], key: fn(T) -> K) -> List[Group[K, T]]:
+        requires K: Equatable
+        let keys: MutableList[K] = []
+        let buckets: MutableList[MutableList[T]] = []
+        for item in items:
+            let value = key(item)
+            var found = -1
+            var index = 0
+            while index < keys.size():
+                if keys.get(index) == value:
+                    found = index
+                    break
+                index += 1
+            if found < 0:
+                keys.append(value)
+                let bucket: MutableList[T] = []
+                bucket.append(item)
+                buckets.append(bucket)
+            else:
+                buckets.get(found).append(item)
+        let groups: MutableList[Group[K, T]] = []
+        var position = 0
+        while position < keys.size():
+            groups.append(Group[K, T](key=keys.get(position), items=buckets.get(position).toList()))
+            position += 1
+        return groups.toList()
+
+generic T, A:
+    func fold(items: List[T], initial: A, step: fn(A, T) -> A) -> A:
+        var result = initial
+        for item in items:
+            result = step(result, item)
+        return result

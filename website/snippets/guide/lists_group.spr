@@ -1,0 +1,19 @@
+import "@std/lists.spr" as lists
+
+class Expense:
+    let item: String
+    let category: String
+    let cents: Int
+
+let expenses: List[Expense] = [
+    Expense(item="Coffee", category="food", cents=1250),
+    Expense(item="Taxi", category="transport", cents=3600),
+    Expense(item="Lunch", category="food", cents=1800),
+]
+
+for expense in lists.sort_by[Expense, Int](expenses, fn(e: Expense) => e.cents):
+    print(expense.item)
+
+for group in lists.group_by[Expense, String](expenses, fn(e: Expense) => e.category):
+    let total = lists.fold[Expense, Int](group.items, 0, fn(sum: Int, e: Expense) => sum + e.cents)
+    print(group.key + ": " + total.toString())
