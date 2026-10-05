@@ -37,6 +37,7 @@ import sprig.compiler.jvm.JavaRunner;
 import sprig.compiler.jvm.JavacRunner;
 import sprig.compiler.jvm.JvmClasspath;
 import sprig.compiler.jvm.JvmMetadata;
+import sprig.compiler.jvm.StandardStreams;
 import sprig.compiler.tooling.Catalog;
 import sprig.compiler.tooling.SprigApi;
 import sprig.compiler.tooling.WrapGenerator;
@@ -56,6 +57,7 @@ import sprig.runtime.SprigRuntime;
  */
 public final class Main {
     public static void main(String[] args) {
+        StandardStreams.configure();
         int exit;
         try {
             exit = dispatch(args);
@@ -925,7 +927,8 @@ public final class Main {
             }
             Path sourceRoot = project.root.resolve(project.source).normalize().toAbsolutePath();
             Path explicit = options.file == null ? null : options.file.toAbsolutePath().normalize();
-            if (explicit != null && !explicit.startsWith(sourceRoot)) {
+            if (explicit != null && !DependencyResolver.canonical(explicit)
+                    .startsWith(DependencyResolver.canonical(sourceRoot))) {
                 prepared.source = options.file;
                 return prepared;
             }
@@ -1034,7 +1037,7 @@ public final class Main {
             }
             DependencyResolver.Result result = DependencyResolver.resolve(project, options.offline);
             Lockfile lock = result.lock;
-            lock.manifestSha = Lockfile.digest(project.manifest);
+            lock.manifestSha = Lockfile.manifestDigest(project.manifest);
             lock.language = project.language;
             lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
             MavenResolver.resolve(result, options.offline);
@@ -1062,7 +1065,7 @@ public final class Main {
             }
             Lockfile lock = Lockfile.parse(Files.readString(project.lockPath()));
             if (lock.manifestSha == null
-                    || !lock.manifestSha.equals(Lockfile.digest(project.manifest))) {
+                    || !lock.manifestSha.equals(Lockfile.manifestDigest(project.manifest))) {
                 return false;
             }
             DependencyResolver.load(project, lock, true);
@@ -1368,7 +1371,7 @@ public final class Main {
         try {
             Lockfile lock = Lockfile.parse(Files.readString(project.lockPath()));
             if (lock.manifestSha == null
-                    || !lock.manifestSha.equals(Lockfile.digest(project.manifest))) {
+                    || !lock.manifestSha.equals(Lockfile.manifestDigest(project.manifest))) {
                 return "stale";
             }
             for (Project.Dependency dependency : project.dependencies) {

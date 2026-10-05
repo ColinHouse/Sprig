@@ -79,6 +79,20 @@ public final class Lockfile {
         return digest(Files.readAllBytes(file));
     }
 
+    /**
+     * Manifest identity reads CRLF line endings as LF, so a Git checkout that
+     * converts newlines ({@code core.autocrlf} on Windows) does not stale a lock
+     * written elsewhere. Every other byte, including a lone CR, still counts.
+     */
+    public static String manifestDigest(Path manifest) throws IOException {
+        byte[] bytes = Files.readAllBytes(manifest);
+        java.io.ByteArrayOutputStream text = new java.io.ByteArrayOutputStream(bytes.length);
+        for (int i = 0; i < bytes.length; i++) {
+            if (bytes[i] != '\r' || i + 1 == bytes.length || bytes[i + 1] != '\n') text.write(bytes[i]);
+        }
+        return digest(text.toByteArray());
+    }
+
     /** Parses a lockfile; schema problems raise structured errors. */
     public static Lockfile parse(String content) throws DepError {
         Toml toml;

@@ -51,7 +51,7 @@ final class PackageCommand {
                 Project candidate = Project.load(candidateFile);
                 Lockfile previous = readPreviousLock(current.lockPath(), request.offline);
                 DependencyResolver.Result result = DependencyResolver.resolve(candidate, request.offline, previous);
-                result.lock.manifestSha = Lockfile.digest(candidateFile);
+                result.lock.manifestSha = Lockfile.manifestDigest(candidateFile);
                 result.lock.language = candidate.language;
                 result.lock.compiler = sprig.compiler.tooling.Catalog.COMPILER_VERSION;
                 MavenResolver.resolve(result, request.offline);

@@ -51,6 +51,8 @@ public final class DependencyResolver {
         public final boolean portable;
         public final Map<String, Package> aliases = new LinkedHashMap<>();
         public final List<Package> direct = new ArrayList<>();
+        /** Physical root for ownership checks; the root project's path may be a Windows 8.3 alias. */
+        final Path physicalRoot;
 
         Package(String alias, Project project, Path root, String kind, String url,
                 String requested, String revision, String locator, String subdir,
@@ -58,6 +60,7 @@ public final class DependencyResolver {
             this.alias = alias;
             this.project = project;
             this.root = root;
+            this.physicalRoot = canonical(root);
             this.sourceRoot = root.resolve(project.source).normalize().toAbsolutePath();
             this.exports = project.exports;
             this.manifestSha = manifestSha;
@@ -124,8 +127,8 @@ public final class DependencyResolver {
             Path canonical = canonical(file);
             Package best = null;
             for (Package pkg : packages) {
-                if (canonical.startsWith(pkg.root)
-                        && (best == null || pkg.root.getNameCount() > best.root.getNameCount())) {
+                if (canonical.startsWith(pkg.physicalRoot)
+                        && (best == null || pkg.physicalRoot.getNameCount() > best.physicalRoot.getNameCount())) {
                     best = pkg;
                 }
             }
@@ -230,7 +233,7 @@ public final class DependencyResolver {
                     "Compiler version in sprig.lock does not match this SDK; run `sprig resolve`", null);
         String digest;
         try {
-            digest = Lockfile.digest(project.manifest);
+            digest = Lockfile.manifestDigest(project.manifest);
         } catch (IOException e) {
             throw new DepError(Codes.PROJECT_MANIFEST,
                     "Cannot read sprig.toml: " + e.getMessage(), null);
@@ -258,7 +261,7 @@ public final class DependencyResolver {
                                  boolean resolveMode, Lockfile previousLock, Deque<Path> stack) {
         String manifestSha;
         try {
-            manifestSha = Lockfile.digest(project.manifest);
+            manifestSha = Lockfile.manifestDigest(project.manifest);
         } catch (IOException e) {
             throw new DepError(Codes.PROJECT_MANIFEST,
                     "Cannot read manifest: " + e.getMessage(), project.manifest.toString());
@@ -429,14 +432,19 @@ public final class DependencyResolver {
 
     private static String shaOf(Path file) {
         try {
-            return Lockfile.digest(file);
+            return Lockfile.manifestDigest(file);
         } catch (IOException e) {
             throw new DepError(Codes.DEP_NOT_FOUND,
                     "Cannot read manifest " + file + ": " + e.getMessage(), null);
         }
     }
 
-    private static Path canonical(Path path) {
+    /**
+     * Physical path for containment checks. A working directory reached through a
+     * symlink, junction or Windows 8.3 short name (for example a {@code RUNNER~1}
+     * temporary directory) must not split one directory into two.
+     */
+    public static Path canonical(Path path) {
         try {
             return path.toRealPath();
         } catch (IOException e) {
