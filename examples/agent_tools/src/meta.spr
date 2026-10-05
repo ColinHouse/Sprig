@@ -1,5 +1,7 @@
 # Shared, explicit helpers for compiler-owned JSON metadata.
 import "@std/json.spr" as json
+import "@std/lists.spr" as lists
+import "@std/nulls.spr" as nulls
 
 class Surface:
     let key: String
@@ -38,14 +40,10 @@ func text_field(value: json.Value, key: String) -> String? throws Error:
     return text(member(value, key))
 
 func or_empty(value: String?) -> String:
-    if value == null:
-        return ""
-    return value
+    return nulls.or_else[String](value, "")
 
 func or_zero(value: Int?) -> Int:
-    if value == null:
-        return 0
-    return value
+    return nulls.or_else[Int](value, 0)
 
 func array_field(value: json.Value, key: String) -> List[json.Value] throws Error:
     return array_of(member(value, key))
@@ -68,37 +66,11 @@ func array_of(value: json.Value?) -> List[json.Value]:
         case json.Value.Object:
             return []
 
-func join(values: List[String], separator: String) -> String:
-    var output = ""
-    var first = true
-    for value in values:
-        if not first:
-            output += separator
-        first = false
-        output += value
-    return output
-
 func sort_strings(values: List[String]) -> List[String]:
-    let items: MutableList[String] = []
-    for value in values:
-        items.append(value)
-    var index: Int = 1
-    while index < items.size():
-        let current = items.get(index)
-        var position = index - 1
-        while position >= 0 and items.get(position) > current:
-            items.set(position + 1, items.get(position))
-            position -= 1
-        items.set(position + 1, current)
-        index += 1
-    return items.toList()
+    return lists.sorted[String](values)
 
 func bump(counts: MutableMap[String, Int], key: String) -> Unit:
-    let current = counts.get(key)
-    if current == null:
-        counts.set(key, 1)
-    else:
-        counts.set(key, current + 1)
+    counts[key] = nulls.or_else[Int](counts[key], 0) + 1
 
 func short_uri(uri: String) -> String:
     var index = uri.length() - 1
@@ -114,13 +86,13 @@ func generic_suffix(declaration: json.Value) -> String throws Error:
         names.append(or_empty(text(item)))
     if names.size() == 0:
         return ""
-    return "[" + join(names.toList(), ", ") + "]"
+    return "[" + String.join(names.toList(), ", ") + "]"
 
 func parameter_list(declaration: json.Value) -> String throws Error:
     let parts: MutableList[String] = []
     for item in array_field(declaration, "parameters"):
         parts.append(or_empty(text_field(item, "name")) + ": " + or_empty(text_field(item, "type")))
-    return "(" + join(parts.toList(), ", ") + ")"
+    return "(" + String.join(parts.toList(), ", ") + ")"
 
 func throws_suffix(declaration: json.Value) -> String throws Error:
     let parts: MutableList[String] = []
@@ -128,7 +100,7 @@ func throws_suffix(declaration: json.Value) -> String throws Error:
         parts.append(or_empty(text(item)))
     if parts.size() == 0:
         return ""
-    return " throws " + join(parts.toList(), ", ")
+    return " throws " + String.join(parts.toList(), ", ")
 
 func signatures(module: json.Value) -> List[Surface] throws Error:
     let output: MutableList[Surface] = []
@@ -166,7 +138,7 @@ func signatures(module: json.Value) -> List[Surface] throws Error:
             for item in array_field(declaration, "cases"):
                 cases.append(or_empty(text(item)))
             output.append(Surface(key="enum " + name,
-                value="enum " + name + " = " + join(cases.toList(), ", ")))
+                value="enum " + name + " = " + String.join(cases.toList(), ", ")))
         elif kind == "variant":
             output.append(Surface(key="variant " + name, value="variant " + name + generics))
             for item in array_field(declaration, "cases"):
@@ -176,7 +148,7 @@ func signatures(module: json.Value) -> List[Surface] throws Error:
                     fields.append(or_empty(text_field(field, "name")) + ": "
                         +or_empty(text_field(field, "type")))
                 output.append(Surface(key="variant " + name + "." + case_name,
-                    value="case " + case_name + "(" + join(fields.toList(), ", ") + ")"))
+                    value="case " + case_name + "(" + String.join(fields.toList(), ", ") + ")"))
     return output.toList()
 
 func render_module(label: String, module: json.Value) -> String throws Error:

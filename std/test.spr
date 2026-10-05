@@ -24,3 +24,21 @@ func run_process(command: List[String]) -> ProcessResult throws Error:
             if output != null and errors != null:
                 return ProcessResult(exit_code=result.exitCode, stdout=output, stderr=errors)
     throw Error("test host returned no process result")
+
+# A failed check throws an Error that names both values, so the report shows
+# what differed. `what` says which value was checked.
+func equal_int(actual: Int, expected: Int, what: String) -> Unit throws Error:
+    if actual != expected:
+        throw Error(what + ": expected " + expected.toString() + ", got " + actual.toString())
+
+func equal_bool(actual: Bool, expected: Bool, what: String) -> Unit throws Error:
+    if actual != expected:
+        throw Error(what + ": expected " + expected.toString() + ", got " + actual.toString())
+
+# Both texts are shown quoted with \\, \", \n, \r and \t escaped, so a
+# difference in line endings or surrounding spaces is visible.
+func equal_text(actual: String, expected: String, what: String) -> Unit throws Error:
+    if actual != expected:
+        let wanted = expected.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        let found = actual.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        throw Error(what + ": expected \"" + wanted + "\", got \"" + found + "\"")

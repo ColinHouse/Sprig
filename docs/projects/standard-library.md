@@ -26,18 +26,28 @@ SDK's exact bytes. See the
 |---|---|
 | `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?` |
-| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
+| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter` |
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
-| `lists` | `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold` |
+| `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by` |
+| `nulls` | `or_else[T](T?, T) -> T`, `require[T](T?, String) -> T throws Error` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
-| `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code) |
+| `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code); `equal_int`, `equal_bool`, `equal_text` |
 
 `test` is intended for ordinary programs run through `sprig test`. Its
 temporary directory helper requires the runner-provided environment. The
 process helper remains available to a standalone program, but it neither
 invokes a shell nor turns a nonzero child status into an exception. See
 [testing](../tooling/testing.md) for isolation, timeout and failure behavior.
+
+`equal_int(actual, expected, what)`, `equal_bool` and `equal_text` do nothing
+when the two values are equal. Otherwise they throw an `Error` whose message
+names both values, such as `total: expected 4, got 5`; the built-in `assert`
+reports only that an assertion failed. `what` says which value was checked.
+`equal_text` shows both texts quoted and escapes backslashes, double quotes,
+line feeds (`\n`), carriage returns (`\r`) and tabs (`\t`), so a difference in
+line endings or surrounding spaces is visible.
+They are ordinary functions that declare `throws Error`.
 
 File text always uses UTF-8. `write_utf8` replaces existing file content,
 creates a file, and requires an existing parent; `make_directory` creates missing
@@ -89,6 +99,21 @@ import "@std/text.spr" as text
 print(text.join(["Sprig", "JVM", "✓"], " · "))
 ```
 
+`text.pad_left(value, width, fill)` and `text.pad_right` extend a value to
+`width` code points. The fill repeats as often as needed and its last
+repetition is cut to fit, so `pad_left("abc", 10, "xy")` is `xyxyxyxabc`. A
+value that is already long enough, or an empty fill, comes back unchanged;
+neither function throws. `text.is_ascii_digit(value)` is true for a non-empty
+value made only of `0`-`9`, and `text.is_ascii_letter(value)` for one made only
+of `A`-`Z` and `a`-`z`. Both are false for an empty string and for every
+non-ASCII digit or letter. Example:
+
+```sprig
+import "@std/text.spr" as text
+print(text.pad_left("7", 3, "0"))      # 007
+print(text.is_ascii_digit("2024"))     # true
+```
+
 `math` covers exact 64-bit integers only; there are no Float or Decimal
 overloads. `abs`, `min`, `max` and `sign` are total functions. `abs` of the
 minimum `Int` overflows and raises the same checked numeric failure as any
@@ -112,7 +137,7 @@ offsets, malformed values, and values outside the `Int` epoch-millisecond range
 raise Sprig `Error`. Neither operation consults the machine's local timezone;
 no timezone database or locale parsing is provided.
 
-## Sorting and grouping lists
+## Sorting, grouping and searching lists
 
 `lists` works on ordinary `List[T]` values; there is no separate dataset type.
 Every function is eager, returns a new list and leaves its input unchanged.
@@ -128,15 +153,58 @@ Every function is eager, returns a new list and leaves its input unchanged.
   saw. Matching scans the keys found so far, so grouping is quadratic in the
   number of distinct keys.
 - `fold[T, A](items, initial, step)` combines items from left to right.
-  Aggregates are folds: a sum of `Int` uses checked arithmetic, and an overflow
-  fails like any other `Int` overflow.
+- `sorted[T](items)` requires `T: Comparable` and returns the items in
+  ascending order. It is stable and uses the order of `MutableList.sort()`.
+- `find[T](items, accept)` returns the first item the test accepts, in list
+  order, or `null` when none does. The result has type `T?`.
+- `any[T](items, accept)` and `all[T](items, accept)` stop at the first item
+  that decides the answer. For an empty list `any` is false and `all` is true.
+- `count[T](items, accept)` is the number of items the test accepts.
+- `sum(values)` adds a `List[Int]`, and `sum_by[T](items, amount)` adds one
+  `Int` per item. Both use checked arithmetic, so an overflow fails like any
+  other `Int` overflow, and both return 0 for an empty list. Other numeric
+  types use `fold`.
+
+A lambda cannot call a function that declares `throws`, so a step that can
+fail, such as parsing each item, still needs a `for` loop.
 
 ```sprig
 import "@std/lists.spr" as lists
 
 for group in lists.group_by[Order, String](orders, fn(o: Order) => o.category):
-    let total = lists.fold[Order, Int](group.items, 0, fn(sum: Int, o: Order) => sum + o.cents)
+    let total = lists.sum_by[Order](group.items, fn(o: Order) => o.cents)
     print(group.key + " " + total.toString())
+
+let large = lists.find[Order](orders, fn(o: Order) => o.cents > 400)
+if large != null:
+    print(large.item)
+```
+
+## Nullable values
+
+`nulls` covers the two ways a nullable read usually ends. Like every generic
+call, both name the value's type.
+
+- `or_else[T](value, fallback)` returns the value, or the fallback when the
+  value is `null`. The fallback is an ordinary argument, so it is evaluated
+  even when it is not used.
+- `require[T](value, message)` returns the value, or throws `Error(message)`
+  when it is `null`. An uncaught error is reported at the `throw` inside
+  `nulls.spr`, so the message should say which value was missing.
+
+The type argument must not be nullable itself: `or_else[String?]` is rejected
+with `SPR-TYPE-GENERIC-NULLABLE`. Reading a `Map` or a `MutableMap` gives a
+nullable value, so `or_else` also supplies the starting value when counting:
+
+```sprig
+import "@std/nulls.spr" as nulls
+import "@std/process.spr" as process
+
+let path = nulls.or_else[String](process.environment("TASKS_FILE"), "tasks.json")
+let counts: MutableMap[String, Int] = {}
+for word in ["tea", "rice", "tea"]:
+    counts[word] = nulls.or_else[Int](counts[word], 0) + 1
+print(counts)  # {tea: 2, rice: 1}
 ```
 
 ## JSON is an ordinary recursive Sprig data model

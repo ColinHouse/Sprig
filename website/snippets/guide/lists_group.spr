@@ -15,5 +15,11 @@ for expense in lists.sort_by[Expense, Int](expenses, fn(e: Expense) => e.cents):
     print(expense.item)
 
 for group in lists.group_by[Expense, String](expenses, fn(e: Expense) => e.category):
-    let total = lists.fold[Expense, Int](group.items, 0, fn(sum: Int, e: Expense) => sum + e.cents)
+    let total = lists.sum_by[Expense](group.items, fn(e: Expense) => e.cents)
     print(group.key + ": " + total.toString())
+
+let ride = lists.find[Expense](expenses, fn(e: Expense) => e.category == "transport")
+if ride != null:
+    print("first ride: " + ride.item)
+print(lists.any[Expense](expenses, fn(e: Expense) => e.cents > 3000))
+print(lists.count[Expense](expenses, fn(e: Expense) => e.category == "food"))

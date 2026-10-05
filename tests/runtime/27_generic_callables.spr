@@ -1,0 +1,131 @@
+# A callable whose type mentions a type parameter is erased in generated Java,
+# so each call must restore the concrete result type the checker promised.
+class Item:
+    let name: String
+    let cents: Int
+
+generic T:
+    func any(items: List[T], accept: fn(T) -> Bool) -> Bool:
+        for item in items:
+            if accept(item):
+                return true
+        return false
+
+generic T:
+    func count(items: List[T], accept: fn(T) -> Bool) -> Int:
+        var total = 0
+        for item in items:
+            let matched: Bool = accept(item)
+            if matched == true:
+                total += 1
+        return total
+
+generic T:
+    func check(item: T, accept: fn(T) -> Bool) -> Bool:
+        return accept(item)
+
+generic T:
+    func total(items: List[T], amount: fn(T) -> Int) -> Int:
+        var sum = 0
+        for item in items:
+            sum += amount(item)
+        return sum
+
+generic T:
+    func average(items: List[T], amount: fn(T) -> Float) -> Float:
+        var sum = 0.0
+        for item in items:
+            sum = sum + amount(item)
+        return sum / items.size().toFloat()
+
+generic T:
+    func labels(items: List[T], label: fn(T) -> String) -> List[String]:
+        let out: MutableList[String] = []
+        for item in items:
+            let text: String = label(item)
+            out.append(text.toUpperCase())
+        return out.toList()
+
+generic T:
+    func first_size(items: List[T], measure: fn(T) -> Int?) -> Int:
+        for item in items:
+            let size = measure(item)
+            if size != null:
+                return size
+        return 0 - 1
+
+generic T:
+    func priced(items: List[T], price: fn(T) -> Item) -> Int:
+        var cents = 0
+        for item in items:
+            let made: Item = price(item)
+            cents += made.cents
+        return cents
+
+generic T:
+    func expanded(items: List[T], expand: fn(T) -> List[T]) -> Int:
+        var size = 0
+        for item in items:
+            let copies: List[T] = expand(item)
+            size += copies.size()
+        return size
+
+generic T:
+    func ordered(left: T, right: T, before: fn(T, T) -> Bool) -> Bool:
+        return before(left, right)
+
+generic T:
+    func discard(item: T, accept: fn(T) -> Bool, label: fn(T) -> String) -> Unit:
+        accept(item)
+        label(item)
+
+generic T, R:
+    func convert(item: T, change: fn(T) -> R) -> R:
+        return change(item)
+
+generic T:
+    func passes_all(item: T, tests: List[fn(T) -> Bool]) -> Bool:
+        for test in tests:
+            if not test(item):
+                return false
+        return true
+
+generic T:
+    func keep(items: List[T], accept: fn(T) -> Bool) -> List[T]:
+        return items.filter(fn(item: T) => accept(item))
+
+generic T:
+    class Rule:
+        let name: String
+        let accept: fn(T) -> Bool
+
+        func passes(value: T) -> Bool:
+            return accept(value)
+
+        func describe(value: T) -> String:
+            if accept(value):
+                return name + " passes"
+            return name + " fails"
+
+let items: List[Item] = [Item(name="tea", cents=350), Item(name="rice", cents=1200), Item(name="salt", cents=90)]
+print(any[Item](items, fn(i: Item) => i.cents > 1000))
+print(any[Item](items, fn(i: Item) => i.cents > 5000))
+print(count[Item](items, fn(i: Item) => i.cents < 1000))
+print(check[Int](3, fn(n: Int) => n > 2))
+print(total[Item](items, fn(i: Item) => i.cents))
+print(average[Int]([1, 2, 6], fn(n: Int) => n.toFloat()))
+print(labels[Item](items, fn(i: Item) => i.name))
+print(first_size[String](["", "abc"], fn(s: String) => s.toIntOrNull()))
+print(first_size[String](["x", "42"], fn(s: String) => s.toIntOrNull()))
+print(priced[Int]([1, 2], fn(n: Int) => Item(name="n", cents=n * 100)))
+print(expanded[String](["a", "b"], fn(s: String) => [s, s, s]))
+print(ordered[String]("apple", "pear", fn(a: String, b: String) => a < b))
+discard[Int](1, fn(n: Int) => n > 0, fn(n: Int) => n.toString())
+print(convert[Int, String](7, fn(n: Int) => n.toString() + "!"))
+print(any[Item](items, fn(i: Item) => check[Item](i, fn(j: Item) => j.name == "salt")))
+print(passes_all[Int](12, [fn(n: Int) => n > 10, fn(n: Int) => n % 2 == 0]))
+print(passes_all[Int](13, [fn(n: Int) => n > 10, fn(n: Int) => n % 2 == 0]))
+print(keep[Int]([5, 12, 7, 30], fn(n: Int) => n > 6))
+let cheap = Rule[Item](name="cheap", accept=fn(i: Item) => i.cents < 100)
+print(cheap.passes(items.get(2)))
+print(cheap.describe(items.get(0)))

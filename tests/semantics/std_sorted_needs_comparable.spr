@@ -1,0 +1,7 @@
+import "@std/lists.spr" as lists
+
+class Order:
+    let cents: Int
+
+let orders: List[Order] = [Order(cents=1)]
+print(lists.sorted[Order](orders).size())

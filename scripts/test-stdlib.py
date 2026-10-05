@@ -70,7 +70,34 @@ def main():
         '[-0.0, 0.0, 1.0, 2.5, NaN]',
         '3', 'NaN 1', '0.0 2', 'NaN 1',
         '0', '0', '16',
+        # find: first match in list order, null when none, stops at the match
+        'bread', 'true', '5', '2',
+        # any, all: empty-list answers and where each stops
+        'true', 'false', 'false', 'true', '2',
+        'true', 'false', 'true', 'false', '2',
+        # count, sum, sum_by
+        '3', '0', '6', '0', '1400', '0',
+        # sorted: a new list, input unchanged, the order of MutableList.sort()
+        '[apple, apple, fig, pear]', '[pear, apple, fig, apple]', '[-0.0, 0.0, 1.0, 2.5, NaN]', '0',
     ], repr(lists_result.stdout)
+    helpers_result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/helpers.spr')],
+                                    cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
+    assert helpers_result.returncode == 0, (helpers_result.stdout, helpers_result.stderr)
+    assert helpers_result.stdout.splitlines() == [
+        # nulls.or_else and nulls.require, then counting through nullable map reads
+        'fallback', 'set', 'set', 'rejected: name is required', '12',
+        '{tea: 2, rice: 1}', '0',
+        # text.pad_left and text.pad_right: repeated fill cut to fit, widths in code points
+        '[007]', '[ab...]', '[xyxyxyxabc]', '[abc123]', '[long]', '[same]', '[a]', '[a]',
+        '[😀😀東] 3',
+        # text.is_ascii_digit, then text.is_ascii_letter
+        'true', 'true', 'false', 'false', 'false', 'false', 'false',
+        'true', 'true', 'false', 'false', 'false', 'false',
+        # test.equal_int, equal_bool and equal_text report both values
+        'sum: expected 4, got 5',
+        'flag: expected true, got false',
+        r'body: expected "a\nb", got "a\r\nb\t\"q\"\\"',
+    ], repr(helpers_result.stdout)
     practical_outputs = []
     for timezone in ('UTC', 'Pacific/Honolulu'):
         with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:
@@ -90,7 +117,7 @@ def main():
             ], (timezone, repr(lines))
             practical_outputs.append(lines)
     assert practical_outputs[0] == practical_outputs[1], practical_outputs
-    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join and recursive JSON contracts passed')
+    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()

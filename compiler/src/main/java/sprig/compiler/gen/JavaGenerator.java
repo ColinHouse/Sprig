@@ -1522,11 +1522,20 @@ public final class JavaGenerator {
             }
             case FUNCTION_VALUE: {
                 String invocation = emitExpr(call.callee) + ".apply(" + positionalArgs(call) + ")";
+                Type result = resolved.returnType;
                 // Java-produced callbacks may violate the Sprig-owned non-null ABI.
-                return resolved.returnType != NativeType.UNIT && !resolved.returnType.isNullable()
-                        && !(resolved.returnType instanceof TypeParameterType)
-                        ? "java.util.Objects.requireNonNull(" + invocation + ", \"non-null callable result\")"
-                        : invocation;
+                if (result != NativeType.UNIT && !result.isNullable()
+                        && !(result instanceof TypeParameterType)) {
+                    invocation = "java.util.Objects.requireNonNull(" + invocation
+                            + ", \"non-null callable result\")";
+                }
+                // A callable type that mentions a type parameter is a raw FnN,
+                // whose apply returns Object: restore the result type here.
+                if (result != NativeType.UNIT && containsTypeParameter(resolved.functionType)
+                        && !javaType(result).equals("java.lang.Object")) {
+                    return unboxGeneric(invocation, result);
+                }
+                return invocation;
             }
             case BUILTIN:
                 return emitBuiltinFunction(resolved.builtinId, call);

@@ -69,6 +69,22 @@ is a result value; an empty command, failure to start, invalid UTF-8 output,
 or a 30-second child-process timeout raises `Error`. Child processes inherit
 the test's environment and project working directory.
 
+A failed `assert` reports only that an assertion failed. `equal_int`,
+`equal_bool` and `equal_text` compare two values and, when they differ, throw
+an `Error` that names both, so the test report shows what went wrong:
+
+```sprig
+import "@std/test.spr" as testing
+
+let quantity = 3
+testing.equal_int(2 + 2, 4, "sum")
+testing.equal_text("tea x" + quantity.toString(), "tea x2", "order line")
+```
+
+The second check fails with `order line: expected "tea x2", got "tea x3"`. The
+third argument says which value was checked. See the
+[standard library](../projects/standard-library.md) for the exact text format.
+
 ## Expected compiler failures
 
 Place negative fixtures under `tests/compile_fail/`. Each `.spr` file needs a

@@ -1,0 +1,22 @@
+import "@std/nulls.spr" as nulls
+
+# A fallback for a missing value, in one line.
+let stock: Map[String, Int] = {"tea": 12}
+print(nulls.or_else[Int](stock["tea"], 0))
+print(nulls.or_else[Int](stock["milk"], 0))
+
+# Counting: start from 0 when the key is not there yet.
+let counts: MutableMap[String, Int] = {}
+for word in ["tea", "rice", "tea"]:
+    counts[word] = nulls.or_else[Int](counts[word], 0) + 1
+print(counts)
+
+# No sensible fallback: stop with an error that says what was missing.
+func port(text: String) -> Int throws Error:
+    return nulls.require[Int](text.toIntOrNull(), "port must be a number: " + text)
+
+try:
+    print(port("8080"))
+    print(port("eighty"))
+catch problem: Error:
+    print(problem.message)

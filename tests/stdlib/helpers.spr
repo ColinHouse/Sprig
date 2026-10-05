@@ -1,0 +1,63 @@
+import "@std/nulls.spr" as nulls
+import "@std/test.spr" as test
+import "@std/text.spr" as text
+
+let missing: String? = null
+let present: String? = "set"
+print(nulls.or_else[String](missing, "fallback"))
+print(nulls.or_else[String](present, "fallback"))
+print(nulls.require[String](present, "name is required"))
+try:
+    print(nulls.require[String](missing, "name is required"))
+catch problem: Error:
+    print("rejected: " + problem.message)
+print(nulls.or_else[Int]("12".toIntOrNull(), 0) + nulls.or_else[Int]("x".toIntOrNull(), 0))
+
+# A map read is nullable for both map types, so one helper covers counting.
+let counts: MutableMap[String, Int] = {}
+for word in ["tea", "rice", "tea"]:
+    counts[word] = nulls.or_else[Int](counts[word], 0) + 1
+print(counts)
+let frozen: Map[String, Int] = counts.toMap()
+print(nulls.or_else[Int](frozen["milk"], 0))
+
+print("[" + text.pad_left("7", 3, "0") + "]")
+print("[" + text.pad_right("ab", 5, ".") + "]")
+print("[" + text.pad_left("abc", 10, "xy") + "]")
+print("[" + text.pad_right("abc", 6, "123456") + "]")
+print("[" + text.pad_left("long", 2, "0") + "]")
+print("[" + text.pad_left("same", 4, "0") + "]")
+print("[" + text.pad_left("a", 4, "") + "]")
+print("[" + text.pad_right("a", 0 - 5, " ") + "]")
+let wide = text.pad_left("東", 3, "😀")
+print("[" + wide + "] " + wide.length().toString())
+
+print(text.is_ascii_digit("2024"))
+print(text.is_ascii_digit("7"))
+print(text.is_ascii_digit(""))
+print(text.is_ascii_digit("12a"))
+print(text.is_ascii_digit("-1"))
+print(text.is_ascii_digit("٣"))
+print(text.is_ascii_digit("/") or text.is_ascii_digit(":"))
+print(text.is_ascii_letter("Sprig"))
+print(text.is_ascii_letter("A") and text.is_ascii_letter("Z") and text.is_ascii_letter("a") and text.is_ascii_letter("z"))
+print(text.is_ascii_letter(""))
+print(text.is_ascii_letter("a_b"))
+print(text.is_ascii_letter("é"))
+print(text.is_ascii_letter("@") or text.is_ascii_letter("[") or text.is_ascii_letter("`") or text.is_ascii_letter("{"))
+
+test.equal_int(2 + 2, 4, "sum")
+test.equal_bool("a" < "b", true, "order")
+test.equal_text("same", "same", "text")
+try:
+    test.equal_int(5, 4, "sum")
+catch problem: Error:
+    print(problem.message)
+try:
+    test.equal_bool(false, true, "flag")
+catch problem: Error:
+    print(problem.message)
+try:
+    test.equal_text("a\r\nb\t\"q\"\\", "a\nb", "body")
+catch problem: Error:
+    print(problem.message)

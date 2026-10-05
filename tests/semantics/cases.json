@@ -347,5 +347,29 @@
     "expected_diagnostic": "SPR-TYPE-OPERAND",
     "status": "implemented",
     "source": "Comparable capability"
+  },
+  {
+    "file": "std_sorted_needs_comparable.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "standard library helpers"
+  },
+  {
+    "file": "std_or_else_nullable_argument.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-NULLABLE",
+    "status": "implemented",
+    "source": "standard library helpers"
+  },
+  {
+    "file": "std_require_declares_throws.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "standard library helpers"
+  },
+  {
+    "file": "std_find_result_nullable.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "standard library helpers"
   }
 ]
