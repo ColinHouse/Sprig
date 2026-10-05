@@ -1,29 +1,49 @@
 {
   "name": "sprig-language",
   "displayName": "Sprig",
-  "description": "Sprig language support: highlighting, diagnostics, formatting, outline, hover, completion, navigation, tests, Run and generated Java.",
-  "version": "0.2.0",
+  "description": "Sprig language support through the Sprig language server: diagnostics as you type, hover, completion, navigation, references, rename, formatting, tests, Run and generated Java.",
+  "version": "0.3.0",
   "publisher": "ColinHouse",
   "license": "Apache-2.0",
+  "preview": true,
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#2F3A45",
+    "theme": "dark"
+  },
+  "homepage": "https://colinhouse.github.io/Sprig/",
+  "bugs": {
+    "url": "https://github.com/ColinHouse/Sprig/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/ColinHouse/Sprig.git",
     "directory": "editors/vscode"
   },
+  "keywords": [
+    "sprig",
+    "jvm",
+    "java",
+    "language server",
+    "lsp"
+  ],
   "engines": {
     "vscode": "^1.95.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Formatters",
+    "Snippets",
+    "Testing"
   ],
-  "main": "./out/extension.js",
+  "main": "./out/main.js",
   "extensionKind": [
     "workspace"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Highlighting, outline, snippets and keyword completion are available; compiler processes, formatting, hover details and tests require workspace trust.",
+      "description": "Highlighting, outline, snippets and keyword completion are available; compiler processes, including the language server, formatting, hover details and tests require workspace trust.",
       "restrictedConfigurations": [
         "sprig.compilerPath"
       ]
@@ -31,21 +51,23 @@
     "virtualWorkspaces": false
   },
   "scripts": {
-    "compile": "tsc -p .",
+    "compile": "tsc -p . && npm run bundle",
+    "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --sourcemap --outfile=out/main.js",
     "test:grammar": "node --test test/grammar.cjs",
-    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs test/symbols.cjs test/markdown.cjs test/features.cjs",
+    "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs test/symbols.cjs test/markdown.cjs test/features.cjs test/server.cjs",
     "test:host": "npm run compile && node test/run-host.cjs",
     "vscode:prepublish": "npm run compile",
-    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.2.0.vsix"
+    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "1.95.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.9.3",
-    "vscode-textmate": "^9.3.0",
-    "vscode-oniguruma": "^2.0.1"
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.0"
   },
   "activationEvents": [
     "onLanguage:sprig",
@@ -130,6 +152,10 @@
       {
         "command": "sprig.showActions",
         "title": "Sprig: Show Actions"
+      },
+      {
+        "command": "sprig.restartLanguageServer",
+        "title": "Sprig: Restart Language Server"
       }
     ],
     "configuration": {
@@ -141,10 +167,27 @@
           "scope": "resource",
           "description": "Path to SDK bin/sprig (bin/sprig.cmd on Windows preview). Relative paths resolve against the project root. Empty searches PATH, then ancestor source bin/."
         },
+        "sprig.languageServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Run the Sprig language server (`sprig lsp`) for diagnostics as you type, hover, completion, navigation, references, rename and formatting. Without it, or with a compiler that does not provide it, these features use separate compiler commands on saved files."
+        },
+        "sprig.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "scope": "window",
+          "description": "Log the messages between VS Code and the Sprig language server in the Sprig Language Server output."
+        },
         "sprig.checkOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "Check saved Sprig files and their project entry graph."
+          "description": "Without the language server: check saved Sprig files and their project entry graph."
         },
         "sprig.commandTimeoutSeconds": {
           "type": "number",
@@ -193,5 +236,8 @@
         }
       ]
     }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^10.1.2"
   }
 }

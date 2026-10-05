@@ -38,8 +38,9 @@ by the historical design kit in `docs/history/design-kit/`.
   serves diagnostics, hover, navigation, completion, formatting and local
   rename over the Language Server Protocol; it re-checks the whole program on
   each change and renames only locals and parameters (see
-  [language server](../tooling/lsp.md)). The local VS Code preview still runs
-  CLI checks/run and Java viewing on its own; see `editors/vscode/README.md`.
+  [language server](../tooling/lsp.md)). The VS Code extension uses it when the
+  compiler provides it, and runs checks, programs, tests and Java viewing as
+  CLI commands; see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java arrays cross the boundary as
   opaque values (no source array syntax; varargs remain unsupported). Concrete

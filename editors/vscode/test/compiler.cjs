@@ -67,13 +67,15 @@ test('Windows terminal plan invokes the SDK JVM directly and rejects arbitrary b
  const command=a.compilerCommand(launcher,['run','server $; 中文.spr'],'win32');
  assert.equal(command.command,'java');assert.equal(command.args.includes('sprig.compiler.cli.Main'),true);
  assert.deepEqual(command.args.slice(-2),['run','server $; 中文.spr']);
- assert.equal(command.args[3].includes(';'),true);
+ assert.equal(command.args[4].includes(';'),true);
  assert.equal(command.args.includes('--json'),false);
- // The same classpaths bin/sprig.cmd uses: a source build, then an extracted release SDK.
- assert.equal(command.args[2],[path.join(dir,'build','sprig-compiler.jar'),path.join(dir,'build','deps','antlr-4.13.2-complete.jar'),path.join(dir,'build','deps','resolver','*')].join(';'));
+ // The same options and classpaths bin/sprig.cmd uses: a source build, then an extracted release SDK.
+ assert.equal(command.args[1],'-XX:TieredStopAtLevel=1');
+ assert.equal(a.compilerCommand(launcher,['lsp'],'win32').args[1],'-XX:+TieredCompilation','the language server keeps tiered compilation');
+ assert.equal(command.args[3],[path.join(dir,'build','sprig-compiler.jar'),path.join(dir,'build','deps','antlr-4.13.2-complete.jar'),path.join(dir,'build','deps','resolver','*')].join(';'));
  const sdk=fixture(t);fs.mkdirSync(path.join(sdk,'lib'),{recursive:true});fs.writeFileSync(path.join(sdk,'lib','sprig-compiler.jar'),'fixture');
  const packaged=a.compilerCommand(path.join(sdk,'bin','sprig.cmd'),['check','--json'],'win32');
- assert.equal(packaged.args[2],path.join(sdk,'lib','*'));assert.equal(packaged.args[3],`-Dsprig.home=${sdk}`);
+ assert.equal(packaged.args[3],path.join(sdk,'lib','*'));assert.equal(packaged.args[4],`-Dsprig.home=${sdk}`);
 });
 test('query commands without exitCode are accepted: api, help and doctor',async()=>{
  const a=api();

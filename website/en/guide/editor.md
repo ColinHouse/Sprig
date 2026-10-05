@@ -3,17 +3,17 @@
 The extension helps you write Sprig in VS Code with:
 
 - syntax highlighting
-- checks on save
+- errors as you type
 - formatting
 - an outline
 - hover information
 - completion
-- go-to-definition
+- go-to-definition, find references and rename
 - snippets
 - a Testing view
 - one-command runs and a view of the generated Java
 
-Types, signatures and errors all come from the `sprig` command you installed; the extension doesn't do any type checking of its own.
+Types, signatures and errors all come from the `sprig` command you installed; the extension doesn't do any type checking of its own. When that compiler has the [language server](/en/guide/tooling#language-server), `sprig lsp`, the extension starts it and gets everything above from it.
 
 The extension isn't on the VS Code Marketplace yet and isn't part of the SDK archive, so you package and install it yourself from source.
 
@@ -26,29 +26,32 @@ npm ci
 npm run package
 ```
 
-That creates `dist/sprig-language-0.2.0.vsix`. In VS Code's Extensions view, choose `…` → **Install from VSIX…** and pick it, or run:
+That creates `dist/sprig-language-0.3.0.vsix`. In VS Code's Extensions view, choose `…` → **Install from VSIX…** and pick it, or run:
 
 ```sh
-code --install-extension dist/sprig-language-0.2.0.vsix
+code --install-extension dist/sprig-language-0.3.0.vsix
 ```
 
 Highlighting, the outline and snippets work right away, without Java or the compiler.
 
 Everything else needs JDK 17+ and the [Sprig SDK](/en/guide/getting-started). Then set **Sprig: Compiler Path** (`sprig.compilerPath`) to the SDK's `bin/sprig`. If you don't set it, the extension looks for `sprig` on your `PATH` first, then searches parent directories for a `bin/sprig` built from source. The Testing view needs compiler v0.5.0-beta.1 or newer.
 
+The language server is in the development version, not in the published v0.5.0-beta.1. With a compiler built from source, the extension uses it automatically; with v0.5.0-beta.1, it falls back to running separate compiler commands, as the table below shows. To turn the server off, set `sprig.languageServer.enabled` to `false`.
+
 ## While you write
 
-| Feature | How to use it |
-|---|---|
-| Checks | Files are checked when you save, and errors show up in the Problems panel. Click an error code to open the diagnostic code reference |
-| Formatting | **Format Document** (Shift+Alt+F) runs `sprig fmt`. To format on every save, turn on VS Code's `editor.formatOnSave` |
-| Outline | The Outline view and the breadcrumbs list functions, classes, variants, enums, fields, methods and top-level variables; **Go to Symbol in Workspace** searches all your files |
-| Hover | On a keyword, the `sprig help` text; on `JavaClass.method`, its signature as Sprig sees it; on `module.function` or your own declarations, the signature the compiler reports |
-| Completion | Keywords, snippets, the file's declarations and imported names; after `JavaClass.`, `module.`, an enum name or a top-level variable followed by a dot, its members |
-| Go to Definition | Press F12 on an import path, on `module.member` or on a declaration in the same file |
-| Snippets | Type a prefix such as `func`, `class`, `variant`, `match`, `ifnn`, `try` or `importj` and press Tab |
+| Feature | With the language server | With v0.5.0-beta.1 |
+|---|---|---|
+| Errors | Shown as you type, in the Problems panel. An error inside an imported file shows on its `import` line | Shown when you save |
+| Hover | Any name: its declaration and type, including local variables and parameters, plus the comment above it | Keywords, `JavaClass.method`, `module.function` and your top-level declarations, from the saved file |
+| Completion | After a dot, the members of any value, including local variables; elsewhere, the names in scope and keywords | Keywords, the file's declarations and imported names; members after `JavaClass.`, `module.`, an enum name or a top-level variable |
+| Go to Definition (F12) | Any name, across files | Import paths, `module.member` and declarations in the same file |
+| Find References (Shift+F12) | Every use of a declaration | Not available |
+| Rename (F2) | Local variables and parameters | Not available |
+| Formatting | **Format Document** (Shift+Alt+F) runs `sprig fmt`. To format on every save, turn on VS Code's `editor.formatOnSave` | The same |
+| Outline | The Outline view and the breadcrumbs list functions, classes, variants, enums, fields, methods and top-level variables | The same |
 
-Hover information and member completion use the saved file, so they catch up when you save.
+In both cases, hovering over a keyword shows its `sprig help` text, **Go to Symbol in Workspace** searches all your files, and clicking an error code opens the diagnostic code reference. For snippets, type a prefix such as `func`, `class`, `variant`, `match`, `ifnn`, `try` or `importj` and press Tab.
 
 ## Commands
 
@@ -67,10 +70,11 @@ Open a `.spr` file and use these from the Command Palette, the editor's context 
 | **Sprig: Explain Diagnostic** | Explains an error code on a formatted page; also available from the lightbulb next to an error |
 | **Sprig: Show Help Topic** | Shows a `sprig help` topic on a formatted page |
 | **Sprig: Show Capabilities** | Shows the installed compiler's feature list |
+| **Sprig: Restart Language Server** | Starts the language server again, for example after you rebuild the compiler |
 | **Sprig: Open Documentation** | Opens the Sprig website |
 | **Sprig: Show Actions** | Lets you pick any of the commands above |
 
-The **Sprig** status entry lives in the status bar's language status area (the `{}` icon). It shows the compiler version and, inside a project, whether the lock file is current, stale or missing.
+The **Sprig** status entry lives in the status bar's language status area (the `{}` icon). It shows the compiler version, whether the language server is running and, inside a project, whether the lock file is current, stale or missing.
 
 - **Saved files only.** Commands work on the saved version of the current file, with the nearest project root as the working directory. Save your changed project files before you run.
 - **No automatic downloads.** If the lock file is missing or out of date, the extension tells you. `sprig resolve` only runs when you choose **Resolve Dependencies** or **New Project**.
@@ -86,11 +90,10 @@ In a project with a `sprig.toml`, every `.spr` file under `tests/` shows up in V
 
 ## Limitations
 
-- The outline and Go to Definition find declarations by name; they don't follow local shadowing or look at types.
-- Member completion knows imported names, enums and variants in the same file, and top-level variables whose type the compiler reports. It doesn't offer members of local variables or parameters.
+- Rename covers local variables and parameters only. There is no debugger.
+- Without the language server, the outline and Go to Definition find declarations by name, member completion doesn't cover local variables or parameters, and hover information follows the saved file.
 - Code with syntax errors can't be formatted.
-- No rename, find references or debugging. The extension doesn't use Sprig's language server yet; other editors can already use [`sprig lsp`](/en/guide/tooling#language-server) from the development version.
-- In Restricted Mode (an untrusted workspace) you get highlighting, the outline, snippets and keyword completion only. Checking, running, formatting, hover information and tests require a trusted workspace.
+- In Restricted Mode (an untrusted workspace) you get highlighting, the outline, snippets and keyword completion only. The language server, checking, running, formatting, hover information and tests require a trusted workspace.
 - Linux and macOS are supported. Windows is a preview.
 - With Remote SSH or containers, the SDK and JDK have to be installed on the remote side. Browser-based VS Code and virtual file systems aren't supported.
 

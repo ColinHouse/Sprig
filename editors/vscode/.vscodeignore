@@ -4,6 +4,8 @@ node_modules/**
 src/**
 test/**
 dist/**
+out/**
+!out/main.js
 **/*.map
 tsconfig.json
 package-lock.json

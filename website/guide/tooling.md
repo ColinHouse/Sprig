@@ -144,7 +144,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 ## 语言服务器
 
-`sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它。它是开发版新加的，已发布的 v0.5.0-beta.1 里还没有。
+`sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是开发版新加的，已发布的 v0.5.0-beta.1 里还没有。
 
 它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化，以及局部变量和参数的重命名。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。
 

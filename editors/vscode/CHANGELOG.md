@@ -1,11 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
+- The extension starts the Sprig language server, `sprig lsp`, when the
+  compiler provides it: diagnostics as you type, hover with the types of
+  locals and parameters, member completion for any value, Go to Definition
+  across modules, Find References, rename of locals and parameters, and
+  formatting. With a compiler without it, such as v0.5.0-beta.1, or with
+  `sprig.languageServer.enabled` off, the extension uses separate compiler
+  commands as in 0.2.0.
+- New command **Sprig: Restart Language Server** and new settings
+  `sprig.languageServer.enabled` and `sprig.trace.server`. The language status
+  item shows whether the server runs.
+- Language server diagnostics link their codes to the diagnostic reference, and
+  the lightbulb offers their `sprig help` topic, as for the command-line checks.
 - Windows: checks, Run and Run in Terminal start the JVM with the classpath of
   a source build or of an extracted release SDK (`lib\*`). The release SDK
   was rejected before, and a source build was missing ANTLR.
 - Windows: cancelling Run stops the compiler and the program it started.
+- The extension is bundled into a single file, and the package carries an icon
+  and Marketplace details.
 
 ## 0.2.0
 

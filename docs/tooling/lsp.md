@@ -50,8 +50,12 @@ language-servers = ["sprig"]
 
 These snippets follow each editor's usual way of registering a server. The
 repository's tests drive the server directly over JSON-RPC, not through these
-editors. The VS Code extension still runs its own CLI commands; switching it
-to this server is planned as a separate change.
+editors.
+
+The VS Code extension (0.3.0 and later) starts `sprig lsp` itself when
+`sprig capabilities --json` reports `"languageServer": true`, and keeps its
+separate CLI commands for compilers without it. Its Extension Host tests run
+the server through VS Code's own client. See `editors/vscode/README.md`.
 
 ## Features
 

@@ -7,6 +7,7 @@ import { mapRange } from './diagnostics';
 import { DIAGNOSTIC_DOCS_URL, DOCS_URL, ExplainJson, HelpJson, explainMarkdown, helpMarkdown } from './markdown';
 import { registerLanguageFeatures } from './language';
 import { Queries } from './queries';
+import { LanguageServer, ServerState, stateAdvice } from './server';
 import { registerStatus } from './status';
 import { registerTesting } from './testing';
 
@@ -17,7 +18,12 @@ const HELP_TOPICS_LIST = ['language','types','strings','functions','classes','va
 export const codeOf = (code: vscode.Diagnostic['code']): string | undefined =>
   code === undefined ? undefined : typeof code === 'object' ? String(code.value) : String(code);
 
-export function activate(context: vscode.ExtensionContext): void {
+/** What the extension returns from activation; the Extension Host tests read it. */
+export interface SprigApi { languageServer(): ServerState }
+
+let server: LanguageServer | undefined;
+
+export function activate(context: vscode.ExtensionContext): SprigApi {
   const output = vscode.window.createOutputChannel('Sprig');
   const diagnostics = vscode.languages.createDiagnosticCollection('sprig');
   const jobs = new Map<string, AbortController>();
@@ -26,6 +32,29 @@ export function activate(context: vscode.ExtensionContext): void {
   const saved = (doc: vscode.TextDocument) => doc.languageId === 'sprig' && doc.uri.scheme === 'file';
   const settings = (uri: vscode.Uri) => vscode.workspace.getConfiguration('sprig', uri);
   context.subscriptions.push(output, diagnostics, {dispose: () => {for(const job of jobs.values()) job.abort();}});
+
+  // Language server diagnostics look like the CLI's: linked codes and the related help topic.
+  const lsp = new LanguageServer(d => {
+    const code = codeOf(d.code);
+    if(!code) return;
+    d.source = 'Sprig'; d.code = {value: code, target: vscode.Uri.parse(DIAGNOSTIC_DOCS_URL)};
+    const help = (d as {data?: {relatedHelp?: unknown}}).data?.relatedHelp;
+    if(typeof help === 'string') helpTopics.set(code, help);
+  });
+  server = lsp;
+  context.subscriptions.push(lsp);
+  const render = () => {
+    diagnostics.clear();
+    const merged = new Map<string,vscode.Diagnostic[]>();
+    for(const group of groups.values()) for(const [uri,items] of group) merged.set(uri,[...(merged.get(uri)??[]),...items]);
+    for(const [uri,items] of merged) diagnostics.set(vscode.Uri.parse(uri),items);
+  };
+  // While the server runs it owns the diagnostics of open files; CLI results keep the others.
+  const ownedByServer = (uri: string) => lsp.state === 'running' && vscode.workspace.textDocuments.some(d => saved(d) && d.uri.toString() === uri);
+  const release = () => {
+    for(const group of groups.values()) for(const uri of [...group.keys()]) if(ownedByServer(uri)) group.delete(uri);
+    render();
+  };
 
   const publish = async (key: string, results: CompilerResult[], fallback: vscode.Uri, owner: AbortController) => {
     const entries = new Map<string, vscode.Diagnostic[]>();
@@ -51,11 +80,9 @@ export function activate(context: vscode.ExtensionContext): void {
       entries.set(uri.toString(),list);
     }
     if(owner.signal.aborted || jobs.get(key)!==owner) return;
+    for(const uri of [...entries.keys()]) if(ownedByServer(uri)) entries.delete(uri);
     groups.set(key,entries);
-    diagnostics.clear();
-    const merged = new Map<string,vscode.Diagnostic[]>();
-    for(const group of groups.values()) for(const [uri,items] of group) merged.set(uri,[...(merged.get(uri)??[]),...items]);
-    for(const [uri,items] of merged) diagnostics.set(vscode.Uri.parse(uri),items);
+    render();
   };
 
   async function executionDirectory(doc: vscode.TextDocument, automatic=false): Promise<string | undefined> {
@@ -149,7 +176,7 @@ export function activate(context: vscode.ExtensionContext): void {
     return result.json;
   };
   const queries = new Queries(query);
-  registerLanguageFeatures(context, queries, query);
+  const features = registerLanguageFeatures(context, queries, query);
   const testing = registerTesting(context, async (args, cwd, signal) => {
     const config = settings(vscode.Uri.file(cwd));
     const executable = resolveCompiler(config.get<string>('compilerPath',''), cwd);
@@ -170,10 +197,20 @@ export function activate(context: vscode.ExtensionContext): void {
     if(summary) vscode.window.setStatusBarMessage(`Sprig tests: ${summary.passed}/${summary.total} passed`, 5000);
     return result;
   }));
-  const status = registerStatus(context, queries, query);
+  const status = registerStatus(context, queries, query, () => lsp.state);
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
     if(!event.affectsConfiguration('sprig')) return;
     queries.clear(); void status.refresh();
+  }));
+  context.subscriptions.push(lsp.onDidChangeState(state => {
+    features.useServer(state==='running');
+    if(state==='running') release();
+    void status.refresh();
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.restartLanguageServer', async () => {
+    const state = await lsp.start();
+    if(state!=='running') void vscode.window.showWarningMessage(stateAdvice(state));
+    return state;
   }));
   /** Runs a project command with the user's command time limit. */
   const project = async (args: string[], root: string): Promise<CompilerResult> => {
@@ -224,7 +261,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const actions = [['Check','sprig.check'],['Run','sprig.run'],['Run in Terminal','sprig.runInTerminal'],['Run Tests','sprig.runTests'],
       ['Format Document','editor.action.formatDocument'],['Resolve Dependencies','sprig.resolveDependencies'],['Show Generated Java','sprig.showGeneratedJava'],
       ['Show Help Topic','sprig.showHelp'],['Explain Diagnostic','sprig.explainDiagnostic'],['Show Capabilities','sprig.showCapabilities'],
-      ['New Project','sprig.newProject'],['Open Documentation','sprig.openDocumentation']];
+      ['New Project','sprig.newProject'],['Restart Language Server','sprig.restartLanguageServer'],['Open Documentation','sprig.openDocumentation']];
     const picked = await vscode.window.showQuickPick(actions.map(([label, command]) => ({label, command})), {placeHolder: 'Sprig'});
     return picked && vscode.commands.executeCommand(picked.command);
   }));
@@ -308,10 +345,19 @@ export function activate(context: vscode.ExtensionContext): void {
       });
     }
   },{providedCodeActionKinds:[vscode.CodeActionKind.QuickFix]}));
+  // The language server checks open files as they change; without it, files are checked on save.
   context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(doc=>{
-    if(saved(doc)&&settings(doc.uri).get<boolean>('checkOnSave',true)) void execute('check',doc,true);
+    if(saved(doc)&&settings(doc.uri).get<boolean>('checkOnSave',true)&&lsp.state!=='running') void execute('check',doc,true);
   }));
+  context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(doc=>{if(saved(doc)&&lsp.state==='running') release();}));
   context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event=>{
     if(saved(event.document)) jobs.get(projectRoot(event.document.uri.fsPath))?.abort();
   }));
+  void lsp.start();
+  return {languageServer: () => lsp.state};
+}
+
+/** Lets VS Code wait for `sprig lsp` to shut down. */
+export function deactivate(): Promise<void> | undefined {
+  return server?.stop();
 }

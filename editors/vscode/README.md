@@ -1,63 +1,84 @@
 # Sprig for VS Code
 
-Desktop extension for the Sprig language: highlighting, compiler diagnostics,
-formatting, outline, hover, completion, navigation, a Testing view, Run and
-generated Java. Extension version **0.2.0** is independent of the compiler
-version. Types, signatures and errors all come from the installed `sprig` CLI;
-the extension does not implement a second type checker.
+Language support for [Sprig](https://colinhouse.github.io/Sprig/en/), an
+indentation-based, statically typed language for the JVM. Diagnostics as you
+type, hover, completion, navigation, references, rename and formatting come
+from the Sprig language server, `sprig lsp`, which runs the same parser and type
+checker as `sprig check`. The extension does not implement a second type
+checker. It also runs programs and tests, shows the generated Java, and
+highlights Sprig without any compiler.
+
+Extension version **0.3.0** is independent of the compiler version.
 
 ## Install / 安装
 
-Build the VSIX in this directory (`npm ci`, then `npm run package`) and install
-`dist/sprig-language-0.2.0.vsix` using VS Code → Extensions → `…` →
-**Install from VSIX…**. Or:
+Install **Sprig** (`ColinHouse.sprig-language`) from the Extensions view. The
+Visual Studio Marketplace serves VS Code; Open VSX serves VSCodium and other
+compatible editors. To build the extension yourself, see
+[Development](#development--开发).
 
-```sh
-code --install-extension dist/sprig-language-0.2.0.vsix
-```
+Highlighting, the outline and snippets work immediately, without Java or the
+compiler. Everything else needs JDK 17+ and the
+[Sprig SDK](https://colinhouse.github.io/Sprig/en/guide/getting-started). Set
+**Sprig: Compiler Path** to the SDK's `bin/sprig` launcher, or put the SDK's
+`bin` on PATH. A built Sprig source checkout is found by searching parent
+directories for `bin/sprig` after PATH.
 
-This package is locally installable; it has not been published to Marketplace.
-Syntax highlighting, the outline and snippets work immediately, without Java or the compiler.
-For everything else, install the [Sprig SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1)
-(see [Getting started](https://colinhouse.github.io/Sprig/en/guide/getting-started)) and JDK17+,
-then set **Sprig: Compiler Path** to the SDK's `bin/sprig` launcher.
-On macOS/Linux you can also put the SDK's `bin` on PATH. A built Sprig source
-checkout is detected by searching ancestors for `bin/sprig` after PATH.
-Compiler 0.4.0-alpha.1 or newer supports checking, running, formatting, hover and
-completion; the Testing view needs 0.5.0-beta.1 or newer.
+The extension asks the compiler (`sprig capabilities --json`) whether it has a
+language server, so there is nothing to configure:
+
+| Compiler | What you get |
+|---|---|
+| With `sprig lsp`: a source build newer than v0.5.0-beta.1 | The language server, as described below |
+| v0.5.0-beta.1 | Checks on save, and hover, completion and navigation from separate compiler commands on saved files |
+| 0.4.0-alpha.1 | As v0.5.0-beta.1, without the Testing view |
 
 ```json
 {
   "sprig.compilerPath": "/absolute/path/to/Sprig/bin/sprig",
+  "sprig.languageServer.enabled": true,
   "sprig.checkOnSave": true,
   "sprig.commandTimeoutSeconds": 120,
   "sprig.testTimeoutSeconds": 600
 }
 ```
 
-Windows SDK `bin/sprig.cmd` (a source build or an extracted release ZIP) is
-experimental. The extension starts the same JVM entrypoint and classpath
+`sprig.trace.server` (`off`, `messages` or `verbose`) logs the protocol in the
+**Sprig Language Server** output.
+
+Windows support (`bin/sprig.cmd` from a source build or an extracted release
+ZIP) is a preview. The extension starts the same JVM entry point and classpath
 directly, so paths never pass through `cmd.exe`; custom batch wrappers are
-unsupported. `java.exe` still reads its command line in the Windows ANSI code
-page, so a file whose path uses characters outside it cannot be checked or run. Remote SSH/containers
-need the SDK and JDK installed on the remote workspace host. Browser-only VS Code
-and virtual filesystems are unsupported.
+unsupported. `java.exe` reads its command line in the Windows ANSI code page,
+so commands such as Check and Run cannot take a file whose path uses
+characters outside it. The language server is not affected: document paths
+travel inside the protocol. Remote SSH and containers need the SDK and JDK on
+the remote host. Browser-only VS Code and virtual file systems are unsupported.
 
 ## Editing / 编辑
 
-| Feature | Behavior |
-|---|---|
-| Diagnostics | Saved files are checked with `sprig check --json`; each code in Problems links to the diagnostic reference |
-| Formatting | **Format Document** runs `sprig fmt` on a temporary copy of the editor text; combine with `editor.formatOnSave` if you like |
-| Outline | Outline view, breadcrumbs and **Go to Symbol in Workspace** list functions, classes, variants, enums, fields, methods, cases and top-level bindings |
-| Hover | Keywords show `sprig help`; `JavaClass.member` shows the Sprig signatures from `sprig api`; `module.member` and your own declarations show the compiler's view |
-| Completion | Keywords, snippets, your declarations and import aliases; after `JavaClass.`, `module.`, an enum or variant, or a top-level variable, its members |
-| Go to Definition | Import paths (including `@std` and dependencies), `module.member` and declarations in the current file |
-| Snippets | `func`, `funct`, `class`, `variant`, `enum`, `match`, `matchr`, `if`, `ifnn`, `for`, `while`, `try`, `import`, `imports`, `importj`, `generic` |
+| Feature | With the language server | Without it |
+|---|---|---|
+| Diagnostics | As you type, for open files. An error inside an imported file shows on the `import` that reaches it | When you save, for the file and its project's entry graph |
+| Hover | Declarations in Sprig syntax with their types, including locals, parameters and narrowed nullable values, plus the comments above them | Java members, module members and your top-level declarations, from the saved file |
+| Completion | After `.`, the members of any value, including locals and parameters; elsewhere, names in scope, imports and keywords | Keywords, declarations and imports; members after `JavaClass.`, `module.`, an enum or variant, or a top-level variable |
+| Go to Definition | Functions, types, cases, fields, parameters and locals, across modules; on an `import`, the imported file | Import paths, `module.member` and declarations in the same file |
+| Find References | Every use of a declaration | Not available |
+| Rename | Local variables and parameters, checked before the edit is applied | Not available |
+| Formatting | **Format Document** applies `sprig fmt`; combine with `editor.formatOnSave` if you like | The same, through a temporary copy of the editor text |
+| Outline | Classes with fields and methods, enums and variants with their cases, functions and top-level variables | The same, found lexically |
 
-Hover details and member completion use `sprig api` on saved files and are
-cached until a file changes, so edits appear after you save. Lookups that fail
-(for example a stale dependency lock) simply show nothing.
+In both modes, a keyword hover shows its `sprig help` topic, **Go to Symbol in
+Workspace** searches every `.spr` file, each diagnostic code in Problems links
+to the diagnostic reference, and the lightbulb offers to explain a code or open
+its help topic. Snippets: `func`, `funct`, `class`, `variant`, `enum`, `match`,
+`matchr`, `if`, `ifnn`, `for`, `while`, `try`, `import`, `imports`, `importj`,
+`generic`.
+
+The language server reads `sprig.toml` and `sprig.lock` like the command line
+and never resolves or downloads anything. See the
+[language server reference](https://colinhouse.github.io/Sprig/en/reference/tooling/lsp)
+for what it does while code does not compile yet.
 
 ## Commands / 命令
 
@@ -66,48 +87,47 @@ Open a `.spr` file. Use the Command Palette, the editor context menu or the
 
 | Command | Behavior |
 |---|---|
-| **Sprig: Check** | Static check; display file-specific errors in Problems |
-| **Sprig: Run** | Compile finite non-interactive programs; show output in Sprig Output |
-| **Sprig: Run in Terminal** | Execute the saved file in an integrated terminal for servers or interactive programs |
+| **Sprig: Check** | Static check of the saved file and its project's entry graph; errors show in Problems |
+| **Sprig: Run** | Compile and run a finite, non-interactive program; output shows in the Sprig output |
+| **Sprig: Run in Terminal** | Run the saved file in an integrated terminal, for servers and interactive programs |
 | **Sprig: Run Tests** | Run the current project's tests and show the results in the Testing view |
-| **Sprig: Build** | Generate Java and compile with javac |
-| **Sprig: Show Generated Java** | Static check, emit Java without javac, open Java beside Sprig |
+| **Sprig: Build** | Generate Java and compile it with javac |
+| **Sprig: Show Generated Java** | Check, emit Java without javac, and open it beside the Sprig file |
 | **Sprig: Resolve Dependencies** | Run `sprig resolve` for the current project |
 | **Sprig: New Project** | Choose a folder and a name; runs `sprig init` and writes the new project's lock |
-| **Sprig: Explain Diagnostic** | Rendered explanation of an error code; also available through the error's lightbulb |
+| **Sprig: Explain Diagnostic** | Rendered explanation of an error code; also in the error's lightbulb |
 | **Sprig: Show Help Topic** | Rendered `sprig help <topic>`; errors with a related topic offer it in the lightbulb |
 | **Sprig: Show Capabilities** | Display the installed compiler's capability JSON |
+| **Sprig: Restart Language Server** | Start `sprig lsp` again, for example after rebuilding the compiler |
 | **Sprig: Open Documentation** | Open the Sprig website (Chinese or English, following VS Code's display language) |
 | **Sprig: Show Actions** | Pick any of the commands above |
 
-The **Sprig** language status item shows the compiler version and, in a
-project, whether `sprig.lock` is current, stale or missing.
+The **Sprig** language status item shows the compiler version, whether the
+language server runs and, in a project, whether `sprig.lock` is current,
+stale or missing.
 
-Saving triggers checks by default. In a `sprig.toml` project, Check validates the
-configured entry graph plus the current file, so an unused module also gets
-feedback. Diagnostics for other projects remain available; diagnostics within
-this project reflect the latest checked entry graph/current file. Missing/stale
-locks are reported. The extension never resolves or downloads packages on its
-own: only **Resolve Dependencies** and **New Project** run `sprig resolve`, and
-only when you choose them.
+Without the language server, saving checks the file by default. In a
+`sprig.toml` project, Check validates the configured entry graph plus the
+current file, so an unused module also gets feedback. With the server, open
+files are checked as they change, and **Sprig: Check** adds the files of the
+entry graph that are not open. The extension never resolves or downloads
+packages on its own: only **Resolve Dependencies** and **New Project** run
+`sprig resolve`, and only when you choose them.
 
-Commands run the **active saved file**, with the nearest project root as working
-directory. Save all dirty Sprig files in that project first. Java/build artifacts
-are kept in the extension's global storage, outside the source tree; old artifacts
-are not automatically deleted. Generated files can be inspected but edits are
-not fed back into Sprig. Java output is opened using compiler-provided paths.
+Commands run the **active saved file**, with the nearest project root as
+working directory. Save all dirty Sprig files in that project first.
+Java/build artifacts are kept in the extension's global storage, outside the
+source tree; old artifacts are not automatically deleted. Generated files can
+be inspected, but edits are not fed back into Sprig.
 
-Run currently supports finite **non-interactive** programs. stdin is closed,
-output is displayed on completion, the default limit is 120 seconds and 8 MB.
+Run supports finite **non-interactive** programs: stdin is closed, output is
+displayed on completion, and the default limits are 120 seconds and 8 MB.
 Cancel the progress notification to stop the compiler and the program it
-started: the process group on Linux/macOS, the process tree on Windows. For persistent servers or interactive programs, select **Sprig: Run in Terminal**.
-It starts normal `sprig run <saved-file>` with the nearest project root as cwd;
-output and stdin belong to the integrated terminal. There is no JSON buffering,
-120-second command limit or 8 MB adapter cap. Use Ctrl+C or close the terminal
-to stop the program. This command checks workspace trust and saved files before
-launching, and never resolves dependencies automatically. Each invocation opens
-one terminal. Linux/macOS launch the SDK directly; Windows preview uses its JVM
-entrypoint, with the same custom-batch restriction as finite Run.
+started: the process group on Linux/macOS, the process tree on Windows. For
+persistent servers or interactive programs, choose **Sprig: Run in Terminal**.
+It starts `sprig run <saved-file>` with the nearest project root as working
+directory; output and stdin belong to the terminal, with no time or output
+limit. Use Ctrl+C or close the terminal to stop the program.
 
 ## Testing view / 测试
 
@@ -135,26 +155,28 @@ Four spaces and spaces instead of tabs are default editor settings for Sprig.
 ### Trust and diagnostics
 
 Restricted Mode keeps highlighting, the outline, workspace symbols, snippets,
-keyword completion and navigation to file imports. Compiler queries, checks,
-runs, formatting, hover details, member completion and tests require a trusted
+keyword completion and navigation to file imports. The language server,
+compiler queries, checks, runs, formatting, hover details, member completion
+and tests require a trusted workspace; the server starts when you trust the
 workspace. Compiler processes receive argument arrays without a shell.
-Old/canceled checks cannot overwrite a newer result. Diagnostic starts convert
-ANTLR code-point columns to VS Code UTF-16 positions. The current compiler mixes
-UTF-16 token lengths with code-point start columns, so a diagnostic ending inside
-an astral-character token can have an approximate end; ASCII operands after emoji
-prefixes are covered by a real regression. Compiler response failures appear in
-Sprig Output; manual commands also show an actionable error notification.
+Old/canceled checks cannot overwrite a newer result. Compiler response
+failures appear in the Sprig output; manual commands also show an actionable
+error notification. If the language server stops repeatedly, the extension
+falls back to separate compiler commands until **Sprig: Restart Language
+Server**; its own log is the **Sprig Language Server** output.
 
 ### Limitations
 
-- Outline, workspace symbols and Go to Definition are lexical: they find
-  declarations by name and do not follow local shadowing or types.
-- Member completion covers import aliases, enum and variant cases in the current
-  file, and top-level variables whose type the compiler reports for the saved
-  file. Members of local variables and parameters are not offered.
+- The language server re-checks the whole program on each change, renames only
+  locals and parameters, and has no workspace symbols, signature help, code
+  actions or semantic highlighting yet.
+- In a multi-root workspace, one language server serves the window, with the
+  compiler configured for the Sprig file or folder it started from.
+- Without the language server, the outline, workspace symbols and Go to
+  Definition are lexical, member completion does not cover locals and
+  parameters, and hover and completion reflect saved files.
 - Formatting needs code that parses; otherwise the document is left unchanged.
-- No rename, find references, semantic highlighting or debugger. The extension
-  does not use the `sprig lsp` language server yet.
+- No debugger.
 
 ## Development / 开发
 
@@ -168,7 +190,8 @@ npm run package
 
 Build the compiler at the repository root first (`python3 scripts/build.py`).
 Open this extension directory in VS Code and press **F5** to launch a separate
-Extension Development Host. The shared launch task compiles TypeScript.
+Extension Development Host; the launch task compiles TypeScript and bundles
+`out/main.js` with esbuild.
 
 ```sh
 npm run test:host
@@ -178,12 +201,19 @@ VSCODE_EXECUTABLE_PATH="/Applications/Visual Studio Code.app/Contents/MacOS/Code
 SPRIG_TEST_RESTRICTED=1 VSCODE_EXECUTABLE_PATH="/Applications/Visual Studio Code.app/Contents/MacOS/Code" npm run test:host
 ```
 
-Unit tests use the actual compiler for the CLI adapter, Markdown rendering,
-queries, formatting, snippets and `sprig test` results, plus TextMate/Oniguruma
-tokenization and terminal command checks. Host tests run a real VS Code Extension
-Host: diagnostics, Run, generated Java, the integrated terminal, symbols, hover,
-completion, definition, formatting, the Testing view and project commands, and a
-separate Restricted Mode run.
-The host tests use isolated temporary profiles; they do not install into or change
-your usual VS Code settings. `npm run package` writes `dist/sprig-language-0.2.0.vsix`.
-See the repository validation report for actual tested versions and limitations.
+On Windows, point `VSCODE_EXECUTABLE_PATH` at `Code.exe`.
+
+Unit tests use the actual compiler for the CLI adapter, the language server
+command and protocol, Markdown rendering, queries, formatting, snippets and
+`sprig test` results, plus TextMate/Oniguruma tokenization and terminal
+command checks. Host tests run a real VS Code Extension Host: diagnostics, Run,
+generated Java, the integrated terminal, symbols, hover, completion,
+definition, formatting, the Testing view and project commands without the
+language server; then, with it, diagnostics for unsaved edits, types of
+locals, member completion, cross-module definition, references, rename,
+formatting, restart and the fall back; and a separate Restricted Mode run. The
+host tests use isolated temporary profiles; they do not install into or change
+your usual VS Code settings. `npm run package` writes
+`dist/sprig-language-0.3.0.vsix`, and `python3 scripts/check-editor.py` at the
+repository root also checks its contents. Publishing is described in
+[DEVELOPMENT.md](https://github.com/ColinHouse/Sprig/blob/main/editors/vscode/DEVELOPMENT.md).
