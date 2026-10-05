@@ -299,5 +299,11 @@
     "expected_diagnostic": "SPR-NAME-FORWARD-REFERENCE",
     "status": "future semantic checker only",
     "source": "initialization order"
+  },
+  {
+    "file": "while_true_break_missing_return.spr",
+    "expected_diagnostic": "SPR-FLOW-MISSING-RETURN",
+    "status": "future semantic checker only",
+    "source": "while-true completion"
   }
 ]

@@ -4060,9 +4060,16 @@ public final class TypeChecker {
         }
         if (statement instanceof Stmt.WhileStmt loop) {
             Set<Completion> out = completions(loop.body);
-            out.remove(Completion.BREAK);
+            // A break in the body (not in a nested loop) leaves this loop normally.
+            boolean breaks = out.remove(Completion.BREAK);
             out.remove(Completion.CONTINUE);
-            out.add(Completion.NORMAL); // conservatively allow zero iterations
+            if (loop.cond instanceof Expr.BoolLit literal && literal.value && !breaks) {
+                // `while true` without break completes only through return or throw,
+                // like Java's constant-true loops.
+                out.remove(Completion.NORMAL);
+            } else {
+                out.add(Completion.NORMAL); // conservatively allow zero iterations
+            }
             return out;
         }
         if (statement instanceof Stmt.ForStmt loop) {
