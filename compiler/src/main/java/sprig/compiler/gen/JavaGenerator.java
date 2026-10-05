@@ -77,6 +77,11 @@ public final class JavaGenerator {
     private final Set<String> reservedRoots;
     private final Set<String> referencedRoots = new java.util.HashSet<>();
     private final Set<String> emittedNames = new java.util.HashSet<>();
+    // Top-level bindings that functions, lambdas or field defaults may reach
+    // before their initializer runs; those uses are checked at runtime.
+    private final Set<Symbol> guardedBindings = new java.util.HashSet<>();
+    private boolean emittingModuleInit;
+    private int fieldDefaultDepth;
     private final Map<Decl, String> typeNames = new IdentityHashMap<>();
     private final Map<Module, String> moduleClassNames = new IdentityHashMap<>();
     private final Map<Symbol, String> localNames = new HashMap<>();
@@ -637,11 +642,15 @@ public final class JavaGenerator {
         w.line("private " + moduleClassNames.get(module) + "() {");
         w.line("}");
         w.line("private static boolean $initialized;");
+        collectGuardedBindings(module);
         for (Stmt stmt : module.topStatements) {
             if (stmt instanceof Stmt.VarDecl varDecl) {
                 w.blank();
                 w.map(varDecl.span);
                 w.line("public static " + javaType(varDecl.symbol.type) + " " + mangle(varDecl.name) + ";");
+                if (guardedBindings.contains(varDecl.symbol)) {
+                    w.line("static boolean " + readyFlagName(varDecl.symbol) + ";");
+                }
             }
         }
         for (Decl decl : module.decls) {
@@ -669,14 +678,19 @@ public final class JavaGenerator {
             }
         }
         resetLocals();
+        emittingModuleInit = true;
         for (Stmt stmt : module.topStatements) {
             if (stmt instanceof Stmt.VarDecl varDecl) {
                 w.map(varDecl.span);
                 w.line(mangle(varDecl.name) + " = " + convertedExpression(varDecl.init, varDecl.symbol.type) + ";");
+                if (guardedBindings.contains(varDecl.symbol)) {
+                    w.line(readyFlagName(varDecl.symbol) + " = true;");
+                }
             } else {
                 emitStmt(w, stmt);
             }
         }
+        emittingModuleInit = false;
         w.close();
         w.blank();
         w.line("// Checked JVM exceptions at top level surface as runtime failures.");
@@ -697,6 +711,71 @@ public final class JavaGenerator {
         w.close();
         String file = PACKAGE_DIR + "/" + moduleClassNames.get(module) + ".java";
         emitFile(file, w);
+    }
+
+    /**
+     * A binding needs a runtime guard when code may run before its initializer:
+     * any earlier top-level statement, or its own initializer, that is not a
+     * plain literal computation. Constant prologues stay guard-free.
+     */
+    private void collectGuardedBindings(Module module) {
+        boolean codeMayRun = false;
+        for (Stmt stmt : module.topStatements) {
+            if (!(stmt instanceof Stmt.VarDecl varDecl) || !inert(varDecl.init)) {
+                codeMayRun = true;
+            }
+            if (codeMayRun && stmt instanceof Stmt.VarDecl varDecl && varDecl.symbol != null) {
+                guardedBindings.add(varDecl.symbol);
+            }
+        }
+    }
+
+    /** Expressions that cannot call Sprig code: literals, names and operators over them. */
+    private static boolean inert(Expr expr) {
+        if (expr instanceof Expr.IntLit || expr instanceof Expr.FloatLit || expr instanceof Expr.StringLit
+                || expr instanceof Expr.BoolLit || expr instanceof Expr.NullLit || expr instanceof Expr.Name) {
+            return true;
+        }
+        if (expr instanceof Expr.Unary unary) {
+            return inert(unary.operand);
+        }
+        if (expr instanceof Expr.Binary binary) {
+            return inert(binary.left) && inert(binary.right);
+        }
+        if (expr instanceof Expr.ListLit list) {
+            return list.items.stream().allMatch(JavaGenerator::inert);
+        }
+        // Variant payloads and enum cases are plain data: constructing or naming
+        // them runs no Sprig code (class constructors may run field defaults).
+        if (expr instanceof Expr.Call call && call.resolved != null
+                && call.resolved.kind == ResolvedCall.Kind.VARIANT_CTOR) {
+            return call.args.stream().allMatch(arg -> inert(arg.value));
+        }
+        if (expr instanceof Expr.FieldAccess access && access.resolved != null
+                && (access.resolved.kind == ResolvedField.Kind.ENUM_CASE
+                        || access.resolved.kind == ResolvedField.Kind.VARIANT_CASE_VALUE)) {
+            return true;
+        }
+        return false;
+    }
+
+    private String readyFlagName(Symbol symbol) {
+        return "$ready$" + mangle(symbol.name);
+    }
+
+    /** Straight-line module initialization runs in source order; everything else may run early. */
+    private boolean needsInitGuard(Symbol symbol) {
+        return guardedBindings.contains(symbol)
+                && (!emittingModuleInit || lambdaDepth > 0 || fieldDefaultDepth > 0);
+    }
+
+    private String topVarRead(Symbol symbol) {
+        String field = moduleClassName(symbol.module) + "." + mangle(symbol.name);
+        if (!needsInitGuard(symbol)) {
+            return field;
+        }
+        return "sprig.runtime.SprigRuntime.initialized(" + moduleClassName(symbol.module) + "."
+                + readyFlagName(symbol) + ", \"" + symbol.name + "\", " + field + ")";
     }
 
     private String thisRef() {
@@ -826,6 +905,10 @@ public final class JavaGenerator {
                     ? thisRef() + "." + mangle(name.symbol.name) : localName(name.symbol);
             if (name.symbol.kind == Symbol.Kind.TOP_VAR) {
                 lhs = moduleClassName(name.symbol.module) + "." + mangle(name.symbol.name);
+                if (needsInitGuard(name.symbol)) {
+                    w.line("sprig.runtime.SprigRuntime.requireInitialized(" + moduleClassName(name.symbol.module)
+                            + "." + readyFlagName(name.symbol) + ", \"" + name.symbol.name + "\");");
+                }
             }
             w.line(lhs + " = " + assignmentValue(name.type, lhs, assign) + ";");
             return;
@@ -1101,7 +1184,7 @@ public final class JavaGenerator {
         return switch (symbol.kind) {
             case LOCAL, PARAM -> localName(symbol);
             case FIELD -> thisRef() + "." + mangle(symbol.name);
-            case TOP_VAR -> moduleClassName(symbol.module) + "." + mangle(symbol.name);
+            case TOP_VAR -> topVarRead(symbol);
             default -> "null";
         };
     }
@@ -1648,7 +1731,11 @@ public final class JavaGenerator {
             if (value != null) {
                 sb.append(genericArgument(value, field.type, resolved.substitution));
             } else if (field.defaultExpr != null) {
+                // Defaults are evaluated at the construction site, which may run
+                // before a top-level binding the default reads.
+                fieldDefaultDepth++;
                 sb.append(genericArgument(field.defaultExpr, field.type, resolved.substitution));
+                fieldDefaultDepth--;
             } else {
                 sb.append(field.name).append("$missing");
             }

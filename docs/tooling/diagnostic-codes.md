@@ -54,6 +54,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-NAME-IMPORT | An imported file or class cannot be resolved. |
 | SPR-NAME-IMPORT-CYCLE | Sprig modules form an import cycle. |
 | SPR-NAME-LET-ASSIGN | let bindings and let fields cannot be reassigned. |
+| SPR-NAME-FORWARD-REFERENCE | Top-level code uses a top-level binding before its declaration runs. |
 | SPR-NAME-MODULE | Module import/alias problem. |
 | SPR-NAME-NOT-A-TYPE | A value name was used where a type is required. |
 | SPR-NAME-NOT-A-VALUE | A type or module name was used as a value. |

@@ -431,6 +431,19 @@ public final class Explanations {
                         "Move the competing declaration into another module if both are needed."));
                 out.put("relatedCodes", List.of(Codes.NAME_FIELD_SHADOW, Codes.NAME_UNRESOLVED));
             }
+            case Codes.NAME_FORWARD_REFERENCE -> {
+                out.put("whyMatters", "Top-level statements run once, in source order; reading a binding before its "
+                        + "declaration would observe 0, false or null instead of its value.");
+                out.put("confusedWith", List.of("Function declarations, which are visible before their position",
+                        "Java static fields, whose forward references javac also rejects"));
+                out.put("commonCauses", List.of("A top-level statement uses a binding declared further down.",
+                        "An initializer refers to its own binding or to a later one."));
+                out.put("safeFixes", List.of("Move the declaration above its first top-level use.",
+                        "Wrap the code in a function and call it after the declaration."));
+                out.put("relatedCodes", List.of(Codes.NAME_UNRESOLVED, Codes.RUNTIME_EXCEPTION));
+                out.put("badExample", "print(limit)\nlet limit: Int = 21");
+                out.put("goodExample", "let limit: Int = 21\nprint(limit)");
+            }
             case Codes.NAME_LET_ASSIGN -> {
                 out.put("whyMatters", "let bindings and let fields are immutable; mutation is visible in the declaration.");
                 out.put("confusedWith", List.of("JavaScript let reassignment", "Python variables"));

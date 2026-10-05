@@ -17,7 +17,9 @@ def invoke(command, path):
 
 NEGATIVE = {
     'finally_missing_return': 'SPR-FLOW-MISSING-RETURN', 'finally_unreachable': 'SPR-FLOW-UNREACHABLE',
-    'global_cycle': 'SPR-TYPE-INFER', 'global_null_infer': 'SPR-TYPE-INFER',
+    # `let a = b` before `let b = a` is now rejected at its root cause: top-level
+    # code cannot use a binding declared below it, so no inference cycle forms.
+    'global_cycle': 'SPR-NAME-FORWARD-REFERENCE', 'global_null_infer': 'SPR-TYPE-INFER',
     'global_lambda_bad': 'SPR-TYPE-MISMATCH', 'global_field_bad': 'SPR-TYPE-MISMATCH',
     'default_earlier_caller': 'SPR-FLOW-THROWS', 'default_lambda_effect': 'SPR-FLOW-THROWS',
     'global_wrong': 'SPR-TYPE-RETURN', 'global_generic': 'SPR-TYPE-RETURN',

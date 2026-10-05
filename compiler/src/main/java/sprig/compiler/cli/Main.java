@@ -1513,6 +1513,9 @@ public final class Main {
         if (className.equals("sprig.runtime.SprigNumericError")) {
             return raw == null || raw.isBlank() ? "Numeric operation failed" : "Numeric error: " + raw;
         }
+        if (className.equals("sprig.runtime.SprigInitializationError")) {
+            return raw == null || raw.isBlank() ? "Top-level binding used before its initializer ran" : raw;
+        }
         if (raw != null) {
             Matcher stringIndex = STRING_INDEX.matcher(raw);
             if (stringIndex.find()) {
@@ -1565,6 +1568,11 @@ public final class Main {
         if (className.equals("sprig.runtime.SprigNumericError")) {
             return new RuntimeOrigin("checked-arithmetic",
                     "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.");
+        }
+        if (className.equals("sprig.runtime.SprigInitializationError")) {
+            return new RuntimeOrigin("init-order",
+                    "Top-level statements run in source order; declare the binding above the first top-level "
+                            + "statement that calls code using it.");
         }
         if (className.equals("java.lang.StringIndexOutOfBoundsException")) {
             return new RuntimeOrigin("string-bounds",

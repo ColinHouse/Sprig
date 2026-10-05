@@ -287,5 +287,17 @@
     "expected_diagnostic": "SPR-TYPE-OPERAND",
     "status": "future semantic checker only",
     "source": "v0.8 generics"
+  },
+  {
+    "file": "forward_reference.spr",
+    "expected_diagnostic": "SPR-NAME-FORWARD-REFERENCE",
+    "status": "future semantic checker only",
+    "source": "initialization order"
+  },
+  {
+    "file": "forward_reference_initializer.spr",
+    "expected_diagnostic": "SPR-NAME-FORWARD-REFERENCE",
+    "status": "future semantic checker only",
+    "source": "initialization order"
   }
 ]
