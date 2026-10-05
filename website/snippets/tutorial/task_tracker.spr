@@ -1,5 +1,6 @@
 import "@std/files.spr" as files
 import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
 import "@std/process.spr" as process
 import java.io.IOException as IOException
 
@@ -14,104 +15,32 @@ func data_path() -> String:
         return configured
     return "tasks.json"
 
-func required_field(value: json.Value, name: String) -> json.Value throws Error:
-    match json.find_member(value, name):
-        case json.Lookup.Found as found:
-            return found.value
-        case json.Lookup.Missing:
-            throw Error("task is missing field " + name)
-        case json.Lookup.NotObject:
-            throw Error("task must be a JSON object")
-
-func as_int(value: json.Value) -> Int throws Error:
-    match value:
-        case json.Value.Number as number:
-            let parsed = number.text.toIntOrNull()
-            if parsed != null:
-                return parsed
-            throw Error("task id must be an integer")
-        case json.Value.Null:
-            throw Error("task id must be an integer")
-        case json.Value.Boolean:
-            throw Error("task id must be an integer")
-        case json.Value.Text:
-            throw Error("task id must be an integer")
-        case json.Value.Array:
-            throw Error("task id must be an integer")
-        case json.Value.Object:
-            throw Error("task id must be an integer")
-
-func as_text(value: json.Value) -> String throws Error:
-    match value:
-        case json.Value.Text as text:
-            return text.value
-        case json.Value.Null:
-            throw Error("task title must be text")
-        case json.Value.Boolean:
-            throw Error("task title must be text")
-        case json.Value.Number:
-            throw Error("task title must be text")
-        case json.Value.Array:
-            throw Error("task title must be text")
-        case json.Value.Object:
-            throw Error("task title must be text")
-
-func as_bool(value: json.Value) -> Bool throws Error:
-    match value:
-        case json.Value.Boolean as boolean:
-            return boolean.value
-        case json.Value.Null:
-            throw Error("task done must be Boolean")
-        case json.Value.Number:
-            throw Error("task done must be Boolean")
-        case json.Value.Text:
-            throw Error("task done must be Boolean")
-        case json.Value.Array:
-            throw Error("task done must be Boolean")
-        case json.Value.Object:
-            throw Error("task done must be Boolean")
-
-func decode_task(value: json.Value) -> Task throws Error:
+func decode_task(row: codec.Reader) -> Task throws Error:
     return Task(
-        id=as_int(required_field(value, "id")),
-        title=as_text(required_field(value, "title")),
-        done=as_bool(required_field(value, "done"))
+        id=codec.required_int(row, "id"),
+        title=codec.required_string(row, "title"),
+        done=codec.required_bool(row, "done")
     )
+
+func encode_task(task: Task) -> json.Value:
+    return codec.object([
+        codec.member("id", codec.int(task.id)),
+        codec.member("title", codec.text(task.title)),
+        codec.member("done", codec.bool(task.done))
+    ])
 
 func load_tasks() -> List[Task] throws Error, IOException:
     let path = data_path()
     if not files.exists(path):
         return []
-    let document = json.parse(files.read_utf8(path))
-    var rows: List[json.Value] = []
-    match document:
-        case json.Value.Array as array:
-            rows = array.values
-        case json.Value.Null:
-            throw Error("task file must contain a JSON array")
-        case json.Value.Boolean:
-            throw Error("task file must contain a JSON array")
-        case json.Value.Number:
-            throw Error("task file must contain a JSON array")
-        case json.Value.Text:
-            throw Error("task file must contain a JSON array")
-        case json.Value.Object:
-            throw Error("task file must contain a JSON array")
     let tasks: MutableList[Task] = []
-    for value in rows:
-        tasks.append(decode_task(value))
+    for row in codec.root_array(json.parse(files.read_utf8(path))):
+        tasks.append(decode_task(row))
     return tasks.toList()
 
 func save_tasks(tasks: List[Task]) -> Unit throws Error, IOException:
-    let values: MutableList[json.Value] = []
-    for task in tasks:
-        values.append(json.Value.Object(members=[
-            json.Member(key="id", value=json.Value.Number(text=task.id.toString())),
-            json.Member(key="title", value=json.Value.Text(value=task.title)),
-            json.Member(key="done", value=json.Value.Boolean(value=task.done))
-        ]))
-    let body = json.stringify(json.Value.Array(values=values.toList())) + "\n"
-    files.write_utf8(data_path(), body)
+    let rows = tasks.map(fn(task: Task) => encode_task(task))
+    files.write_utf8(data_path(), json.stringify(codec.array(rows)) + "\n")
 
 func usage() -> Unit:
     print("Usage: sprig run -- list | add <title> | done <id>")

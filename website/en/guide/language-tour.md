@@ -150,6 +150,21 @@ When you pass a function value to Java, the Java parameter has to be one of Spri
 
 `json.find_member` has three outcomes: `Missing` (no such key), `Found` (the value is in `value`) and `NotObject` (you didn't look inside an object). A key whose value is `null`, `false`, `0` or an empty string is still `Found`, so it never gets confused with a missing key. Duplicate keys in an object throw an `Error`, and members keep their order. The [standard library notes](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md) cover parsing, lookup and serialization in full.
 
+To read whole records, `@std/json_codec` (newer than v0.5.0-beta.1) takes a field by name and type, so you don't write a `match` for every field:
+
+<<< @/snippets/json_fields.spr
+
+```text
+Read the tour {"id":1,"title":"Read the tour","done":true}
+$[1].id: expected integer, found string
+```
+
+- `required_int`, `required_string` and `required_bool` return the field, or throw an `Error` when it is missing, `null` or another kind. Nothing is converted: the string `"2"` is not an integer.
+- Every message starts with where the problem is, here element 1 of the list, field `id`.
+- The `optional_` versions return `null` for a missing or `null` field.
+- `root` reads a document that is an object, and `root_array` one that is a list.
+- `object`, `member`, `int`, `text` and `bool` build the values to write back.
+
 ## Modules
 
 <<< @/snippets/modules/main.spr

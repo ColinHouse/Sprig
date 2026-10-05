@@ -4,7 +4,7 @@ Once you've done the [tutorial](/en/tutorial), these fuller programs are a good 
 
 ## Start with small local tools
 
-- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker): a command-line task list that keeps its data in a local JSON file. It shows file I/O and a typed data model, with no network access.
+- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker): a command-line task list that keeps its data in a local JSON file. It shows file I/O, a typed data model and reading JSON fields with `@std/json_codec`, with no network access.
 - [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select): a command-line tool for picking fields out of JSON, split across several files, using the `sprig-cli` library for options.
 - [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary): reads a small JSON configuration file and prints a summary in a fixed format, with clear errors for bad input.
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools): three small tools written in Sprig that read the compiler's JSON output to query Java and Sprig APIs, summarize errors and compare APIs.

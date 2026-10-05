@@ -4,7 +4,7 @@
 
 ## 先从本地小工具看起
 
-- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：命令行任务清单，数据存在本地的 JSON 文件里。演示文件读写和带类型的数据模型，不需要联网。
+- [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：命令行任务清单，数据存在本地的 JSON 文件里。演示文件读写、带类型的数据模型，以及用 `@std/json_codec` 读取 JSON 字段，不需要联网。
 - [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：从 JSON 里挑选字段的命令行工具，由多个文件组成，用 `sprig-cli` 库解析命令行选项。
 - [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary)：读取一个小的 JSON 配置文件，输出格式固定的摘要；输入有误时会给出清楚的错误信息。
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：三个用 Sprig 写的小工具，读取编译器输出的 JSON，用来查询 Java 和 Sprig API、汇总错误信息、比较 API 的差异。

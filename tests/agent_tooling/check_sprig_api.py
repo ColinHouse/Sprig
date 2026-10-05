@@ -231,6 +231,19 @@ with tempfile.TemporaryDirectory(prefix="sprig-api-") as temp:
     verify("directory without project refused",
            proc.returncode == 1 and "SPR-API-TARGET" in diagnostic_codes(data), proc.stdout)
 
+    # Bundled modules belong to the SDK: they are queryable by import with or without a project.
+    for where, directory in (("without a project", plain), ("inside a project", project)):
+        proc, data = result(directory, "api", "@std/text.spr", "--json")
+        verify(f"bundled std module {where}",
+               proc.returncode == 0 and data.get("module") == "@std/text.spr"
+               and "trim" in {d["name"] for d in data.get("declarations", [])}, f"{proc.stdout}{proc.stderr}")
+    proc, data = result(plain, "api", "@std/no_such_module.spr", "--json")
+    verify("missing std module refused without a project",
+           proc.returncode == 1 and "SPR-DEP-NOT-FOUND" in diagnostic_codes(data), f"{proc.stdout}{proc.stderr}")
+    proc, data = result(plain, "api", "@web/app.spr", "--json")
+    verify("package module still requires a project",
+           proc.returncode == 1 and "SPR-API-TARGET" in diagnostic_codes(data), f"{proc.stdout}{proc.stderr}")
+
     stale = make_fixture(work, "stale")
     manifest = (stale / "sprig.toml").read_text(encoding="utf-8")
     (stale / "sprig.toml").write_text(manifest.replace('version = "0.1.0"', 'version = "0.2.0"'),

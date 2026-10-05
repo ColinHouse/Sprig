@@ -53,6 +53,15 @@ def main():
         (d/'multi_main.spr').write_text('import "./multi.spr" as m\nprint(m.answer())\nprint(m.greeting())\n')
         result=invoke('run',d/'multi_main.spr')
         assert result.returncode==0 and result.stdout=='42\nhello\n',result.stdout+result.stderr
+        # A bundled module is named by its import: a path from the facade to the SDK differs per machine.
+        (d/'std_facade.spr').write_text('import "@std/text.spr" as text\nimport "./core.spr" as core\nexport text.trim\nexport core.answer\n')
+        (d/'std_main.spr').write_text('import "./std_facade.spr" as facade\nprint("[" + facade.trim("  a ") + "]")\n')
+        result=invoke('run',d/'std_main.spr')
+        assert result.returncode==0 and result.stdout=='[a]\n',result.stdout+result.stderr
+        api=invoke('api',d/'std_facade.spr','--json')
+        assert api.returncode==0, api.stdout+api.stderr
+        origins={e['name']:e['originModule'] for e in json.loads(api.stdout)['declarations']}
+        assert origins=={'trim':'@std/text.spr','answer':'./core.spr'}, origins
         previous='core'
         for i in range(20):
             name=f'chain{i}'

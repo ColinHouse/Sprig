@@ -5,9 +5,17 @@ built directly on `@std/json.spr`. It removes the mechanical
 `find_member`/`match` field extraction that every application otherwise
 rewrites, while leaving all application rules explicit.
 
+The implementation is now the bundled `@std/json_codec.spr`, so a program can
+use it without a dependency: `import "@std/json_codec.spr" as codec`. This
+package remains for projects that already depend on it. Its `codec.spr`
+reexports every declaration of the std module, so both imports name the same
+types and functions. The package therefore needs an SDK that bundles
+`@std/json_codec.spr`, which v0.5.0-beta.1 does not; with that SDK, pin the
+package at the `v0.5.0-beta.1` tag.
+
 ```sprig
 import "@std/json.spr" as json
-import "@json-codec/codec.spr" as codec
+import "@json-codec/codec.spr" as codec  # or "@std/json_codec.spr"
 
 let root = codec.root(json.parse(text))
 let schema = codec.required_int(root, "schema")
@@ -125,6 +133,15 @@ let meta = codec.optional_object(root, "meta")
 let extra = codec.optional_array(root, "extra")
 ```
 
+`root` requires the document to be an object. For a document that is an
+array, such as a file of records, `root_array` returns one reader per element
+with paths `$[0]`, `$[1]` and so on:
+
+```sprig
+for row in codec.root_array(json.parse(text)):
+    let id = codec.required_int(row, "id")  # an error reads "$[1].id: ..."
+```
+
 ## Encoding
 
 Small helpers keep construction uniform:
@@ -164,9 +181,15 @@ for project in codec.required_array(root, "projects"):
 ## Relationship to @std/json
 
 `@std/json` is the exact low-level data model and parser: `Value`, `Lookup`,
-`find_member`, `parse`, `stringify`. `sprig-json-codec` is higher-level
-application policy that consumes those types; it deliberately does not live in
-`@std/json` so it can evolve at library speed.
+`find_member`, `parse`, `stringify`. The codec is higher-level application
+policy that consumes those types. It stays out of `@std/json.spr` itself, which
+is unchanged, and lives next to it as `@std/json_codec.spr`.
+
+It was first kept outside the standard library so that it could change at
+library speed. It moved in because a single file, a tutorial program or a
+freshly initialized project could not use it without declaring a dependency,
+so each of them rewrote the same field extraction by hand. As a bundled module
+it now changes only with the SDK.
 
 ## Future source generation
 

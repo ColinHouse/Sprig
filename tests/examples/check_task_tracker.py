@@ -81,6 +81,20 @@ def main():
         check("malformed JSON is rejected", malformed.returncode != 0,
               malformed.stdout + malformed.stderr)
 
+        # Well-formed JSON of the wrong shape is reported with the place it was found.
+        for name, content, message in (
+                ("a document that is not a list", '{"id": 1}', "$: expected array, found object"),
+                ("a field of the wrong type", '[{"id": "1", "title": "t", "done": false}]',
+                 "$[0].id: expected integer, found string"),
+                ("a missing field", '[{"id": 1, "title": "t", "done": true}, {"id": 2, "title": "u"}]',
+                 "$[1].done: required field is missing")):
+            store.write_text(content, encoding="utf-8")
+            rejected = run("run", "--offline", "--", "list", env=env)
+            check(f"{name} is rejected with its path",
+                  rejected.returncode != 0 and message in rejected.stdout + rejected.stderr
+                  and "1 [" not in rejected.stdout,
+                  rejected.stdout + rejected.stderr)
+
     print(f"task tracker: {CHECKS} checks passed")
 
 

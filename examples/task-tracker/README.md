@@ -18,8 +18,9 @@ sprig run -- done 1
 sprig run -- list
 ```
 
-`done` writes through the standard library's UTF-8 helper. The JSON
-decoder rejects malformed JSON and the program validates each required field;
-unexpected input is reported rather than silently replaced. This is a teaching
-example, not a concurrent database: parallel writers and large data sets need a
-database or a locking policy.
+`done` writes through the standard library's UTF-8 helper. `@std/json.spr`
+rejects malformed JSON, and `@std/json_codec.spr` reads each required field
+with its type. Unexpected input is reported with the place it was found, such
+as `$[0].id: expected integer, found string`, rather than silently replaced.
+This is a teaching example, not a concurrent database: parallel writers and
+large data sets need a database or a locking policy.

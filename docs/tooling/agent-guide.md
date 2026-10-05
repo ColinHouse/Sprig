@@ -18,6 +18,7 @@ bin/sprig help upgrade --json
 bin/sprig api java.time.LocalDate --json
 bin/sprig api src/main.spr --json
 bin/sprig api @pkg/module.spr --member Type.member --json
+bin/sprig api @std/text.spr --json
 bin/sprig api . --json
 bin/sprig project --json
 bin/sprig deps --json

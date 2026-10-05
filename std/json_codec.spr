@@ -1,0 +1,395 @@
+# Path-aware JSON decoding and encoding over "@std/json.spr".
+#
+# This module is application policy on top of the exact JSON data model:
+# it validates JSON kinds, carries a deterministic path for diagnostics and
+# never coerces values. Missing and present-null are distinct in `Field`.
+import "@std/json.spr" as json
+
+# A value together with the JSON path it was reached through, e.g. "$",
+# "$.projects[1]", "$.projects[1].amount".
+class Reader:
+    let path: String
+    let value: json.Value
+
+# Field presence: a missing key, a present JSON null, or a present value.
+variant Field:
+    Missing
+    Null
+    Value(value: json.Value)
+
+# Human JSON kind name used in every error message.
+func kind(value: json.Value) -> String:
+    match value:
+        case json.Value.Null:
+            return "null"
+        case json.Value.Boolean:
+            return "boolean"
+        case json.Value.Number:
+            return "number"
+        case json.Value.Text:
+            return "string"
+        case json.Value.Array:
+            return "array"
+        case json.Value.Object:
+            return "object"
+
+func child_path(parent: String, name: String) -> String:
+    return parent + "." + name
+
+# Root reader: the document itself must be an object, at path "$".
+func root(value: json.Value) -> Reader throws Error:
+    return as_object(Reader(path="$", value=value))
+
+# Root readers for a document that is an array, such as a file of records:
+# one reader per element, at paths "$[0]", "$[1]" and so on.
+func root_array(value: json.Value) -> List[Reader] throws Error:
+    return as_array(Reader(path="$", value=value))
+
+# Exact JSON kind checks. Wrong kinds are errors, never conversions.
+func as_object(reader: Reader) -> Reader throws Error:
+    match reader.value:
+        case json.Value.Object:
+            return reader
+        case json.Value.Null:
+            throw Error(reader.path + ": expected object, found null")
+        case json.Value.Boolean as node:
+            throw Error(reader.path + ": expected object, found boolean")
+        case json.Value.Number as node:
+            throw Error(reader.path + ": expected object, found number")
+        case json.Value.Text as node:
+            throw Error(reader.path + ": expected object, found string")
+        case json.Value.Array as node:
+            throw Error(reader.path + ": expected object, found array")
+
+func as_array(reader: Reader) -> List[Reader] throws Error:
+    match reader.value:
+        case json.Value.Array as node:
+            let readers: MutableList[Reader] = []
+            var index: Int = 0
+            for item in node.values:
+                readers.append(Reader(path=reader.path + "[" + index.toString() + "]", value=item))
+                index += 1
+            return readers.toList()
+        case json.Value.Null:
+            throw Error(reader.path + ": expected array, found null")
+        case json.Value.Boolean:
+            throw Error(reader.path + ": expected array, found boolean")
+        case json.Value.Number:
+            throw Error(reader.path + ": expected array, found number")
+        case json.Value.Text:
+            throw Error(reader.path + ": expected array, found string")
+        case json.Value.Object:
+            throw Error(reader.path + ": expected array, found object")
+
+func as_string(reader: Reader) -> String throws Error:
+    match reader.value:
+        case json.Value.Text as node:
+            return node.value
+        case json.Value.Null:
+            throw Error(reader.path + ": expected string, found null")
+        case json.Value.Boolean:
+            throw Error(reader.path + ": expected string, found boolean")
+        case json.Value.Number:
+            throw Error(reader.path + ": expected string, found number")
+        case json.Value.Array:
+            throw Error(reader.path + ": expected string, found array")
+        case json.Value.Object:
+            throw Error(reader.path + ": expected string, found object")
+
+func as_bool(reader: Reader) -> Bool throws Error:
+    match reader.value:
+        case json.Value.Boolean as node:
+            return node.value
+        case json.Value.Null:
+            throw Error(reader.path + ": expected boolean, found null")
+        case json.Value.Number:
+            throw Error(reader.path + ": expected boolean, found number")
+        case json.Value.Text:
+            throw Error(reader.path + ": expected boolean, found string")
+        case json.Value.Array:
+            throw Error(reader.path + ": expected boolean, found array")
+        case json.Value.Object:
+            throw Error(reader.path + ": expected boolean, found object")
+
+# Plain JSON integer lexeme: optional '-' then 0 or [1-9][0-9]*.
+func integer_lexeme(text: String) -> Bool:
+    if text.length() == 0:
+        return false
+    var start: Int = 0
+    if text.charAt(0) == "-":
+        start = 1
+        if text.length() == 1:
+            return false
+    if text.charAt(start) == "0":
+        return text.length() == start + 1
+    var index: Int = start
+    while index < text.length():
+        let digit = text.charAt(index)
+        if digit < "0" or digit > "9":
+            return false
+        index += 1
+    return true
+
+func as_int(reader: Reader) -> Int throws Error:
+    match reader.value:
+        case json.Value.Number as node:
+            if not integer_lexeme(node.text):
+                throw Error(reader.path + ": expected integer, found number " + node.text)
+            let parsed = node.text.toIntOrNull()
+            if parsed == null:
+                throw Error(reader.path + ": expected integer in range, found number " + node.text)
+            return parsed
+        case json.Value.Null:
+            throw Error(reader.path + ": expected integer, found null")
+        case json.Value.Boolean:
+            throw Error(reader.path + ": expected integer, found boolean")
+        case json.Value.Text:
+            throw Error(reader.path + ": expected integer, found string")
+        case json.Value.Array:
+            throw Error(reader.path + ": expected integer, found array")
+        case json.Value.Object:
+            throw Error(reader.path + ": expected integer, found object")
+
+# Exact JSON number lexeme, for Decimal/BigInt handling by the application.
+func as_number_text(reader: Reader) -> String throws Error:
+    match reader.value:
+        case json.Value.Number as node:
+            return node.text
+        case json.Value.Null:
+            throw Error(reader.path + ": expected number, found null")
+        case json.Value.Boolean:
+            throw Error(reader.path + ": expected number, found boolean")
+        case json.Value.Text:
+            throw Error(reader.path + ": expected number, found string")
+        case json.Value.Array:
+            throw Error(reader.path + ": expected number, found array")
+        case json.Value.Object:
+            throw Error(reader.path + ": expected number, found object")
+
+# JSON number lexeme: -? int ('.' digits)? ([eE] [+-]? digits)?
+func number_lexeme(text: String) -> Bool:
+    if text.length() == 0:
+        return false
+    var index: Int = 0
+    if text.charAt(0) == "-":
+        index = 1
+        if text.length() == 1:
+            return false
+    if text.charAt(index) == "0":
+        index += 1
+    elif text.charAt(index) >= "1" and text.charAt(index) <= "9":
+        index += 1
+        while index < text.length() and text.charAt(index) >= "0" and text.charAt(index) <= "9":
+            index += 1
+    else:
+        return false
+    if index < text.length() and text.charAt(index) == ".":
+        index += 1
+        let fraction_start = index
+        while index < text.length() and text.charAt(index) >= "0" and text.charAt(index) <= "9":
+            index += 1
+        if index == fraction_start:
+            return false
+    if index < text.length() and (text.charAt(index) == "e" or text.charAt(index) == "E"):
+        index += 1
+        if index < text.length() and (text.charAt(index) == "+" or text.charAt(index) == "-"):
+            index += 1
+        let exponent_start = index
+        while index < text.length() and text.charAt(index) >= "0" and text.charAt(index) <= "9":
+            index += 1
+        if index == exponent_start:
+            return false
+    return index == text.length()
+
+func as_decimal(reader: Reader) -> Decimal throws Error:
+    match reader.value:
+        case json.Value.Number as node:
+            if not number_lexeme(node.text):
+                throw Error(reader.path + ": expected decimal, found number " + node.text)
+            return Decimal.parse(node.text)
+        case json.Value.Null:
+            throw Error(reader.path + ": expected decimal, found null")
+        case json.Value.Boolean:
+            throw Error(reader.path + ": expected decimal, found boolean")
+        case json.Value.Text:
+            throw Error(reader.path + ": expected decimal, found string")
+        case json.Value.Array:
+            throw Error(reader.path + ": expected decimal, found array")
+        case json.Value.Object:
+            throw Error(reader.path + ": expected decimal, found object")
+
+func as_value(reader: Reader) -> json.Value:
+    return reader.value
+
+# Explicit lookup: missing, present null and present value stay distinct.
+func field(reader: Reader, name: String) -> Field throws Error:
+    match json.find_member(reader.value, name):
+        case json.Lookup.Found as found:
+            match found.value:
+                case json.Value.Null:
+                    return Field.Null
+                case json.Value.Boolean:
+                    return Field.Value(value=found.value)
+                case json.Value.Number:
+                    return Field.Value(value=found.value)
+                case json.Value.Text:
+                    return Field.Value(value=found.value)
+                case json.Value.Array:
+                    return Field.Value(value=found.value)
+                case json.Value.Object:
+                    return Field.Value(value=found.value)
+        case json.Lookup.Missing:
+            return Field.Missing
+        case json.Lookup.NotObject:
+            throw Error(reader.path + ": expected object to read field '" + name
+                +"', found " + kind(reader.value))
+
+# Present field of any JSON kind; a present null is a value here.
+func required_value(reader: Reader, name: String) -> json.Value throws Error:
+    match field(reader, name):
+        case Field.Missing:
+            throw Error(child_path(reader.path, name) + ": required field is missing")
+        case Field.Null:
+            return json.Value.Null
+        case Field.Value as found:
+            return found.value
+
+# Present field; missing and present null both decode to null.
+# Use `field` when the application must tell those states apart.
+func optional_value(reader: Reader, name: String) -> json.Value? throws Error:
+    match field(reader, name):
+        case Field.Missing:
+            return null
+        case Field.Null:
+            return null
+        case Field.Value as found:
+            return found.value
+
+func required_string(reader: Reader, name: String) -> String throws Error:
+    return as_string(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func required_bool(reader: Reader, name: String) -> Bool throws Error:
+    return as_bool(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func required_int(reader: Reader, name: String) -> Int throws Error:
+    return as_int(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func required_decimal(reader: Reader, name: String) -> Decimal throws Error:
+    return as_decimal(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func required_number_text(reader: Reader, name: String) -> String throws Error:
+    return as_number_text(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func required_array(reader: Reader, name: String) -> List[Reader] throws Error:
+    return as_array(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func required_string_array(reader: Reader, name: String) -> List[String] throws Error:
+    let values: MutableList[String] = []
+    for item in required_array(reader, name):
+        values.append(as_string(item))
+    return values.toList()
+
+func required_object(reader: Reader, name: String) -> Reader throws Error:
+    return as_object(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
+
+func optional_string(reader: Reader, name: String) -> String? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_string(Reader(path=child_path(reader.path, name), value=value))
+
+func optional_bool(reader: Reader, name: String) -> Bool? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_bool(Reader(path=child_path(reader.path, name), value=value))
+
+func optional_int(reader: Reader, name: String) -> Int? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_int(Reader(path=child_path(reader.path, name), value=value))
+
+func optional_decimal(reader: Reader, name: String) -> Decimal? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_decimal(Reader(path=child_path(reader.path, name), value=value))
+
+func optional_array(reader: Reader, name: String) -> List[Reader]? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_array(Reader(path=child_path(reader.path, name), value=value))
+
+func optional_string_array(reader: Reader, name: String) -> List[String]? throws Error:
+    let values = optional_array(reader, name)
+    if values == null:
+        return null
+    let strings: MutableList[String] = []
+    for item in values:
+        strings.append(as_string(item))
+    return strings.toList()
+
+func optional_object(reader: Reader, name: String) -> Reader? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_object(Reader(path=child_path(reader.path, name), value=value))
+
+func optional_number_text(reader: Reader, name: String) -> String? throws Error:
+    let value = optional_value(reader, name)
+    if value == null:
+        return null
+    return as_number_text(Reader(path=child_path(reader.path, name), value=value))
+
+# Unknown-field policy is explicit: not calling this allows unknown fields.
+# Duplicate keys are rejected here as well, independent of later lookups.
+func reject_unknown_fields(reader: Reader, allowed: List[String]) -> Unit throws Error:
+    match reader.value:
+        case json.Value.Object as node:
+            let seen: MutableList[String] = []
+            for member in node.members:
+                if seen.contains(member.key):
+                    throw Error(reader.path + ": duplicate field '" + member.key + "'")
+                seen.append(member.key)
+                if not allowed.contains(member.key):
+                    throw Error(reader.path + ": unknown field '" + member.key + "'")
+        case json.Value.Null:
+            throw Error(reader.path + ": expected object, found null")
+        case json.Value.Boolean:
+            throw Error(reader.path + ": expected object, found boolean")
+        case json.Value.Number:
+            throw Error(reader.path + ": expected object, found number")
+        case json.Value.Text:
+            throw Error(reader.path + ": expected object, found string")
+        case json.Value.Array:
+            throw Error(reader.path + ": expected object, found array")
+
+# Encoding helpers keep construction uniform; they add no policy.
+func text(value: String) -> json.Value:
+    return json.Value.Text(value=value)
+
+func bool(value: Bool) -> json.Value:
+    return json.Value.Boolean(value=value)
+
+func int(value: Int) -> json.Value:
+    return json.Value.Number(text=value.toString())
+
+func number(text: String) -> json.Value:
+    return json.Value.Number(text=text)
+
+func member(key: String, value: json.Value) -> json.Member:
+    return json.Member(key=key, value=value)
+
+func object(members: List[json.Member]) -> json.Value:
+    return json.Value.Object(members=members)
+
+func array(values: List[json.Value]) -> json.Value:
+    return json.Value.Array(values=values)
+
+func string_array(values: List[String]) -> json.Value:
+    let items: MutableList[json.Value] = []
+    for value in values:
+        items.append(text(value))
+    return array(items.toList())
