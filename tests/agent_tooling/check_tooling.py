@@ -32,7 +32,7 @@ def obj(proc):
 
 def main():
     catalog = obj(run("capabilities", "--json"))
-    check("catalog-version", catalog["compilerVersion"] == "0.5.0-beta.1"
+    check("catalog-version", catalog["compilerVersion"] == "0.6.0-beta.1"
           and catalog["languageVersion"] == "0.8-dev" and catalog["jdk"]["minimum"] == 17)
     check("catalog-types", catalog["collectionTypes"] ==
           ["List[T]", "MutableList[T]", "Map[K,V]", "MutableMap[K,V]"])
