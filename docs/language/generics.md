@@ -42,18 +42,48 @@ let none: Option[Int] = Option[Int].None
 ## Type parameters have almost no abilities
 
 Inside a generic declaration, `T` supports assignment, passing, returning and
-being placed in compatible generic containers. It has no operators, ordering
-or methods, and equality only when the enclosing function declares it:
-`value + value` is `SPR-TYPE-OPERAND`, and `a == b` is rejected unless the
+being placed in compatible generic containers. It has no operators or methods,
+and equality or ordering only when the enclosing function declares them:
+`value + value` is `SPR-TYPE-OPERAND`; `a == b` is rejected unless the
 function starts with `requires K: Equatable`, in which case equality is checked
-with value equality on the boxed representation.
+with value equality on the boxed representation; `a < b` is rejected unless it
+starts with `requires K: Comparable`.
 
 Capabilities are deliberately minimal:
 
 | Capability | Status |
 |---|---|
 | `Equatable` | implemented for `<T>` equality under `requires X: Equatable` |
-| `Comparable` | parsed, but not implemented (`SPR-GENERIC-CONSTRAINT`) |
+| `Comparable` | implemented for `< <= > >=` and `sort()` under `requires X: Comparable` |
+
+The set of capabilities is closed; any other name reports
+`SPR-GENERIC-CONSTRAINT`. Capabilities are independent: `Comparable` does not
+grant `==`, so a function that needs both writes both clauses.
+
+### Comparable
+
+`requires T: Comparable` grants the ordering operators `<`, `<=`, `>` and `>=`
+between two values of type `T`, and `sort()` on a `MutableList[T]`.
+
+- **Type arguments.** Comparable types are exactly the types that already have
+  ordering operators: `Int`, `Int32`, `Float`, `Float32`, `Decimal`, `BigInt`
+  and `String`, plus a type parameter of the calling function that itself
+  declares `requires X: Comparable`. Nullable types, `Bool`, classes, enums,
+  variants, collections and Java types are not Comparable. Every call that
+  instantiates the requirement is checked: a generic function call, a method
+  call on a generic class instance, or an unqualified method call inside the
+  class. A violation reports `SPR-GENERIC-CONSTRAINT` at that call.
+- **Meaning.** A generic comparison means exactly what the same operator means
+  on the concrete type: numeric order for `Int`, `Int32`, `Decimal` and
+  `BigInt`; IEEE comparison for `Float` and `Float32` (every comparison with
+  NaN is false, and `-0.0` and `0.0` compare equal); UTF-16 code unit order for
+  `String`.
+- **Sorting.** `sort()` on a `MutableList[T]` uses the same ascending, stable
+  order as `sort()` on a concrete list, which for `Float` places `-0.0` before
+  `0.0` and NaN last. `sort()` accepts `Bool` and every Comparable element type.
+- **Lowering.** Generated Java calls `SprigRuntime.lessThan`, `lessOrEqual`,
+  `greaterThan` or `greaterOrEqual` on the erased values; those helpers
+  dispatch on the boxed type to keep the concrete semantics above.
 
 Clauses must form a leading prefix of the function body. A late or nested
 clause reports `SPR-GENERIC-CONSTRAINT` and grants no capability.
@@ -144,7 +174,7 @@ Java reference results remain conservatively nullable. See
 
 ## Not implemented
 
-Generic inference, variance, `Comparable` and any user-defined capability,
+Generic inference, variance, any user-defined capability,
 generic constraints on JVM types, and registry/publishing features. The
 manifest and entry-discovery model (`sprig.toml`, `init`, `project`, `deps`,
 `run --bin`), schema-5 lockfiles, local/Git and Apache Maven resolution are implemented;

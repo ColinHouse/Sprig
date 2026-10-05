@@ -1,0 +1,38 @@
+import java.lang.Double as Double
+import "@std/lists.spr" as lists
+
+class Order:
+    let item: String
+    let category: String
+    let cents: Int
+
+let orders: List[Order] = [
+    Order(item="tea", category="drink", cents=300),
+    Order(item="cake", category="food", cents=450),
+    Order(item="coffee", category="drink", cents=350),
+    Order(item="bread", category="food", cents=200),
+    Order(item="water", category="drink", cents=100),
+]
+
+for order in lists.sort_by[Order, Int](orders, fn(o: Order) => o.cents):
+    print(order.item)
+
+for order in lists.sort_by[Order, String](orders, fn(o: Order) => o.category):
+    print(order.item)
+
+for group in lists.group_by[Order, String](orders, fn(o: Order) => o.category):
+    let total = lists.fold[Order, Int](group.items, 0, fn(sum: Int, o: Order) => sum + o.cents)
+    print(group.key + " " + group.items.size().toString() + " " + total.toString())
+
+let floats: List[Float] = [2.5, Double.NaN, 0.0, -0.0, 1.0]
+print(lists.sort_by[Float, Float](floats, fn(x: Float) => x))
+
+let float_groups = lists.group_by[Float, Float]([Double.NaN, 0.0, Double.NaN, -0.0], fn(x: Float) => x)
+print(float_groups.size())
+for group in float_groups:
+    print("" + group.key + " " + group.items.size().toString())
+
+let empty: List[Order] = []
+print(lists.sort_by[Order, Int](empty, fn(o: Order) => o.cents).size())
+print(lists.group_by[Order, String](empty, fn(o: Order) => o.category).size())
+print(lists.fold[Int, Int]([1, 2, 3], 10, fn(total: Int, x: Int) => total + x))

@@ -273,6 +273,7 @@ public final class TypeChecker {
     private void checkFunction(Decl.Func func, Decl.ClassDecl owner) {
         leadingRequirements.clear();
         func.equatableParams.clear();
+        func.comparableParams.clear();
         for (Stmt stmt : func.body) {
             if (!(stmt instanceof Stmt.Requires requires)) break;
             leadingRequirements.add(requires);
@@ -674,15 +675,61 @@ public final class TypeChecker {
             return;
         }
         if (requires.capability.equals("Comparable")) {
-            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
-                    "Capability 'Comparable' is not implemented yet; only Equatable is available",
-                    module.uri, requires.span));
+            if (parameterVisible && currentFunction != null) {
+                currentFunction.comparableParams.add(requires.parameter);
+            }
             return;
         }
         diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
                 "Unknown capability '" + requires.capability
                         + "'; v0.8 defines Comparable and Equatable",
                 module.uri, requires.span));
+    }
+
+    /**
+     * Comparable is closed: the types that already have ordering operators, or
+     * a type parameter whose function declares {@code requires X: Comparable}.
+     */
+    private boolean isComparableType(Type type) {
+        if (type instanceof TypeParameterType parameter) {
+            return currentFunction != null
+                    && currentFunction.comparableParams.contains(parameter.name)
+                    && activeTypeParams.containsKey(parameter.name);
+        }
+        return type == NativeType.INT || type == NativeType.INT32 || type == NativeType.FLOAT
+                || type == NativeType.FLOAT32 || type == NativeType.DECIMAL || type == NativeType.BIGINT
+                || type == NativeType.STRING;
+    }
+
+    /** Each {@code requires X: Comparable} of the callee must hold for its type argument at this use. */
+    private void checkComparableArguments(Decl.Func func, Map<TypeParameterType, Type> map, Span span) {
+        for (Stmt stmt : func.body) {
+            if (!(stmt instanceof Stmt.Requires requires)) break;
+            if (!requires.capability.equals("Comparable")) continue;
+            Type argument = null;
+            for (Map.Entry<TypeParameterType, Type> entry : map.entrySet()) {
+                if (entry.getKey().name.equals(requires.parameter)) argument = entry.getValue();
+            }
+            // No substitution: a call from inside the generic declaration itself.
+            if (argument == null) argument = activeTypeParams.get(requires.parameter);
+            if (argument == null || argument == NativeType.ERROR || isComparableType(argument)) continue;
+            if (argument instanceof TypeParameterType parameter) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                        "Type parameter '" + parameter.name + "' is not Comparable here, but '" + func.name
+                                + "' requires a Comparable type argument",
+                        module.uri, span)
+                        .withTypes("Comparable type", argument.display())
+                        .withHint("Begin this function with 'requires " + parameter.name + ": Comparable'."));
+                continue;
+            }
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                    "Type argument '" + argument.display() + "' for " + requires.parameter
+                            + " is not Comparable, which '" + func.name + "' requires",
+                    module.uri, span)
+                    .withTypes("Comparable type", argument.display())
+                    .withHint("Comparable types are Int, Int32, Float, Float32, Decimal, BigInt and String;"
+                            + " for other types, pass an explicit comparison function."));
+        }
     }
 
     /** Whether equality on this parameter is justified by a requires clause. */
@@ -1268,6 +1315,7 @@ public final class TypeChecker {
             return NativeType.ERROR;
         }
         Map<TypeParameterType, Type> map = Substitution.forFunction(func, args);
+        checkComparableArguments(func, map, subscript.span);
         Type returnType = Substitution.apply(func.returnType, map);
         ResolvedCall resolved = resolvedCall(call,
                 func.isMethod() ? ResolvedCall.Kind.METHOD : ResolvedCall.Kind.FUNCTION, returnType);
@@ -1419,6 +1467,11 @@ public final class TypeChecker {
                 binary.valueEquality = true;
                 return NativeType.BOOL;
             }
+            boolean ordering = op.equals("<") || op.equals("<=") || op.equals(">") || op.equals(">=");
+            if (ordering && left.equals(right) && left instanceof TypeParameterType && isComparableType(left)) {
+                binary.genericOrdering = true;
+                return NativeType.BOOL;
+            }
             if (left != NativeType.ERROR && right != NativeType.ERROR) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
                         "Operator '" + op + "' is not available for generic type parameter "
@@ -1428,7 +1481,7 @@ public final class TypeChecker {
                         .withHint("Use a concrete type, or begin the function with 'requires "
                                 + (containsTypeParameter(left) && left instanceof TypeParameterType p
                                         ? p.name : "T")
-                                + ": Equatable' for equality."));
+                                + (ordering ? ": Comparable' for ordering." : ": Equatable' for equality.")));
             }
             return NativeType.ERROR;
         }
@@ -1884,6 +1937,7 @@ public final class TypeChecker {
                     if (!func.typeParams.isEmpty()) {
                         requireExplicitTypeArguments(func, call);
                     }
+                    checkComparableArguments(func, Map.of(), call.span);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
                     resolved.symbol = symbol;
                     resolved.methodDecl = func;
@@ -1976,6 +2030,7 @@ public final class TypeChecker {
                 case METHOD -> {
                     Decl.Func func = field.methodDecl;
                     Map<TypeParameterType, Type> map = field.substitution;
+                    checkComparableArguments(func, map, call.span);
                     Type returnType = Substitution.apply(func.returnType, map);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, returnType);
                     resolved.symbol = func.symbol;
@@ -3170,11 +3225,11 @@ public final class TypeChecker {
                 checkArity(call, 0, 0, id);
                 if (id.endsWith("sort")) {
                     Type element = ((ListType) receiver).element;
-                    boolean sortable = element == NativeType.INT || element == NativeType.FLOAT
-                            || element == NativeType.STRING || element == NativeType.BOOL;
+                    boolean sortable = element == NativeType.BOOL || isComparableType(element);
                     if (!sortable && element != NativeType.ERROR) {
                         diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
-                                "sort requires Int, Float, String or Bool elements",
+                                "sort requires Bool or Comparable elements (Int, Int32, Float, Float32,"
+                                        + " Decimal, BigInt, String or a Comparable type parameter)",
                                 module.uri, call.span).withTypes("comparable element", element.display()));
                     }
                 }

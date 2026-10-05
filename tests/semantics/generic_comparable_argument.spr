@@ -1,0 +1,8 @@
+generic T:
+    func biggest(a: T, b: T) -> T:
+        requires T: Comparable
+        if a > b:
+            return a
+        return b
+
+print(biggest[Bool](true, false))
