@@ -81,3 +81,13 @@ start it themselves must quote for `cmd.exe`; a C runtime argument list (for
 example Python's `subprocess` list form) leaves `&`, `|` and `^` unquoted. See
 [known limitations](../language/known-limitations.md) for the JDK's
 command-line code page.
+
+## Compiler JVM options
+
+`bin/sprig` and `bin\sprig.cmd` start the compiler JVM with
+`-XX:TieredStopAtLevel=1`. A Sprig command ends before the C2 JIT pays off, so
+the C1 JIT alone finishes it sooner: in local measurements on JDK 17 and 25,
+`sprig build` and `sprig test` took 30–40% less time. `sprig lsp` runs for a
+whole editor session and keeps tiered compilation. Programs started by
+`sprig run` and `sprig test` run in their own JVM with the JDK's defaults.
+JVMs without this HotSpot option, such as OpenJ9, ignore it.
