@@ -57,10 +57,13 @@ public final class JavaWriter {
         line("}");
     }
 
-    /** Records the Sprig span for the next emitted line. */
+    /**
+     * Records the Sprig span for the next emitted line, keyed by its 1-based
+     * Java line number, the numbering javac diagnostics and JVM frames use.
+     */
     public void map(Span span) {
         if (span != null) {
-            lineMap.put(line, span);
+            lineMap.put(line + 1, span);
         }
     }
 

@@ -47,6 +47,17 @@ CASES = {
     "program-exit": (
         "import java.lang.System\nSystem.exit(3)\n",
         "SPR-PROGRAM-EXIT", "Program exited with status 3", None, None),
+    # A following statement must not take over the failing statement's range:
+    # every case above fails in the last statement, which hid an off-by-one.
+    "overflow-before-next-statement": (
+        "let big: Int = 9223372036854775807\nlet next = big + 1\nprint(next)\n",
+        "SPR-RUNTIME-EXCEPTION", "Numeric error: Int addition overflow", "checked-arithmetic", 2),
+    "list-index-before-next-statement": (
+        "let xs: List[Int] = [1, 2]\nlet value = xs[5]\nprint(value)\n",
+        "SPR-RUNTIME-EXCEPTION", "List index 5 is out of bounds; size is 2", "list-bounds", 2),
+    "overflow-mid-function": (
+        "func bump(x: Int) -> Int:\n    let y = x + 1\n    return y\n\nprint(bump(9223372036854775807))\n",
+        "SPR-RUNTIME-EXCEPTION", "Numeric error: Int addition overflow", "checked-arithmetic", 2),
 }
 
 with tempfile.TemporaryDirectory(prefix="sprig-runtime-diag-") as work:
