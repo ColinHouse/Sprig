@@ -17,11 +17,12 @@ function harness(t, options={}) {
  const disposable={dispose(){}};
  const compiler=path.join(dir,'SDK space $;','bin','sprig');
  const fakes={
-  window:{activeTextEditor:{document:doc},createOutputChannel:()=>disposable,
+  window:{activeTextEditor:{document:doc},createOutputChannel:()=>open({dispose(){}}),
    showWarningMessage:message=>{warnings.push(message);},showErrorMessage:message=>{throw Error(message);},
    createTerminal:settings=>{const terminal={settings,shown:false,show(){this.shown=true;}};terminals.push(terminal);return terminal;}},
   workspace:{isTrusted:options.trusted!==false,textDocuments:[doc],
-   getConfiguration:()=>({get:(name,fallback)=>name==='compilerPath'?compiler:fallback}),
+   // These checks cover the terminal; the language server has its own tests.
+   getConfiguration:()=>({get:(name,fallback)=>name==='compilerPath'?compiler:name==='languageServer.enabled'?false:fallback}),
    onDidSaveTextDocument:()=>disposable,onDidChangeTextDocument:()=>disposable},
   languages:{createDiagnosticCollection:()=>disposable,registerCodeActionsProvider:()=>disposable},
   commands:{registerCommand:(name,callback)=>{callbacks.set(name,callback);return disposable;}},

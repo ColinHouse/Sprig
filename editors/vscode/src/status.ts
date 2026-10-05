@@ -3,9 +3,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { projectRoot } from './compiler';
 import type { Queries, Runner } from './queries';
+import { ServerState, stateLabel } from './server';
 
-/** Language status item: compiler version and, inside a project, the lock state. */
-export function registerStatus(context: vscode.ExtensionContext, queries: Queries, run: Runner): { refresh(): Promise<void> } {
+/** Language status item: compiler version, language server state and, inside a project, the lock state. */
+export function registerStatus(context: vscode.ExtensionContext, queries: Queries, run: Runner,
+  server: () => ServerState): { refresh(): Promise<void> } {
   const item = vscode.languages.createLanguageStatusItem('sprig.status', { language: 'sprig' });
   item.name = 'Sprig';
   item.text = 'Sprig';
@@ -25,7 +27,7 @@ export function registerStatus(context: vscode.ExtensionContext, queries: Querie
     item.busy = true;
     try {
       const root = projectRoot(doc.uri.fsPath), home = await queries.home(root);
-      let detail = home ? `compiler ${home.compilerVersion ?? 'unknown'}` : 'compiler not found; set sprig.compilerPath';
+      let detail = home ? `compiler ${home.compilerVersion ?? 'unknown'} · ${stateLabel(server())}` : 'compiler not found; set sprig.compilerPath';
       let severity = home ? vscode.LanguageStatusSeverity.Information : vscode.LanguageStatusSeverity.Error;
       if (home && fs.existsSync(path.join(root, 'sprig.toml'))) {
         const project = await run(['project', '--json'], root).catch(() => undefined);

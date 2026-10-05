@@ -43,7 +43,10 @@ function moduleMembers(api: ModuleApi): Member[] {
   ];
 }
 
-export function registerLanguageFeatures(context: vscode.ExtensionContext, queries: Queries, run: Runner): void {
+/** Switches the compiler-backed editor features between `sprig lsp` and separate CLI queries. */
+export interface LanguageFeatures { useServer(active: boolean): void }
+
+export function registerLanguageFeatures(context: vscode.ExtensionContext, queries: Queries, run: Runner): LanguageFeatures {
   const outlines = new Map<string, { version: number; outline: Outline }>();
   const outlineOf = (doc: vscode.TextDocument): Outline => {
     const key = doc.uri.toString(), hit = outlines.get(key);
@@ -113,21 +116,12 @@ export function registerLanguageFeatures(context: vscode.ExtensionContext, queri
     return api ? javaMembers(api, false) : [];
   }
 
+  let server = false;
+  const show = (markdown: string | undefined, range: vscode.Range) => markdown ? new vscode.Hover(new vscode.MarkdownString(markdown), range) : undefined;
+
+  // Always registered: the language server has no workspace symbols, and says nothing about keywords.
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument(doc => outlines.delete(doc.uri.toString())),
-
-    vscode.languages.registerDocumentSymbolProvider(SELECTOR, {
-      provideDocumentSymbols(doc) {
-        const symbol = (d: Decl): vscode.DocumentSymbol => {
-          const end = doc.lineAt(Math.min(d.endLine, doc.lineCount - 1)).range.end;
-          const item = new vscode.DocumentSymbol(d.name, d.detail, SYMBOLS[d.kind],
-            new vscode.Range(d.line, 0, end.line, end.character), new vscode.Range(d.line, d.start, d.line, d.end));
-          item.children = d.children.map(symbol);
-          return item;
-        };
-        return outlineOf(doc).declarations.map(symbol);
-      },
-    }),
 
     vscode.languages.registerWorkspaceSymbolProvider({
       async provideWorkspaceSymbols(query) {
@@ -145,31 +139,55 @@ export function registerLanguageFeatures(context: vscode.ExtensionContext, queri
       },
     }),
 
+    // `sprig help` for keywords; for built-in types too, unless the language server describes them.
+    vscode.languages.registerHoverProvider(SELECTOR, {
+      async provideHover(doc, position) {
+        const ref = referenceAt(doc.lineAt(position.line).text, position.character);
+        if (!ref?.word || ref.qualifier) return undefined;
+        const topic = HELP_TOPICS[ref.word];
+        if (!topic || !(KEYWORDS.includes(ref.word) || (!server && BUILTIN_TYPES.includes(ref.word)))) return undefined;
+        if (findDecl(outlineOf(doc), ref.word) || !trusted() || !local(doc)) return undefined;
+        const help = await queries.help(topic, rootOf(doc));
+        return show(help && helpMarkdown(help), new vscode.Range(position.line, ref.start, position.line, ref.end));
+      },
+    }),
+  );
+
+  // Without the language server: the lexical outline plus compiler queries on saved files.
+  const cliFeatures = () => vscode.Disposable.from(
+    vscode.languages.registerDocumentSymbolProvider(SELECTOR, {
+      provideDocumentSymbols(doc) {
+        const symbol = (d: Decl): vscode.DocumentSymbol => {
+          const end = doc.lineAt(Math.min(d.endLine, doc.lineCount - 1)).range.end;
+          const item = new vscode.DocumentSymbol(d.name, d.detail, SYMBOLS[d.kind],
+            new vscode.Range(d.line, 0, end.line, end.character), new vscode.Range(d.line, d.start, d.line, d.end));
+          item.children = d.children.map(symbol);
+          return item;
+        };
+        return outlineOf(doc).declarations.map(symbol);
+      },
+    }),
+
     vscode.languages.registerHoverProvider(SELECTOR, {
       async provideHover(doc, position) {
         const ref = referenceAt(doc.lineAt(position.line).text, position.character);
         if (!ref?.word) return undefined;
         const range = new vscode.Range(position.line, ref.start, position.line, ref.end);
-        const show = (markdown?: string) => markdown ? new vscode.Hover(new vscode.MarkdownString(markdown), range) : undefined;
-        if (ref.qualifier) return show((await members(doc, ref.qualifier)).find(m => m.name === ref.word)?.markdown());
+        if (ref.qualifier) return show((await members(doc, ref.qualifier)).find(m => m.name === ref.word)?.markdown(), range);
         const outline = outlineOf(doc), decl = findDecl(outline, ref.word);
-        const topic = HELP_TOPICS[ref.word];
-        if (topic && !decl && (KEYWORDS.includes(ref.word) || BUILTIN_TYPES.includes(ref.word))) {
-          if (!trusted() || !local(doc)) return undefined;
-          const help = await queries.help(topic, rootOf(doc));
-          return show(help && helpMarkdown(help));
-        }
+        // Keywords and built-in types: the help hover above.
+        if (HELP_TOPICS[ref.word] && !decl && (KEYWORDS.includes(ref.word) || BUILTIN_TYPES.includes(ref.word))) return undefined;
         const imp = outline.imports.find(i => i.alias === ref.word);
-        if (imp) return show('```sprig\n' + `import ${imp.kind === 'java' ? imp.spec : `"${imp.spec}"`} as ${imp.alias}` + '\n```');
+        if (imp) return show('```sprig\n' + `import ${imp.kind === 'java' ? imp.spec : `"${imp.spec}"`} as ${imp.alias}` + '\n```', range);
         if (!decl) return undefined;
         if (trusted() && local(doc)) {
           const self = await queries.module(doc.uri.fsPath, rootOf(doc));
           const api = self?.declarations?.find(d => d.name === decl.name);
-          if (api) return show(declarationMarkdown(api));
+          if (api) return show(declarationMarkdown(api), range);
           const variable = self?.variables?.find(v => v.name === decl.name);
-          if (variable) return show(variableMarkdown(variable.name, variable.type, variable.mutable));
+          if (variable) return show(variableMarkdown(variable.name, variable.type, variable.mutable), range);
         }
-        return show('```sprig\n' + doc.lineAt(decl.line).text.trim() + '\n```');
+        return show('```sprig\n' + doc.lineAt(decl.line).text.trim() + '\n```', range);
       },
     }),
 
@@ -239,4 +257,15 @@ export function registerLanguageFeatures(context: vscode.ExtensionContext, queri
       },
     }),
   );
+
+  // Two providers of the same feature would duplicate results (and make VS Code ask for a default formatter).
+  let cli: vscode.Disposable | undefined = cliFeatures();
+  context.subscriptions.push({ dispose: () => cli?.dispose() });
+  return {
+    useServer(active: boolean) {
+      server = active;
+      if (active) { cli?.dispose(); cli = undefined; }
+      else cli ??= cliFeatures();
+    },
+  };
 }

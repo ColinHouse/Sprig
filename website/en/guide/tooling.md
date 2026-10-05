@@ -144,7 +144,7 @@ The full approach is in [working with AI assistants](/en/guide/agent-workflow).
 
 ## Language server
 
-`sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly. It's new in the development version, so the published v0.5.0-beta.1 doesn't have it yet.
+`sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly, and the [VS Code extension](/en/guide/editor) starts it for you. It's new in the development version, so the published v0.5.0-beta.1 doesn't have it yet.
 
 It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, and rename for local variables and parameters. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. While your code doesn't parse, the server answers with nothing rather than a guess.
 

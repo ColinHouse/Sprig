@@ -131,8 +131,13 @@ javac. Do not claim a development catalog is a published SDK.
 ## VS Code adapter
 
 `editors/vscode/` is a TypeScript desktop extension. Highlighting uses the real
-lexer contract; compiler semantics remain in Java. Keep editor dependencies and
-lockfile separate from the website. Run `npm test` and `npm run package` there;
-`npm run test:host` additionally runs a real isolated VS Code Extension Host.
-Never execute compiler commands in an untrusted workspace. Package locally; do
-not publish Marketplace or change compiler version for an editor-only change.
+lexer contract; compiler semantics remain in Java. Editor features come from
+`sprig lsp` through `vscode-languageclient` when the compiler reports
+`languageServer`, otherwise from CLI queries; esbuild bundles the extension
+into `out/main.js`. Keep editor dependencies and lockfile separate from the
+website. Run `npm test` and `npm run package` there; `npm run test:host`
+additionally runs a real isolated VS Code Extension Host. Never execute
+compiler commands, the language server included, in an untrusted workspace.
+Package locally and do not change the compiler version for an editor-only
+change. Publishing to the Marketplace and Open VSX is the owner's
+`vscode-extension.yml` workflow; agents never publish.

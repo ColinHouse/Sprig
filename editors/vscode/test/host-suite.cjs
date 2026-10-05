@@ -4,8 +4,10 @@ const path=require('node:path');
 const vscode=require('vscode');
 exports.run=async()=>{
  const codeOf=d=>typeof d.code==='object'?d.code.value:d.code;
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const root=process.env.SPRIG_TEST_ROOT;const folder=vscode.workspace.workspaceFolders[0].uri.fsPath;
  const ext=vscode.extensions.getExtension('ColinHouse.sprig-language');assert.ok(ext,'extension must be installed/registered');await ext.activate();
+ assert.equal(ext.exports.languageServer(),'off','no language server without trust, or before it is enabled');
  const config=vscode.workspace.getConfiguration('sprig');await config.update('compilerPath',path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig'),vscode.ConfigurationTarget.Workspace);
  await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
  if(process.env.SPRIG_TEST_RESTRICTED==='1') {
@@ -105,7 +107,50 @@ exports.run=async()=>{
  assert.equal(created,path.join(folder,'created app'));assert.ok(fs.existsSync(path.join(created,'src','main.spr')));assert.ok(fs.existsSync(path.join(created,'sprig.lock')));
  const resolved=await vscode.commands.executeCommand('sprig.resolveDependencies');assert.equal(resolved.exitCode,0);
  const registered=await vscode.commands.getCommands(true);
- for(const id of ['sprig.newProject','sprig.resolveDependencies','sprig.runTests','sprig.openDocumentation','sprig.showActions','sprig.showHelp'])assert.ok(registered.includes(id),id);
+ for(const id of ['sprig.newProject','sprig.resolveDependencies','sprig.runTests','sprig.openDocumentation','sprig.showActions','sprig.showHelp','sprig.restartLanguageServer'])assert.ok(registered.includes(id),id);
+ // Language server: unsaved edits are checked, locals have types, and navigation crosses modules.
+ const until=async(check,what)=>{for(let i=0;i<600;i++){const value=await check();if(value)return value;await sleep(100);}assert.fail(what);};
+ const serverState=async state=>until(()=>ext.exports.languageServer()===state,`language server ${state}, not ${ext.exports.languageServer()}`);
+ await config.update('languageServer.enabled',true,vscode.ConfigurationTarget.Workspace);await serverState('running');
+ const served=path.join(folder,'language server');fs.mkdirSync(served,{recursive:true});
+ fs.writeFileSync(path.join(served,'shapes.spr'),'class Box:\n    let width: Int\n\nfunc area(box: Box) -> Int:\n    return box.width * box.width\n');
+ const liveFile=path.join(served,'live.spr');
+ fs.writeFileSync(liveFile,'import "./shapes.spr" as shapes\n\nfunc report(size: Int) -> String:\n    let box = shapes.Box(width=size)\n    let label = "area " + shapes.area(box).toString()\n    return label\n\nprint(report(3))\n');
+ const live=await vscode.workspace.openTextDocument(liveFile);await vscode.window.showTextDocument(live);
+ const typo=new vscode.WorkspaceEdit();typo.insert(live.uri,new vscode.Position(live.lineCount-1,0),'let wrong: Int = "bad"\n');await vscode.workspace.applyEdit(typo);assert.ok(live.isDirty);
+ const typed=await until(()=>vscode.languages.getDiagnostics(live.uri).find(d=>codeOf(d)==='SPR-TYPE-ASSIGN'),'diagnostics for an unsaved edit');
+ assert.equal(typed.source,'Sprig');assert.ok(String(typed.code.target).endsWith('/reference/tooling/diagnostic-codes'),'server codes link to the docs too');
+ const fixes=await vscode.commands.executeCommand('vscode.executeCodeActionProvider',live.uri,typed.range);
+ assert.ok(fixes.some(a=>a.title==='Explain SPR-TYPE-ASSIGN')&&fixes.some(a=>a.title==='Show sprig help types'),JSON.stringify(fixes.map(a=>a.title)));
+ const untypo=new vscode.WorkspaceEdit();untypo.delete(live.uri,new vscode.Range(live.lineCount-2,0,live.lineCount-1,0));await vscode.workspace.applyEdit(untypo);
+ await until(()=>vscode.languages.getDiagnostics(live.uri).length===0,'an unsaved repair clears the diagnostics');await live.save();
+ const hoverIn=async(doc,line,character)=>((await vscode.commands.executeCommand('vscode.executeHoverProvider',doc.uri,new vscode.Position(line,character)))??[]).flatMap(h=>h.contents.map(c=>typeof c==='string'?c:c.value));
+ assert.ok((await hoverIn(live,3,9)).some(text=>text.includes('let box: Box')),'type of a local from the server');
+ const keyword=await hoverIn(live,2,1);assert.equal(keyword.length,1,'one hover: the server says nothing about keywords');assert.ok(keyword[0].includes('sprig help functions'));
+ const dot=new vscode.WorkspaceEdit();dot.insert(live.uri,new vscode.Position(6,0),'    box.\n');await vscode.workspace.applyEdit(dot);
+ const members=(await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',live.uri,new vscode.Position(6,8),'.')).items.map(i=>typeof i.label==='string'?i.label:i.label.label);
+ assert.ok(members.includes('width'),'members of a local variable: '+JSON.stringify(members));
+ const undot=new vscode.WorkspaceEdit();undot.delete(live.uri,new vscode.Range(6,0,7,0));await vscode.workspace.applyEdit(undot);await live.save();
+ const located=(await vscode.commands.executeCommand('vscode.executeDefinitionProvider',live.uri,new vscode.Position(4,34))).map(l=>l.uri?{uri:l.uri,range:l.range}:{uri:l.targetUri,range:l.targetRange});
+ assert.equal(located.length,1);assert.equal(located[0].uri.fsPath,path.join(served,'shapes.spr'));assert.equal(located[0].range.start.line,3);
+ const references=await vscode.commands.executeCommand('vscode.executeReferenceProvider',live.uri,new vscode.Position(4,34));
+ assert.deepEqual(references.map(l=>path.basename(l.uri.fsPath)).sort(),['live.spr','shapes.spr']);
+ const renamed=await vscode.commands.executeCommand('vscode.executeDocumentRenameProvider',live.uri,new vscode.Position(5,12),'text');
+ assert.equal(renamed.entries().find(([uri])=>uri.fsPath===live.uri.fsPath)?.[1].length,2,'rename a local and its use');
+ assert.deepEqual((await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',live.uri)).map(s=>s.name),['report'],'one outline provider at a time');
+ const messyFile=path.join(served,'messy.spr');fs.writeFileSync(messyFile,'func add(a:Int,b:Int)->Int:\n  return a+b\n');
+ const messyServed=await vscode.workspace.openTextDocument(messyFile);
+ const serverEdits=await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider',messyServed.uri,{tabSize:4,insertSpaces:true});
+ const reformat=new vscode.WorkspaceEdit();reformat.set(messyServed.uri,serverEdits);await vscode.workspace.applyEdit(reformat);
+ assert.equal(messyServed.getText(),'func add(a: Int, b: Int) -> Int:\n    return a + b\n','formatting through the server');await messyServed.save();
+ // A manual check keeps reporting closed files, but the server alone reports open ones.
+ const saveBad=new vscode.WorkspaceEdit();saveBad.insert(live.uri,new vscode.Position(live.lineCount-1,0),'let wrong: Int = "bad"\n');await vscode.workspace.applyEdit(saveBad);await live.save();
+ await until(()=>vscode.languages.getDiagnostics(live.uri).some(d=>codeOf(d)==='SPR-TYPE-ASSIGN'),'server diagnostics after save');
+ await vscode.window.showTextDocument(live);assert.equal((await vscode.commands.executeCommand('sprig.check')).exitCode,1);
+ assert.equal(vscode.languages.getDiagnostics(live.uri).filter(d=>codeOf(d)==='SPR-TYPE-ASSIGN').length,1,'no duplicate from the CLI check');
+ assert.equal(await vscode.commands.executeCommand('sprig.restartLanguageServer'),'running');
+ await config.update('languageServer.enabled',false,vscode.ConfigurationTarget.Workspace);await serverState('off');
+ assert.deepEqual((await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',live.uri)).map(s=>s.name),['report','wrong'],'the lexical outline, with top-level bindings, returns');
  // Actual integrated terminal invokes normal Run without the finite JSON adapter.
  await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
  const terminalSource=path.join(folder,'terminal 中文 $;.spr'), marker=path.join(folder,'terminal-marker.txt');

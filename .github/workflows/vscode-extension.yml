@@ -1,0 +1,99 @@
+name: Publish VS Code extension
+
+# Run by the repository owner from the Actions tab. It tests the extension
+# against a fresh compiler build, then publishes that same VSIX to the chosen
+# registries. See editors/vscode/DEVELOPMENT.md for the one-time setup.
+on:
+  workflow_dispatch:
+    inputs:
+      marketplace:
+        description: Visual Studio Marketplace (needs the VSCE_PAT secret)
+        type: boolean
+        default: true
+      openvsx:
+        description: Open VSX (the OVSX_PAT secret, or this workflow as a trusted publisher)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # Open VSX trusted publishing
+
+concurrency:
+  group: publish-vscode-extension
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  publish:
+    name: Test, package and publish
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - name: Check the request
+        env:
+          MARKETPLACE: ${{ inputs.marketplace }}
+          OPENVSX: ${{ inputs.openvsx }}
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Publish from main, not $GITHUB_REF."
+            exit 1
+          fi
+          if [ "$MARKETPLACE" != true ] && [ "$OPENVSX" != true ]; then
+            echo "::error::Choose at least one registry."
+            exit 1
+          fi
+          if [ "$MARKETPLACE" = true ] && [ -z "$VSCE_PAT" ]; then
+            echo "::error::Add the VSCE_PAT repository secret (an Azure DevOps token with Marketplace > Manage), or clear the Marketplace option."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: editors/vscode/package-lock.json
+      - run: python scripts/build.py
+      - run: npm ci
+        working-directory: editors/vscode
+      - name: Unit tests, package and VSIX contents
+        run: python scripts/check-editor.py
+      - name: Test actual VS Code Extension Host
+        working-directory: editors/vscode
+        run: |
+          xvfb-run -a npm run test:host
+          SPRIG_TEST_RESTRICTED=1 xvfb-run -a npm run test:host
+      - name: Name the package
+        id: vsix
+        working-directory: editors/vscode
+        run: echo "path=dist/sprig-language-$(node -p 'require("./package.json").version').vsix" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: sprig-vscode-extension
+          path: editors/vscode/${{ steps.vsix.outputs.path }}
+      - name: Publish to the Visual Studio Marketplace
+        if: inputs.marketplace
+        working-directory: editors/vscode
+        env:
+          VSIX: ${{ steps.vsix.outputs.path }}
+        run: npx vsce publish --packagePath "$VSIX"
+      - name: Publish to Open VSX
+        if: inputs.openvsx
+        working-directory: editors/vscode
+        env:
+          VSIX: ${{ steps.vsix.outputs.path }}
+        run: |
+          # Without a token, ovsx exchanges this workflow's OIDC token (trusted publishing).
+          if [ -z "$OVSX_PAT" ]; then unset OVSX_PAT; fi
+          npx --yes ovsx@1.2.0 publish "$VSIX"

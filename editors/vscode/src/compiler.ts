@@ -47,9 +47,18 @@ export function resolveCompiler(configured: string, cwd: string): string {
 }
 
 /**
- * Shared direct-process plan for finite JSON commands and integrated terminals.
- * On Windows the JVM is started with the classpath bin/sprig.cmd would use, so
- * no argument passes through cmd.exe quoting.
+ * Whether `sprig capabilities --json` reports the `sprig lsp` language server.
+ * The version cannot tell: a development build reports the release before it.
+ */
+export function supportsLanguageServer(capabilities: CompilerResult): boolean {
+  const features = capabilities.features as Record<string, unknown> | undefined;
+  return features?.languageServer === true;
+}
+
+/**
+ * Shared direct-process plan for compiler commands, integrated terminals and `sprig lsp`.
+ * On Windows the JVM is started with the options and classpath bin/sprig.cmd
+ * would use, so no argument passes through cmd.exe quoting.
  */
 export function compilerCommand(executable: string, args: string[],
   platform: NodeJS.Platform = process.platform): { command: string; args: string[] } {
@@ -64,7 +73,9 @@ export function compilerCommand(executable: string, args: string[],
     } else {
       throw new Error('Windows preview requires the SDK bin/sprig.cmd launcher; arbitrary batch wrappers are unsupported.');
     }
-    return {command: 'java', args: ['-Dfile.encoding=UTF-8', '-cp', classpath.join(';'),
+    // As the launcher: C1 alone for commands, tiered compilation for the long-lived server.
+    const jit = args[0] === 'lsp' ? '-XX:+TieredCompilation' : '-XX:TieredStopAtLevel=1';
+    return {command: 'java', args: ['-Dfile.encoding=UTF-8', jit, '-cp', classpath.join(';'),
       `-Dsprig.home=${home}`, 'sprig.compiler.cli.Main', ...args]};
   }
   return {command: executable, args};

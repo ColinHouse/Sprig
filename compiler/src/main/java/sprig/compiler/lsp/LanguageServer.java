@@ -511,6 +511,10 @@ public final class LanguageServer {
             if (!related.isEmpty()) {
                 item.put("relatedInformation", related);
             }
+            if (diagnostic.relatedHelp != null) {
+                // The `sprig help` topic, as `relatedHelp` in `sprig check --json`.
+                item.put("data", Map.of("relatedHelp", diagnostic.relatedHelp));
+            }
             out.add(item);
         }
         return out;

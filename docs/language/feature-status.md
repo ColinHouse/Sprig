@@ -10,7 +10,7 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | Expression `match` | one expression per branch | strict contextual/inferred results, shared exhaustive/binder rules | Java 17 switch/yield; no closures; scrutinee once | match expression runtime/generic/null/effect tests |
 | Explicit `export alias.Symbol` | yes | original symbols, collisions, cycles and package boundaries | no wrapper/copy | reexport runtime/API/package suite |
 | Canonical `sprig fmt` | trivia-preserving lexer | parse structure invariant | atomic file replacement, check/JSON modes | formatter fixtures + valid corpus |
-| `sprig lsp` language server (stdio) | unsaved buffers parsed in place of files | diagnostics, hover, definition, references, symbols, completion and verified local rename from the same resolver and checker | none; formatting reuses `sprig fmt` | `tests/lsp` JSON-RPC suite |
+| `sprig lsp` language server (stdio) | unsaved buffers parsed in place of files | diagnostics, hover, definition, references, symbols, completion and verified local rename from the same resolver and checker | none; formatting reuses `sprig fmt` | `tests/lsp` JSON-RPC suite; VS Code client in `editors/vscode` unit and Extension Host tests |
 | Foreign JVM conformance `conform C to J` | declaration form, one per relation | exact JVM witness matching, v1 restrictions, foreign conformance conversion | emitted `implements`; non-null entry guards (`SPR-CONFORM-*`) | `tests/conform` runtime and negative suite |
 | Functions, typed parameters/returns, recursion | yes | yes | Java static methods | runtime 01/02, visitor |
 | Indentation, blocks, `if`/`elif`/`else`, `while`, `for`, `break`/`continue` | yes | yes | Java control flow | runtime 03/13 |
