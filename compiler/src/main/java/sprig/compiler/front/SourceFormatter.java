@@ -53,6 +53,7 @@ public final class SourceFormatter {
             out.append("    ".repeat(depth));
             Token previous = null;
             boolean previousUnary = false;
+            boolean previousNamedArgument = false;
             for (Token token : line) {
                 if (token.getType() == SprigLexer.COMMENT) {
                     if (previous != null) out.append("  ");
@@ -62,12 +63,17 @@ public final class SourceFormatter {
                 boolean unary = (token.getType() == SprigLexer.PLUS || token.getType() == SprigLexer.MINUS)
                         && (previous == null || opening(previous) || operator(previous) || previous.getType() == SprigLexer.COMMA
                             || previous.getType() == SprigLexer.COLON || keywordPrefix(previous));
-                if (previous != null && space(previous, token, previousUnary)) out.append(' ');
+                // Inside delimiters '=' can only separate a named argument from its
+                // value; it is written without spaces, like a Python keyword argument.
+                boolean namedArgument = brackets > 0 && token.getType() == SprigLexer.ASSIGN;
+                if (previous != null && !namedArgument && !previousNamedArgument
+                        && space(previous, token, previousUnary)) out.append(' ');
                 out.append(token.getText());
                 if (opening(token)) brackets++;
                 if (closing(token)) brackets--;
                 previous = token;
                 previousUnary = unary;
+                previousNamedArgument = namedArgument;
             }
             out.append('\n');
             blank = false;

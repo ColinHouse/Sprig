@@ -16,7 +16,7 @@ func summarize(text: String) -> String throws Error:
         case codec.Field.Null:
             "(none)"
         case codec.Field.Value as field:
-            codec.as_string(codec.Reader(path = "$.active_project", value = field.value))
+            codec.as_string(codec.Reader(path="$.active_project", value=field.value))
 
     let names: MutableList[String] = []
     var target_count = 0

@@ -75,8 +75,8 @@ func decode(document: json.Value) -> Config throws Error:
                 throw Error(target_row.path + ".item_id: item id cannot be empty")
             if amount <= 0:
                 throw Error(target_row.path + ".amount: must be positive")
-            targets.append(Target(item_id = item_id, amount = amount))
-        projects.append(Project(id = id, name = name, targets = targets.toList()))
+            targets.append(Target(item_id=item_id, amount=amount))
+        projects.append(Project(id=id, name=name, targets=targets.toList()))
     let active = codec.optional_string(root, "active_project")
     if active != null and active != "":
         var found = false
@@ -85,8 +85,8 @@ func decode(document: json.Value) -> Config throws Error:
                 found = true
         if not found:
             throw Error("$.active_project: unknown project id '" + active + "'")
-    return Config(schema = 1, hud_enabled = codec.required_bool(root, "hud_enabled"),
-        active_project = active, projects = projects.toList())
+    return Config(schema=1, hud_enabled=codec.required_bool(root, "hud_enabled"),
+        active_project=active, projects=projects.toList())
 
 let text = String.join([
     "{\"schema\": 1, \"hud_enabled\": true, \"active_project\": \"alpha\",",

@@ -38,7 +38,7 @@ func child_path(parent: String, name: String) -> String:
 
 # Root reader: the document itself must be an object, at path "$".
 func root(value: json.Value) -> Reader throws Error:
-    return as_object(Reader(path = "$", value = value))
+    return as_object(Reader(path="$", value=value))
 
 # Exact JSON kind checks. Wrong kinds are errors, never conversions.
 func as_object(reader: Reader) -> Reader throws Error:
@@ -62,7 +62,7 @@ func as_array(reader: Reader) -> List[Reader] throws Error:
             let readers: MutableList[Reader] = []
             var index: Int = 0
             for item in node.values:
-                readers.append(Reader(path = reader.path + "[" + index.toString() + "]", value = item))
+                readers.append(Reader(path=reader.path + "[" + index.toString() + "]", value=item))
                 index += 1
             return readers.toList()
         case json.Value.Null:
@@ -224,15 +224,15 @@ func field(reader: Reader, name: String) -> Field throws Error:
                 case json.Value.Null:
                     return Field.Null
                 case json.Value.Boolean:
-                    return Field.Value(value = found.value)
+                    return Field.Value(value=found.value)
                 case json.Value.Number:
-                    return Field.Value(value = found.value)
+                    return Field.Value(value=found.value)
                 case json.Value.Text:
-                    return Field.Value(value = found.value)
+                    return Field.Value(value=found.value)
                 case json.Value.Array:
-                    return Field.Value(value = found.value)
+                    return Field.Value(value=found.value)
                 case json.Value.Object:
-                    return Field.Value(value = found.value)
+                    return Field.Value(value=found.value)
         case json.Lookup.Missing:
             return Field.Missing
         case json.Lookup.NotObject:
@@ -261,22 +261,22 @@ func optional_value(reader: Reader, name: String) -> json.Value? throws Error:
             return found.value
 
 func required_string(reader: Reader, name: String) -> String throws Error:
-    return as_string(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_string(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func required_bool(reader: Reader, name: String) -> Bool throws Error:
-    return as_bool(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_bool(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func required_int(reader: Reader, name: String) -> Int throws Error:
-    return as_int(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_int(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func required_decimal(reader: Reader, name: String) -> Decimal throws Error:
-    return as_decimal(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_decimal(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func required_number_text(reader: Reader, name: String) -> String throws Error:
-    return as_number_text(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_number_text(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func required_array(reader: Reader, name: String) -> List[Reader] throws Error:
-    return as_array(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_array(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func required_string_array(reader: Reader, name: String) -> List[String] throws Error:
     let values: MutableList[String] = []
@@ -285,37 +285,37 @@ func required_string_array(reader: Reader, name: String) -> List[String] throws 
     return values.toList()
 
 func required_object(reader: Reader, name: String) -> Reader throws Error:
-    return as_object(Reader(path = child_path(reader.path, name), value = required_value(reader, name)))
+    return as_object(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
 func optional_string(reader: Reader, name: String) -> String? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_string(Reader(path = child_path(reader.path, name), value = value))
+    return as_string(Reader(path=child_path(reader.path, name), value=value))
 
 func optional_bool(reader: Reader, name: String) -> Bool? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_bool(Reader(path = child_path(reader.path, name), value = value))
+    return as_bool(Reader(path=child_path(reader.path, name), value=value))
 
 func optional_int(reader: Reader, name: String) -> Int? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_int(Reader(path = child_path(reader.path, name), value = value))
+    return as_int(Reader(path=child_path(reader.path, name), value=value))
 
 func optional_decimal(reader: Reader, name: String) -> Decimal? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_decimal(Reader(path = child_path(reader.path, name), value = value))
+    return as_decimal(Reader(path=child_path(reader.path, name), value=value))
 
 func optional_array(reader: Reader, name: String) -> List[Reader]? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_array(Reader(path = child_path(reader.path, name), value = value))
+    return as_array(Reader(path=child_path(reader.path, name), value=value))
 
 func optional_string_array(reader: Reader, name: String) -> List[String]? throws Error:
     let values = optional_array(reader, name)
@@ -330,13 +330,13 @@ func optional_object(reader: Reader, name: String) -> Reader? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_object(Reader(path = child_path(reader.path, name), value = value))
+    return as_object(Reader(path=child_path(reader.path, name), value=value))
 
 func optional_number_text(reader: Reader, name: String) -> String? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
-    return as_number_text(Reader(path = child_path(reader.path, name), value = value))
+    return as_number_text(Reader(path=child_path(reader.path, name), value=value))
 
 # Unknown-field policy is explicit: not calling this allows unknown fields.
 # Duplicate keys are rejected here as well, independent of later lookups.
@@ -363,25 +363,25 @@ func reject_unknown_fields(reader: Reader, allowed: List[String]) -> Unit throws
 
 # Encoding helpers keep construction uniform; they add no policy.
 func text(value: String) -> json.Value:
-    return json.Value.Text(value = value)
+    return json.Value.Text(value=value)
 
 func bool(value: Bool) -> json.Value:
-    return json.Value.Boolean(value = value)
+    return json.Value.Boolean(value=value)
 
 func int(value: Int) -> json.Value:
-    return json.Value.Number(text = value.toString())
+    return json.Value.Number(text=value.toString())
 
 func number(text: String) -> json.Value:
-    return json.Value.Number(text = text)
+    return json.Value.Number(text=text)
 
 func member(key: String, value: json.Value) -> json.Member:
-    return json.Member(key = key, value = value)
+    return json.Member(key=key, value=value)
 
 func object(members: List[json.Member]) -> json.Value:
-    return json.Value.Object(members = members)
+    return json.Value.Object(members=members)
 
 func array(values: List[json.Value]) -> json.Value:
-    return json.Value.Array(values = values)
+    return json.Value.Array(values=values)
 
 func string_array(values: List[String]) -> json.Value:
     let items: MutableList[json.Value] = []

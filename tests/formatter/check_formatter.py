@@ -33,6 +33,14 @@ def main():
         result=invoke('fmt',path)
         assert result.returncode==0 and path.read_text()==canonical,result.stdout+result.stderr
         assert invoke('fmt',path).returncode==0 and path.read_text()==canonical
+        # Named arguments are written like Python keyword arguments: no spaces
+        # around '=' inside a call, while assignments and defaults keep them.
+        named = 'class P:\n  let x:Int=1\n  let y:Int=2\nvar p=P(x = 3,y = -4)\np = P(\n  x =5,\n  y= [1,2][0])\nprint(p.x)\n'
+        named_canonical = 'class P:\n    let x: Int = 1\n    let y: Int = 2\nvar p = P(x=3, y=-4)\np = P(\n    x=5,\n    y=[1, 2][0])\nprint(p.x)\n'
+        path.write_text(named)
+        result=invoke('fmt',path)
+        assert result.returncode==0 and path.read_text()==named_canonical, repr(path.read_text())+result.stdout+result.stderr
+        assert invoke('fmt','--check',path).returncode==0
         for source in ['enum F:\n  A\n  B\nlet x = match F.A: # map\n  # branch\n  case F.A:\n    1 # one\n  case F.B:\n    2\n', '', '# only\n# second', 'let x = [1,\n  2] # list\n', 'let x = -1 + +2\n', 'let x = "# a  b" # trailing\n', 'class C:\n  # field\n  let x: Int = 1\n  # method\n  func f() -> Int:\n    # nested\n    return x\n# top EOF' ]:
             path.write_text(source)
             result=invoke('fmt',path)
