@@ -274,7 +274,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const uri = vscode.Uri.from({scheme: 'sprig-doc', path: `/${name}.md`});
     pages.set(uri.path, markdown); changed.fire(uri);
     try { await vscode.commands.executeCommand('markdown.showPreviewToSide', uri); }
-    catch { await vscode.window.showTextDocument(uri, {viewColumn: vscode.ViewColumn.Beside, preview: true}); }
+    catch { await vscode.window.showTextDocument(uri, {viewColumn: vscode.ViewColumn.Beside, preview: true, preserveFocus: true}); }
     return markdown;
   }
   const queryRoot = () => {

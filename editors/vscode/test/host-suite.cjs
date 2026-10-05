@@ -35,6 +35,7 @@ exports.run=async()=>{
  assert.ok(actions.some(a=>a.title==='Explain SPR-TYPE-ASSIGN'));assert.ok(actions.some(a=>a.title==='Show sprig help types'));
  const page=await vscode.commands.executeCommand('sprig.explainDiagnostic','SPR-TYPE-ASSIGN');assert.match(page,/^# SPR-TYPE-ASSIGN\n/);
  const topic=await vscode.commands.executeCommand('sprig.showHelp','nullability');assert.match(topic,/`sprig help nullability`/);
+ await vscode.window.showTextDocument(doc); // rendered pages may take focus, depending on the VS Code version
  const edit=new vscode.WorkspaceEdit();edit.replace(doc.uri,new vscode.Range(0,0,doc.lineCount,0),'import "@std/text.spr" as text\nprint(text.trim("  hello extension host  "))\n');await vscode.workspace.applyEdit(edit);await doc.save();
  await vscode.commands.executeCommand('sprig.check');assert.equal(vscode.languages.getDiagnostics(doc.uri).length,0);
  const ran=await vscode.commands.executeCommand('sprig.run');assert.equal(ran.exitCode,0);assert.equal(ran.programOutput.trim(),'hello extension host');
