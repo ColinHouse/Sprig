@@ -61,7 +61,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 
 ## JSON 输出
 
-几乎每个命令都能加 `--json`。加了以后，标准输出里只有一个 JSON 文档，程序运行失败时也是这样。程序打印的内容放在 `programOutput` 里，错误放在 `diagnostics` 里，两者不会混在一起。
+几乎每个命令都能加 `--json`。加了以后，标准输出里只有一个 JSON 文档，程序运行失败时也是这样。程序打印的内容放在 `programOutput` 里，错误放在 `diagnostics` 里，两者不会混在一起。比 v0.5.0-beta.1 新的版本里，程序写到标准错误的内容放在 `programErrorOutput` 里；用 `--json` 运行时，程序读到的标准输入是空的。
 
 成功运行一个打招呼的小程序：
 
@@ -128,7 +128,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 - 命令行参数写错，或者工具本身出错，返回 `2`。
 - 源码错误和运行时错误，一般返回 `1`。
-- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。程序以非零状态退出、又没有抛出 JVM 异常时，Sprig 会报 `SPR-PROGRAM-EXIT`，程序的退出码记在 JSON 的 `data.programExitCode` 里。
+- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。比 v0.5.0-beta.1 新的版本里，程序用 `@std/process` 的 `process.exit` 指定退出码；同一个模块还有写标准错误的 `print_error`，以及读标准输入的 `read_line`、`read_lines`、`read_all`。程序以非零状态退出、又没有抛出 JVM 异常时，Sprig 会报 `SPR-PROGRAM-EXIT`，程序的退出码记在 JSON 的 `data.programExitCode` 里。
 
 ## 给 AI 助手用
 

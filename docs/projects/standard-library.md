@@ -28,7 +28,7 @@ signatures. It works from any directory, with or without a project.
 | Module | Public operations |
 |---|---|
 | `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
-| `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?` |
+| `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?`; `exit(Int)`, `print_error(String)`; `read_line() -> String?`, `read_lines() -> List[String]`, `read_all() -> String` |
 | `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter` |
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
 | `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by` |
@@ -183,6 +183,55 @@ let large = lists.find[Order](orders, fn(o: Order) => o.cents > 400)
 if large != null:
     print(large.item)
 ```
+
+## Command-line programs: input, errors and exit status
+
+`process` gives a program the three things a command-line tool needs besides
+its arguments.
+
+- `exit(status)` ends the program with an exit status from 0 to 255, after
+  flushing what was printed. 0 means success. A status outside that range is a
+  bug in the caller and stops the program with `SPR-RUNTIME-EXCEPTION`. The
+  checker does not know that `exit` never returns, so a function that must
+  return a value still needs a `return` or a `throw` after it.
+- `print_error(text)` writes one line to standard error, so messages for the
+  person running the tool stay out of the program's output.
+- `read_line()` returns the next line of standard input without its line
+  ending, or `null` at the end of input. `read_lines()` returns every
+  remaining line as a list. `read_all()` returns everything that is left,
+  line endings included. A line ends with LF, CRLF or CR, and the last line
+  needs no ending. All three declare `throws Error`.
+
+Piped or redirected input is read as UTF-8, and bytes that are not UTF-8 are
+an `Error`, not a replacement character. Input typed at a terminal uses the
+terminal's encoding, such as GBK on a Chinese Windows console, when both
+standard input and standard output are the terminal.
+
+```sprig
+import "@std/process.spr" as process
+
+func total(lines: List[String]) -> Int throws Error:
+    var sum = 0
+    for line in lines:
+        let amount = line.toIntOrNull()
+        if amount == null:
+            throw Error("not a number: " + line)
+        sum += amount
+    return sum
+
+try:
+    print(total(process.read_lines()))
+catch problem: Error:
+    process.print_error(problem.message)
+    process.exit(1)
+```
+
+`sprig run` passes its own standard input to the program and forwards the
+program's exit status. It shows what the program wrote to standard error after
+the program ends, and for a nonzero status adds an `SPR-PROGRAM-EXIT`
+diagnostic. With `--json`, and in `sprig test`, the program gets an empty
+standard input, and `sprig run --json` carries what the program wrote to
+standard error in `programErrorOutput`, next to `programOutput`.
 
 ## Nullable values
 

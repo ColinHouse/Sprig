@@ -8,6 +8,66 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def check_process_io(launcher):
+    """Standard input, standard error and exit status of @std/process.spr, through real pipes."""
+    import json
+    source = str(ROOT / 'tests/stdlib/process_io.spr')
+
+    def run(mode, *extra, stdin=b'', as_json=False):
+        command = [launcher, 'run', source] + (['--json'] if as_json else []) + ['--', mode, *extra]
+        result = subprocess.run(command, cwd=ROOT, input=stdin, capture_output=True)
+        # Bytes in, bytes out: line endings and UTF-8 are part of the contract.
+        return result.returncode, result.stdout.decode('utf-8').replace('\r\n', '\n'), \
+            result.stderr.decode('utf-8').replace('\r\n', '\n')
+
+    # read_line: LF and CRLF end a line, text is UTF-8, the last line needs no ending, null at the end.
+    code, out, err = run('line', stdin='first\r\n第二行 😀\n\nlast'.encode('utf-8'))
+    assert (code, err) == (0, ''), (code, out, err)
+    assert out.splitlines() == [
+        '1 [first] 5: 102 105 114 115 116',
+        '2 [第二行 😀] 5: 31532 20108 34892 32 128512',
+        '3 [] 0:',
+        '4 [last] 4: 108 97 115 116',
+        'end after 4', 'true', '0',
+    ], repr(out)
+    code, out, err = run('line')
+    assert (code, out.splitlines(), err) == (0, ['end after 0', 'true', '0'], ''), (code, out, err)
+    # read_lines: every remaining line, no element for the final line ending, then nothing left.
+    code, out, err = run('lines', stdin=b'a\nb\r\n\nc\n')
+    assert (code, out.splitlines(), err) == (0, ['4', '[a]', '[b]', '[]', '[c]', '0'], ''), (code, out, err)
+    code, out, err = run('lines', stdin=b'a\rb')  # a lone CR ends a line too
+    assert (code, out.splitlines(), err) == (0, ['2', '[a]', '[b]', '0'], ''), (code, out, err)
+    # read_all after read_line: the rest, with its line endings unchanged (13 10 is CR LF).
+    code, out, err = run('rest', stdin=b'head\r\ntail\r\nx')
+    assert (code, out.splitlines(), err) == (0, ['[head]', '7: 116 97 105 108 13 10 120'], ''), (code, out, err)
+    # Bytes that are not UTF-8 are an Error, never a replacement character.
+    code, out, err = run('lines', stdin=b'ok\n\xff\xfe\n')
+    assert code == 1 and out == '' and 'Cannot read standard input: it is not valid UTF-8' in err, (code, out, err)
+
+    # print_error goes to standard error; exit flushes and sets the status the run command forwards.
+    code, out, err = run('fail')
+    assert code == 3 and out == 'before\n', (code, out, err)
+    assert err.splitlines()[0] == 'problem: 说明 😀' and 'SPR-PROGRAM-EXIT' in err, err
+    code, out, err = run('ok')
+    assert (code, out, err) == (0, 'done\n', 'note\n'), (code, out, err)
+    code, out, err = run('status', '255')
+    assert code == 255 and 'Program exited with status 255' in err, (code, out, err)
+    code, out, err = run('status', '300')
+    assert code == 1 and 'SPR-RUNTIME-EXCEPTION' in err \
+        and 'Exit status must be between 0 and 255: 300' in err, (code, out, err)
+
+    # --json: standard error is carried next to programOutput, and standard input is empty.
+    code, out, err = run('fail', as_json=True)
+    envelope = json.loads(out)
+    assert code == 3 and envelope['exitCode'] == 3, (code, out, err)
+    assert envelope['programOutput'].replace('\r\n', '\n') == 'before\n', envelope
+    assert envelope['programErrorOutput'].replace('\r\n', '\n') == 'problem: 说明 😀\n', envelope
+    assert [d['code'] for d in envelope['diagnostics']] == ['SPR-PROGRAM-EXIT'], envelope
+    code, out, err = run('lines', stdin=b'not delivered\n', as_json=True)
+    envelope = json.loads(out)
+    assert code == 0 and envelope['programOutput'].replace('\r\n', '\n') == '0\n0\n', (code, out, err)
+    assert 'programErrorOutput' not in envelope, envelope
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--launcher', type=Path, default=ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig'))
@@ -98,6 +158,7 @@ def main():
         'flag: expected true, got false',
         r'body: expected "a\nb", got "a\r\nb\t\"q\"\\"',
     ], repr(helpers_result.stdout)
+    check_process_io(launcher)
     practical_outputs = []
     for timezone in ('UTC', 'Pacific/Honolulu'):
         with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:
@@ -117,7 +178,7 @@ def main():
             ], (timezone, repr(lines))
             practical_outputs.append(lines)
     assert practical_outputs[0] == practical_outputs[1], practical_outputs
-    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks and recursive JSON contracts passed')
+    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks, process input/output/exit and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()

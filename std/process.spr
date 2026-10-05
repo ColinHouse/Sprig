@@ -18,3 +18,37 @@ func argument(index: Int) -> String throws Error:
 
 func environment(name: String) -> String?:
     return HostSystem.environment(name)
+
+# Ends the program with an exit status from 0 to 255; 0 means success. Text
+# printed so far is flushed first. The checker does not know that exit never
+# returns, so a function that must return a value still needs a return or a
+# throw after it.
+func exit(status: Int) -> Unit:
+    HostSystem.exit(status)
+
+# Writes one line to standard error, for messages that are not program output.
+func print_error(text: String) -> Unit:
+    HostSystem.printError(text)
+
+# The next line of standard input without its line ending, or null at the end
+# of input. Piped or redirected input is read as UTF-8; input typed at a
+# terminal uses the terminal's encoding.
+func read_line() -> String? throws Error:
+    return HostSystem.readLine()
+
+# Every remaining line of standard input, without line endings.
+func read_lines() -> List[String] throws Error:
+    let lines: MutableList[String] = []
+    while true:
+        let line = HostSystem.readLine()
+        if line == null:
+            break
+        lines.append(line)
+    return lines.toList()
+
+# Everything left on standard input, line endings included.
+func read_all() -> String throws Error:
+    let text = HostSystem.readAll()
+    if text != null:
+        return text
+    throw Error("host read_all returned null")
