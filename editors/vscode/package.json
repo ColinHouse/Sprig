@@ -110,6 +110,10 @@
       {
         "command": "sprig.runTests",
         "title": "Sprig: Run Tests"
+      },
+      {
+        "command": "sprig.showHelp",
+        "title": "Sprig: Show Help Topic"
       }
     ],
     "configuration": {

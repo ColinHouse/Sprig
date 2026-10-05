@@ -4,15 +4,24 @@ import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { CompilerResult, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
 import { mapRange } from './diagnostics';
+import { DIAGNOSTIC_DOCS_URL, ExplainJson, HelpJson, explainMarkdown, helpMarkdown } from './markdown';
 import { registerLanguageFeatures } from './language';
 import { Queries } from './queries';
 import { registerTesting } from './testing';
+
+const HELP_TOPICS_LIST = ['language','types','strings','functions','classes','variants','match','nullability','errors','collections',
+  'numerics','modules','jvm','conform','generics','projects','dependencies','agents','upgrade','fmt','testing','wrap'];
+
+/** The plain code of a diagnostic, whether or not it carries a documentation link. */
+export const codeOf = (code: vscode.Diagnostic['code']): string | undefined =>
+  code === undefined ? undefined : typeof code === 'object' ? String(code.value) : String(code);
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Sprig');
   const diagnostics = vscode.languages.createDiagnosticCollection('sprig');
   const jobs = new Map<string, AbortController>();
   const groups = new Map<string, Map<string, vscode.Diagnostic[]>>();
+  const helpTopics = new Map<string, string>();
   const saved = (doc: vscode.TextDocument) => doc.languageId === 'sprig' && doc.uri.scheme === 'file';
   const settings = (uri: vscode.Uri) => vscode.workspace.getConfiguration('sprig', uri);
   context.subscriptions.push(output, diagnostics, {dispose: () => {for(const job of jobs.values()) job.abort();}});
@@ -34,9 +43,10 @@ export function activate(context: vscode.ExtensionContext): void {
       if(d.expectedType || d.actualType) message += `\nExpected: ${d.expectedType ?? '?'}; actual: ${d.actualType ?? '?'}.`;
       if(d.hint) message += `\n${d.hint}`;
       const item = new vscode.Diagnostic(range,message,d.severity==='warning' ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error);
-      item.source = 'Sprig'; item.code = d.code;
+      item.source = 'Sprig'; item.code = {value: d.code, target: vscode.Uri.parse(DIAGNOSTIC_DOCS_URL)};
+      if(d.relatedHelp) helpTopics.set(d.code, d.relatedHelp);
       const list = entries.get(uri.toString()) ?? [];
-      if(!list.some(x=>x.code===item.code && x.message===item.message && x.range.isEqual(item.range))) list.push(item);
+      if(!list.some(x=>codeOf(x.code)===d.code && x.message===item.message && x.range.isEqual(item.range))) list.push(item);
       entries.set(uri.toString(),list);
     }
     if(owner.signal.aborted || jobs.get(key)!==owner) return;
@@ -199,21 +209,46 @@ export function activate(context: vscode.ExtensionContext): void {
       output.appendLine(JSON.stringify(result.json,null,2));output.show(true);
     } catch(e) {void vscode.window.showErrorMessage(String(e));}
   }));
+  // Rendered explanations and help open as read-only Markdown pages.
+  const pages = new Map<string, string>(), changed = new vscode.EventEmitter<vscode.Uri>();
+  context.subscriptions.push(changed, vscode.workspace.registerTextDocumentContentProvider('sprig-doc', {
+    onDidChange: changed.event, provideTextDocumentContent: uri => pages.get(uri.path) ?? '',
+  }));
+  async function showPage(name: string, markdown: string): Promise<string> {
+    const uri = vscode.Uri.from({scheme: 'sprig-doc', path: `/${name}.md`});
+    pages.set(uri.path, markdown); changed.fire(uri);
+    try { await vscode.commands.executeCommand('markdown.showPreviewToSide', uri); }
+    catch { await vscode.window.showTextDocument(uri, {viewColumn: vscode.ViewColumn.Beside, preview: true}); }
+    return markdown;
+  }
+  const queryRoot = () => {
+    const doc = vscode.window.activeTextEditor?.document;
+    return doc?.uri.scheme==='file' ? projectRoot(doc.uri.fsPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+  };
   context.subscriptions.push(vscode.commands.registerCommand('sprig.explainDiagnostic',async(code?: string)=>{
     if(!code) code=await vscode.window.showInputBox({prompt:'Sprig diagnostic code',placeHolder:'SPR-TYPE-ASSIGN'});
-    if(!code)return;
-    if(!vscode.workspace.isTrusted)return;
-    const doc=vscode.window.activeTextEditor?.document;if(!doc||!/^SPR-[A-Z0-9-]+$/.test(code))return;
-    try {
-      const cwd=projectRoot(doc.uri.fsPath);const executable=resolveCompiler(settings(doc.uri).get<string>('compilerPath',''),cwd);
-      const result=await invoke(executable,['explain',code,'--json'],cwd);output.appendLine(JSON.stringify(result.json,null,2));output.show(true);
-    } catch(e) {void vscode.window.showErrorMessage(String(e));}
+    if(!code || !/^SPR-[A-Z0-9-]+$/.test(code)) return;
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to query the Sprig compiler.');return;}
+    try { return await showPage(code, explainMarkdown(await query(['explain',code,'--json'],queryRoot()) as unknown as ExplainJson)); }
+    catch(e) {void vscode.window.showErrorMessage(String(e));return;}
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.showHelp',async(topic?: string)=>{
+    topic ??= await vscode.window.showQuickPick(HELP_TOPICS_LIST,{placeHolder:'Sprig help topic'});
+    if(!topic) return;
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to query the Sprig compiler.');return;}
+    try { return await showPage(`help-${topic}`, helpMarkdown(await query(['help',topic,'--json'],queryRoot()) as unknown as HelpJson)); }
+    catch(e) {void vscode.window.showErrorMessage(String(e));return;}
   }));
   context.subscriptions.push(vscode.languages.registerCodeActionsProvider('sprig',{
     provideCodeActions(_doc,_range,ctx) {
-      return ctx.diagnostics.filter(d=>d.source==='Sprig' && typeof d.code==='string').map(d=>{
-        const action=new vscode.CodeAction(`Explain ${d.code}`,vscode.CodeActionKind.QuickFix);
-        action.command={command:'sprig.explainDiagnostic',title:action.title,arguments:[d.code]};action.diagnostics=[d];return action;
+      return ctx.diagnostics.filter(d=>d.source==='Sprig' && codeOf(d.code)).flatMap(d=>{
+        const code=codeOf(d.code)!, explain=new vscode.CodeAction(`Explain ${code}`,vscode.CodeActionKind.QuickFix);
+        explain.command={command:'sprig.explainDiagnostic',title:explain.title,arguments:[code]};explain.diagnostics=[d];
+        const topic=helpTopics.get(code);
+        if(!topic) return [explain];
+        const help=new vscode.CodeAction(`Show sprig help ${topic}`,vscode.CodeActionKind.QuickFix);
+        help.command={command:'sprig.showHelp',title:help.title,arguments:[topic]};help.diagnostics=[d];
+        return [explain,help];
       });
     }
   },{providedCodeActionKinds:[vscode.CodeActionKind.QuickFix]}));

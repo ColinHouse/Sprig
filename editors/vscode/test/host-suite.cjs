@@ -3,6 +3,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vscode=require('vscode');
 exports.run=async()=>{
+ const codeOf=d=>typeof d.code==='object'?d.code.value:d.code;
  const root=process.env.SPRIG_TEST_ROOT;const folder=vscode.workspace.workspaceFolders[0].uri.fsPath;
  const ext=vscode.extensions.getExtension('ColinHouse.sprig-language');assert.ok(ext,'extension must be installed/registered');await ext.activate();
  const config=vscode.workspace.getConfiguration('sprig');await config.update('compilerPath',path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig'),vscode.ConfigurationTarget.Workspace);
@@ -27,7 +28,13 @@ exports.run=async()=>{
  }
  const file=path.join(folder,'hello 中文.spr');fs.writeFileSync(file,'let bad: Int = "wrong"\n');
  let doc=await vscode.workspace.openTextDocument(file);await vscode.window.showTextDocument(doc);assert.equal(doc.languageId,'sprig');
- let checked=await vscode.commands.executeCommand('sprig.check');assert.equal(checked.exitCode,1);assert.ok(vscode.languages.getDiagnostics(doc.uri).some(d=>d.code==='SPR-TYPE-ASSIGN'));
+ let checked=await vscode.commands.executeCommand('sprig.check');assert.equal(checked.exitCode,1);assert.ok(vscode.languages.getDiagnostics(doc.uri).some(d=>codeOf(d)==='SPR-TYPE-ASSIGN'));
+ const linked=vscode.languages.getDiagnostics(doc.uri).find(d=>codeOf(d)==='SPR-TYPE-ASSIGN');
+ assert.ok(String(linked.code.target).endsWith('/reference/tooling/diagnostic-codes'),'diagnostic code links to the docs');
+ const actions=await vscode.commands.executeCommand('vscode.executeCodeActionProvider',doc.uri,linked.range);
+ assert.ok(actions.some(a=>a.title==='Explain SPR-TYPE-ASSIGN'));assert.ok(actions.some(a=>a.title==='Show sprig help types'));
+ const page=await vscode.commands.executeCommand('sprig.explainDiagnostic','SPR-TYPE-ASSIGN');assert.match(page,/^# SPR-TYPE-ASSIGN\n/);
+ const topic=await vscode.commands.executeCommand('sprig.showHelp','nullability');assert.match(topic,/`sprig help nullability`/);
  const edit=new vscode.WorkspaceEdit();edit.replace(doc.uri,new vscode.Range(0,0,doc.lineCount,0),'import "@std/text.spr" as text\nprint(text.trim("  hello extension host  "))\n');await vscode.workspace.applyEdit(edit);await doc.save();
  await vscode.commands.executeCommand('sprig.check');assert.equal(vscode.languages.getDiagnostics(doc.uri).length,0);
  const ran=await vscode.commands.executeCommand('sprig.run');assert.equal(ran.exitCode,0);assert.equal(ran.programOutput.trim(),'hello extension host');
@@ -37,7 +44,7 @@ exports.run=async()=>{
  await vscode.window.showTextDocument(doc);
  const bad=new vscode.WorkspaceEdit();bad.replace(doc.uri,new vscode.Range(0,0,doc.lineCount,0),'let wrong: Int = "bad"\n');await vscode.workspace.applyEdit(bad);await doc.save();
  for(let i=0;i<100 && !vscode.languages.getDiagnostics(doc.uri).length;i++)await new Promise(r=>setTimeout(r,100));
- assert.ok(vscode.languages.getDiagnostics(doc.uri).some(d=>d.code==='SPR-TYPE-ASSIGN'),'on-save diagnostics');
+ assert.ok(vscode.languages.getDiagnostics(doc.uri).some(d=>codeOf(d)==='SPR-TYPE-ASSIGN'),'on-save diagnostics');
  const repaired=new vscode.WorkspaceEdit();repaired.replace(doc.uri,new vscode.Range(0,0,doc.lineCount,0),'print("repaired save")\n');await vscode.workspace.applyEdit(repaired);await doc.save();
  for(let i=0;i<100 && vscode.languages.getDiagnostics(doc.uri).length;i++)await new Promise(r=>setTimeout(r,100));
  assert.equal(vscode.languages.getDiagnostics(doc.uri).length,0,'on-save repair clears errors');
@@ -50,8 +57,8 @@ exports.run=async()=>{
  const main=path.join(project,'src','main.spr');fs.writeFileSync(main,'import "child.spr" as child\nprint("project")\n');
  const adapter=require(path.join(ext.extensionPath,'out/compiler.js'));const locked=await adapter.invoke(path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig'),['resolve','--json'],project);assert.equal(locked.json.exitCode,0);
  const mainDoc=await vscode.workspace.openTextDocument(main);await vscode.window.showTextDocument(mainDoc);const projectChecked=await vscode.commands.executeCommand('sprig.check');assert.equal(projectChecked.exitCode,1);
- for(let i=0;i<50 && !vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN');i++)await new Promise(r=>setTimeout(r,100));
- assert.ok(vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>d.code==='SPR-TYPE-ASSIGN'),JSON.stringify({expectedUri:vscode.Uri.file(child).toString(),result:projectChecked,actual:vscode.languages.getDiagnostics().map(([uri,ds])=>[uri.toString(),ds.map(d=>({code:d.code,message:d.message}))])}));
+ for(let i=0;i<50 && !vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>codeOf(d)==='SPR-TYPE-ASSIGN');i++)await new Promise(r=>setTimeout(r,100));
+ assert.ok(vscode.languages.getDiagnostics(vscode.Uri.file(child)).some(d=>codeOf(d)==='SPR-TYPE-ASSIGN'),JSON.stringify({expectedUri:vscode.Uri.file(child).toString(),result:projectChecked,actual:vscode.languages.getDiagnostics().map(([uri,ds])=>[uri.toString(),ds.map(d=>({code:codeOf(d),message:d.message}))])}));
  assert.ok(vscode.languages.getDiagnostics(doc.uri).length,'independent project diagnostics retained');
  const unused=path.join(project,'src','unused.spr');fs.writeFileSync(unused,'print(\"unused\")\n');await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(unused));
  assert.equal((await vscode.commands.executeCommand('sprig.check')).exitCode,1,'entry graph failure must survive a clean unused-file check');
