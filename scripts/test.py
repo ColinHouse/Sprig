@@ -70,6 +70,7 @@ def main():
               "tests/adversarial/v08/check_projects.py"]
     suites += ["tests/adversarial/regressions/check_semantics.py",
                "tests/adversarial/regressions/check_type_names.py",
+               "tests/adversarial/regressions/check_java_identifiers.py",
                "tests/adversarial/regressions/check_layout_lines.py",
                "tests/adversarial/regressions/check_jvm_bridges.py",
                "tests/adversarial/regressions/check_properties.py",

@@ -46,7 +46,21 @@ public final class JavaGenerator {
             "for", "goto", "if", "implements", "import", "instanceof", "int", "interface", "long", "native",
             "new", "package", "private", "protected", "public", "return", "short", "static", "strictfp",
             "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try", "void",
-            "volatile", "while", "true", "false", "null", "_");
+            "volatile", "while", "true", "false", "null", "_",
+            // Restricted identifiers: legal for some Java declarations but not as
+            // type names (record, var, yield, sealed, permits), so never emitted.
+            "record", "var", "yield", "sealed", "permits");
+
+    /**
+     * Members every generated class inherits from java.lang.Object or receives
+     * as generated value methods. A Sprig method with one of these names is
+     * renamed instead of (illegally) overriding or clashing with them.
+     */
+    private static final Set<String> OBJECT_MEMBER_NAMES = Set.of(
+            "clone", "equals", "finalize", "getClass", "hashCode", "notify", "notifyAll", "toString", "wait");
+
+    /** Package roots that generated code always spells as fully qualified names. */
+    private static final Set<String> BUILTIN_PACKAGE_ROOTS = Set.of("java", "javax", "sprig");
 
     public static final class Output {
         public final Map<String, String> sources = new LinkedHashMap<>();
@@ -58,6 +72,11 @@ public final class JavaGenerator {
     private final Compilation compilation;
     private final Diagnostics diagnostics;
     private final Output output = new Output();
+    // A Java variable or member type named like a package root obscures that
+    // package (JLS 6.4.2), breaking every fully qualified name below it.
+    private final Set<String> reservedRoots;
+    private final Set<String> referencedRoots = new java.util.HashSet<>();
+    private final Set<String> emittedNames = new java.util.HashSet<>();
     private final Map<Decl, String> typeNames = new IdentityHashMap<>();
     private final Map<Module, String> moduleClassNames = new IdentityHashMap<>();
     private final Map<Symbol, String> localNames = new HashMap<>();
@@ -69,8 +88,13 @@ public final class JavaGenerator {
     private Type currentReturnType;
 
     public JavaGenerator(Compilation compilation, Diagnostics diagnostics) {
+        this(compilation, diagnostics, BUILTIN_PACKAGE_ROOTS);
+    }
+
+    private JavaGenerator(Compilation compilation, Diagnostics diagnostics, Set<String> reservedRoots) {
         this.compilation = compilation;
         this.diagnostics = diagnostics;
+        this.reservedRoots = reservedRoots;
     }
 
     public Output generate() {
@@ -91,6 +115,17 @@ public final class JavaGenerator {
         }
         if (compilation.main != null) {
             output.mainClass = PACKAGE + "." + moduleClassNames.get(compilation.main);
+        }
+        // JVM package roots are only known once their fully qualified names have
+        // been emitted. If a user identifier was emitted with the same spelling,
+        // generate again with those roots reserved; the second pass emits the
+        // same JVM names, so it cannot discover new collisions.
+        Set<String> collisions = new java.util.HashSet<>(referencedRoots);
+        collisions.retainAll(emittedNames);
+        if (!collisions.isEmpty()) {
+            Set<String> roots = new java.util.HashSet<>(reservedRoots);
+            roots.addAll(referencedRoots);
+            return new JavaGenerator(compilation, diagnostics, Set.copyOf(roots)).generate();
         }
         return output;
     }
@@ -124,7 +159,7 @@ public final class JavaGenerator {
                 usedNames.add(name);
                 if (decl instanceof Decl.VariantDecl variant) {
                     for (Decl.VariantCase variantCase : variant.cases) {
-                        usedNames.add(name + "$" + variantCase.name);
+                        usedNames.add(name + "$" + mangle(variantCase.name));
                     }
                 }
                 typeNames.put(decl, PACKAGE + "." + name);
@@ -138,7 +173,7 @@ public final class JavaGenerator {
         }
         if (decl instanceof Decl.VariantDecl variant) {
             for (Decl.VariantCase variantCase : variant.cases) {
-                if (usedNames.contains(name + "$" + variantCase.name)) {
+                if (usedNames.contains(name + "$" + mangle(variantCase.name))) {
                     return false;
                 }
             }
@@ -182,12 +217,29 @@ public final class JavaGenerator {
         return sb.isEmpty() ? "anon" : sb.toString();
     }
 
-    private static String mangle(String name) {
-        if (JAVA_RESERVED.contains(name) || name.equals("sprig") || name.equals("java")
-                || name.equals("javax")) {
+    private String mangle(String name) {
+        if (JAVA_RESERVED.contains(name) || reservedRoots.contains(name)) {
             return name + "$";
         }
+        emittedNames.add(name);
         return name;
+    }
+
+    /**
+     * Sprig method names that java.lang.Object or the generated value methods
+     * already own are renamed. Foreign conformance methods keep their name: it
+     * is the Java interface method they implement.
+     */
+    private String methodName(Decl.Func func) {
+        if (!func.foreignBoundary && OBJECT_MEMBER_NAMES.contains(func.name)) {
+            return func.name + "$";
+        }
+        return mangle(func.name);
+    }
+
+    /** Text for a generated // comment: no line breaks and no Java Unicode escapes. */
+    private static String commentText(Object text) {
+        return String.valueOf(text).replace("\\", "\\\\").replace('\n', ' ').replace('\r', ' ');
     }
 
     private String localName(Symbol symbol) {
@@ -288,7 +340,7 @@ public final class JavaGenerator {
             return typeNames.get(variantType.decl);
         }
         if (type instanceof VariantCaseType caseType) {
-            return typeNames.get(caseType.variant) + "." + caseType.variantCase.name;
+            return typeNames.get(caseType.variant) + "." + mangle(caseType.variantCase.name);
         }
         if (type instanceof JavaType javaType) {
             if (javaType.args.isEmpty() || containsTypeParameter(javaType)) {
@@ -352,15 +404,17 @@ public final class JavaGenerator {
         return javaType(type);
     }
 
-    private static String sourceName(Class<?> clazz) {
+    private String sourceName(Class<?> clazz) {
         if (clazz.isArray()) {
             return sourceName(clazz.getComponentType()) + "[]";
         }
         String canonical = clazz.getCanonicalName();
-        if (canonical != null) {
-            return canonical;
+        String name = canonical != null ? canonical : clazz.getName().replace('$', '.');
+        int dot = name.indexOf('.');
+        if (dot > 0) {
+            referencedRoots.add(name.substring(0, dot));
         }
-        return clazz.getName().replace('$', '.');
+        return name;
     }
 
     // ------------------------------------------------------------------
@@ -371,17 +425,29 @@ public final class JavaGenerator {
         JavaWriter w = writer(decl.span);
         w.line("package " + PACKAGE + ";");
         w.blank();
-        w.line("// Sprig enum " + currentModule.name + ":" + decl.span.display());
+        w.line("// Sprig enum " + commentText(currentModule.name) + ":" + decl.span.display());
         w.map(decl.span);
-        StringBuilder line = new StringBuilder("public enum " + simpleName(typeNames.get(decl)) + " { ");
-        for (int i = 0; i < decl.cases.size(); i++) {
-            if (i > 0) {
-                line.append(", ");
+        String enumName = simpleName(typeNames.get(decl));
+        boolean renamed = decl.cases.stream().anyMatch(name -> !mangle(name).equals(name));
+        if (!renamed) {
+            w.line("public enum " + enumName + " { " + String.join(", ", decl.cases) + " }");
+        } else {
+            // A case spelled like a Java keyword gets a legal constant name; the
+            // constant still prints with its Sprig spelling.
+            w.open("public enum " + enumName);
+            List<String> constants = new ArrayList<>();
+            for (String name : decl.cases) {
+                constants.add(mangle(name) + "(\"" + name + "\")");
             }
-            line.append(decl.cases.get(i));
+            w.line(String.join(", ", constants) + ";");
+            w.blank();
+            w.line("private final java.lang.String sprigName;");
+            w.blank();
+            w.line(enumName + "(java.lang.String sprigName) { this.sprigName = sprigName; }");
+            w.blank();
+            w.line("@Override public java.lang.String toString() { return sprigName; }");
+            w.close();
         }
-        line.append(" }");
-        w.line(line.toString());
         emitFile(PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java", w);
     }
 
@@ -389,7 +455,7 @@ public final class JavaGenerator {
         JavaWriter w = writer(decl.span);
         w.line("package " + PACKAGE + ";");
         w.blank();
-        w.line("// Sprig variant " + currentModule.name + ":" + decl.span.display());
+        w.line("// Sprig variant " + commentText(currentModule.name) + ":" + decl.span.display());
         w.map(decl.span);
         w.open("public interface " + simpleName(typeNames.get(decl)));
         for (Decl.VariantCase variantCase : decl.cases) {
@@ -401,7 +467,7 @@ public final class JavaGenerator {
     }
 
     private void generateVariantCase(JavaWriter w, Decl.VariantDecl variant, Decl.VariantCase variantCase) {
-        String className = variantCase.name;
+        String className = mangle(variantCase.name);
         w.blank();
         w.line("// Sprig case " + variant.name + "." + variantCase.name);
         w.map(variantCase.span);
@@ -448,8 +514,9 @@ public final class JavaGenerator {
         w.blank();
         w.open("@Override public boolean equals(java.lang.Object other)");
         w.line("if (this == other) return true;");
-        w.line("if (!(other instanceof " + variantCase.name + ")) return false;");
-        w.line(variantCase.name + " that = (" + variantCase.name + ") other;");
+        String className = mangle(variantCase.name);
+        w.line("if (!(other instanceof " + className + ")) return false;");
+        w.line(className + " that = (" + className + ") other;");
         if (variantCase.fields.isEmpty()) {
             w.line("return true;");
         } else {
@@ -492,7 +559,7 @@ public final class JavaGenerator {
         JavaWriter w = writer(classDecl.span);
         w.line("package " + PACKAGE + ";");
         w.blank();
-        w.line("// Sprig class " + currentModule.name + ":" + classDecl.span.display());
+        w.line("// Sprig class " + commentText(currentModule.name) + ":" + classDecl.span.display());
         w.map(classDecl.span);
         StringBuilder header = new StringBuilder("public final class ")
                 .append(simpleName(typeNames.get(decl)));
@@ -564,7 +631,7 @@ public final class JavaGenerator {
         JavaWriter w = writer(null);
         w.line("package " + PACKAGE + ";");
         w.blank();
-        w.line("// Sprig module " + module.name + " (" + module.path.getFileName() + ")");
+        w.line("// Sprig module " + commentText(module.name) + " (" + commentText(module.path.getFileName()) + ")");
         w.map(null);
         w.open("public final class " + moduleClassNames.get(module));
         w.line("private " + moduleClassNames.get(module) + "() {");
@@ -645,7 +712,7 @@ public final class JavaGenerator {
         currentReturnType = func.returnType;
         lambdaDepth = 0;
         w.map(func.span);
-        w.line("// Sprig " + currentModule.path.getFileName() + ":" + func.span.display()
+        w.line("// Sprig " + commentText(currentModule.path.getFileName()) + ":" + func.span.display()
                 + (owner == null ? " func " + func.name : " method " + owner.name + "." + func.name));
         StringBuilder sig = new StringBuilder();
         if (owner == null) {
@@ -654,7 +721,7 @@ public final class JavaGenerator {
             sig.append("public ");
         }
         sig.append(func.returnType == NativeType.UNIT ? "void" : javaType(func.returnType));
-        sig.append(' ').append(owner == null ? fnName(func) : mangle(func.name)).append('(');
+        sig.append(' ').append(owner == null ? fnName(func) : methodName(func)).append('(');
         for (int i = 0; i < func.params.size(); i++) {
             if (i > 0) {
                 sig.append(", ");
@@ -905,7 +972,7 @@ public final class JavaGenerator {
         for (Stmt.Match.Branch branch : match.branches) {
             String condition;
             if (match.matchedType instanceof EnumType enumType) {
-                condition = temp + " == " + typeNames.get(enumType.decl) + "." + branch.caseName;
+                condition = temp + " == " + typeNames.get(enumType.decl) + "." + mangle(branch.caseName);
             } else if (concreteScrutinee) {
                 condition = null;
                 unconditional = true;
@@ -1011,7 +1078,7 @@ public final class JavaGenerator {
         boolean concrete = match.matchedType instanceof VariantCaseType;
         for (var branch : match.branches) {
             if (match.matchedType instanceof EnumType enumType) {
-                code.append("if (").append(temp).append(" == ").append(typeNames.get(enumType.decl)).append(".").append(branch.caseName).append(") { ");
+                code.append("if (").append(temp).append(" == ").append(typeNames.get(enumType.decl)).append(".").append(mangle(branch.caseName)).append(") { ");
             } else if (concrete) code.append("{ ");
             else {
                 code.append("if (").append(temp).append(" instanceof ").append(javaType(branch.binderType));
@@ -1054,7 +1121,7 @@ public final class JavaGenerator {
                 return code;
             }
             case ENUM_CASE:
-                return typeNames.get(field.enumDecl) + "." + field.enumCaseName;
+                return typeNames.get(field.enumDecl) + "." + mangle(field.enumCaseName);
             case VARIANT_CASE_VALUE:
                 if (field.payloadless) {
                     return "new " + javaType(field.type) + "()";
@@ -1339,7 +1406,7 @@ public final class JavaGenerator {
                         ? positionalArgs(call)
                         : positionalArgsFor(call, func.params);
                 return finishGenericCall(resolved,
-                        receiver + "." + mangle(func.name) + "(" + args + ")");
+                        receiver + "." + methodName(func) + "(" + args + ")");
             }
             case CLASS_CTOR:
                 return "new " + typeNames.get(resolved.classDecl) + "(" + ctorArgs(resolved, call) + ")";
