@@ -1136,7 +1136,8 @@ public final class Main {
         Diagnostics diagnostics = new Diagnostics();
         int prepared = prepare(options, diagnostics, "init");
         if (prepared != 0) return prepared;
-        Path dir = options.file == null ? Path.of("").toAbsolutePath() : options.file.toAbsolutePath();
+        // Normalize so that "." and ".." name the directory they point to.
+        Path dir = (options.file == null ? Path.of("") : options.file).toAbsolutePath().normalize();
         Path manifest = dir.resolve(Project.MANIFEST);
         Path entry = dir.resolve("src/main.spr");
         if (Files.exists(manifest) || Files.exists(entry)) {
