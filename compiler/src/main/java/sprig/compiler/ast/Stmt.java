@@ -1,6 +1,7 @@
 package sprig.compiler.ast;
 
 import java.util.List;
+import sprig.compiler.diag.Span;
 import sprig.compiler.sem.ForKind;
 import sprig.compiler.sem.Symbol;
 import sprig.compiler.types.Type;
@@ -15,6 +16,7 @@ public abstract class Stmt extends Node {
         public final TypeRef typeRef; // may be null (inferred)
         public final Expr init;       // may be null only for top-level? grammar requires it
         public Symbol symbol;
+        public Span nameSpan;
 
         public VarDecl(boolean mutable, String name, TypeRef typeRef, Expr init) {
             this.mutable = mutable;
@@ -111,6 +113,7 @@ public abstract class Stmt extends Node {
         public final List<Stmt> body;
         public Symbol symbol;
         public ForKind forKind = ForKind.LIST;
+        public Span nameSpan;
 
         public ForStmt(String varName, Expr iterable, List<Stmt> body) {
             this.varName = varName;
@@ -153,6 +156,7 @@ public abstract class Stmt extends Node {
             public final List<Stmt> body;
             public Symbol symbol;
             public Type caughtType;
+            public Span nameSpan;
 
             public CatchClause(String name, TypeRef typeRef, List<Stmt> body) {
                 this.name = name;
@@ -180,6 +184,9 @@ public abstract class Stmt extends Node {
             public Symbol binderSymbol;
             public Type binderType;
             public boolean payloadless;
+            /** The case name (the last identifier of {@code Type.Case}). */
+            public Span caseSpan;
+            public Span binderSpan;
 
             public Branch(TypeRef caseTypeRef, String caseName, String binder, List<Stmt> body) {
                 this.caseTypeRef = caseTypeRef;

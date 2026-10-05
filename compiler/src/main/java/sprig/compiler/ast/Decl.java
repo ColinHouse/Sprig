@@ -1,6 +1,7 @@
 package sprig.compiler.ast;
 
 import java.util.List;
+import sprig.compiler.diag.Span;
 import sprig.compiler.sem.Symbol;
 import sprig.compiler.types.Type;
 
@@ -8,6 +9,8 @@ import sprig.compiler.types.Type;
 public abstract class Decl extends Node {
     public final String name;
     public Symbol symbol;
+    /** The declared name's identifier token; editor tooling navigates to it. */
+    public Span nameSpan;
     /**
      * v0.8 generic parameter names declared by an enclosing
      * {@code generic T:} block. Empty for ordinary declarations. The list is
@@ -28,6 +31,7 @@ public abstract class Decl extends Node {
         public final TypeRef typeRef;
         public Symbol symbol;
         public Type type;
+        public Span nameSpan;
 
         public Param(String name, TypeRef typeRef) {
             this.name = name;
@@ -136,6 +140,8 @@ public abstract class Decl extends Node {
 
     public static final class EnumDecl extends Decl {
         public final List<String> cases;
+        /** Identifier spans of {@link #cases}, in the same order. */
+        public final List<Span> caseSpans = new java.util.ArrayList<>();
 
         public EnumDecl(String name, List<String> cases) {
             super(name);
@@ -160,6 +166,7 @@ public abstract class Decl extends Node {
         public final String name;
         public final List<Field> fields;
         public VariantDecl owner;
+        public Span nameSpan;
 
         public VariantCase(String name, List<Field> fields) {
             this.name = name;
@@ -178,6 +185,10 @@ public abstract class Decl extends Node {
         public final String pathOrClass; // "./lib.spr" or java.time.LocalDate
         public final boolean fileImport;
         public final String alias;       // may be null -> derived
+        /** The quoted path or the Java class name. */
+        public Span targetSpan;
+        /** The identifier after {@code as}; null without an explicit alias. */
+        public Span aliasSpan;
 
         public Import(String pathOrClass, boolean fileImport, String alias) {
             this.pathOrClass = pathOrClass;

@@ -45,7 +45,7 @@ A build from source without a tag reports itself as development; a build that ex
 ## Still planned
 
 - adapters for Java functional interfaces (SAM), arrays and full generics
-- a language server (LSP) and IDE support
+- IDE integration built on the language server (`sprig lsp` itself is in the development version)
 - a compiler written in Sprig itself (self-hosting)
 
 Also note that type checking doesn't prove numerical stability.

@@ -61,7 +61,7 @@ def main():
               "tests/correctness/check_correctness.py", "tests/recovery/check_recovery.py",
               "tests/acceptance/scripts/run_acceptance.py", "tests/acceptance/scripts/json_matrix.py",
               "tests/acceptance/scripts/consistency_matrix.py", "tests/agent_tooling/check_tooling.py",
-              "tests/agent_tooling/check_diagnostics.py", "tests/docs/check_doc_roles.py",
+              "tests/agent_tooling/check_diagnostics.py", "tests/lsp/check_lsp.py", "tests/docs/check_doc_roles.py",
               "tests/agent_tooling/check_sprig_api.py", "tests/agent_tooling/check_agent_tools.py",
               "tests/agent_eval/check_task_pack.py", "tests/examples/check_task_tracker.py",
               "tests/cli_contract/check_cli_contract.py", "tests/test_runner/check_test_runner.py", "tests/http/check_http.py", "tests/bootstrap/check_probe.py",

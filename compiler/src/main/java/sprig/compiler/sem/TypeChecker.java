@@ -2641,7 +2641,7 @@ public final class TypeChecker {
         if (receiver instanceof JavaType javaType) {
             return javaMember(javaType, access, true);
         }
-        String id = builtinStaticId(receiver, access.name);
+        String id = BuiltinMembers.staticId(receiver, access.name);
         if (id == null) {
             diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                     "Type " + receiver.display() + " has no static member '" + access.name + "'",
@@ -2649,40 +2649,6 @@ public final class TypeChecker {
             return errorField(access);
         }
         return builtin(access, id, NativeType.ERROR, receiver);
-    }
-
-    private String builtinStaticId(Type receiver, String name) {
-        if (receiver == NativeType.INT) {
-            return switch (name) {
-                case "parse", "abs", "min", "max" -> "Int." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.FLOAT) {
-            return switch (name) {
-                case "sqrt", "floor", "ceil", "abs" -> "Float." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.DECIMAL) {
-            return switch (name) {
-                case "parse", "fromInt", "fromJava" -> "Decimal." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.BIGINT) {
-            return switch (name) {
-                case "parse", "fromInt", "fromJava" -> "BigInt." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.STRING) {
-            return switch (name) {
-                case "join", "fromCode" -> "String." + name;
-                default -> null;
-            };
-        }
-        return null;
     }
 
     private ResolvedField classMember(ClassType classType, Expr.FieldAccess access) {
@@ -2814,7 +2780,7 @@ public final class TypeChecker {
     }
 
     private ResolvedField builtinInstance(Type receiver, Expr.FieldAccess access) {
-        String id = builtinInstanceId(receiver, access.name);
+        String id = BuiltinMembers.instanceId(receiver, access.name);
         if (id == null) {
             if (access.name.equals("toString")) {
                 return builtin(access, "toString", NativeType.STRING, receiver);
@@ -2825,80 +2791,6 @@ public final class TypeChecker {
             return errorField(access);
         }
         return builtin(access, id, NativeType.ERROR, receiver);
-    }
-
-    private String builtinInstanceId(Type receiver, String name) {
-        if (receiver == NativeType.INT) {
-            return switch (name) {
-                case "toFloat", "toFloatExact", "toFloatLossy", "toInt32Exact",
-                     "toDecimal", "divTrunc", "toString" -> "Int." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.INT32) {
-            return switch (name) {
-                case "toInt", "toFloat", "toDecimal", "divTrunc", "toString" -> "Int32." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.FLOAT) {
-            return switch (name) {
-                case "toInt", "toIntExact", "toIntTrunc", "toFloat32Exact",
-                     "toFloat32Lossy", "isNaN", "isInfinite", "isFinite",
-                     "approxEqual", "toString" -> "Float." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.FLOAT32) {
-            return switch (name) {
-                case "toFloat", "isNaN", "isInfinite", "isFinite", "toString" -> "Float32." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.DECIMAL) {
-            return switch (name) {
-                case "divide", "toIntExact", "toFloatExact", "toFloatLossy", "toJava", "toString" -> "Decimal." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.BIGINT) {
-            return switch (name) {
-                case "divTrunc", "toIntExact", "toFloatExact", "toFloatLossy",
-                     "toDecimal", "toJava", "toString" -> "BigInt." + name;
-                default -> null;
-            };
-        }
-        if (receiver == NativeType.BOOL) {
-            return name.equals("toString") ? "Bool.toString" : null;
-        }
-        if (receiver == NativeType.STRING) {
-            return switch (name) {
-                case "length", "isEmpty", "charAt", "codeAt", "substring", "indexOf", "contains",
-                     "startsWith", "endsWith", "toUpperCase", "toLowerCase", "trim", "split",
-                     "replace", "repeat", "toInt", "toIntOrNull", "toFloat", "toString" -> "String." + name;
-                default -> null;
-            };
-        }
-        if (receiver instanceof ListType list) {
-            return switch (name) {
-                case "size", "isEmpty", "get", "contains", "indexOf", "toMutableList", "toList",
-                     "map", "filter", "forEach" -> "List." + name;
-                case "toString" -> "toString";
-                case "append", "set", "insert", "removeAt", "remove", "clear", "sort" -> list.mutable
-                        ? "MutableList." + name : "List.immutable." + name;
-                default -> null;
-            };
-        }
-        if (receiver instanceof MapType map) {
-            return switch (name) {
-                case "size", "isEmpty", "get", "containsKey", "keys", "values", "toMutableMap",
-                     "toMap" -> "Map." + name;
-                case "toString" -> "toString";
-                case "set", "remove", "clear" -> map.mutable ? "MutableMap." + name : "Map.immutable." + name;
-                default -> null;
-            };
-        }
-        return null;
     }
 
     private ResolvedField builtin(Expr.FieldAccess access, String id, Type type, Type receiver) {

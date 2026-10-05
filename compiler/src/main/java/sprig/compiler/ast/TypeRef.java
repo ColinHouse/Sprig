@@ -2,6 +2,7 @@ package sprig.compiler.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import sprig.compiler.diag.Span;
 import sprig.compiler.types.Type;
 
 /**
@@ -13,6 +14,8 @@ public final class TypeRef extends Node {
     public final List<TypeRef> args;
     public final boolean nullable;
     public Type resolved;
+    /** The last name segment; null for source callable types. */
+    public Span nameSpan;
     /** Non-null for source callable types; args then hold the parameter types. */
     public final TypeRef functionResult;
 
