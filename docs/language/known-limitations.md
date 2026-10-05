@@ -32,9 +32,12 @@ by the historical design kit in `docs/history/design-kit/`.
   small synchronous JDK HTTP client; it does not provide an HTTP server,
   streaming, async requests or a stable package registry. The ecosystem remains
   intentionally small and experimental.
-  LSP, debugger integration and incremental compilation are absent. The local
-  VS Code preview offers lexical highlighting, CLI checks/run and Java viewing;
-  see `editors/vscode/README.md`.
+  Debugger integration and incremental compilation are absent. `sprig lsp`
+  serves diagnostics, hover, navigation, completion, formatting and local
+  rename over the Language Server Protocol; it re-checks the whole program on
+  each change and renames only locals and parameters (see
+  [language server](../tooling/lsp.md)). The local VS Code preview still runs
+  CLI checks/run and Java viewing on its own; see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java arrays cross the boundary as
   opaque values (no source array syntax; varargs remain unsupported). Concrete
@@ -86,7 +89,8 @@ by the historical design kit in `docs/history/design-kit/`.
   validation is outside the cooperative cache model.
 - `sprig fmt` is canonical and comment-preserving, without configuration or
   aggressive wrapping. See [formatter](../tooling/formatter.md) for file safety and
-  comment indentation policy. LSP integration remains future work.
+  comment indentation policy. Editors can request the same formatting through
+  `sprig lsp`.
 - `sprig test` is a sequential project runner for ordinary `.spr` programs.
   It has a fixed 30-second runtime timeout and no parallel execution, watch
   mode, coverage, snapshots or test-function discovery. It requires a current

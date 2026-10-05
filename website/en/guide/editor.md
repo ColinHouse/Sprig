@@ -89,7 +89,7 @@ In a project with a `sprig.toml`, every `.spr` file under `tests/` shows up in V
 - The outline and Go to Definition find declarations by name; they don't follow local shadowing or look at types.
 - Member completion knows imported names, enums and variants in the same file, and top-level variables whose type the compiler reports. It doesn't offer members of local variables or parameters.
 - Code with syntax errors can't be formatted.
-- No rename, find references or debugging, and no language server (LSP).
+- No rename, find references or debugging. The extension doesn't use Sprig's language server yet; other editors can already use [`sprig lsp`](/en/guide/tooling#language-server) from the development version.
 - In Restricted Mode (an untrusted workspace) you get highlighting, the outline, snippets and keyword completion only. Checking, running, formatting, hover information and tests require a trusted workspace.
 - Linux and macOS are supported. Windows is a preview, and cancelling a run there may not stop the child process.
 - With Remote SSH or containers, the SDK and JDK have to be installed on the remote side. Browser-based VS Code and virtual file systems aren't supported.

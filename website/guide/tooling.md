@@ -1,8 +1,8 @@
 # 工具与 JSON
 
-Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，也没有语言服务器。编辑器里的支持见 [VS Code 插件](/guide/editor)。
+Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，连语言服务器也是一个子命令 `sprig lsp`，由编辑器自己启动。VS Code 里的支持见 [VS Code 插件](/guide/editor)。
 
-这页列出的命令，已发布的 v0.5.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
+这页列出的命令，除了 `sprig lsp`，已发布的 v0.5.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
 
 ## 命令一览
 
@@ -44,6 +44,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 |---|---|
 | `sprig wrap <Java 类> --out <文件>` | 为 Java 类生成 Sprig 包装代码，见 [JVM 互操作](/guide/jvm-interop) |
 | `sprig upgrade` | 升级 SDK；加 `--check` 只看有没有新版本 |
+| `sprig lsp` | 给编辑器用的语言服务器，见[语言服务器](#语言服务器) |
 | `sprig version` | 显示版本号 |
 
 在项目里，`check`、`run`、`build` 可以不写文件名，默认使用项目的入口。`check`、`build`、`run`、`api`、`wrap` 和 `doctor` 都能用 `--classpath` 加入本地的 JAR 或目录，可以写多次。这个参数只使用你给的路径，不会下载任何东西。
@@ -141,11 +142,18 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 `sprig fmt 文件.spr` 会直接格式化文件；`sprig fmt --check . --json` 只检查、不修改，适合放进 CI。格式化会保留注释，结果是确定的，没有配置项，也不会激进地折行。除了 `fmt`，其他命令都不会改动你的源码。详见[格式化（英文）](/en/reference/tooling/formatter)。
 
+## 语言服务器
+
+`sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它。它是开发版新加的，已发布的 v0.5.0-beta.1 里还没有。
+
+它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化，以及局部变量和参数的重命名。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。
+
+编辑器怎么配置、每项功能的细节，见[语言服务器参考（英文）](/en/reference/tooling/lsp)。
+
 ## 还没有的
 
 下面这些都还在计划中，目前没有实现：
 
-- 语言服务器（LSP），以及基于它的补全、跳转等编辑器功能
 - 包的发布和模块仓库
 - 增量检查
 
