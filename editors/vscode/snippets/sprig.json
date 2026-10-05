@@ -1,0 +1,94 @@
+{
+  "Function": {
+    "prefix": "func",
+    "body": ["func ${1:name}(${2:value}: ${3:Int}) -> ${4:Int}:", "    return ${0:$2}"],
+    "description": "Function with typed parameters and result"
+  },
+  "Function that can fail": {
+    "prefix": "funct",
+    "body": [
+      "func ${1:parse}(${2:text}: String) -> ${3:Int} throws Error:",
+      "    if $2 == \"\":",
+      "        throw Error(\"${4:empty input}\")",
+      "    return ${0:0}"
+    ],
+    "description": "Function that declares throws Error"
+  },
+  "Class": {
+    "prefix": "class",
+    "body": [
+      "class ${1:Item}:",
+      "    let ${2:name}: ${3:String}",
+      "    var ${4:count}: ${5:Int} = ${6:0}",
+      "",
+      "    func ${7:describe}() -> String:",
+      "        return ${0:$2}"
+    ],
+    "description": "Class with fields and a method"
+  },
+  "Variant": {
+    "prefix": "variant",
+    "body": ["variant ${1:Shape}:", "    ${2:Circle}(${3:radius}: ${4:Float})", "    ${5:Square}(${6:side}: ${7:Float})"],
+    "description": "Variant (sum type) with two cases"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": ["enum ${1:Mode}:", "    ${2:Fast}", "    ${3:Careful}"],
+    "description": "Enum with two cases"
+  },
+  "Match statement": {
+    "prefix": "match",
+    "body": ["match ${1:value}:", "    case ${2:Shape.Circle} as ${3:circle}:", "        ${0:pass}"],
+    "description": "Match statement; write a case for every variant case"
+  },
+  "Match expression": {
+    "prefix": "matchr",
+    "body": ["return match ${1:value}:", "    case ${2:Shape.Circle} as ${3:circle}:", "        ${0:0}"],
+    "description": "Return the value of a match expression"
+  },
+  "If": {
+    "prefix": "if",
+    "body": ["if ${1:condition}:", "    ${0:pass}"],
+    "description": "If statement"
+  },
+  "If not null": {
+    "prefix": "ifnn",
+    "body": ["if ${1:value} != null:", "    ${0:print($1)}"],
+    "description": "Use a nullable value after checking it"
+  },
+  "For": {
+    "prefix": "for",
+    "body": ["for ${1:item} in ${2:items}:", "    ${0:print($1)}"],
+    "description": "For loop"
+  },
+  "While": {
+    "prefix": "while",
+    "body": ["while ${1:condition}:", "    ${0:pass}"],
+    "description": "While loop"
+  },
+  "Try": {
+    "prefix": "try",
+    "body": ["try:", "    ${1:pass}", "catch ${2:problem}: ${3:Error}:", "    ${0:print($2.message)}"],
+    "description": "Try and catch"
+  },
+  "Import module": {
+    "prefix": "import",
+    "body": ["import \"${1:./module.spr}\" as ${0:module}"],
+    "description": "Import another Sprig file"
+  },
+  "Import standard library": {
+    "prefix": "imports",
+    "body": ["import \"@std/${1|text,files,json,process,time,jvm,test|}.spr\" as ${0:$1}"],
+    "description": "Import a standard library module"
+  },
+  "Import Java class": {
+    "prefix": "importj",
+    "body": ["import ${1:java.time.LocalDate} as ${0:LocalDate}"],
+    "description": "Import a Java class"
+  },
+  "Generic class": {
+    "prefix": "generic",
+    "body": ["generic ${1:T}:", "    class ${2:Box}:", "        let ${3:value}: $1"],
+    "description": "Generic class"
+  }
+}

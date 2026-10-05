@@ -57,3 +57,15 @@ test('Windows terminal plan invokes the SDK JVM directly and rejects arbitrary b
  assert.equal(command.args[3].includes(';'),true);
  assert.equal(command.args.includes('--json'),false);
 });
+test('query commands without exitCode are accepted: api, help and doctor',async()=>{
+ const a=api();
+ const module=await a.invoke(compiler,['api',path.join(root,'website/snippets/classes.spr'),'--json'],root);assert.equal(module.json.exitCode,0);assert.equal(module.json.kind,'sprig-module');
+ const help=await a.invoke(compiler,['help','match','--json'],root);assert.equal(help.json.exitCode,0);assert.equal(help.json.topic,'match');
+ const doctor=await a.invoke(compiler,['doctor','--json'],root);assert.equal(doctor.json.exitCode,0);assert.equal(typeof doctor.json.compilerHome,'string');
+ const missing=await a.invoke(compiler,['api','com.example.Missing','--json'],root);assert.equal(missing.json.exitCode,1);assert.equal(missing.json.diagnostics[0].code,'SPR-JVM-CLASS');
+});
+test('capture runs plain-text commands such as init with adversarial paths',async t=>{
+ const a=api(),dir=fixture(t),target=path.join(dir,'new app $; 中文');
+ const result=await a.capture(compiler,['init',target],dir);assert.equal(result.code,0);assert.match(result.stdout,/Created/);
+ assert.ok(fs.existsSync(path.join(target,'src','main.spr')));
+});
