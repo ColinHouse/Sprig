@@ -4,6 +4,8 @@ import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { CompilerResult, compilerCommand, invoke, projectRoot, resolveCompiler } from './compiler';
 import { mapRange } from './diagnostics';
+import { registerLanguageFeatures } from './language';
+import { Queries } from './queries';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Sprig');
@@ -125,6 +127,20 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     } finally {if(jobs.get(cwd)===controller) jobs.delete(cwd);}
   }
+
+  // Read-only compiler queries for editor features; never run without workspace trust.
+  const query = async (args: string[], cwd: string, root = cwd): Promise<CompilerResult> => {
+    if(!vscode.workspace.isTrusted) throw new Error('Workspace is not trusted.');
+    const executable = resolveCompiler(settings(vscode.Uri.file(root)).get<string>('compilerPath',''), root);
+    const result = await invoke(executable, args, cwd, {timeoutMs: 30000});
+    if(result.stderr) output.appendLine(result.stderr);
+    return result.json;
+  };
+  const queries = new Queries(query);
+  registerLanguageFeatures(context, queries, query);
+  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+    if(event.affectsConfiguration('sprig')) queries.clear();
+  }));
 
   for(const [name,command] of [['check','check'],['run','run'],['build','build'],['showGeneratedJava','java']]) {
     context.subscriptions.push(vscode.commands.registerCommand(`sprig.${name}`,()=>{

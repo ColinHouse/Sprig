@@ -16,7 +16,7 @@ function harness(t, options={}) {
  const callbacks=new Map(), terminals=[], warnings=[];
  const disposable={dispose(){}};
  const compiler=path.join(dir,'SDK space $;','bin','sprig');
- const vscode={
+ const fakes={
   window:{activeTextEditor:{document:doc},createOutputChannel:()=>disposable,
    showWarningMessage:message=>{warnings.push(message);},showErrorMessage:message=>{throw Error(message);},
    createTerminal:settings=>{const terminal={settings,shown:false,show(){this.shown=true;}};terminals.push(terminal);return terminal;}},
@@ -27,6 +27,10 @@ function harness(t, options={}) {
   commands:{registerCommand:(name,callback)=>{callbacks.set(name,callback);return disposable;}},
   CodeActionKind:{QuickFix:'quickfix'}
  };
+ // Editor features unrelated to the terminal register through inert stand-ins.
+ const inert=()=>new Proxy(function(){},{get:(_,key)=>key===Symbol.iterator?function*(){}:key==='then'||typeof key==='symbol'?undefined:inert(),set:()=>true,apply:()=>inert(),construct:()=>inert()});
+ const open=object=>new Proxy(object,{get:(target,key)=>key in target||typeof key==='symbol'?target[key]:inert()});
+ const vscode=open({...fakes,window:open(fakes.window),workspace:open(fakes.workspace),languages:open(fakes.languages),commands:open(fakes.commands)});
  if(options.peerDirty)vscode.workspace.textDocuments.push({languageId:'sprig',uri:{scheme:'file',fsPath:path.join(dir,'src','peer.spr')},isDirty:true});
  const load=Module._load;
  Module._load=function(name,...rest){return name==='vscode'?vscode:load.call(this,name,...rest);};

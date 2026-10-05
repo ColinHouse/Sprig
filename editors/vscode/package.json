@@ -48,7 +48,8 @@
     "vscode-oniguruma": "^2.0.1"
   },
   "activationEvents": [
-    "onLanguage:sprig"
+    "onLanguage:sprig",
+    "workspaceContains:**/sprig.toml"
   ],
   "contributes": {
     "languages": [

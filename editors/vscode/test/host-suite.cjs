@@ -16,6 +16,12 @@ exports.run=async()=>{
   const terminalCount=vscode.window.terminals.length;assert.equal(await vscode.commands.executeCommand('sprig.runInTerminal'),undefined);assert.equal(vscode.window.terminals.length,terminalCount);
   assert.equal(await vscode.commands.executeCommand('sprig.showGeneratedJava'),undefined);
   assert.equal(vscode.languages.getDiagnostics(doc.uri).length,0);
+  const outlineFile=path.join(folder,'restricted outline.spr');fs.writeFileSync(outlineFile,'import java.lang.Math as Math\nclass Hero:\n    let name: String\nprint(Math.max(1, 2))\n');
+  const outlineDoc=await vscode.workspace.openTextDocument(outlineFile);
+  assert.deepEqual((await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',outlineDoc.uri)).map(s=>s.name),['Hero']);
+  assert.equal((await vscode.commands.executeCommand('vscode.executeHoverProvider',outlineDoc.uri,new vscode.Position(3,12))).length,0,'no compiler hover without trust');
+  const restrictedEdits=await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider',outlineDoc.uri,{tabSize:4,insertSpaces:true});
+  assert.ok(!restrictedEdits||restrictedEdits.length===0,'no formatting without trust');
   console.log('Restricted Host passed: highlighting/language registration available; compiler commands blocked.');return;
  }
  const file=path.join(folder,'hello 中文.spr');fs.writeFileSync(file,'let bad: Int = "wrong"\n');
@@ -48,6 +54,34 @@ exports.run=async()=>{
  assert.ok(vscode.languages.getDiagnostics(doc.uri).length,'independent project diagnostics retained');
  const unused=path.join(project,'src','unused.spr');fs.writeFileSync(unused,'print(\"unused\")\n');await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(unused));
  assert.equal((await vscode.commands.executeCommand('sprig.check')).exitCode,1,'entry graph failure must survive a clean unused-file check');
+ // Language features from lexical outline plus compiler queries.
+ await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
+ const lang=path.join(folder,'language features');fs.mkdirSync(lang,{recursive:true});
+ fs.writeFileSync(path.join(lang,'helper.spr'),'func twice(x: Int) -> Int:\n    return x * 2\n');
+ const featureFile=path.join(lang,'features.spr');
+ fs.writeFileSync(featureFile,'import java.lang.Math as Math\nimport "./helper.spr" as helper\n\nclass Hero:\n    let name: String\n    var health: Int = 100\n\nfunc describe(hero: Hero) -> String:\n    return hero.name\n\nlet total = Math.max(1, 2)\nprint(helper.twice(total))\n');
+ const featureDoc=await vscode.workspace.openTextDocument(featureFile);await vscode.window.showTextDocument(featureDoc);
+ const symbols=await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',featureDoc.uri);
+ assert.deepEqual(symbols.map(s=>s.name),['Hero','describe','total']);assert.deepEqual(symbols[0].children.map(s=>s.name),['name','health']);
+ const hoverAt=async(line,character)=>((await vscode.commands.executeCommand('vscode.executeHoverProvider',featureDoc.uri,new vscode.Position(line,character)))??[]).flatMap(h=>h.contents.map(c=>typeof c==='string'?c:c.value)).join('\n');
+ assert.ok((await hoverAt(10,18)).includes('max(Int, Int) -> Int'),'Java member hover');
+ assert.ok((await hoverAt(11,14)).includes('func twice(x: Int) -> Int'),'module member hover');
+ assert.ok((await hoverAt(3,2)).includes('sprig help classes'),'keyword hover');
+ assert.ok((await hoverAt(7,6)).includes('func describe(hero: Hero) -> String'),'own declaration hover');
+ const draft=path.join(lang,'draft.spr');fs.writeFileSync(draft,'import java.lang.Math as Math\nimport "./helper.spr" as helper\nMath.\nhelper.\n');
+ const draftDoc=await vscode.workspace.openTextDocument(draft);
+ const complete=async(line,character)=>(await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',draftDoc.uri,new vscode.Position(line,character),'.')).items.map(i=>typeof i.label==='string'?i.label:i.label.label);
+ const mathItems=await complete(2,5);assert.ok(mathItems.includes('max')&&mathItems.includes('abs'),'Java static completion');
+ assert.ok((await complete(3,7)).includes('twice'),'module completion');
+ const definitionAt=async(line,character)=>(await vscode.commands.executeCommand('vscode.executeDefinitionProvider',featureDoc.uri,new vscode.Position(line,character))).map(l=>l.uri?{uri:l.uri,range:l.range}:{uri:l.targetUri,range:l.targetRange});
+ const toHelper=await definitionAt(11,14);assert.equal(toHelper[0].uri.fsPath,path.join(lang,'helper.spr'));assert.equal(toHelper[0].range.start.line,0);
+ assert.equal((await definitionAt(1,10))[0].uri.fsPath,path.join(lang,'helper.spr'));
+ assert.equal((await definitionAt(7,22))[0].range.start.line,3);
+ const messy=path.join(lang,'messy.spr');fs.writeFileSync(messy,'func add(a:Int,b:Int)->Int:\n  return a+b\n');
+ const messyDoc=await vscode.workspace.openTextDocument(messy);
+ const edits=await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider',messyDoc.uri,{tabSize:4,insertSpaces:true});
+ const formatting=new vscode.WorkspaceEdit();formatting.set(messyDoc.uri,edits);await vscode.workspace.applyEdit(formatting);
+ assert.equal(messyDoc.getText(),'func add(a: Int, b: Int) -> Int:\n    return a + b\n');
  // Actual integrated terminal invokes normal Run without the finite JSON adapter.
  await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
  const terminalSource=path.join(folder,'terminal 中文 $;.spr'), marker=path.join(folder,'terminal-marker.txt');
