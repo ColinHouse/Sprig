@@ -38,7 +38,8 @@ completion; the Testing view needs 0.5.0-beta.1 or newer.
 Windows SDK `bin/sprig.cmd` (a source build or an extracted release ZIP) is
 experimental. The extension starts the same JVM entrypoint and classpath
 directly, so paths never pass through `cmd.exe`; custom batch wrappers are
-unsupported. Remote SSH/containers
+unsupported. `java.exe` still reads its command line in the Windows ANSI code
+page, so a file whose path uses characters outside it cannot be checked or run. Remote SSH/containers
 need the SDK and JDK installed on the remote workspace host. Browser-only VS Code
 and virtual filesystems are unsupported.
 

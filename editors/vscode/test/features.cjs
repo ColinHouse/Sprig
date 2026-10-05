@@ -7,7 +7,8 @@ const root=path.resolve(__dirname,'../../..');
 const compiler=path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig');
 const {invoke}=require('../out/compiler.js');
 const run=async(args,cwd)=>(await invoke(compiler,args,cwd)).json;
-function fixture(t){const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'Sprig 功能 $; ')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
+const {nonAscii}=require('./platform-text.cjs');
+function fixture(t){const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),`Sprig ${nonAscii} $; `)));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
 
 test('formatSource returns canonical text and refuses broken source',async()=>{
  const {formatSource}=require('../out/format.js');

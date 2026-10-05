@@ -6,9 +6,10 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'../../..');
 const compiler=path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig');
 function api(){assert.ok(fs.existsSync(path.join(__dirname,'../out/compiler.js')),'CLI adapter must be implemented');return require('../out/compiler.js');}
-function fixture(t){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'Sprig 插件 $; '));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
+const {nonAscii}=require('./platform-text.cjs');
+function fixture(t){const dir=fs.mkdtempSync(path.join(os.tmpdir(),`Sprig ${nonAscii} $; `));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));return dir;}
 test('CLI check, real JVM run and Java-only output with adversarial filename',async t=>{
- const a=api(),dir=fixture(t),file=path.join(dir,'hello $; 中文.spr');fs.writeFileSync(file,'import "@std/text.spr" as text\nprint(text.trim("  hello VS Code  "))\n');
+ const a=api(),dir=fixture(t),file=path.join(dir,`hello $; ${nonAscii}.spr`);fs.writeFileSync(file,'import "@std/text.spr" as text\nprint(text.trim("  hello VS Code  "))\n');
  assert.equal((await a.invoke(compiler,['check',file,'--json'],dir)).json.exitCode,0);
  const run=await a.invoke(compiler,['run',file,'--json'],dir);assert.equal(run.json.exitCode,0);assert.equal(run.json.programOutput.trim(),'hello VS Code');
  const out=path.join(dir,'generated Java');const built=await a.invoke(compiler,['build',file,'--emit-java-only','-d',out,'--json'],dir);
@@ -82,7 +83,7 @@ test('query commands without exitCode are accepted: api, help and doctor',async(
  const missing=await a.invoke(compiler,['api','com.example.Missing','--json'],root);assert.equal(missing.json.exitCode,1);assert.equal(missing.json.diagnostics[0].code,'SPR-JVM-CLASS');
 });
 test('capture runs plain-text commands such as init with adversarial paths',async t=>{
- const a=api(),dir=fixture(t),target=path.join(dir,'new app $; 中文');
+ const a=api(),dir=fixture(t),target=path.join(dir,`new app $; ${nonAscii}`);
  const result=await a.capture(compiler,['init',target],dir);assert.equal(result.code,0);assert.match(result.stdout,/Created/);
  assert.ok(fs.existsSync(path.join(target,'src','main.spr')));
 });

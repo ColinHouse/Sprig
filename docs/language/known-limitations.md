@@ -104,8 +104,9 @@ by the historical design kit in `docs/history/design-kit/`.
   applied migration is unsupported by convention, not automatically detected.
   Migration SQL is trusted project code.
 - On Windows, `java.exe` reads its command line in the ANSI code page, so a
-  program argument outside that code page (an emoji, or Chinese text on a
-  Western European system) is replaced before any Sprig code runs. `bin\sprig.cmd`
+  command-line argument outside that code page, such as a source path or program
+  argument with an emoji, or with Chinese text on a Western European system, is
+  replaced before any Sprig code runs. `bin\sprig.cmd`
   forwards correctly quoted arguments unchanged, including under inherited
   delayed expansion; quoting for `cmd.exe` remains the caller's job. A
   Windows console shows output in its own code page, while redirected output
