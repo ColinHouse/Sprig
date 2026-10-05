@@ -69,7 +69,9 @@ the wrapper into the user's Gradle cache and is not bundled in the Sprig SDK.
 The artwork was supplied by the project owner, who approved its use for this
 project. `website/assets/brand/generate.py` derives the README image, site logo,
 favicons, Apple touch icon and social preview image by **cropping, masking and
-resizing only**; the character was not redesigned or recolored. A separate
+resizing only**; the character was not redesigned or recolored. The VS Code
+extension icon (`editors/vscode/images/icon.png`) is the round site logo
+resized to 256px, so it also appears on the extension's registry pages. A separate
 "S" monogram is generated for 16–32px favicons because the detailed
 illustration is not legible at that size.
 
@@ -80,6 +82,19 @@ resemblance is intentional, confirm that the reference is acceptable; a
 third-party mark used to identify this project could be confusing. No claim of
 original or unrestricted licensing is made for the artwork beyond the owner's
 approval.
+
+## VS Code extension (`editors/vscode/`)
+
+The extension package bundles `vscode-languageclient` 10 and its runtime
+dependencies (`vscode-languageserver-protocol`, `vscode-jsonrpc`,
+`vscode-languageserver-types`, `vscode-languageserver-textdocument`,
+`minimatch`, `brace-expansion`, `balanced-match` and `semver`) into
+`out/main.js`. They are MIT, ISC and BlueOak-1.0.0 licensed. Their license
+texts ship in the package as `editors/vscode/ThirdPartyNotices.txt`, which
+`scripts/check-editor.py` keeps in step with `package-lock.json`. The build
+and test tools (TypeScript, esbuild, `@vscode/vsce`, `@vscode/test-electron`,
+`vscode-textmate`, `vscode-oniguruma`) are development dependencies and are not
+shipped. None of these packages are committed to the repository.
 
 ## Content and fonts in this repository
 
