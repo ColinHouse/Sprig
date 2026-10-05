@@ -71,6 +71,12 @@
         "path": "./syntaxes/sprig.tmLanguage.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "sprig",
+        "path": "./snippets/sprig.json"
+      }
+    ],
     "commands": [
       {
         "command": "sprig.check",

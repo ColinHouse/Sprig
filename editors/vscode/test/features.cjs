@@ -25,3 +25,21 @@ test('queries cache lookups, find the bundled std and degrade to undefined',asyn
  assert.equal(await q.javaClass('com.example.Missing',root),undefined);
  assert.equal(await q.module(path.join(root,'no such file.spr'),root),undefined);
 });
+// ${1:default} and ${1|a,b|} define a placeholder; $1 and ${1} mirror it.
+function expand(body){
+ const values={};
+ let text=body.replace(/\$\{(\d+)\|([^|]*)\|\}/g,(_,n,choices)=>values[n]=choices.split(',')[0]);
+ for(let i=0;i<5;i++)text=text.replace(/\$\{(\d+):((?:[^{}]|\{[^{}]*\})*)\}/g,(_,n,value)=>values[n]??=value);
+ return text.replace(/\$\{(\d+)\}|\$(\d+)/g,(_,a,b)=>values[a??b]??'');
+}
+test('every snippet expands to Sprig that parses',async t=>{
+ const snippets=JSON.parse(fs.readFileSync(path.join(__dirname,'../snippets/sprig.json'),'utf8'));
+ assert.ok(Object.keys(snippets).length>=16);
+ const dir=fixture(t);
+ for(const [name,snippet] of Object.entries(snippets)){
+  const text=expand(snippet.body.join('\n'))+'\n';
+  const file=path.join(dir,name.replace(/\W+/g,'_')+'.spr');fs.writeFileSync(file,text);
+  const result=await run(['check',file,'--syntax-only','--json'],dir);
+  assert.equal(result.exitCode,0,`${name}:\n${text}\n${JSON.stringify(result.diagnostics)}`);
+ }
+});
