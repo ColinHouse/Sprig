@@ -72,7 +72,9 @@ public final class Explanations {
                 out.put("whyMatters", "Numeric conversions can lose range or precision; Sprig names the loss instead of hiding it.");
                 out.put("confusedWith", List.of("Java implicit numeric promotion", "C integer promotion"));
                 out.put("commonCauses", List.of("Implicit conversion could lose range, precision, or numeric meaning."));
-                out.put("safeFixes", List.of("Use an explicit exact conversion (toIntExact, toFloatExact) or an explicitly lossy one after deciding the precision."));
+                out.put("safeFixes", List.of("Use an explicit exact conversion (toIntExact, toFloatExact) or an explicitly lossy one after deciding the precision.",
+                        "Float to Int: toIntExact() requires a whole value, toIntTrunc() drops the fraction, java.lang.Math.round(x) rounds to the nearest Int.",
+                        "Int to Float: toFloat() fails on precision loss; toFloatLossy() rounds."));
                 out.put("relatedCodes", List.of(Codes.NUM_RANGE, Codes.NUM_DIVISION));
             }
             case Codes.COLLECTION_IMMUTABLE -> {

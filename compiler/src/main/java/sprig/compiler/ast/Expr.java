@@ -5,6 +5,7 @@ import sprig.compiler.ast.Decl;
 import sprig.compiler.sem.ResolvedCall;
 import sprig.compiler.sem.ResolvedField;
 import sprig.compiler.sem.Symbol;
+import sprig.compiler.diag.Span;
 import sprig.compiler.types.Type;
 
 /** Expressions. The checker stores the static {@link #type} on every node. */
@@ -65,6 +66,8 @@ public abstract class Expr extends Node {
         public final Expr receiver;
         public final String name;
         public ResolvedField resolved;
+        /** The member name after the dot; span covers the whole postfix chain. */
+        public Span nameSpan;
 
         public FieldAccess(Expr receiver, String name) {
             this.receiver = receiver;
