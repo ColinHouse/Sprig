@@ -13,6 +13,7 @@ import ctypes
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -85,6 +86,8 @@ def main():
             if failure:
                 failures.append(f"delayed expansion {delayed}: {failure}")
     outside = [value for value in UNICODE if value not in unicode]
+    # Without PYTHONUTF8 the console encoding is the code page that cannot carry them either.
+    sys.stdout.reconfigure(errors="backslashreplace")
     print(f"note: ANSI code page {code_page} cannot carry {outside}; java.exe replaces that text "
           "before the JVM starts (JDK launcher limitation)")
     for failure in failures:
