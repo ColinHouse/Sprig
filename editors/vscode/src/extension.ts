@@ -6,6 +6,7 @@ import { CompilerResult, compilerCommand, invoke, projectRoot, resolveCompiler }
 import { mapRange } from './diagnostics';
 import { registerLanguageFeatures } from './language';
 import { Queries } from './queries';
+import { registerTesting } from './testing';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Sprig');
@@ -140,6 +141,26 @@ export function activate(context: vscode.ExtensionContext): void {
   registerLanguageFeatures(context, queries, query);
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
     if(event.affectsConfiguration('sprig')) queries.clear();
+  }));
+  const testing = registerTesting(context, async (args, cwd, signal) => {
+    const config = settings(vscode.Uri.file(cwd));
+    const executable = resolveCompiler(config.get<string>('compilerPath',''), cwd);
+    const timeoutMs = Math.max(1, Math.min(7200, config.get<number>('testTimeoutSeconds', 600))) * 1000;
+    const result = await invoke(executable, args, cwd, {signal, timeoutMs});
+    if(result.stderr) output.appendLine(result.stderr);
+    return result.json;
+  });
+  context.subscriptions.push(vscode.commands.registerCommand('sprig.runTests', async () => {
+    if(!vscode.workspace.isTrusted) {void vscode.window.showWarningMessage('Trust this workspace to run Sprig tests.');return;}
+    const doc = vscode.window.activeTextEditor?.document;
+    const root = doc?.uri.scheme==='file' ? projectRoot(doc.uri.fsPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if(!root) {void vscode.window.showWarningMessage('Open a file in a Sprig project first.');return;}
+    for(const d of vscode.workspace.textDocuments) if(saved(d) && d.isDirty && projectRoot(d.uri.fsPath)===root) await d.save();
+    const result = await testing.runProject(root);
+    if(!result) {void vscode.window.showInformationMessage('No Sprig tests found under tests/.');return;}
+    const summary = result.summary as {total:number; passed:number} | undefined;
+    if(summary) vscode.window.setStatusBarMessage(`Sprig tests: ${summary.passed}/${summary.total} passed`, 5000);
+    return result;
   }));
 
   for(const [name,command] of [['check','check'],['run','run'],['build','build'],['showGeneratedJava','java']]) {

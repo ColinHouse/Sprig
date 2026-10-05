@@ -22,6 +22,7 @@ exports.run=async()=>{
   assert.equal((await vscode.commands.executeCommand('vscode.executeHoverProvider',outlineDoc.uri,new vscode.Position(3,12))).length,0,'no compiler hover without trust');
   const restrictedEdits=await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider',outlineDoc.uri,{tabSize:4,insertSpaces:true});
   assert.ok(!restrictedEdits||restrictedEdits.length===0,'no formatting without trust');
+  assert.equal(await vscode.commands.executeCommand('sprig.runTests'),undefined);
   console.log('Restricted Host passed: highlighting/language registration available; compiler commands blocked.');return;
  }
  const file=path.join(folder,'hello 中文.spr');fs.writeFileSync(file,'let bad: Int = "wrong"\n');
@@ -82,6 +83,18 @@ exports.run=async()=>{
  const edits=await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider',messyDoc.uri,{tabSize:4,insertSpaces:true});
  const formatting=new vscode.WorkspaceEdit();formatting.set(messyDoc.uri,edits);await vscode.workspace.applyEdit(formatting);
  assert.equal(messyDoc.getText(),'func add(a: Int, b: Int) -> Int:\n    return a + b\n');
+ // Test panel: discovery and a real `sprig test` run through the controller.
+ const tested=path.join(folder,'tested project');fs.mkdirSync(path.join(tested,'src'),{recursive:true});fs.mkdirSync(path.join(tested,'tests','compile_fail'),{recursive:true});
+ fs.writeFileSync(path.join(tested,'sprig.toml'),'[project]\nname = "tested"\nversion = "0.1.0"\nlanguage = "0.8"\n');
+ fs.writeFileSync(path.join(tested,'src','main.spr'),'print("main")\n');
+ fs.writeFileSync(path.join(tested,'tests','pass.spr'),'print("ok")\n');
+ fs.writeFileSync(path.join(tested,'tests','fail.spr'),'throw Error("boom")\n');
+ fs.writeFileSync(path.join(tested,'tests','compile_fail','wrong.spr'),'let x: Int = "s"\n');
+ fs.writeFileSync(path.join(tested,'tests','compile_fail','wrong.expect.toml'),'codes = ["SPR-TYPE-ASSIGN"]\nexact = true\n');
+ assert.equal((await adapter.invoke(path.join(root,'bin',process.platform==='win32'?'sprig.cmd':'sprig'),['resolve','--json'],tested)).json.exitCode,0);
+ await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(path.join(tested,'src','main.spr')));
+ const testResult=await vscode.commands.executeCommand('sprig.runTests');
+ assert.deepEqual(testResult.summary,{total:3,passed:2,failed:1});
  // Actual integrated terminal invokes normal Run without the finite JSON adapter.
  await config.update('checkOnSave',false,vscode.ConfigurationTarget.Workspace);
  const terminalSource=path.join(folder,'terminal 中文 $;.spr'), marker=path.join(folder,'terminal-marker.txt');
