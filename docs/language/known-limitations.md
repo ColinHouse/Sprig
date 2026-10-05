@@ -57,6 +57,16 @@ by the historical design kit in `docs/history/design-kit/`.
   `data.origin="checked-arithmetic"`; the span is the statement, not a
   sub-expression. JVM library operations do not inherit Sprig's checked integer
   arithmetic rules.
+- Generated Java shares the JVM class-file limits. Long string literals are
+  split automatically, but one generated method still holds at most 64 KB of
+  bytecode: a very large literal collection or a very long top-level script can
+  fail with `SPR-JVM-COMPILE` and a hint to load the data from a file or split
+  the code into functions.
+- Initialization order is checked rather than inferred: top-level code may not
+  use a binding declared below it (`SPR-NAME-FORWARD-REFERENCE`), and a binding
+  reached through a function before its initializer ran fails at runtime with
+  `data.origin="init-order"`. The check is conservative and cannot prove at
+  compile time that such a call never happens.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.

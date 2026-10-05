@@ -34,8 +34,9 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | JVM callable ABI with concrete `sprig.runtime.Fn0..Fn3` signatures | yes | boxed invariant parameters/results, non-null arguments | direct calls, nullable returned callable and runtime contract guards | tests/callables |
 | Lambdas `fn(...) => expr`, arities 0–3, `map`/`filter`/`forEach` | yes | yes | `Fn0..Fn3` anonymous classes | runtime 10, 18 |
 | `throw`/`throws`/`try`/`catch`/`finally` (typed errors) | yes | yes (`SPR-FLOW-THROWS`) | Java exceptions | runtime 08, interop 15 |
-| Flow: definite return, unreachable code | — | yes (`SPR-FLOW-*`) | — | semantics |
+| Flow: definite return, unreachable code; `while true` without `break` completes only through `return`/`throw` | — | yes (`SPR-FLOW-*`) | — | semantics, runtime 25 |
 | Modules: file imports, alias access, init once, cycle detection | yes | yes | static `$init()` per module | runtime 12, semantics |
+| Initialization order: top-level statements run once, in source order | — | top-level code cannot use a binding declared below it (`SPR-NAME-FORWARD-REFERENCE`) | a function, method, lambda or field default that runs before a later binding's initializer fails with `SPR-RUNTIME-EXCEPTION` (`data.origin="init-order"`) instead of observing 0, false or null; constant prologues are unguarded | semantics, runtime diagnostics |
 | JDK interop: imports, ctors, static/instance methods/fields, overloads | yes | reflection-based; reference results nullable and require narrowing | direct Java calls | runtime 15, correctness regressions |
 | Checked `Int`/`Int32`, explicit integer quotient, numeric literal ranges | yes | `SPR-NUM-*` checks | `NumericOps` checked JVM operations | numeric acceptance suite |
 | IEEE `Float`/`Float32`, explicit exact/lossy conversion | yes | mixed-type and narrowing checks | Java `double`/`float` | numeric acceptance suite |
@@ -44,7 +45,9 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
 | Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | locked JVM JARs precede explicit entries; compiler libraries isolated | agent tooling suite |
 | Bounded JVM interop: opaque arrays, concrete generics, explicit collection adapters | explicit `Type[Arg]` application; `@std/jvm.spr`; `sprig.runtime.jvm.HostBytes` | structured `interopLevel`/`interopReasonCodes`; wildcards, inference, recursive bounds and varargs rejected before `javac` | arrays keep exact JVM classes; snapshots/copies are independent; no implicit conversion | JVM interop suite |
-| javac error → Sprig span translation | — | — | line map | by design |
+| javac error and runtime frame → Sprig span translation | — | — | 1-based line map shared by javac diagnostics and runtime failures | runtime diagnostics |
+| Java-reserved spellings as Sprig identifiers (Java keywords and restricted identifiers, `java.lang.Object` member names, package roots such as `java` or an imported `org`) | — | — | renamed JVM names; enum and variant values still print their Sprig spelling | `check_java_identifiers` |
+| JVM class-file limits | — | — | string literals beyond the constant-pool limit are split; a method over 64 KB of bytecode fails with `SPR-JVM-COMPILE` and an actionable hint | `check_jvm_limits` |
 | Checked effects from omitted class defaults | — | checked at each constructor call; explicit field values skip unused defaults | defaults still evaluate per instance, in declaration order | correctness regressions |
 | `Unit` value positions and unsupported type arguments | rejected before codegen | `SPR-TYPE-UNIT` / `SPR-TYPE-MISMATCH` | no invalid Java emitted | correctness regressions |
 | Match on statically inferred variant case | yes | singleton exhaustiveness; impossible other branches rejected | concrete case `instanceof` dispatch | correctness regressions |
