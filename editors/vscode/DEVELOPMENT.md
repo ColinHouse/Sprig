@@ -57,7 +57,10 @@ unit tests.
   provider at a time, no duplicate diagnostics from a manual check, restart and
   the fall back; Restricted Mode starts no server.
 - [x] 0.3.0: `scripts/check-editor.py` inspects the VSIX: the bundled entry
-  point and assets, without sources, maps or `node_modules`.
+  point and assets, without sources, maps or `node_modules`, and
+  `ThirdPartyNotices.txt` matching the production dependencies in
+  `package-lock.json`. After changing them, run
+  `python3 scripts/check-editor.py --write-notices`.
 
 Production files: package.json and language-configuration.json register the
 language/editor behavior; syntaxes/sprig.tmLanguage.json scopes source;

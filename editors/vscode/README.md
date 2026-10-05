@@ -217,3 +217,8 @@ your usual VS Code settings. `npm run package` writes
 `dist/sprig-language-0.3.0.vsix`, and `python3 scripts/check-editor.py` at the
 repository root also checks its contents. Publishing is described in
 [DEVELOPMENT.md](https://github.com/ColinHouse/Sprig/blob/main/editors/vscode/DEVELOPMENT.md).
+
+## License
+
+Apache-2.0. The extension bundles the language client libraries listed, with
+their licenses, in `ThirdPartyNotices.txt`.
