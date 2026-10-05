@@ -24,6 +24,14 @@ It writes into `website/public/`:
 | `apple-touch-icon.png` | 180px rounded-square version of the full artwork. |
 | `og-image.png` | 1200×630 social card: circular artwork plus a short wordmark on the project's paper background. |
 
+The text in `logo-mono.png`, the favicons and `og-image.png` is drawn with
+macOS's Arial Rounded Bold (`/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf`).
+Where that font is missing, the script writes only `logo-round.png` and
+`apple-touch-icon.png`, and a warning names the four images it skipped.
+`--allow-fallback-font` writes them anyway with the next font it finds, or with
+Pillow's built-in font. Their text then does not match the committed images, so
+commit them only if that change is intended.
+
 Design rules followed:
 
 - The artwork is only cropped, masked, resized and composited; the character is
@@ -35,5 +43,5 @@ Design rules followed:
   illustration remains the project image.
 
 Provenance and the unresolved third-party-mark question are recorded in
-`THIRD_PARTY_NOTICES.md`. Rasterizing the social card uses a system font; no
-font file is redistributed.
+`THIRD_PARTY_NOTICES.md`. The text font comes from the system; no font file is
+redistributed.
