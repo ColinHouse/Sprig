@@ -1,0 +1,8 @@
+generic T:
+    func larger(a: T, b: T) -> T:
+        requires T: Comparable
+        if a >= b:
+            return a
+        return b
+
+print(larger[Bool](true, false))

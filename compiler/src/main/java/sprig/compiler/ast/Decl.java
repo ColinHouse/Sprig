@@ -57,6 +57,11 @@ public abstract class Decl extends Node {
          * checked with value equality in generated Java.
          */
         public final java.util.Set<String> equatableParams = new java.util.LinkedHashSet<>();
+        /**
+         * Parameters granted ordering by {@code requires X: Comparable}: the
+         * operators {@code < <= > >=} and {@code sort()} on their values.
+         */
+        public final java.util.Set<String> comparableParams = new java.util.LinkedHashSet<>();
 
         public Func(String name, List<Param> params, TypeRef returnTypeRef,
                     List<TypeRef> throwsRefs, List<Stmt> body) {

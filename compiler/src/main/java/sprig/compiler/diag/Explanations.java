@@ -104,10 +104,12 @@ public final class Explanations {
                 out.put("relatedCodes", List.of(Codes.GENERIC_ARITY, Codes.GENERIC_ARGS_REQUIRED));
             }
             case Codes.GENERIC_CONSTRAINT -> {
-                out.put("whyMatters", "Only capabilities the compiler can enforce are accepted; unimplemented ones are refused, not ignored.");
-                out.put("commonCauses", List.of("requires X: Comparable or another unsupported capability was requested."));
-                out.put("safeFixes", List.of("Use requires X: Equatable for value equality.",
-                        "Write an explicit comparison function for ordered logic."));
+                out.put("whyMatters", "Capabilities are closed and checked: a generic function states what it needs, and every call proves it.");
+                out.put("commonCauses", List.of("A requires clause names a capability other than Equatable or Comparable, or is not a leading statement.",
+                        "A function that requires X: Comparable was called with a type argument that has no ordering, such as Bool, a nullable type or a class."));
+                out.put("safeFixes", List.of("Use requires X: Equatable for value equality and requires X: Comparable for ordering.",
+                        "Call it with Int, Int32, Float, Float32, Decimal, BigInt or String, or pass an explicit comparison function for other types.",
+                        "Inside another generic function, declare requires X: Comparable there too."));
                 out.put("relatedCodes", List.of(Codes.GENERIC_ARGS_REQUIRED));
             }
             case Codes.FLOW_THROWS -> {

@@ -28,6 +28,7 @@ SDK's exact bytes. See the
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?` |
 | `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with` |
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
+| `lists` | `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 | `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code) |
@@ -110,6 +111,33 @@ discarded toward the earlier millisecond. Invalid calendar dates, absent
 offsets, malformed values, and values outside the `Int` epoch-millisecond range
 raise Sprig `Error`. Neither operation consults the machine's local timezone;
 no timezone database or locale parsing is provided.
+
+## Sorting and grouping lists
+
+`lists` works on ordinary `List[T]` values; there is no separate dataset type.
+Every function is eager, returns a new list and leaves its input unchanged.
+
+- `sort_by[T, K](items, key)` requires `K: Comparable`. It is stable, and keys
+  use the order of `MutableList.sort()`, so Float keys put `-0.0` before `0.0`
+  and NaN last.
+- `group_by[T, K](items, key)` requires `K: Equatable` and returns
+  `List[Group[K, T]]`, where `Group` has `key: K` and `items: List[T]`. Groups
+  appear in first-seen key order and keep input order inside each group. Keys
+  match with Sprig `==`, never with Java equality or hashing: a NaN key never
+  joins another group, `-0.0` joins `0.0`, and a group keeps the first key it
+  saw. Matching scans the keys found so far, so grouping is quadratic in the
+  number of distinct keys.
+- `fold[T, A](items, initial, step)` combines items from left to right.
+  Aggregates are folds: a sum of `Int` uses checked arithmetic, and an overflow
+  fails like any other `Int` overflow.
+
+```sprig
+import "@std/lists.spr" as lists
+
+for group in lists.group_by[Order, String](orders, fn(o: Order) => o.category):
+    let total = lists.fold[Order, Int](group.items, 0, fn(sum: Int, o: Order) => sum + o.cents)
+    print(group.key + " " + total.toString())
+```
 
 ## JSON is an ordinary recursive Sprig data model
 

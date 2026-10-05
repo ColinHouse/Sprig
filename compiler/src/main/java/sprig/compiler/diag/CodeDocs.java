@@ -44,7 +44,7 @@ public final class CodeDocs {
             Map.entry(Codes.GENERIC_ARITY, "A generic declaration was used with the wrong number of type arguments (supply every parameter in declaration order)."),
             Map.entry(Codes.GENERIC_ARGS_REQUIRED, "A generic function or constructor needs explicit [Type] arguments; Sprig does not infer them."),
             Map.entry(Codes.GENERIC_NULLABLE, "This type parameter is used with '?' in the declaration, so its argument must be non-nullable."),
-            Map.entry(Codes.GENERIC_CONSTRAINT, "An unsupported capability was requested; the implementation supports Equatable only, not Comparable."),
+            Map.entry(Codes.GENERIC_CONSTRAINT, "A requires clause names an unknown capability or is misplaced, or a type argument is not Comparable where the callee requires it."),
             Map.entry(Codes.PROJECT_MANIFEST, "sprig.toml is missing, malformed, or lacks a required field."),
             Map.entry(Codes.PROJECT_ENTRY, "The requested project entry point does not exist or the named --bin is unknown."),
             Map.entry(Codes.PROJECT_UNSUPPORTED, "The project or a dependency needs project features or a language version this compiler does not support."),

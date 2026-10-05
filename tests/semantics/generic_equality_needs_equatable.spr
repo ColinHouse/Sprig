@@ -1,0 +1,4 @@
+generic T:
+    func same(a: T, b: T) -> Bool:
+        requires T: Comparable
+        return a == b

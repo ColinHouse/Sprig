@@ -1,0 +1,17 @@
+generic T:
+    func larger(a: T, b: T) -> T:
+        requires T: Comparable
+        if a >= b:
+            return a
+        return b
+
+generic T:
+    func sorted_copy(items: List[T]) -> List[T]:
+        requires T: Comparable
+        let copy = items.toMutableList()
+        copy.sort()
+        return copy.toList()
+
+print(larger[Int](3, 9))
+print(larger[String]("pear", "apple"))
+print(sorted_copy[Float]([2.5, 0.5, 1.0]))
