@@ -61,7 +61,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 - Indexing, `in`, `get`, `set`, `append`, `sort` and the lambda-taking methods `map`, `filter` and `forEach` all work.
 - Floating-point numbers can't be `Map` keys, because `NaN` and signed zero don't behave consistently under equality and hashing.
 
-To sort by a field, group or total things up, use `@std/lists` from the standard library:
+To sort by a field, group, total things up or search, use `@std/lists` from the standard library. It is newer than v0.5.0-beta.1:
 
 <<< @/snippets/guide/lists_group.spr
 
@@ -71,11 +71,16 @@ Lunch
 Taxi
 food: 3050
 transport: 3600
+first ride: Taxi
+true
+2
 ```
 
-- `sort_by` is a stable sort, and its key has to be orderable (see `Comparable` in [generics](/en/guide/generics)).
+- `sort_by` is a stable sort, and its key has to be orderable (see `Comparable` in [generics](/en/guide/generics)). `sorted` sorts a list of orderable values such as `List[String]`.
 - `group_by` forms groups in the order their keys first appear and keeps the original order inside each group; keys are compared with `==`.
-- `fold` combines the elements from left to right into one result, which covers sums and counts.
+- `sum_by` adds up one `Int` per element, and `sum` adds up a `List[Int]`.
+- `find` gives you the first element that passes the test, or `null` when none does. `any`, `all` and `count` take the same kind of test.
+- `fold` combines the elements from left to right into one result, for anything the functions above don't cover.
 
 ## Nullable values
 
@@ -87,6 +92,22 @@ transport: 3600
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
 - Objects returned by Java methods are always treated as possibly `null`; see [JVM interop](/en/guide/jvm-interop).
+
+When all you want is a fallback value or an error, `@std/nulls` (newer than v0.5.0-beta.1) saves the `if`:
+
+<<< @/snippets/guide/nulls_fallback.spr
+
+```text
+12
+0
+{tea: 2, rice: 1}
+8080
+port must be a number: eighty
+```
+
+- `or_else` returns the value, or the fallback you give it when the value is `null`.
+- `require` returns the value, or throws an `Error` with your message when the value is `null`.
+- Both need the type in brackets, like every generic call.
 
 ## Errors
 

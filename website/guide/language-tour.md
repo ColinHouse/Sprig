@@ -61,7 +61,7 @@
 - 支持下标、`in`、`get`、`set`、`append`、`sort`，以及 `map`、`filter`、`forEach` 这几个接收 lambda 的方法。
 - `Map` 的键不能是浮点数，因为 `NaN` 和正负零在相等比较和哈希上对不上。
 
-按某个字段排序、分组、汇总，用标准库的 `@std/lists`：
+按某个字段排序、分组、汇总或查找，用标准库的 `@std/lists`。它比 v0.5.0-beta.1 新：
 
 <<< @/snippets/guide/lists_group.spr
 
@@ -71,11 +71,16 @@ Lunch
 Taxi
 food: 3050
 transport: 3600
+first ride: Taxi
+true
+2
 ```
 
-- `sort_by` 是稳定排序，排序的键要能比较大小（见[泛型](/guide/generics)里的 `Comparable`）。
+- `sort_by` 是稳定排序，排序的键要能比较大小（见[泛型](/guide/generics)里的 `Comparable`）。`sorted` 给本身就能比较大小的元素排序，比如 `List[String]`。
 - `group_by` 按键第一次出现的顺序分组，每组里保持原来的顺序；键用 `==` 比较。
-- `fold` 从左到右把元素累积成一个结果，求和、计数都可以用它。
+- `sum_by` 把每个元素算出的一个 `Int` 加起来，`sum` 把 `List[Int]` 加起来。
+- `find` 返回第一个通过检查的元素，一个都没有就返回 `null`。`any`、`all`、`count` 接收同样的检查函数。
+- `fold` 从左到右把元素累积成一个结果，上面几个函数做不了的再用它。
 
 ## 可空值
 
@@ -87,6 +92,22 @@ transport: 3600
 - 把可能为 `null` 的值用在需要非空的地方，会报 `SPR-TYPE-NULLABLE`。
 - `var` 字段检查过之后，只要中间调用了函数，之前的检查就不算数了，因为函数可能改了它。
 - Java 方法返回的对象一律当作可能为 `null`，见 [JVM 互操作](/guide/jvm-interop)。
+
+如果只是想要一个默认值，或者没有值就报错，用 `@std/nulls`（比 v0.5.0-beta.1 新）可以省掉 `if`：
+
+<<< @/snippets/guide/nulls_fallback.spr
+
+```text
+12
+0
+{tea: 2, rice: 1}
+8080
+port must be a number: eighty
+```
+
+- `or_else` 返回这个值；值是 `null` 时返回你给的默认值。
+- `require` 返回这个值；值是 `null` 时抛出 `Error`，消息由你来写。
+- 两个函数都要在方括号里写出类型，和所有泛型调用一样。
 
 ## 错误处理
 

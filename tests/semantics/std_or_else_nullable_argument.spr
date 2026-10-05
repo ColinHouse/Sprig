@@ -1,0 +1,4 @@
+import "@std/nulls.spr" as nulls
+
+let name: String? = null
+print(nulls.or_else[String?](name, "none"))

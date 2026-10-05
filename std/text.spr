@@ -58,3 +58,34 @@ func trim(value: String) -> String:
     while end > start and (value.charAt(end - 1) == " " or value.charAt(end - 1) == "\t" or value.charAt(end - 1) == "\r" or value.charAt(end - 1) == "\n"):
         end -= 1
     return value.substring(start, end)
+
+# Pads to width code points. The fill repeats as often as needed and its last
+# repetition is cut to fit. A value already that long, or an empty fill,
+# returns the value unchanged.
+func pad_left(value: String, width: Int, fill: String) -> String:
+    if width <= value.length() or fill.length() == 0:
+        return value
+    let missing = width - value.length()
+    return fill.repeat(missing.divTrunc(fill.length()) + 1).substring(0, missing) + value
+
+func pad_right(value: String, width: Int, fill: String) -> String:
+    if width <= value.length() or fill.length() == 0:
+        return value
+    let missing = width - value.length()
+    return value + fill.repeat(missing.divTrunc(fill.length()) + 1).substring(0, missing)
+
+# True for a non-empty value made only of the ASCII digits 0-9.
+func is_ascii_digit(value: String) -> Bool:
+    for element in value:
+        let code = element.codeAt(0)
+        if code < 48 or code > 57:
+            return false
+    return value.length() > 0
+
+# True for a non-empty value made only of the ASCII letters A-Z and a-z.
+func is_ascii_letter(value: String) -> Bool:
+    for element in value:
+        let code = element.codeAt(0)
+        if code < 65 or (code > 90 and code < 97) or code > 122:
+            return false
+    return value.length() > 0

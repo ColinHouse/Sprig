@@ -1,0 +1,16 @@
+# The two ways a nullable read usually ends: a fallback value or an Error.
+# Like every generic call, both name the value's type:
+# nulls.or_else[Int](counts[key], 0).
+
+# The fallback is an ordinary argument, so it is evaluated even when unused.
+generic T:
+    func or_else(value: T?, fallback: T) -> T:
+        if value != null:
+            return value
+        return fallback
+
+generic T:
+    func require(value: T?, message: String) -> T throws Error:
+        if value != null:
+            return value
+        throw Error(message)

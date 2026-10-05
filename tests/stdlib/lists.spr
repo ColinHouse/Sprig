@@ -36,3 +36,47 @@ let empty: List[Order] = []
 print(lists.sort_by[Order, Int](empty, fn(o: Order) => o.cents).size())
 print(lists.group_by[Order, String](empty, fn(o: Order) => o.category).size())
 print(lists.fold[Int, Int]([1, 2, 3], 10, fn(total: Int, x: Int) => total + x))
+
+# Counts how often a test ran, to show where a search stops.
+class Probe:
+    var calls: Int = 0
+
+    func over(limit: Int, value: Int) -> Bool:
+        calls += 1
+        return value > limit
+
+let cheap = lists.find[Order](orders, fn(o: Order) => o.cents < 250)
+if cheap != null:
+    print(cheap.item)
+print(lists.find[Order](orders, fn(o: Order) => o.cents > 1000) == null)
+let found = Probe()
+print(lists.find[Int]([1, 5, 9, 12], fn(n: Int) => found.over(4, n)))
+print(found.calls)
+
+print(lists.any[Order](orders, fn(o: Order) => o.category == "food"))
+print(lists.any[Order](orders, fn(o: Order) => o.cents > 1000))
+print(lists.any[Order](empty, fn(o: Order) => true))
+let some = Probe()
+print(lists.any[Int]([1, 5, 9, 12], fn(n: Int) => some.over(4, n)))
+print(some.calls)
+
+print(lists.all[Order](orders, fn(o: Order) => o.cents >= 100))
+print(lists.all[Order](orders, fn(o: Order) => o.category == "drink"))
+print(lists.all[Order](empty, fn(o: Order) => false))
+let every = Probe()
+print(lists.all[Int]([5, 1, 9, 12], fn(n: Int) => every.over(4, n)))
+print(every.calls)
+
+print(lists.count[Order](orders, fn(o: Order) => o.category == "drink"))
+print(lists.count[Order](empty, fn(o: Order) => true))
+print(lists.sum([1, 2, 3]))
+let none: List[Int] = []
+print(lists.sum(none))
+print(lists.sum_by[Order](orders, fn(o: Order) => o.cents))
+print(lists.sum_by[Order](empty, fn(o: Order) => o.cents))
+
+let names: List[String] = ["pear", "apple", "fig", "apple"]
+print(lists.sorted[String](names))
+print(names)
+print(lists.sorted[Float](floats))
+print(lists.sorted[Int](none).size())

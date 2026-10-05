@@ -35,7 +35,8 @@
     "guide/jvm_collections.spr",
     "guide/jvm_bytes.spr",
     "guide/generics_comparable.spr",
-    "guide/lists_group.spr"
+    "guide/lists_group.spr",
+    "guide/nulls_fallback.spr"
   ],
   "import-only": [
     "modules/math_module.spr"

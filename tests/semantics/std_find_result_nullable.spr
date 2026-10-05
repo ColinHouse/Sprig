@@ -1,0 +1,4 @@
+import "@std/lists.spr" as lists
+
+let words: List[String] = ["a", "bb"]
+print(lists.find[String](words, fn(w: String) => w.length() > 1).length())

@@ -1,0 +1,6 @@
+import "@std/nulls.spr" as nulls
+
+func label(value: String?) -> String:
+    return nulls.require[String](value, "a label is required")
+
+print(label("x"))

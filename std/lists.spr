@@ -83,3 +83,58 @@ generic T, A:
         for item in items:
             result = step(result, item)
         return result
+
+# The first item the test accepts, in list order, or null when none does.
+generic T:
+    func find(items: List[T], accept: fn(T) -> Bool) -> T?:
+        for item in items:
+            if accept(item):
+                return item
+        return null
+
+# any and all stop at the first item that decides the answer. For an empty
+# list any is false and all is true.
+generic T:
+    func any(items: List[T], accept: fn(T) -> Bool) -> Bool:
+        for item in items:
+            if accept(item):
+                return true
+        return false
+
+generic T:
+    func all(items: List[T], accept: fn(T) -> Bool) -> Bool:
+        for item in items:
+            if not accept(item):
+                return false
+        return true
+
+generic T:
+    func count(items: List[T], accept: fn(T) -> Bool) -> Int:
+        var total = 0
+        for item in items:
+            if accept(item):
+                total += 1
+        return total
+
+# Int totals use checked arithmetic: an overflow fails like any other Int
+# overflow. Other numeric types use fold.
+func sum(values: List[Int]) -> Int:
+    var total = 0
+    for value in values:
+        total += value
+    return total
+
+generic T:
+    func sum_by(items: List[T], amount: fn(T) -> Int) -> Int:
+        var total = 0
+        for item in items:
+            total += amount(item)
+        return total
+
+# Ascending and stable, in the order of MutableList.sort().
+generic T:
+    func sorted(items: List[T]) -> List[T]:
+        requires T: Comparable
+        let copy = items.toMutableList()
+        copy.sort()
+        return copy.toList()
