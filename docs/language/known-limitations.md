@@ -98,6 +98,9 @@ by the historical design kit in `docs/history/design-kit/`.
   targets public GitHub releases; on Windows `sprig upgrade` refuses and the
   extracted release ZIP is replaced by hand. Published SHA-256 assets detect
   archive mismatch but do not provide signed provenance. Older SDKs are retained.
+  SQLite migrations record filenames without content digests; changing an
+  applied migration is unsupported by convention, not automatically detected.
+  Migration SQL is trusted project code.
 - On Windows, `java.exe` reads its command line in the ANSI code page, so a
   program argument outside that code page (an emoji, or Chinese text on a
   Western European system) is replaced before any Sprig code runs. `bin\sprig.cmd`
@@ -106,9 +109,6 @@ by the historical design kit in `docs/history/design-kit/`.
   Windows console shows output in its own code page, while redirected output
   is UTF-8 as on Linux and macOS. `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
-  SQLite migrations record filenames without content digests; changing an
-  applied migration is unsupported by convention, not automatically detected.
-  Migration SQL is trusted project code.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
 - Sprig targets v0.5.0-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.

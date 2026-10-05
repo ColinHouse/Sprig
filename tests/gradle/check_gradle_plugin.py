@@ -119,10 +119,17 @@ def main() -> int:
                 "unchanged Sprig generation must be Gradle up-to-date")
 
         # Without SPRIG_HOME the platform launcher is found on PATH; an SDK bin
-        # directory holds both, and Windows must pick sprig.cmd.
+        # directory holds both, and Windows must pick sprig.cmd. The fixture's
+        # settings read SPRIG_HOME, so name the plugin build directly here.
+        settings = project / "settings.gradle"
+        fixture_settings = settings.read_text(encoding="utf-8")
+        settings.write_text("pluginManagement {\n    includeBuild('"
+                            + (sdk_home / "libraries/sprig-gradle").as_posix()
+                            + "')\n}\n\nrootProject.name = \"ordinary-project\"\n", encoding="utf-8")
         path_env = {key: value for key, value in env.items() if key.upper() != "SPRIG_HOME"}
         path_env["PATH"] = str(sdk_home / "bin") + os.pathsep + env.get("PATH", "")
         via_path = run([*gradle, "--offline", "--no-daemon", "sprigInfo"], cwd=project, env=path_env)
+        settings.write_text(fixture_settings, encoding="utf-8")
         require(via_path.returncode == 0 and f"Compiler home: {sdk_home}" in via_path.stdout,
                 "sprigInfo must find the SDK launcher on PATH\n" + via_path.stdout + via_path.stderr)
 

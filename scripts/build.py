@@ -23,7 +23,8 @@ def write_launchers(home, packaged=False):
     bindir.mkdir(parents=True, exist_ok=True)
     unix_cp = '$HERE/lib/*' if packaged else '$HERE/build/sprig-compiler.jar:$HERE/build/deps/' + ANTLR_NAME + ':$HERE/build/deps/resolver/*'
     windows_cp = '%SPRIG_HOME%\\lib\\*' if packaged else '%SPRIG_HOME%\\build\\sprig-compiler.jar;%SPRIG_HOME%\\build\\deps\\' + ANTLR_NAME + ';%SPRIG_HOME%\\build\\deps\\resolver\\*'
-    (bindir / 'sprig').write_text('#!/bin/sh\nset -eu\nHERE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexec java -Dfile.encoding=UTF-8 -cp "' + unix_cp + '" -Dsprig.home="$HERE" sprig.compiler.cli.Main "$@"\n', encoding='utf-8')
+    # LF even when built on Windows: an SDK archive is portable.
+    (bindir / 'sprig').write_text('#!/bin/sh\nset -eu\nHERE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexec java -Dfile.encoding=UTF-8 -cp "' + unix_cp + '" -Dsprig.home="$HERE" sprig.compiler.cli.Main "$@"\n', encoding='utf-8', newline='\n')
     (bindir / 'sprig').chmod(0o755)
     # An inherited delayed-expansion state (cmd /v:on or the registry default)
     # would otherwise strip '!' from forwarded arguments and the SDK path.

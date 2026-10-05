@@ -58,7 +58,7 @@ test('test outcomes map pass, runtime failure and compile-fail fixtures by file'
  const map=outcomes(all);
  assert.equal(map.get(path.join(dir,'tests','pass.spr')).status,'passed');
  const fail=map.get(path.join(dir,'tests','fail.spr'));
- assert.equal(fail.status,'failed');assert.equal(fail.programOutput,'before\n');
+ assert.equal(fail.status,'failed');assert.equal(fail.programOutput.replace(/\r\n/g,'\n'),'before\n');
  assert.equal(fail.diagnostics[0].code,'SPR-RUNTIME-ERROR');assert.equal(fail.diagnostics[0].range.start.line,1);
  assert.equal(map.get(path.join(dir,'tests','compile_fail','wrong.spr')).status,'passed');
  const single=await run(['test',path.join(dir,'tests','pass.spr'),'--json'],dir);

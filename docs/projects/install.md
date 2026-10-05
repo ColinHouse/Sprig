@@ -72,7 +72,7 @@ Expand-Archive $Zip -DestinationPath .
 & ".\$($Zip -replace '\.zip$')\bin\sprig.cmd" version
 ```
 
-The first command must print `True`. `sprig upgrade` refuses on Windows; replace
+The comparison must print `True`. `sprig upgrade` refuses on Windows; replace
 the extracted SDK with a newer verified ZIP instead. Building from source works
 too: `py -3 scripts/build.py` creates `bin\sprig.cmd` in the checkout.
 

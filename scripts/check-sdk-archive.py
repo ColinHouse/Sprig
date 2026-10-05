@@ -33,6 +33,7 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     sdk = Path(temp) / f"sprig-v{version}-jdk"
     cli = sdk / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
     (sdk / "bin" / "sprig").chmod(0o755)
+    assert b"\r" not in (sdk / "bin" / "sprig").read_bytes(), "the POSIX launcher must use LF line endings"
     assert (sdk / "bin" / "sprig.cmd").is_file()
     resolver = json.loads((sdk / "legal/resolver-libraries.json").read_text(encoding="utf-8"))
     for name, digest in resolver["jars"].items():

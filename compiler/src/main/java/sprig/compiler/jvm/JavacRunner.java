@@ -59,7 +59,7 @@ public final class JavacRunner {
                 String message = javaDiagnostic.getMessage(null);
                 diagnostics.add(Diagnostic.error(Codes.JVM_COMPILE, Phase.JVM,
                         "Java compiler: " + message, uri, span)
-                        .withHint(hintFor(message)));
+                        .withHint(hintFor(javaDiagnostic.getCode())));
             }
             return ok;
         } catch (IOException e) {
@@ -69,10 +69,10 @@ public final class JavacRunner {
         }
     }
 
-    /** Maps a 1-based generated-Java line back to the nearest recorded Sprig span. */
-    private static String hintFor(String javacMessage) {
-        if (javacMessage != null && (javacMessage.contains("code too large")
-                || javacMessage.contains("too many constants"))) {
+    /** javac's diagnostic key, not its message, which a non-English JDK localizes. */
+    private static String hintFor(String javacCode) {
+        if (javacCode != null && (javacCode.startsWith("compiler.err.limit.code")
+                || javacCode.startsWith("compiler.err.limit.pool"))) {
             return "The generated Java exceeds a JVM class-file limit (64 KB of bytecode per method, "
                     + "65,535 constants per class). Load large literal data from a file at runtime, "
                     + "or split the code into smaller functions or modules.";
