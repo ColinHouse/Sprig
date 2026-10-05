@@ -1,0 +1,2 @@
+let price = 12.5
+let cents: Int = price

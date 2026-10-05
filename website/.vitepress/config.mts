@@ -65,7 +65,7 @@ export default defineConfig({
       lang: 'zh-CN',
       title: 'Sprig',
       description:
-        '面向人类与编码 Agent 的静态类型 JVM 语言。Sprig 让程序和编译器反馈更少依赖猜测；当前为实验性 Beta。',
+        'Sprig 是一门跑在 JVM 上的静态类型小语言，语法像 Python。写错了，编译器会告诉你错在哪、为什么错、怎么改。当前为实验性 Beta。',
       head: [['meta', { property: 'og:locale', content: 'zh_CN' }]],
       markdown: {
         container: {
@@ -91,7 +91,7 @@ export default defineConfig({
         ],
         sidebar: {
           '/tutorial': [
-            { text: '从零开始', items: [{ text: 'Sprig 入门教程', link: '/tutorial' }] }
+            { text: '从零开始', items: [{ text: '入门教程：记账小工具', link: '/tutorial' }] }
           ],
           '/guide/': [
             {
@@ -142,7 +142,7 @@ export default defineConfig({
       lang: 'en-US',
       title: 'Sprig',
       description:
-        'A statically typed JVM language for people and coding agents. Sprig makes programs and compiler feedback easier to verify; currently experimental Beta.',
+        'A small, statically typed JVM language with Python-like syntax. When something is wrong, the compiler tells you where, why and how to fix it. Experimental Beta.',
       head: [['meta', { property: 'og:locale', content: 'en_US' }]],
       themeConfig: {
         nav: [
@@ -166,7 +166,7 @@ export default defineConfig({
         ],
         sidebar: {
           '/en/tutorial': [
-            { text: 'Start here', items: [{ text: 'Sprig tutorial', link: '/en/tutorial' }] }
+            { text: 'Start here', items: [{ text: 'Tutorial: expense tracker', link: '/en/tutorial' }] }
           ],
           '/en/guide/': [
             {

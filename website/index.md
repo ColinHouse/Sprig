@@ -2,74 +2,78 @@
 layout: home
 hero:
   name: Sprig
-  text: 少一点猜测，多一点可验证
-  tagline: Sprig 不试图让编码 Agent 更聪明，而是尽量减少它需要猜测的内容。面向人和 Agent；Agent 友好，也应当方便审查。实验性 Beta；JDK 17+。
+  text: 写给人看，<br>也写给 AI 看
+  tagline: 一门跑在 JVM 上的小语言，语法像 Python。写错了，编译器会告诉你错在哪一行、为什么错、可以怎么改。
   image:
     src: /logo-round.png
     alt: Sprig
   actions:
     - theme: brand
-      text: 开始教程
+      text: 开始入门教程
       link: /tutorial
     - theme: alt
-      text: 与 Agent 一起贡献
-      link: /en/project/contributing
+      text: 安装
+      link: /guide/getting-started
     - theme: alt
       text: GitHub
       link: https://github.com/ColinHouse/Sprig
 features:
-  - title: 先写能读懂的程序
-    details: 显式函数类型、清晰绑定与小型 JVM 程序，让源码便于人类检查与讨论。
-  - title: 用编译器查询代替猜测
-    details: 能力、主题帮助、Java 签名和 JSON 诊断提供可复现的实现证据。
-  - title: 让修改可审查
-    details: 类型检查、穷尽 match、受检数值和锁定依赖帮助尽早暴露具体问题；它们不保证算法本身正确。
+  - title: 漏掉的分支会被找出来
+    details: 给一个类型加了新的情况，所有忘了处理它的 match 都会在编译时报错，不会等到运行时才出问题。
+  - title: 空值要先检查
+    details: 可能为空的值写成 T?，用之前必须判断。Java 方法返回的对象也一样。
+  - title: 报错可以直接拿来修
+    details: 每个错误都有固定的错误码、准确的位置和修改提示，还能输出成 JSON，交给编辑器或 AI 助手处理。
 ---
 
-## 可以做什么？
+## 先看一眼
 
-仓库自动化、数据转换、小型 JVM 应用和编译器工具。源代码里程碑的
-[showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)
-包括仓库审计器、真实 Maven 库应用与源码分析器；各自 README 提供输入、命令和边界。
+<<< @/snippets/home/first_look.spr
 
-## 早期 dogfood：反馈比性能结论更重要
+运行结果：
 
-维护者报告曾用一个较低成本的编码模型尝试真实 Sprig 工作流。这是早期、轶事式的产品 dogfood：没有受控实验、等价 Java 对照实现、预注册任务集或生产力指标，因此不能据此声称 Sprig 优于 Java、提升了多少效率或消除了模型错误。它只支持一个较窄的观察：编译器查询和结构化诊断可以为修复提供具体证据。我们欢迎外部用户复现并报告体验。
+```text
+3.14159
+7.0
+MONDAY
+```
 
-## 从一个项目开始
+如果以后给 `Shape` 加一种 `Triangle`，却忘了改 `area`，`sprig check` 会直接指出来：
 
-[安装 SDK 或从源码构建](/guide/getting-started)，然后：
+```text
+SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
+  hint: Add 'case Shape.Triangle:' (there is no default case)
+```
+
+## 能用来做什么
+
+- 命令行小工具和自动化脚本
+- 处理 JSON 和文本数据
+- 小型 Web 服务和 SQLite 应用（见[示例](/examples)）
+- 调用 Maven 上现成的 Java 库
+- 写 Minecraft 模组里的业务逻辑（见 [Fabric 集成](/guide/fabric)）
+
+## 现在能用吗？
+
+Sprig 还在早期。当前发布的版本是实验性的 v0.5.0-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它还没有泛型推断、接口和 LSP，也不建议用在生产环境。完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
+
+## 五分钟跑起来
+
+需要 JDK 17 或更新的版本。[装好 SDK](/guide/getting-started) 以后：
 
 ```bash
-sprig version
-sprig init my-tool
-cd my-tool
+sprig init hello
+cd hello
 sprig resolve
 sprig run
 ```
 
-输出：`Hello, Sprig!`。随后查询 `sprig capabilities --json`，修改
-`src/main.spr`，用 `sprig check --json` 理解并修复错误。
+看到 `Hello, Sprig!` 就可以开始[入门教程](/tutorial)了：用半小时写一个记账小工具。
 
-## 发行状态与限制
+## 参与进来
 
-公开 SDK 是实验性 [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1)，
-编译器版本为 `0.5.0-beta.1`，语言版本仍为 `0.8-dev`。Beta 将项目测试、wrapper
-生成、schema-4 依赖锁、明确的 Java 泛型与集合边界，以及 CLI、HTTP、JSON、SQLite
-和 Web 一方库纳入发行 SDK；详细范围以[发行状态](/en/project/release-status)、
-发行资产和已安装 SDK 的 `sprig capabilities --json` 为准。真实 Fabric/Loom
-dogfood 的端到端接线见 [Fabric / JVM 框架集成](/guide/fabric)。
+- 发现了 bug，或者觉得哪里设计得别扭：欢迎[开一个 issue](https://github.com/ColinHouse/Sprig/issues)。
+- 想贡献代码：先看[贡献指南](/en/project/contributing)（英文），再挑一个[开着的 issue](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen)。
+- 用 AI 助手写的代码也欢迎，但请你自己读懂、测过再提交。
 
-Sprig 尚未自举，也不承诺生产可用；发布/registry、LSP、接口与泛型推断仍属未来工作。
-见[已知限制](/en/reference/language/known-limitations)。
-
-## 一起贡献
-
-想用 Codex / Claude / ChatGPT 参与？挑选一个
-[agent-friendly 任务](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-friendly)，
-让 Agent 读 AGENTS.md，运行验证、审查补丁并提交 PR。
-[贡献指南（英文）](/en/project/contributing)提供完整短流程。欢迎 AI 辅助，提交者负责
-理解变更、测试、许可与正确性。
-
-Apache-2.0 · [English](/en/) · [语言导览](/guide/language-tour) ·
-[工具与 JSON](/guide/tooling)
+[English](/en/) · [Apache-2.0](https://github.com/ColinHouse/Sprig/blob/main/LICENSE) · [GitHub](https://github.com/ColinHouse/Sprig)
