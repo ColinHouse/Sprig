@@ -29,7 +29,7 @@ See the [agent tooling reference](/en/reference/tooling/agent-guide) for JSON fi
 
 Assigning a string to an integer reports `SPR-TYPE-ASSIGN` with `expectedType: Int` and `actualType: String`. Keep that machine-readable evidence. Depending on intent, change the value to an integer or declare the binding as `String`; do not add a conversion solely to make the build pass.
 
-The tutorial's [expected-failure snippet](/en/tutorial#9-ask-the-compiler-for-evidence) is checked by the docs gate. New semantics should have both positive and negative programs so tests prove rejection as well as acceptance.
+The tutorial's [expected-failure snippet](/en/tutorial#_1-values-and-types) is checked by the docs gate. New semantics should have both positive and negative programs so tests prove rejection as well as acceptance.
 
 ## Limits of early dogfooding
 
