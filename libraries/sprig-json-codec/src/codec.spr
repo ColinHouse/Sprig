@@ -1,0 +1,49 @@
+# Compatibility facade. The implementation is the bundled "@std/json_codec.spr";
+# every name here is that module's own declaration, so values from either
+# import are interchangeable. New code can import the std module directly.
+import "@std/json_codec.spr" as std_codec
+
+export std_codec.Reader
+export std_codec.Field
+export std_codec.kind
+export std_codec.child_path
+export std_codec.root
+export std_codec.root_array
+export std_codec.as_object
+export std_codec.as_array
+export std_codec.as_string
+export std_codec.as_bool
+export std_codec.integer_lexeme
+export std_codec.as_int
+export std_codec.as_number_text
+export std_codec.number_lexeme
+export std_codec.as_decimal
+export std_codec.as_value
+export std_codec.field
+export std_codec.required_value
+export std_codec.optional_value
+export std_codec.required_string
+export std_codec.required_bool
+export std_codec.required_int
+export std_codec.required_decimal
+export std_codec.required_number_text
+export std_codec.required_array
+export std_codec.required_string_array
+export std_codec.required_object
+export std_codec.optional_string
+export std_codec.optional_bool
+export std_codec.optional_int
+export std_codec.optional_decimal
+export std_codec.optional_array
+export std_codec.optional_string_array
+export std_codec.optional_object
+export std_codec.optional_number_text
+export std_codec.reject_unknown_fields
+export std_codec.text
+export std_codec.bool
+export std_codec.int
+export std_codec.number
+export std_codec.member
+export std_codec.object
+export std_codec.array
+export std_codec.string_array

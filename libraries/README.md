@@ -10,7 +10,7 @@ library through application packages.
 | Package | Purpose |
 |---|---|
 | [`sprig-cli`](sprig-cli/README.md) | Explicit command-line option parsing and usage text. |
-| [`sprig-json-codec`](sprig-json-codec/README.md) | Path-aware JSON decoding and encoding over `@std/json`. |
+| [`sprig-json-codec`](sprig-json-codec/README.md) | Path-aware JSON decoding and encoding over `@std/json`. The implementation is the bundled `@std/json_codec.spr`; the package reexports it for existing dependents. |
 | [`sprig-http`](sprig-http/README.md) | Small synchronous JDK HTTP/HTTPS client. |
 
 ## Persistence and server integration

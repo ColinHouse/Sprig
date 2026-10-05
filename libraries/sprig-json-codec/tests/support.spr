@@ -10,6 +10,12 @@ func root_error(value: json.Value) -> String:
     catch problem: Error:
         return problem.message
 
+func root_array_error(value: json.Value) -> String:
+    try:
+        return "decoded: " + codec.root_array(value).size().toString()
+    catch problem: Error:
+        return problem.message
+
 func field_name(reader: codec.Reader, name: String) -> String throws Error:
     match codec.field(reader, name):
         case codec.Field.Missing:

@@ -22,6 +22,9 @@ the published SDK distribution; a project lock does not attest the installed
 SDK's exact bytes. See the
 [published release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
 
+`sprig api @std/text.spr --json` lists what a bundled module declares, with
+signatures. It works from any directory, with or without a project.
+
 | Module | Public operations |
 |---|---|
 | `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
@@ -30,6 +33,7 @@ SDK's exact bytes. See the
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
 | `lists` | `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
+| `json_codec` | typed field access over `json`: `root`, `root_array`, `required_*`, `optional_*`, `field`, `reject_unknown_fields`; builders `object`, `member`, `array`, `text`, `int`, `bool` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 | `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code) |
 
@@ -186,6 +190,65 @@ Nesting above 128 is rejected during parsing and rendering. Manually constructed
 Unicode escape units use JVM UTF-16 representation; this API does not claim
 Unicode scalar validation or canonical JSON normalization. It loads whole input
 strings and is intended for small tooling/configuration data, not streaming data.
+
+### Typed fields with `json_codec`
+
+`match` has no wildcard branch, so reading one integer out of a `json.Value`
+by hand lists all six cases. `@std/json_codec.spr` does that once: it checks
+the JSON kind, never converts between kinds, and reports the place a problem
+was found.
+
+```sprig
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+class Task:
+    let id: Int
+    let title: String
+    let done: Bool
+
+func decode_task(row: codec.Reader) -> Task throws Error:
+    return Task(
+        id=codec.required_int(row, "id"),
+        title=codec.required_string(row, "title"),
+        done=codec.required_bool(row, "done")
+    )
+
+func encode_task(task: Task) -> json.Value:
+    return codec.object([
+        codec.member("id", codec.int(task.id)),
+        codec.member("title", codec.text(task.title)),
+        codec.member("done", codec.bool(task.done))
+    ])
+```
+
+- A `Reader` is a value together with the path it was reached through, such
+  as `$`, `$.projects[1]` or `$[0].id`. Every error message starts with that
+  path: `$[0].id: expected integer, found string`.
+- `root(value)` requires the document to be an object. `root_array(value)`
+  requires an array and returns one `Reader` per element.
+- `required_string`, `required_bool`, `required_int`, `required_decimal`,
+  `required_number_text`, `required_array`, `required_string_array` and
+  `required_object` throw `Error` when the field is missing, is JSON `null` or
+  has another kind. The two failures read differently: `required field is
+  missing` and `expected string, found null`.
+- The matching `optional_*` functions return `null` for a missing field and for
+  JSON `null`. `field(reader, name)` returns `Field.Missing`, `Field.Null` or
+  `Field.Value(value)` when a program must tell those apart.
+- No kind is converted: `"12"` is not an integer, and `12.5` or `1e3` is not an
+  integer either. `required_int` also rejects integers outside the `Int` range.
+  `required_number_text` keeps the exact JSON number text, and
+  `required_decimal` parses it as `Decimal`.
+- `reject_unknown_fields(reader, allowed)` throws for a field that is not in
+  the list, and for a duplicate field in a manually built object.
+- `object`, `member`, `array`, `string_array`, `text`, `int`, `bool` and
+  `number` build values for `json.stringify`. They add no policy.
+
+There is no automatic mapping from classes: no reflection, annotations or
+generated code. Rules such as positive amounts or unique ids stay in the
+application. The first-party `sprig-json-codec` package reexports this module,
+so `import "@json-codec/codec.spr"` keeps working and names the same types.
+`examples/task-tracker` is a complete program built on it.
 
 `HostFiles`, `HostSystem`, and `HostText` are explicit Java implementation
 boundaries, queryable with `sprig api ... --json`. `files.list` explicitly copies

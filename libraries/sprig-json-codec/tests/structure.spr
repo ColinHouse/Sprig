@@ -38,6 +38,16 @@ assert(support.root_error(json.parse("[1]")) == "$: expected object, found array
 assert(support.root_error(json.parse("null")) == "$: expected object, found null")
 assert(support.root_error(json.parse("true")) == "$: expected object, found boolean")
 
+# A document that is an array: one reader per element, with element paths
+let rows = codec.root_array(json.parse("[{\"id\": 1}, {\"id\": \"two\"}]"))
+assert(rows.size() == 2)
+assert(rows[0].path == "$[0]")
+assert(codec.required_int(rows[0], "id") == 1)
+assert(support.required_int_error(rows[1], "id") == "$[1].id: expected integer, found string")
+assert(support.root_array_error(json.parse("[]")) == "decoded: 0")
+assert(support.root_array_error(json.parse("{\"a\": 1}")) == "$: expected array, found object")
+assert(support.root_array_error(json.parse("null")) == "$: expected array, found null")
+
 # 13/14. unknown-field policy is explicit
 let allowed: List[String] = ["projects", "tags", "meta"]
 assert(support.unknown_error(root, allowed) == "allowed")

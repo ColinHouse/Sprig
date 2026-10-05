@@ -40,6 +40,11 @@ func child_path(parent: String, name: String) -> String:
 func root(value: json.Value) -> Reader throws Error:
     return as_object(Reader(path="$", value=value))
 
+# Root readers for a document that is an array, such as a file of records:
+# one reader per element, at paths "$[0]", "$[1]" and so on.
+func root_array(value: json.Value) -> List[Reader] throws Error:
+    return as_array(Reader(path="$", value=value))
+
 # Exact JSON kind checks. Wrong kinds are errors, never conversions.
 func as_object(reader: Reader) -> Reader throws Error:
     match reader.value:

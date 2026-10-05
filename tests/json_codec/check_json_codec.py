@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sprig-json-codec: formatted pure-Sprig library, its own tests, consumer usage."""
+"""JSON codec: the bundled std module, the package that reexports it, its tests and consumers."""
 from pathlib import Path
 import json
 import os
@@ -58,6 +58,39 @@ def run_checks():
            and {row["name"] for row in report["tests"]} == EXPECTED_TESTS,
            f"exit={tested.returncode} {tested.stdout[:400]}{tested.stderr[:200]}")
 
+    # The implementation is the bundled std module; the library only reexports it.
+    std_module = ROOT / "std" / "json_codec.spr"
+    formatted = call("fmt", "--check", std_module)
+    verify("fmt-check-std-module", formatted.returncode == 0,
+           f"exit={formatted.returncode} {formatted.stdout}{formatted.stderr}")
+    std_api = call("api", "@std/json_codec.spr", "--json")
+    std_names = []
+    try:
+        std_names = [row["name"] for row in json.loads(std_api.stdout)["declarations"]
+                     if not row.get("reexported")]
+    except (ValueError, KeyError):
+        pass
+    verify("std-module-api", std_api.returncode == 0 and "required_int" in std_names
+           and "root_array" in std_names and "Reader" in std_names,
+           f"exit={std_api.returncode} {std_api.stdout[:300]}{std_api.stderr[:200]}")
+
+    # A single file needs no manifest and no dependency to use the std module.
+    with tempfile.TemporaryDirectory(prefix="sprig-json-codec-standalone-") as temp:
+        source = Path(temp) / "standalone.spr"
+        source.write_text('''import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+for row in codec.root_array(json.parse("[{\\"id\\": 1}, {\\"id\\": \\"two\\"}]")):
+    try:
+        print(codec.required_int(row, "id"))
+    catch problem: Error:
+        print(problem.message)
+''', encoding="utf-8")
+        standalone = call("run", source, cwd=temp)
+        verify("std-module-standalone", standalone.returncode == 0
+               and standalone.stdout == "1\n$[1].id: expected integer, found string\n",
+               f"exit={standalone.returncode} stdout={standalone.stdout!r} stderr={standalone.stderr!r}")
+
     # A consumer project uses the library through normal dependency/import rules.
     with tempfile.TemporaryDirectory(prefix="sprig-json-codec-consumer-") as temp:
         project = Path(temp)
@@ -107,6 +140,31 @@ catch problem: Error:
                     "$.hud_enabled: required field is missing\n")
         verify("consumer-run", consumer_run.returncode == 0 and consumer_run.stdout == expected,
                f"exit={consumer_run.returncode} stdout={consumer_run.stdout!r} stderr={consumer_run.stderr!r}")
+
+        # The package's names are the std module's own declarations, so values
+        # from either import are the same types.
+        (project / "src/mixed.spr").write_text('''import "@std/json.spr" as json
+import "@std/json_codec.spr" as std_codec
+import "@json-codec/codec.spr" as codec
+
+let from_package: std_codec.Reader = codec.root(json.parse("{\\"n\\": 3}"))
+let from_std: codec.Reader = std_codec.root(json.parse("{\\"n\\": 4}"))
+print(std_codec.required_int(from_package, "n") + codec.required_int(from_std, "n"))
+''', encoding="utf-8")
+        mixed = call("run", "src/mixed.spr", cwd=project)
+        verify("package-and-std-share-types", mixed.returncode == 0 and mixed.stdout == "7\n",
+               f"exit={mixed.returncode} stdout={mixed.stdout!r} stderr={mixed.stderr!r}")
+        facade_api = call("api", "@json-codec/codec.spr", "--json", cwd=project)
+        facade_rows = []
+        try:
+            facade_rows = json.loads(facade_api.stdout)["declarations"]
+        except (ValueError, KeyError):
+            pass
+        verify("package-api-names-std-origin", facade_api.returncode == 0
+               and sorted(row["name"] for row in facade_rows) == sorted(std_names)
+               and all(row.get("reexported") is True and row.get("originModule") == "@std/json_codec.spr"
+                       for row in facade_rows),
+               f"exit={facade_api.returncode} {facade_api.stdout[:400]}{facade_api.stderr[:200]}")
 
     print(f"json codec library: {passed} checks passed, {len(failed)} failed")
     for name in failed:

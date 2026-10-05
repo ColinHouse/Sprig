@@ -1,0 +1,29 @@
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+class Task:
+    let id: Int
+    let title: String
+    let done: Bool
+
+func decode_task(row: codec.Reader) -> Task throws Error:
+    return Task(
+        id=codec.required_int(row, "id"),
+        title=codec.required_string(row, "title"),
+        done=codec.required_bool(row, "done")
+    )
+
+func encode_task(task: Task) -> json.Value:
+    return codec.object([
+        codec.member("id", codec.int(task.id)),
+        codec.member("title", codec.text(task.title)),
+        codec.member("done", codec.bool(task.done))
+    ])
+
+let text = "[{\"id\": 1, \"title\": \"Read the tour\", \"done\": true}, {\"id\": \"2\", \"title\": \"Write code\", \"done\": false}]"
+for row in codec.root_array(json.parse(text)):
+    try:
+        let task = decode_task(row)
+        print(task.title + " " + json.stringify(encode_task(task)))
+    catch problem: Error:
+        print(problem.message)
