@@ -13,9 +13,11 @@ by the historical design kit in `docs/history/design-kit/`.
   because of the existing interop adapters.
 - Generics accept one or more parameters (`generic K, V:`) but are fully
   explicit: no inference, no variance, and partial type arguments are never
-  guessed. A type parameter `T` has no operators, ordering or methods, and
-  equality only under `requires T: Equatable`; `Comparable` and user-defined
-  capabilities are not implemented (`SPR-GENERIC-CONSTRAINT`).
+  guessed. A type parameter `T` has no operators or methods, equality only
+  under `requires T: Equatable` and ordering only under
+  `requires T: Comparable` (Int, Int32, Float, Float32, Decimal, BigInt and
+  String). User-defined capabilities are not implemented
+  (`SPR-GENERIC-CONSTRAINT`).
 - Generic code is erased and boxed in generated Java (type parameters become
   `Object`). Boxing/unboxing is compiler-controlled, but generic values carry
   no JVM-level type information at runtime.

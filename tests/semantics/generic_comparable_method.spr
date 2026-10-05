@@ -1,0 +1,10 @@
+generic T:
+    class Box:
+        let value: T
+
+        func bigger(other: T) -> Bool:
+            requires T: Comparable
+            return value > other
+
+let box = Box[Bool](value=true)
+print(box.bigger(false))

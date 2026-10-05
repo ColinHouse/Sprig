@@ -61,6 +61,22 @@
 - 支持下标、`in`、`get`、`set`、`append`、`sort`，以及 `map`、`filter`、`forEach` 这几个接收 lambda 的方法。
 - `Map` 的键不能是浮点数，因为 `NaN` 和正负零在相等比较和哈希上对不上。
 
+按某个字段排序、分组、汇总，用标准库的 `@std/lists`：
+
+<<< @/snippets/guide/lists_group.spr
+
+```text
+Coffee
+Lunch
+Taxi
+food: 3050
+transport: 3600
+```
+
+- `sort_by` 是稳定排序，排序的键要能比较大小（见[泛型](/guide/generics)里的 `Comparable`）。
+- `group_by` 按键第一次出现的顺序分组，每组里保持原来的顺序；键用 `==` 比较。
+- `fold` 从左到右把元素累积成一个结果，求和、计数都可以用它。
+
 ## 可空值
 
 <<< @/snippets/nullable.spr
@@ -85,7 +101,7 @@
 
 <<< @/snippets/generics.spr
 
-你自己写的类、variant 和函数可以放进 `generic T:`（或 `generic K, V:`）块里。用的时候每次都要写出类型参数，比如 `Box[Int](value=42)`。Sprig 不推断类型参数，泛型也没有协变和逆变。要对类型参数用 `==`，需要在函数开头写 `requires T: Equatable`。详细规则见[泛型](/guide/generics)。
+你自己写的类、variant 和函数可以放进 `generic T:`（或 `generic K, V:`）块里。用的时候每次都要写出类型参数，比如 `Box[Int](value=42)`。Sprig 不推断类型参数，泛型也没有协变和逆变。要对类型参数用 `==`，需要在函数开头写 `requires T: Equatable`；要比较大小，写 `requires T: Comparable`。详细规则见[泛型](/guide/generics)。
 
 ## Lambda
 

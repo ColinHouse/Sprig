@@ -61,6 +61,22 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 - Indexing, `in`, `get`, `set`, `append`, `sort` and the lambda-taking methods `map`, `filter` and `forEach` all work.
 - Floating-point numbers can't be `Map` keys, because `NaN` and signed zero don't behave consistently under equality and hashing.
 
+To sort by a field, group or total things up, use `@std/lists` from the standard library:
+
+<<< @/snippets/guide/lists_group.spr
+
+```text
+Coffee
+Lunch
+Taxi
+food: 3050
+transport: 3600
+```
+
+- `sort_by` is a stable sort, and its key has to be orderable (see `Comparable` in [generics](/en/guide/generics)).
+- `group_by` forms groups in the order their keys first appear and keeps the original order inside each group; keys are compared with `==`.
+- `fold` combines the elements from left to right into one result, which covers sums and counts.
+
 ## Nullable values
 
 <<< @/snippets/nullable.spr
@@ -85,7 +101,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 
 <<< @/snippets/generics.spr
 
-Your own classes, variants and functions can go inside a `generic T:` (or `generic K, V:`) block. Every use spells out the type arguments, as in `Box[Int](value=42)`. Sprig doesn't infer type arguments, and generics have no variance. To compare values of a type parameter with `==`, start the function with `requires T: Equatable`. The [generics guide](/en/guide/generics) has the details.
+Your own classes, variants and functions can go inside a `generic T:` (or `generic K, V:`) block. Every use spells out the type arguments, as in `Box[Int](value=42)`. Sprig doesn't infer type arguments, and generics have no variance. To compare values of a type parameter with `==`, start the function with `requires T: Equatable`; to order them with `<`, use `requires T: Comparable`. The [generics guide](/en/guide/generics) has the details.
 
 ## Lambdas
 

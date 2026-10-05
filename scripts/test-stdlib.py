@@ -60,6 +60,17 @@ def main():
         '1', '-2', '-2', '1', '0', '1', '3', '1000',
         'clamp rejected', 'division rejected', 'negative sqrt rejected',
     ], repr(math_result.stdout)
+    lists_result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/lists.spr')],
+                                  cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
+    assert lists_result.returncode == 0, (lists_result.stdout, lists_result.stderr)
+    assert lists_result.stdout.splitlines() == [
+        'water', 'bread', 'tea', 'coffee', 'cake',
+        'tea', 'coffee', 'water', 'cake', 'bread',
+        'drink 3 750', 'food 2 650',
+        '[-0.0, 0.0, 1.0, 2.5, NaN]',
+        '3', 'NaN 1', '0.0 2', 'NaN 1',
+        '0', '0', '16',
+    ], repr(lists_result.stdout)
     practical_outputs = []
     for timezone in ('UTC', 'Pacific/Honolulu'):
         with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:
