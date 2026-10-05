@@ -37,6 +37,33 @@ def write(path, text):
     path.write_text(text)
 
 
+def link_directory(link, target):
+    """A symlink, or on Windows a junction, which needs no symlink privilege."""
+    if os.name == "nt":
+        subprocess.run(["cmd", "/d", "/c", "mklink", "/J", str(link), str(target)],
+                       check=True, capture_output=True)
+    else:
+        link.symlink_to(target)
+
+
+def unlink_directory(link):
+    if os.name == "nt":
+        os.rmdir(link)  # removes the junction, never its target
+    else:
+        link.unlink()
+
+
+def windows_short_path(path):
+    """The 8.3 alias of path, or None when the volume does not generate one."""
+    if os.name != "nt":
+        return None
+    import ctypes
+    buffer = ctypes.create_unicode_buffer(32768)
+    if not ctypes.windll.kernel32.GetShortPathNameW(str(path), buffer, len(buffer)):
+        return None
+    return None if Path(buffer.value) == Path(path) else Path(buffer.value)
+
+
 def project(root, name, exports=(), dependencies=()):
     lines = ["[project]", f'name = "{name}"', 'version = "0.1.0"', 'language = "0.8"']
     if exports:
@@ -75,6 +102,27 @@ def main():
         executed = run(app, "run")
         check("at-import-runs", executed.returncode == 0 and executed.stdout == "42\n",
               executed.stdout + executed.stderr)
+
+        # A checkout that converts newlines (core.autocrlf on Windows) does not
+        # edit either manifest; any other byte change still stales the lock.
+        # Text-mode writes above use the platform newline, so flip whichever it is.
+        def flipped(data):
+            return data.replace(b"\r\n", b"\n") if b"\r\n" in data else data.replace(b"\n", b"\r\n")
+
+        manifests = [app / "sprig.toml", base / "lib/sprig.toml"]
+        originals = [manifest.read_bytes() for manifest in manifests]
+        for manifest, original in zip(manifests, originals):
+            manifest.write_bytes(flipped(original))
+        crlf = run(app, "run")
+        check("crlf-manifests-keep-lock", crlf.returncode == 0 and crlf.stdout == "42\n",
+              crlf.stdout + crlf.stderr)
+        manifests[1].write_bytes(flipped(originals[1]) + b"\n")
+        edited = run(app, "check")
+        check("crlf-manifest-edit-stales-lock", edited.returncode == 1
+              and "SPR-PROJECT-LOCK-STALE" in edited.stdout + edited.stderr,
+              edited.stdout + edited.stderr)
+        for manifest, original in zip(manifests, originals):
+            manifest.write_bytes(original)
 
         write(base / "app/src/main.spr",
               'import "@math/internal.spr" as hidden\nprint(hidden.hidden())\n')
@@ -171,9 +219,11 @@ def main():
               'import "@abs/abs.spr" as abs\nprint(abs.value())\n')
         abs_resolve = run(abs_app, "resolve")
         abs_lock = (abs_app / "sprig.lock").read_text()
+        # The lock is TOML: a Windows path is written with escaped backslashes.
+        abs_locator = str((base / "portable/abs-lib").resolve()).replace("\\", "\\\\")
         check("absolute-declaration-non-portable", abs_resolve.returncode == 0
               and "portable = false" in abs_lock
-              and f'path = "{(base / "portable/abs-lib").resolve()}"' in abs_lock,
+              and f'path = "{abs_locator}"' in abs_lock,
               abs_resolve.stdout + abs_resolve.stderr + abs_lock)
         shutil.copytree(abs_app, base / "portable/abs-app-moved")
         moved_ok = run(base / "portable/abs-app-moved", "run", "--offline")
@@ -205,16 +255,36 @@ def main():
         write(link_app / "src/main.spr",
               'import "@math/lib.spr" as lib\nprint(lib.double(4))\n')
         link = base / "portable/lib-link"
-        if os.name == "nt":
-            print("skip symlink alias relocation (windows)")
-        else:
-            link.symlink_to(base / "portable/lib")
-            check("symlink-alias-resolve", run(link_app, "resolve").returncode == 0)
-            link.unlink()
-            link.symlink_to(base / "portable/lib-2")
-            link_run = run(link_app, "run", "--offline")
-            check("symlink-alias-retarget-accepted", link_run.returncode == 0
-                  and link_run.stdout == "8\n", link_run.stdout + link_run.stderr)
+        link_directory(link, base / "portable/lib")
+        check("symlink-alias-resolve", run(link_app, "resolve").returncode == 0)
+        unlink_directory(link)
+        link_directory(link, base / "portable/lib-2")
+        link_run = run(link_app, "run", "--offline")
+        check("symlink-alias-retarget-accepted", link_run.returncode == 0
+              and link_run.stdout == "8\n", link_run.stdout + link_run.stderr)
+
+        # A project reached through a linked or 8.3 working directory is the
+        # same project: Windows keeps that spelling in the JVM's user.dir.
+        linked_app = base / "portable/app-link"
+        link_directory(linked_app, papp)
+        aliases = [("linked", linked_app)]
+        short = windows_short_path(papp)
+        if short is not None:
+            aliases.append(("short-name", short))
+        elif os.name == "nt":
+            print("skip 8.3 working directory (volume has no short names)")
+        for label, alias in aliases:
+            via_alias = run(alias, "run", "--offline")
+            check(f"project-via-{label}-directory", via_alias.returncode == 0
+                  and via_alias.stdout == "42\n", f"{alias}: {via_alias.stdout}{via_alias.stderr}")
+            explicit = run(alias, "check", "src/main.spr", "--offline")
+            check(f"project-file-via-{label}-directory", explicit.returncode == 0,
+                  f"{alias}: {explicit.stdout}{explicit.stderr}")
+            # An absolute file spelled through the alias still belongs to the project.
+            spelled = run(papp, "check", alias / "src/main.spr", "--offline")
+            check(f"project-file-spelled-via-{label}-path", spelled.returncode == 0,
+                  f"{alias}: {spelled.stdout}{spelled.stderr}")
+        unlink_directory(linked_app)
 
         # ---------------------------------------------------------- cycle
         project(base / "cycle/a", "a", exports=["a.spr"], dependencies=[("b", "../b")])

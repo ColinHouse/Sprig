@@ -63,7 +63,7 @@ Never change a golden output or weaken an assertion merely to remove a failure.
 
 Release validation additionally packages the SDK, verifies checksums/legal
 notices, extracts and exercises each showcase from the archive, and runs the
-Linux/macOS × JDK17/26 hosted matrix; Windows preview runs separately and is non-blocking. Maintainers record those
+Linux/macOS × JDK17/26 hosted matrix; the Windows preview job runs the same gates separately and is not a required check. Maintainers record those
 results in the milestone validation record. A local contributor gate does
 not establish release or platform validation.
 

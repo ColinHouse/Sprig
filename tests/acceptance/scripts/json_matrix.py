@@ -57,7 +57,9 @@ def run_case(name, args, expect_json=True, expect_exit=None, expected_codes=None
         record["codes"] = [d.get("code") for d in diagnostics]
         record["uri_null_count"] = sum(1 for d in diagnostics if d.get("uri") is None)
         record["range_null_count"] = sum(1 for d in diagnostics if d.get("range") is None)
-        record["program_output"] = data.get("programOutput")
+        # print ends lines with the platform line separator (CRLF on Windows).
+        output = data.get("programOutput")
+        record["program_output"] = output.replace("\r\n", "\n") if isinstance(output, str) else output
     if expect_exit is not None and proc.returncode != expect_exit:
         record["problems"].append(f"exit {proc.returncode} != expected {expect_exit}")
     if expected_codes is not None and record["codes"] != expected_codes:

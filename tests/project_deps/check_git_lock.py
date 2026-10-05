@@ -77,7 +77,12 @@ public class LockHolder {
             assert holder.poll() is None, "resolver terminated or stole another process's lock holder"
             assert lock_path.stat().st_size == 0, "timed-out resolver changed the cooperative lock file"
         finally:
-            holder.terminate()
+            if os.name == "nt":
+                # A java.exe on PATH may be a launcher stub (Oracle's javapath)
+                # whose JVM child keeps the lock unless the whole tree stops.
+                subprocess.run(["taskkill", "/PID", str(holder.pid), "/T", "/F"], capture_output=True)
+            else:
+                holder.terminate()
             holder.wait(timeout=10)
 
         retry = subprocess.run([str(CLI), "resolve", "--json"], cwd=project, env=env,

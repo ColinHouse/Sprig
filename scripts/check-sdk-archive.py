@@ -87,6 +87,9 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
         return result.stdout
 
     assert command("version").strip().endswith(version)
+    if os.name == "nt":
+        subprocess.run([sys.executable, str(ROOT / "tests/launcher/check_windows_arguments.py"),
+                        "--launcher", str(cli)], check=True)
     capabilities = json.loads(command("capabilities", "--json"))
     assert capabilities["compilerVersion"] == version
     assert capabilities["releaseStatus"] == "prerelease; v" + version or re.fullmatch(r"development; (?:target|based on) v" + re.escape(version) + r"; latest published v[0-9A-Za-z.+-]+", capabilities["releaseStatus"])
@@ -101,12 +104,12 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
                 assert (sdk / example).is_file(), (topic, example)
     hello = "website/snippets/tutorial/hello.spr"
     assert json.loads(command("check", hello, "--json"))["diagnostics"] == []
-    assert json.loads(command("run", hello, "--json"))["programOutput"] == "Hello, Ada!\n"
+    assert json.loads(command("run", hello, "--json"))["programOutput"].replace("\r\n", "\n") == "Hello, Ada!\n"
     independent = Path(temp) / "standalone std user"
     independent.mkdir()
     source = independent / "main.spr"
     source.write_text('import "@std/text.spr" as text\nprint(text.trim("  installed std  "))\n', encoding="utf-8")
-    assert json.loads(command("run", str(source), "--json", cwd=independent))["programOutput"] == "installed std\n"
+    assert json.loads(command("run", str(source), "--json", cwd=independent))["programOutput"].replace("\r\n", "\n") == "installed std\n"
     generated = json.loads(command("build", str(source), "--emit-java-only", "-d", str(independent / "output"), "--json", cwd=independent))
     assert generated["javacInvoked"] is False and generated["javaSources"]
     assert not list((independent / "output").rglob("*.class"))
@@ -119,7 +122,7 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     assert resolved["exitCode"] == 0, resolved
     assert (project / "sprig.lock").is_file()
     assert json.loads(command("check", "--offline", "--json", cwd=project))["diagnostics"] == []
-    assert json.loads(command("run", "--offline", "--json", cwd=project))["programOutput"] == "Hello, Sprig!\n"
+    assert json.loads(command("run", "--offline", "--json", cwd=project))["programOutput"].replace("\r\n", "\n") == "Hello, Sprig!\n"
     showcase_test = ROOT / "scripts/test-showcases.py"
     if not showcase_test.is_file():
         raise AssertionError("release requires all three showcases and their portable verification")

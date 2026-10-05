@@ -33,6 +33,18 @@ test('cancel aborts a real process, timeout terminates it, malformed output is d
  await assert.rejects(a.invoke(slow,[],dir,{timeoutMs:50}),/timed out/i);
  const bad=path.join(dir,'bad');fs.writeFileSync(bad,'#!/bin/sh\nprintf "not json"\n',{mode:0o755});await assert.rejects(a.invoke(bad,[],dir),/JSON/);
 });
+test('Windows cancel stops the compiler JVM and the program JVM it started',async t=>{
+ if(process.platform!=='win32')return t.skip('POSIX process groups are covered above');
+ const a=api(),dir=fixture(t),file=path.join(dir,'beat.spr'),marker=path.join(dir,'beats.txt');
+ fs.writeFileSync(file,'import "@std/files.spr" as files\nimport "@std/process.spr" as process\n\nlet marker = process.arguments().get(0)\nvar beats = 0\nwhile true:\n    beats += 1\n    files.write_utf8(marker, beats.toString())\n');
+ const abort=new AbortController(),run=a.capture(compiler,['run',file,'--',marker],dir,{signal:abort.signal});
+ const read=()=>{try{return fs.readFileSync(marker,'utf8');}catch{return null;}},pause=ms=>new Promise(r=>setTimeout(r,ms));
+ for(let i=0;i<600&&read()===null;i++)await pause(100);
+ assert.notEqual(read(),null,'the program never started');
+ abort.abort();await assert.rejects(run,/cancel/i);
+ await pause(1000);const stopped=read();await pause(1500);
+ assert.equal(read(),stopped,'the program JVM kept running after cancel');
+});
 test('real Unicode prefix diagnostic points to the ASCII failing operand in UTF-16',async t=>{
  const a=api(),dir=fixture(t),file=path.join(dir,'unicode.spr');const source='let bad = ["😀", missing]\n';fs.writeFileSync(file,source);
  const r=await a.invoke(compiler,['check',file,'--json'],dir);assert.ok(r.json.diagnostics.length);
@@ -56,6 +68,11 @@ test('Windows terminal plan invokes the SDK JVM directly and rejects arbitrary b
  assert.deepEqual(command.args.slice(-2),['run','server $; 中文.spr']);
  assert.equal(command.args[3].includes(';'),true);
  assert.equal(command.args.includes('--json'),false);
+ // The same classpaths bin/sprig.cmd uses: a source build, then an extracted release SDK.
+ assert.equal(command.args[2],[path.join(dir,'build','sprig-compiler.jar'),path.join(dir,'build','deps','antlr-4.13.2-complete.jar'),path.join(dir,'build','deps','resolver','*')].join(';'));
+ const sdk=fixture(t);fs.mkdirSync(path.join(sdk,'lib'),{recursive:true});fs.writeFileSync(path.join(sdk,'lib','sprig-compiler.jar'),'fixture');
+ const packaged=a.compilerCommand(path.join(sdk,'bin','sprig.cmd'),['check','--json'],'win32');
+ assert.equal(packaged.args[2],path.join(sdk,'lib','*'));assert.equal(packaged.args[3],`-Dsprig.home=${sdk}`);
 });
 test('query commands without exitCode are accepted: api, help and doctor',async()=>{
  const a=api();

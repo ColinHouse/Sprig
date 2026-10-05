@@ -49,7 +49,11 @@ def server(project, build=None, entry=None):
                 yield "http://127.0.0.1:" + str(int(line.removeprefix("PORT=")))
                 break
     finally:
-        proc.terminate()
+        if os.name == "nt":
+            # Terminating sprig.cmd alone would orphan the compiler and program JVMs.
+            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True)
+        else:
+            proc.terminate()
         try:
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:

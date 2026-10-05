@@ -39,8 +39,10 @@ Schema 5 is current. Schemas 1–4 are rejected with `SPR-PROJECT-LOCK-SCHEMA`;
 run `sprig resolve` to write a new lock (there is no automatic migration).
 The lock records the compiler version and consumers reject a mismatch, so a
 compiler upgrade requires explicit resolution. Source edits do not stale the
-lock; manifest edits and locator changes do. Absolute package imports, `..`
-and symlink escapes are rejected.
+lock; manifest edits and locator changes do. Manifest digests read CRLF line
+endings as LF, so a checkout that converts newlines (Git `core.autocrlf` on
+Windows) keeps a lock written on another platform current. Absolute package
+imports, `..` and symlink escapes are rejected.
 
 Relative file imports are not a general filesystem sandbox.
 

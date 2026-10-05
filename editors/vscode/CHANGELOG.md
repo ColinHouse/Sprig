@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Windows: checks, Run and Run in Terminal start the JVM with the classpath of
+  a source build or of an extracted release SDK (`lib\*`). The release SDK
+  was rejected before, and a source build was missing ANTLR.
+- Windows: cancelling Run stops the compiler and the program it started.
+
 ## 0.2.0
 
 - Format Document runs `sprig fmt`; it works with `editor.formatOnSave`.

@@ -175,6 +175,9 @@ def main():
         for name, (lines, expected) in cases.items():
             file_name = "uni\\u000aesc.spr" if name == "unicode-escape-file-name" else f"{name}.spr"
             path = Path(work) / file_name
+            # On Windows the backslash is a separator, so the same escape sits
+            # between a directory and the file name.
+            path.parent.mkdir(exist_ok=True)
             path.write_text("\n".join(lines) + "\n", encoding="utf-8")
             result = run(path)
             actual = result.stdout.splitlines()

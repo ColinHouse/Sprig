@@ -25,7 +25,9 @@ def write_launchers(home, packaged=False):
     windows_cp = '%SPRIG_HOME%\\lib\\*' if packaged else '%SPRIG_HOME%\\build\\sprig-compiler.jar;%SPRIG_HOME%\\build\\deps\\' + ANTLR_NAME + ';%SPRIG_HOME%\\build\\deps\\resolver\\*'
     (bindir / 'sprig').write_text('#!/bin/sh\nset -eu\nHERE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexec java -Dfile.encoding=UTF-8 -cp "' + unix_cp + '" -Dsprig.home="$HERE" sprig.compiler.cli.Main "$@"\n', encoding='utf-8')
     (bindir / 'sprig').chmod(0o755)
-    (bindir / 'sprig.cmd').write_bytes(('@echo off\r\nsetlocal\r\nfor %%I in ("%~dp0..") do set "SPRIG_HOME=%%~fI"\r\njava -Dfile.encoding=UTF-8 -cp "' + windows_cp + '" "-Dsprig.home=%SPRIG_HOME%" sprig.compiler.cli.Main %*\r\nexit /b %errorlevel%\r\n').encode('utf-8'))
+    # An inherited delayed-expansion state (cmd /v:on or the registry default)
+    # would otherwise strip '!' from forwarded arguments and the SDK path.
+    (bindir / 'sprig.cmd').write_bytes(('@echo off\r\nsetlocal DisableDelayedExpansion\r\nfor %%I in ("%~dp0..") do set "SPRIG_HOME=%%~fI"\r\njava -Dfile.encoding=UTF-8 -cp "' + windows_cp + '" "-Dsprig.home=%SPRIG_HOME%" sprig.compiler.cli.Main %*\r\nexit /b %errorlevel%\r\n').encode('utf-8'))
 
 
 def main():

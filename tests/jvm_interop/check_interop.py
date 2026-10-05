@@ -277,7 +277,7 @@ def main():
         compiled = subprocess.run(
             ["javac", "--release", "17", "-cp", str(ROOT / "build" / "sprig-compiler.jar"),
              "-d", str(classes), *map(str, sorted(source_dir.glob("*.java")))],
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            text=True, errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         verify("javac-fixture", compiled.returncode == 0, compiled.stdout + compiled.stderr)
         cp = str(classes)
 

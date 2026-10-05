@@ -121,5 +121,5 @@ with tempfile.TemporaryDirectory(prefix="sprig-doc-reference-") as temp:
     source.write_text(quick + "\n")
     result = subprocess.run([str(SPRIG), "run", str(source), "--json"],
                             cwd=ROOT, capture_output=True, text=True)
-    assert result.returncode == 0 and json.loads(result.stdout)["programOutput"] == "3\n"
+    assert result.returncode == 0 and json.loads(result.stdout)["programOutput"].replace("\r\n", "\n") == "3\n"
 print("tooling/release consistency: version, language, JDK, license, commands, topics, codes, status passed")

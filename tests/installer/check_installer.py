@@ -64,6 +64,9 @@ def traversal_zip(tag):
 def main():
     if not INSTALLER.is_file():
         raise AssertionError("missing scripts/install-sprig.sh")
+    if os.name == "nt":
+        print("SKIP managed installer: documented Linux/macOS only")
+        return
     with tempfile.TemporaryDirectory(prefix="sprig-install-test-") as temporary:
         work = Path(temporary)
         server = ThreadingHTTPServer(("127.0.0.1", 0), ReleaseHandler)

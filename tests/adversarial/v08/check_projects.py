@@ -50,14 +50,17 @@ def main():
         empty_maven.mkdir()
         source = root/'src/main.spr'
         source.write_text('print("hello")\n')
-        unusual = root/'app\nprint("injected")\n#'
+        # Windows file names cannot hold newlines or double quotes; keep every
+        # TOML/Sprig metacharacter the platform does allow.
+        unusual = root/("app' # [project] name = {x} ; & ! % ✓" if os.name == 'nt'
+                        else 'app\nprint("injected")\n#')
         unusual.mkdir()
         status, data = invoke(unusual, 'init')
         assert status == 0, data
         status, data = invoke(unusual, 'resolve')
         assert status == 0, data
         status, data = invoke(unusual, 'run')
-        assert status == 0 and data['programOutput'] == 'Hello, Sprig!\n', data
+        assert status == 0 and data['programOutput'].replace('\r\n', '\n') == 'Hello, Sprig!\n', data
         print('pass init directory name remains data, never source code')
         manifest = root/'sprig.toml' 
         for name, text in cases.items():
@@ -76,7 +79,7 @@ def main():
         assert status == 1 and 'SPR-PROJECT-ENTRY' in [d['code'] for d in data['diagnostics']], data
         for name in ('a', 'b'):
             status, data = invoke(root, 'run', '--bin', name)
-            assert status == 0 and data['programOutput'] == 'hello\n', data
+            assert status == 0 and data['programOutput'].replace('\r\n', '\n') == 'hello\n', data
         print('pass multiple binary selection and ambiguous default')
         standalone = root/'standalone.spr'
         standalone.write_text('print("standalone")\n')

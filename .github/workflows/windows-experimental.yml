@@ -10,7 +10,6 @@ jobs:
   preview:
     name: Windows preview / JDK ${{ matrix.java }}
     runs-on: windows-latest
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -24,9 +23,16 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      # Windows is an experimental, non-blocking preview: these steps may fail
-      # without failing the job. The final step lists every failed or skipped
-      # step in the job summary and as a warning annotation.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            website/package-lock.json
+            editors/vscode/package-lock.json
+      # Windows is an experimental preview and not a required status check.
+      # Every gate runs even after an earlier one fails; the final step lists
+      # each failed or skipped gate in the job summary and fails the job.
       - name: Build (scripts/build.py)
         id: build
         continue-on-error: true
@@ -48,6 +54,16 @@ jobs:
         run: |
           python scripts/package-alpha.py --skip-build
           python scripts/check-sdk-archive.py
+      - name: Documentation (scripts/check-docs.py)
+        id: docs
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: python scripts/check-docs.py
+      - name: VS Code extension (scripts/check-editor.py)
+        id: editor
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: python scripts/check-editor.py
       - name: Report preview results
         if: ${{ !cancelled() }}
         shell: bash
@@ -57,13 +73,15 @@ jobs:
           TESTS: ${{ steps.tests.outcome }}
           GRAMMAR: ${{ steps.grammar.outcome }}
           ARCHIVE: ${{ steps.archive.outcome }}
+          DOCS: ${{ steps.docs.outcome }}
+          EDITOR: ${{ steps.editor.outcome }}
         run: |
           failed=()
           skipped=()
           {
             echo "### Windows experimental preview / JDK $JAVA_VERSION"
             echo
-            echo "Non-blocking: a failed step is reported here and as a warning instead of failing the job."
+            echo "Not a required status check: a failed gate fails this job without blocking merges."
             echo
             echo "| Step | Outcome |"
             echo "|---|---|"
@@ -81,12 +99,14 @@ jobs:
           report "Tests (scripts/test.py)" "$TESTS"
           report "Grammar tests (scripts/test-grammar.py)" "$GRAMMAR"
           report "SDK archive (scripts/package-alpha.py + scripts/check-sdk-archive.py)" "$ARCHIVE"
+          report "Documentation (scripts/check-docs.py)" "$DOCS"
+          report "VS Code extension (scripts/check-editor.py)" "$EDITOR"
           joined() { local text; text=$(printf '%s; ' "$@"); echo "${text%; }"; }
           if [ ${#failed[@]} -eq 0 ] && [ ${#skipped[@]} -eq 0 ]; then
             printf '\nAll preview steps passed.\n' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          message="Windows preview on JDK $JAVA_VERSION did not pass (non-blocking)."
+          message="Windows preview on JDK $JAVA_VERSION did not pass."
           if [ ${#failed[@]} -gt 0 ]; then
             message="$message Failed: $(joined "${failed[@]}")."
           fi
@@ -94,4 +114,5 @@ jobs:
             message="$message Not run: $(joined "${skipped[@]}")."
           fi
           printf '\n**%s**\n' "$message" >> "$GITHUB_STEP_SUMMARY"
-          echo "::warning title=Windows experimental / JDK $JAVA_VERSION::$message"
+          echo "::error title=Windows experimental / JDK $JAVA_VERSION::$message"
+          exit 1

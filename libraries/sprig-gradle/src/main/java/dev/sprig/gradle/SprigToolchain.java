@@ -134,10 +134,8 @@ public final class SprigToolchain {
             throw missingExecutable("SPRIG_HOME does not contain a Sprig launcher: " + packaged);
         }
 
-        File onPath = findOnPath("sprig");
-        if (onPath == null && isWindows()) {
-            onPath = findOnPath("sprig.cmd");
-        }
+        // An SDK bin directory holds both launchers; Windows cannot run the POSIX one.
+        File onPath = findOnPath(launcherName());
         if (onPath != null) {
             return onPath;
         }

@@ -15,7 +15,7 @@ def expect(cwd, args, code=None, output=None, env=None):
     d = json.loads(p.stdout)
     assert p.returncode == (1 if code else 0), (args, p.stdout, p.stderr)
     if code: assert code in [x['code'] for x in d['diagnostics']], d
-    if output is not None: assert d['programOutput'] == output, d
+    if output is not None: assert d['programOutput'].replace('\r\n', '\n') == output, d
     count += 1
     return d
 

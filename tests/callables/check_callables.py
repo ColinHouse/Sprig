@@ -17,7 +17,7 @@ def main():
         passed+=1
     with tempfile.TemporaryDirectory(prefix="sprig-callables-") as tmp:
         cp=Path(tmp)/"classes";cp.mkdir()
-        p=subprocess.run(["javac","--release","17","-cp",str(ROOT/"build/sprig-compiler.jar"),"-d",str(cp),str(HERE/"CallableFixture.java")],capture_output=True,text=True)
+        p=subprocess.run(["javac","--release","17","-cp",str(ROOT/"build/sprig-compiler.jar"),"-d",str(cp),str(HERE/"CallableFixture.java")],capture_output=True,text=True,errors="replace")
         expect(p.returncode==0,p.stderr)
         for name in ("types","bridge"):
             p=run("run",HERE/(name+".spr"),"--classpath",cp)

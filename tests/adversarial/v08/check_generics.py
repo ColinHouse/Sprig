@@ -40,7 +40,7 @@ def main():
                         assert status == 0 and data['diagnostics'] == [], data
                 if 'output' in case:
                     status, data = command('run', source)
-                    assert status == 0 and data.get('programOutput') == case['output'], data
+                    assert status == 0 and data.get('programOutput', '').replace('\r\n', '\n') == case['output'], data
                 elif 'runtimeMessage' in case:
                     status, data = command('run', source)
                     assert status == 1 and any(d['code'] == 'SPR-RUNTIME-EXCEPTION'
