@@ -462,7 +462,9 @@ public final class JavaGenerator {
         w.blank();
         w.line("// Sprig variant " + commentText(currentModule.name) + ":" + decl.span.display());
         w.map(decl.span);
-        w.open("public interface " + simpleName(typeNames.get(decl)));
+        // Nested final case classes are the implicitly permitted subclasses, so
+        // Java code cannot add cases that exhaustive Sprig matches never saw.
+        w.open("public sealed interface " + simpleName(typeNames.get(decl)));
         for (Decl.VariantCase variantCase : decl.cases) {
             generateVariantCase(w, decl, variantCase);
         }
@@ -1111,7 +1113,7 @@ public final class JavaGenerator {
             return Double.toString(floatLit.value);
         }
         if (expr instanceof Expr.StringLit stringLit) {
-            return quote(stringLit.value);
+            return stringLiteral(stringLit.value);
         }
         if (expr instanceof Expr.BoolLit boolLit) {
             return boolLit.value ? "true" : "false";
@@ -2029,6 +2031,29 @@ public final class JavaGenerator {
             return code;
         }
         return code;
+    }
+
+    /**
+     * A class-file constant holds at most 65,535 bytes of modified UTF-8. Longer
+     * literals are emitted as chunks joined at runtime; String.join keeps javac
+     * from folding them back into one constant, as it would with '+'.
+     */
+    private static String stringLiteral(String text) {
+        final int chunk = 20_000; // at most 3 bytes per char: 60,000 bytes
+        if (text.length() <= chunk) {
+            return quote(text);
+        }
+        List<String> parts = new ArrayList<>();
+        int start = 0;
+        while (start < text.length()) {
+            int end = Math.min(start + chunk, text.length());
+            if (end < text.length() && Character.isHighSurrogate(text.charAt(end - 1))) {
+                end--;
+            }
+            parts.add(quote(text.substring(start, end)));
+            start = end;
+        }
+        return "java.lang.String.join(\"\", " + String.join(", ", parts) + ")";
     }
 
     private static String quote(String text) {

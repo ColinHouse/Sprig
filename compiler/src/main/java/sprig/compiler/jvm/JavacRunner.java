@@ -56,10 +56,10 @@ public final class JavacRunner {
                 Path path = generatedFile == null ? null : Path.of(generatedFile);
                 Span span = mapBack(path, javaDiagnostic.getLineNumber(), lineMaps);
                 String uri = path != null && uriByPath.containsKey(path) ? uriByPath.get(path) : null;
+                String message = javaDiagnostic.getMessage(null);
                 diagnostics.add(Diagnostic.error(Codes.JVM_COMPILE, Phase.JVM,
-                        "Java compiler: " + javaDiagnostic.getMessage(null), uri, span)
-                        .withHint("This reports generated-code rejection; it may indicate a compiler bug "
-                                + "or an interop mismatch."));
+                        "Java compiler: " + message, uri, span)
+                        .withHint(hintFor(message)));
             }
             return ok;
         } catch (IOException e) {
@@ -70,6 +70,16 @@ public final class JavacRunner {
     }
 
     /** Maps a 1-based generated-Java line back to the nearest recorded Sprig span. */
+    private static String hintFor(String javacMessage) {
+        if (javacMessage != null && (javacMessage.contains("code too large")
+                || javacMessage.contains("too many constants"))) {
+            return "The generated Java exceeds a JVM class-file limit (64 KB of bytecode per method, "
+                    + "65,535 constants per class). Load large literal data from a file at runtime, "
+                    + "or split the code into smaller functions or modules.";
+        }
+        return "This reports generated-code rejection; it may indicate a compiler bug or an interop mismatch.";
+    }
+
     public static Span mapBack(Path generatedFile, long javaLine,
                                Map<Path, Map<Integer, Span>> lineMaps) {
         if (generatedFile == null || javaLine < 0) {
