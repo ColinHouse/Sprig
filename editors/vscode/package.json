@@ -1,8 +1,8 @@
 {
   "name": "sprig-language",
   "displayName": "Sprig",
-  "description": "Sprig syntax highlighting, compiler diagnostics, Run, terminal execution and generated Java.",
-  "version": "0.1.0",
+  "description": "Sprig language support: highlighting, diagnostics, formatting, outline, hover, completion, navigation, tests, Run and generated Java.",
+  "version": "0.2.0",
   "publisher": "ColinHouse",
   "license": "Apache-2.0",
   "repository": {
@@ -36,7 +36,7 @@
     "test": "npm run compile && node --test test/grammar.cjs test/compiler.cjs test/terminal.cjs test/symbols.cjs test/markdown.cjs test/features.cjs",
     "test:host": "npm run compile && node test/run-host.cjs",
     "vscode:prepublish": "npm run compile",
-    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.1.0.vsix"
+    "package": "node -e \"require('node:fs').mkdirSync('dist', {recursive: true})\" && vsce package --no-dependencies --out dist/sprig-language-0.2.0.vsix"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
