@@ -1,0 +1,14 @@
+import "@std/jvm.spr" as jvm
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.add("Ada")
+names.add("Grace")
+
+let snapshot = jvm.list_snapshot[String](names)
+names.add("Linus")
+print(snapshot.size())
+print(names.size())
+
+let copy = jvm.list_copy[String](snapshot)
+print(copy.size())

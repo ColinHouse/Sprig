@@ -1,0 +1,5 @@
+import java.lang.System as System
+
+let version = System.getProperty("java.version")
+if version != null:
+    print(version.length() > 0)

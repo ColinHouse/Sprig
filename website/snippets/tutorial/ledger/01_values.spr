@@ -1,0 +1,8 @@
+let item = "Coffee"
+let price = 1250
+var cups = 2
+cups += 1
+
+print(item)
+print(price * cups)
+print(cups > 2)

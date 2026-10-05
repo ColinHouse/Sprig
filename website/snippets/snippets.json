@@ -20,12 +20,33 @@
     "tutorial/numeric_science.spr",
     "tutorial/shapes.spr",
     "tutorial/word_count.spr",
-    "tutorial/task_tracker.spr"
+    "tutorial/task_tracker.spr",
+    "tutorial/ledger/01_values.spr",
+    "tutorial/ledger/02_money.spr",
+    "tutorial/ledger/03_expense.spr",
+    "tutorial/ledger/04_category.spr",
+    "tutorial/ledger/05_lookup.spr",
+    "tutorial/ledger/06_parse.spr",
+    "tutorial/ledger/07_report.spr",
+    "home/first_look.spr",
+    "guide/generics_option.spr",
+    "guide/generics_equatable.spr",
+    "guide/jvm_nullable.spr",
+    "guide/jvm_collections.spr",
+    "guide/jvm_bytes.spr"
   ],
   "import-only": [
     "modules/math_module.spr"
   ],
   "compile-fail": [
-    "tutorial/type_error.spr"
+    "tutorial/type_error.spr",
+    "tutorial/ledger/01_values_error.spr",
+    "tutorial/ledger/02_money_error.spr",
+    "tutorial/ledger/04_category_missing.spr",
+    "tutorial/ledger/05_lookup_error.spr",
+    "tutorial/ledger/06_parse_unhandled.spr",
+    "home/first_look_missing.spr",
+    "guide/generics_missing_args.spr",
+    "guide/tooling_missing_case.spr"
   ]
 }

@@ -1,0 +1,12 @@
+class Expense:
+    let item: String
+    let cents: Int
+
+func find(expenses: List[Expense], item: String) -> Expense?:
+    for expense in expenses:
+        if expense.item == item:
+            return expense
+    return null
+
+let taxi = find([Expense(item="Taxi", cents=3600)], "Taxi")
+print(taxi.cents)

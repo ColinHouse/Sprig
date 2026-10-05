@@ -1,0 +1,17 @@
+func total(amounts: List[Int]) -> Int:
+    var sum = 0
+    for amount in amounts:
+        sum += amount
+    return sum
+
+func format_money(cents: Int) -> String:
+    let units = cents.divTrunc(100)
+    let rest = cents % 100
+    if rest < 10:
+        return units.toString() + ".0" + rest.toString()
+    return units.toString() + "." + rest.toString()
+
+let today: List[Int] = [1250, 3600, 1800]
+print(total(today))
+print(format_money(total(today)))
+print(0.1 + 0.2)

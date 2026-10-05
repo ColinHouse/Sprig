@@ -2,8 +2,8 @@
 layout: home
 hero:
   name: Sprig
-  text: Less to guess. Easier to verify.
-  tagline: Sprig does not try to make coding agents smarter. It tries to give them less to guess. For people and agents; agent-friendly should also mean review-friendly. Experimental Beta; JDK 17+.
+  text: A small JVM language for people and AI
+  tagline: Python-like syntax, static types, runs on the JVM. When something is wrong, the compiler tells you where, why, and how to fix it.
   image:
     src: /logo-round.png
     alt: Sprig
@@ -12,75 +12,68 @@ hero:
       text: Start the tutorial
       link: /en/tutorial
     - theme: alt
-      text: Contribute with your agent
-      link: /en/project/contributing
+      text: Install
+      link: /en/guide/getting-started
     - theme: alt
       text: GitHub
       link: https://github.com/ColinHouse/Sprig
 features:
-  - title: Programs people can read
-    details: Explicit function types, clear bindings and small JVM programs make source easier to inspect and discuss.
-  - title: Ask the compiler instead of guessing
-    details: Capabilities, topic help, Java signatures and JSON diagnostics provide reproducible implementation evidence.
-  - title: Keep changes reviewable
-    details: Type checking, exhaustive match, checked numerics and locked dependencies expose concrete problems early; they do not prove an algorithm correct.
+  - title: Missed cases get caught
+    details: Add a case to a type, and every match that forgets it fails to compile instead of failing at runtime.
+  - title: Check for null first
+    details: A value that can be null is written T?, and you check it before use. Objects returned by Java count too.
+  - title: Errors you can act on
+    details: Every error has a stable code, an exact location and a fix hint. Ask for JSON and hand it to your editor or AI assistant.
 ---
 
-## What can I build?
+## A first look
 
-Repository automation, data transforms, small JVM applications and compiler
-utilities. The source milestone's [showcases](https://github.com/ColinHouse/Sprig/tree/main/examples/showcases)
-include a repository auditor, a real Maven-library application and a source
-analyzer. Their READMEs include inputs, commands and explicit boundaries.
+<<< @/snippets/home/first_look.spr
 
-## Early dogfood: feedback, not a performance claim
+Output:
 
-The maintainer reports trying a real Sprig workflow with a lower-cost coding
-model. This is early, anecdotal product dogfooding: there was no controlled
-experiment, equivalent Java implementation, preregistered task set or
-productivity metric. It cannot support claims that Sprig beats Java, improves
-productivity by a measured amount or eliminates model errors. The narrower
-observation is that compiler queries and structured diagnostics can provide
-concrete evidence for repairs. We welcome external users to reproduce and
-report their experience.
+```text
+3.14159
+7.0
+MONDAY
+```
 
-## Start with a project
+Add a `Triangle` to `Shape` later and forget to update `area`, and `sprig check` points straight at it:
 
-[Install the SDK or build from source](/en/guide/getting-started), then:
+```text
+SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
+  hint: Add 'case Shape.Triangle:' (there is no default case)
+```
+
+## What you can build
+
+- Command-line tools and automation scripts
+- JSON and text processing
+- Small web services and SQLite apps (see the [examples](/en/examples))
+- Programs that use existing Java libraries from Maven
+- The game logic of a Minecraft mod (see [Fabric integration](/en/guide/fabric))
+
+## Can I use it yet?
+
+Sprig is young. The current release is the experimental v0.5.0-beta.1. Everything listed above works today, and each item has an example you can run. It doesn't have generic type inference, interfaces or an LSP yet, and it isn't meant for production use. The full list is in [known limitations](/en/reference/language/known-limitations).
+
+## Up and running in five minutes
+
+You need JDK 17 or newer. Once the [SDK is installed](/en/guide/getting-started):
 
 ```bash
-sprig version
-sprig init my-tool
-cd my-tool
+sprig init hello
+cd hello
 sprig resolve
 sprig run
 ```
 
-Output: `Hello, Sprig!`. Then query `sprig capabilities --json`, edit
-`src/main.spr`, and use `sprig check --json` to guide repairs.
+When you see `Hello, Sprig!`, head to the [tutorial](/en/tutorial) and build a small expense tracker in about half an hour.
 
-## Release and limitations
+## Get involved
 
-The published SDK is experimental [v0.5.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.5.0-beta.1),
-with compiler version `0.5.0-beta.1` and language version `0.8-dev`. Beta brings
-project testing, wrapper generation, schema-4 dependency locks, explicit Java
-generic and collection boundaries, and first-party CLI, HTTP, JSON, SQLite and
-Web packages into the SDK. See [release status](/en/project/release-status),
-the release assets and `sprig capabilities --json` from the installed SDK for
-the exact feature set. The end-to-end wiring from a real Fabric/Loom dogfood is
-in [Fabric / JVM framework integration](/en/guide/fabric).
+- Found a bug, or something feels awkward? [Open an issue](https://github.com/ColinHouse/Sprig/issues).
+- Want to contribute code? Read the [contributing guide](/en/project/contributing), then pick an [open issue](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen).
+- Code written with an AI assistant is welcome, as long as you've read it and tested it yourself.
 
-Sprig is not self-hosted or production ready. Publishing/registry, LSP,
-interfaces and generic inference remain future work. See
-[known limitations](/en/reference/language/known-limitations).
-
-## Help build Sprig
-
-Want to contribute with Codex / Claude / ChatGPT? Pick an
-[agent-friendly issue](https://github.com/ColinHouse/Sprig/issues?q=is%3Aissue+is%3Aopen+label%3Aagent-friendly),
-read AGENTS.md, run the contributor gate, review the patch and open a PR.
-[Contributing](/en/project/contributing) explains the short path; AI assistance
-is welcome and submitters own review, tests and correctness.
-
-Apache-2.0 · [中文](/) · [Language tour](/en/guide/language-tour) ·
-[Tooling and JSON](/en/guide/tooling)
+[中文](/) · [Apache-2.0](https://github.com/ColinHouse/Sprig/blob/main/LICENSE) · [GitHub](https://github.com/ColinHouse/Sprig)

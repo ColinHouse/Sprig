@@ -1,0 +1,20 @@
+import java.time.LocalDate as LocalDate
+
+variant Shape:
+    Circle(radius: Float)
+    Rect(width: Float, height: Float)
+    Triangle(base: Float, height: Float)
+
+func area(shape: Shape) -> Float:
+    return match shape:
+        case Shape.Circle as circle:
+            3.14159 * circle.radius * circle.radius
+        case Shape.Rect as rect:
+            rect.width * rect.height
+
+print(area(Shape.Circle(radius=1.0)))
+print(area(Shape.Rect(width=2.0, height=3.5)))
+
+let day = LocalDate.parse("2026-10-05")
+if day != null:
+    print(day.getDayOfWeek())

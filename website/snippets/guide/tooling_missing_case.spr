@@ -1,0 +1,8 @@
+variant Shape:
+    Circle(radius: Float)
+    Square(side: Float)
+
+func area(shape: Shape) -> Float:
+    return match shape:
+        case Shape.Circle as circle:
+            3.14159 * circle.radius * circle.radius

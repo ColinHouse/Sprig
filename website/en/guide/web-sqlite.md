@@ -1,13 +1,12 @@
-# Web and SQLite development milestone
+# Web and SQLite
 
-The published v0.5.0-beta.1 SDK includes `libraries/sprig-web`,
-`libraries/sprig-sqlite` and the `examples/mini_web`, `examples/sqlite` and
-`examples/ledger` projects. This is an experimental Beta application example,
-not a production framework or a production deployment promise.
+The SDK includes two libraries, `libraries/sprig-web` for HTTP services and `libraries/sprig-sqlite` for SQLite databases. It also includes example projects that use them: `examples/mini_web`, `examples/sqlite`, `examples/sqlite_migrations` and `examples/ledger`.
 
-## Run the backend
+These are experimental examples that show how far Sprig can go. They aren't frameworks you can put straight into production.
 
-From the repository root after building:
+## Run the ledger backend
+
+`examples/ledger` is a complete bookkeeping backend: an HTTP API, SQLite storage and generated API documentation. From the root of a built Sprig repository, run:
 
 ```bash
 cd examples/ledger
@@ -16,53 +15,84 @@ cd examples/ledger
 ../../bin/sprig run --offline -- ledger.sqlite 8080
 ```
 
-Open `http://localhost:8080/docs` for Swagger UI and `/openapi.json` for typed
-OpenAPI metadata. The Swagger page uses pinned CDN assets and needs network
-access. The backend itself binds loopback and needs no network after dependencies
-are resolved and cached. Stop with Ctrl+C. VS Code offers **Sprig: Run in Terminal**
-for persistent programs; JSON run buffers until completion.
+When you see `LEDGER_READY 8080`, the server is up. Open `http://localhost:8080/docs` to try the API in Swagger UI; `/openapi.json` is the machine-readable description. The Swagger page loads its assets from a CDN, so it needs a network connection. The backend itself only listens on your machine and runs fully offline once dependencies are resolved and cached. Press Ctrl+C to stop it.
 
-Use GET/POST `/api/accounts`, GET/POST `/api/categories`, GET/POST
-`/api/transactions`, DELETE `/api/transactions/{id}`, and GET
-`/api/statistics/monthly?month=2026-09`. Money is signed Int minor units.
-The project README specifies request fields, persistence and validation.
+In VS Code, run long-running programs like this one with **Sprig: Run in Terminal**.
 
-## Ordinary typed Sprig APIs
+| Method | Path | What it does |
+|---|---|---|
+| GET, POST | `/api/accounts` | Lists or creates accounts |
+| GET, POST | `/api/categories` | Lists or creates categories |
+| GET, POST | `/api/transactions` | Lists or creates transactions |
+| DELETE | `/api/transactions/{id}` | Deletes a transaction: 204 if deleted, 404 if it doesn't exist |
+| GET | `/api/statistics/monthly?month=2026-09` | Number of transactions and totals for a month |
 
-Route handlers have source type `fn(web.Request) -> web.Response`. `App.get`,
-`post` and `delete` register handlers; `App.route` accepts an ordinary named
-`Route` constructor with explicit summary and schemas. There are no decorators.
-Use module functions `web.text(body,status)` and `web.json_response(value,status)`;
-`Response.text` is not a static Sprig API.
+Amounts are integers in the smallest currency unit (cents, for example) and can be negative. The [ledger README](https://github.com/ColinHouse/Sprig/blob/main/examples/ledger/README.md) lists the request fields, storage and validation rules.
 
-`req.path_param(name)`, `query(name)` and `header(name)` return String?, preserving
-absence versus empty strings. `req.body` is UTF-8 text; `req.json()` produces the
-closed JSON Value variant. Malformed input becomes400, missing route404 and
-unhandled application failure a controlled500. `json.find_member` distinguishes
-Missing, Found(value) and NotObject without truthiness or Any.
+## Handlers are ordinary Sprig functions
 
-Schemas use explicit Schema/FieldSchema/QueryParameter values, not arbitrary
-class reflection. They describe the API; handlers still validate request values.
-Registration rejects duplicate query metadata and conflicting template paths.
-See the repository `libraries/sprig-web/README.md` for behavior policy; resolved
-signatures come from `sprig api @web/app.spr --json` after `sprig resolve`.
+A route handler has the type `fn(web.Request) -> web.Response`. These excerpts are from `examples/mini_web/src/main.spr`:
 
-## SQL stays visible
+```sprig
+import "@web/web.spr" as web
 
-The SQLite package resolves `org.xerial:sqlite-jdbc:3.46.1.0` through the existing
-Maven Resolver and schema-5 lock. Data parameters are closed Integer/Text/Boolean/
-Null cases. SQL structure is trusted application code; values use prepared
-parameters. Queries return typed detached snapshots and adapters close JDBC
-resources and roll back failed query snapshots or batches. No ORM, arrays,
-implicit REAL-to-Int conversion, BLOB or Decimal binding is introduced.
+let app = web.App(title="Mini Web", cors_origin="http://localhost:5173")
 
-## Limits and verification
+func root(req: web.Request) -> web.Response:
+    return web.text("Hello, Sprig!", 200).with_header("X-Sprig", "mini-web")
 
-This synchronous single-user example has no auth, sessions, migrations, pooling,
-async or public deployment. Bodies and result snapshots are held in memory.
-Swagger CDN availability is separate from offline backend behavior.
-The repository tests use actual HTTP, temporary SQLite files, restart persistence
-and structural OpenAPI assertions:
+func hello(req: web.Request) -> web.Response:
+    let name = req.path_param("name")
+    let greeting = req.query("greeting")
+    if name != null:
+        if greeting != null:
+            return web.text(greeting + ", " + name + "!", 200)
+        return web.text("Hello, " + name + "!", 200)
+    return web.text("Missing name", 400)
+
+app.get("/", fn(req: web.Request) => root(req))
+```
+
+- Register handlers with `app.get`, `app.post` and `app.delete`. To document the route as well, pass a `web.Route` to `app.route`, with a summary and the shapes of the parameters, request and response. There are no decorators and no Java annotations.
+- Build responses with module functions: `web.text(body, status)` and `web.json_response(value, status)`. There's no static `Response.text` form.
+- `req.path_param`, `req.query` and `req.header` return `String?`, so "no such parameter" and "an empty parameter" stay distinct.
+- `req.body` is UTF-8 text, and `req.json()` parses the body into a JSON value. To find a field in it, use `json.find_member`, which tells apart a missing key, a JSON `null` value and a value that isn't an object; see the [language quick reference](/en/guide/language-tour).
+- Malformed requests get a 400, unknown routes a 404, and an unhandled error in a handler a controlled 500.
+
+## API documentation
+
+The OpenAPI document comes from `Schema`, `FieldSchema` and `QueryParameter` values that you write out explicitly; the library never reflects over arbitrary classes. These descriptions are documentation only, so handlers still validate the values they receive. Duplicate query parameters and conflicting path templates are rejected when you register a route.
+
+The [`libraries/sprig-web` README](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-web/README.md) describes the behavior in full. After `sprig resolve`, `sprig api @web/app.spr --json` lists the signature of everything in the library.
+
+## SQL stays in plain sight
+
+The SQLite library gets a pinned `org.xerial:sqlite-jdbc:3.46.1.0` from Maven, recorded in the lock file.
+
+- SQL statements are ordinary strings that you write, and they count as trusted application code. Values from users always go in through prepared-statement parameters, which come in four kinds: `Integer`, `Text`, `Boolean` and `Null`. This is not a SQL sandbox.
+- A query returns a typed snapshot of the results, already disconnected from the database. Connections, statements and result sets are closed when they're done. A single query can return at most 10,000 rows (more is an error), and the whole result is held in memory.
+- `Database.batch` runs a list of statements in one transaction; if any of them fails, all of them are rolled back. When a query (including `INSERT ... RETURNING`) fails, anything it wrote is rolled back too.
+- You can't write transaction statements such as `BEGIN` or `COMMIT` yourself; `batch` manages transactions.
+- There's no ORM, no automatic conversion from REAL to Int, and no BLOB or Decimal parameters. Only ordinary database files are supported, not `:memory:` databases.
+
+### Database migrations (experimental)
+
+Import `@sqlite/migrations.spr` and call `Migrations(database=database, directory="migrations").apply()`:
+
+- Migration files are named `NNN_description.sql`, and the three-digit numbers must be unique.
+- Files run in filename order, and the names of applied files are recorded in the `sprig_schema_migrations` table. If an applied file sorts after one that hasn't been applied, the run stops instead of applying migrations out of order.
+- Each file's SQL and its record are committed in the same transaction. If something fails, both are rolled back, and you can run again after fixing the file.
+- Don't edit a file that has already been applied: file contents aren't checksummed yet, so the change would go unnoticed. The migrations directory counts as trusted project code.
+
+See [`examples/sqlite_migrations`](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations) for a complete example, and the [`libraries/sprig-sqlite` README](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-sqlite/README.md) for the full API.
+
+## Limitations
+
+This is a synchronous, single-user example. It has no authentication, sessions, connection pooling or async handling, and it isn't designed for public deployment. Request bodies and query results are held in memory in full. Type checking makes sure the types are right, but it can't make your business rules or arithmetic correct.
+
+## How it's tested
+
+The repository's tests start a real local HTTP server, work with temporary SQLite files, check that data survives a restart and verify the structure of the OpenAPI document:
 
 ```bash
 python3 tests/callables/check_callables.py
@@ -71,6 +101,4 @@ python3 tests/sqlite/check_sqlite.py
 ./scripts/verify.sh
 ```
 
-The source report lives at `docs/history/milestones/WEB_SQLITE_ENGINEERING_REPORT.md`.
-Compiler query surfaces explain [function types](/en/guide/language-tour) and
-[JVM callable boundaries](/en/reference/jvm/interop).
+The development record is in `docs/history/milestones/WEB_SQLITE_ENGINEERING_REPORT.md`. For a command-line tool made of several files, with option parsing, see [`examples/json_select`](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select).
