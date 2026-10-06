@@ -1,10 +1,10 @@
 # Release status
 
-The current release is [v0.6.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.6.0-beta.1).
+The current release is [v0.7.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.0-beta.1).
 
 | | |
 |---|---|
-| Compiler | `0.6.0-beta.1` |
+| Compiler | `0.7.0-beta.1` |
 | Language version | `0.8-dev` |
 | Requires | JDK 17 or newer (the SDK doesn't include a JDK) |
 | License | Apache-2.0 |
@@ -14,26 +14,31 @@ This is an experimental Beta. It's for trying Sprig out and reporting problems; 
 
 ## What's new in this release
 
-- A language server, `sprig lsp`, for Neovim, Helix and other editors; the [VS Code extension](/en/guide/editor) starts it for you
-- `requires T: Comparable`, so generic code can compare and sort values
-- New standard library modules: `@std/lists`, `@std/nulls`, `@std/math` and `@std/json_codec`, plus padding helpers in `@std/text`, assertions in `@std/test` that print both values, and standard input, standard error and exit status in `@std/process`
-- In a condition like `if x != null and ...`, the right side of `and` can treat `x` as non-null
-- A Gradle plugin and a Fabric template; see [Gradle integration](/en/guide/gradle)
-- Lock format version 5, which no longer records `@std` in the lock file
-- A round of correctness fixes: error positions, names that are keywords in Java, and the order top-level code runs in
-- Faster commands, because the compiler JVM starts with only the C1 JIT
+- Lambdas can call functions that throw `Error`, function types can say `throws Error`, and `rethrows` lets a helper such as `lists.sort_by` throw exactly what the function you pass it throws
+- You can pass a Sprig function where Java expects a callback (`list.sort`, `forEach`, `removeIf`), and call Java varargs methods such as `Path.of("a", "b")` and `String.format`
+- New standard library modules `@std/sets`, `@std/random`, `@std/regex` and `@std/dates`; a test runner in `@std/test` that reports every failing check; `process.run` for running other programs; and more helpers in `@std/lists`, `@std/text`, `@std/files` and `@std/time`
+- Errors written for someone new to Sprig: habits from Python, Java or C, like `else if`, `readLine()` or `List<Int>`, get the Sprig spelling, and `sprig help language` is a complete small program you can run
+- `@std/files` reports every failure as an `Error` such as `cannot read data/x.txt: no such file`
+- New checks catch a `catch` that can never run, a `throws` that can never happen, and a `Unit` result used as a value
+- `sprig check --bin` and `sprig build --bin`, and `sprig check` with no file checks every bin of a project
 
-Everything from v0.5 is still there: projects with local, Git and Maven dependencies, `sprig test`, `sprig wrap`, explicit Java interop, and the official command-line, HTTP, JSON, SQLite and Web libraries.
+Everything from v0.6 is still there: the language server, `requires T: Comparable`, projects with local, Git and Maven dependencies, `sprig test`, `sprig wrap`, the Gradle plugin and Fabric template, and the official command-line, HTTP, JSON, SQLite and Web libraries.
 
-There's no central package registry yet, and the compiler isn't written in Sprig itself (it isn't self-hosted). For exactly what your installed SDK supports, run `sprig capabilities --json`. The full story is in the [v0.6.0-beta.1 release notes](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.6.0-beta.1.md).
+There's no central package registry yet, and the compiler isn't written in Sprig itself (it isn't self-hosted). For exactly what your installed SDK supports, run `sprig capabilities --json`. The full story is in the [v0.7.0-beta.1 release notes](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.7.0-beta.1.md).
 
-## Upgrading from v0.5
+## Upgrading from v0.6
 
-Run `sprig upgrade`, then run `sprig resolve` once in each project. Lock files written by v0.5.0-beta.1 use format version 4, and the new compiler asks you to resolve again instead of reading them. A few programs that v0.5 accepted are now rejected, such as top-level code that uses a variable declared further down; the error tells you what to change.
+Run `sprig upgrade`, then run `sprig resolve` once in each project, because a lock file records the compiler that wrote it.
+
+A few programs that v0.6 accepted are now rejected, and the error tells you what to change:
+
+- `catch problem: IOException` around a `@std/files` call doesn't compile anymore; catch `Error` instead
+- a `catch` or `throws` for a checked Java exception that can never happen is an error; remove it
+- `rethrows` is now a keyword, so a variable or function with that name needs a new name
 
 ## Changes since the release
 
-This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.6.0-beta.1, it says so.
+This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.7.0-beta.1, it says so.
 
 ## How it was verified
 
@@ -43,11 +48,11 @@ A build from source without a tag reports itself as development; a build that ex
 
 ## Still planned
 
-- adapters for Java functional interfaces (SAM), arrays and full generics
+- Java arrays as values you can index, and full Java generics
 - a compiler written in Sprig itself (self-hosting)
 
 Also note that type checking doesn't prove numerical stability.
 
 ## Earlier releases
 
-v0.5 was the first Beta. It added projects with local, Git and Maven dependencies, `sprig test`, `sprig wrap`, explicit Java interop, and the official command-line, HTTP, JSON, SQLite and Web libraries. v0.4 built on v0.3 with the code formatter, explicit module re-exports, expression `match`, Unicode code-point string semantics, module and project inspection through `sprig api`, and managed SDK upgrades, along with a round of correctness fixes. Notes for every release are in [`docs/releases/`](https://github.com/ColinHouse/Sprig/tree/main/docs/releases).
+v0.6 added the language server, `requires T: Comparable`, the `@std/lists`, `@std/nulls`, `@std/math` and `@std/json_codec` modules, the Gradle plugin and Fabric template, and lock format version 5. v0.5 was the first Beta, with projects with local, Git and Maven dependencies, `sprig test`, `sprig wrap`, explicit Java interop, and the official command-line, HTTP, JSON, SQLite and Web libraries. v0.4 built on v0.3 with the code formatter, explicit module re-exports, expression `match`, Unicode code-point string semantics, module and project inspection through `sprig api`, and managed SDK upgrades, along with a round of correctness fixes. Notes for every release are in [`docs/releases/`](https://github.com/ColinHouse/Sprig/tree/main/docs/releases).
