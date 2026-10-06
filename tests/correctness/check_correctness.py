@@ -95,8 +95,41 @@ def sealed_variant_lowering():
               f"exit={result.returncode} {result.stdout}{result.stderr}{java[:400]}")
 
 
+def string_join_lowering():
+    """String, Int, Int32, Float, Float32 and Bool join with Java's own concatenation.
+
+    Each SprigRuntime.str call inlines the general formatter; in one long
+    top-level block those copies exhausted HotSpot's inlining budget and left a
+    later hot loop's checked arithmetic as real calls (about 5x slower). Other
+    values still go through str, which renders lists, maps and errors.
+    """
+    with tempfile.TemporaryDirectory(prefix="sprig-join-") as work:
+        source = Path(work) / "join.spr"
+        source.write_text("func describe(count: Int, small: Int32, ratio: Float, narrow: Float32, ok: Bool,\n"
+                          "             name: String, items: List[Int]) -> String:\n"
+                          '    var text = "n=" + count + small + ratio + narrow + ok + name + " items=" + items\n'
+                          "    text += count\n"
+                          "    return text\n\n"
+                          'print(describe(3, 4, 0.5, 1.5, true, "pen", [1, 2]))\n', encoding="utf-8")
+        out = Path(work) / "out"
+        result = run("build", source, "--emit-java-only", "-d", out)
+        generated = list(out.rglob("$M_join.java"))
+        java = generated[0].read_text(encoding="utf-8") if generated else ""
+        joins = [line.strip() for line in java.splitlines() if "text = " in line]
+        scalar_str = [name for name in ("count", "small", "ratio", "narrow", "ok", "name")
+                      if f"SprigRuntime.str({name})" in java]
+        check("string-join-scalars-use-java-concatenation", result.returncode == 0 and len(joins) == 2
+              and not scalar_str and '"n=" + count' in java and "SprigRuntime.str(items)" in java
+              and "(text + count)" in java,
+              f"exit={result.returncode} str={scalar_str} {result.stdout}{result.stderr}{joins}")
+        ran = run("run", source)
+        check("string-join-scalars-render-as-print", ran.returncode == 0
+              and ran.stdout.strip() == "n=340.51.5truepen items=[1, 2]3", f"{ran.stdout!r} {ran.stderr!r}")
+
+
 def main():
     sealed_variant_lowering()
+    string_join_lowering()
     null_assignment = run("check", "--json", CASES / "java_nonnull_null.spr")
     check("java-null-rejected", null_assignment.returncode != 0 and
           diagnostic_codes(null_assignment) == ["SPR-TYPE-NULL"] and

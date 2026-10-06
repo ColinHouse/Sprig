@@ -1,0 +1,14 @@
+Int 9223372036854775807, Int32 -2147483648, Bool true false
+Float 0.5 -0.0 0.30000000000000004 1.0E21 Infinity NaN
+Float32 1.25
+Decimal 12.50, BigInt 123456789012345678901234567890
+List [1, 2, 3], empty [], nested [[a], [b, c]]
+Map {a: 1, b: 2}
+enum High, variant Circle(radius=2.0) Point
+class Item(name=pen, count=3)
+3 then 12
+left 3 right
+0.5 first
+x1true2.5[4]
+|
+message bad input

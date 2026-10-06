@@ -965,8 +965,7 @@ public final class JavaGenerator {
         String value = emitExpr(assign.value);
         String op = assign.op.substring(0, 1);
         if (targetType == NativeType.STRING && op.equals("+")) {
-            return "(sprig.runtime.SprigRuntime.str(" + oldValue + ") + sprig.runtime.SprigRuntime.str("
-                    + value + "))";
+            return "(" + oldValue + " + " + joinOperand(assign.value.type, value) + ")";
         }
         return numericOp(op, targetType, oldValue, value);
     }
@@ -1313,6 +1312,22 @@ public final class JavaGenerator {
         return "(" + unary.op + emitExpr(unary.operand) + ")";
     }
 
+    /**
+     * One side of a string join. Java's own concatenation renders String,
+     * Int, Int32, Float, Float32 and Bool exactly as {@code SprigRuntime.str}
+     * does, so only other types go through it. Every {@code str} call inlines
+     * the general formatter; in one long top-level block those copies used up
+     * HotSpot's inlining budget and left a later hot loop's arithmetic as real
+     * calls. The checker guarantees one side is a String, so Java concatenates.
+     */
+    private static String joinOperand(Type type, String code) {
+        if (type == NativeType.STRING || type == NativeType.INT || type == NativeType.INT32
+                || type == NativeType.FLOAT || type == NativeType.FLOAT32 || type == NativeType.BOOL) {
+            return code;
+        }
+        return "sprig.runtime.SprigRuntime.str(" + code + ")";
+    }
+
     private String emitBinary(Expr.Binary binary) {
         String op = binary.op;
         String left = emitExpr(binary.left);
@@ -1361,7 +1376,7 @@ public final class JavaGenerator {
             return wrapNegate(negate, comparison);
         }
         if (op.equals("+") && (binary.type == NativeType.STRING)) {
-            return "(sprig.runtime.SprigRuntime.str(" + left + ") + sprig.runtime.SprigRuntime.str(" + right + "))";
+            return "(" + joinOperand(binary.left.type, left) + " + " + joinOperand(binary.right.type, right) + ")";
         }
         if (binary.genericOrdering) {
             String helper = switch (op) {
