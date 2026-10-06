@@ -904,7 +904,21 @@ public final class Main {
                             source.toAbsolutePath().toUri().toString(), lineMaps, uris,
                             options.stacktrace));
                 }
-                report(diagnostics, options.json, "run", result.exitCode, options.json ? result.stdout : null);
+                if (options.json) {
+                    // What the program wrote to standard error, as written, without the
+                    // runtime's own failure records (those become the diagnostic above).
+                    StringBuilder programErrors = new StringBuilder();
+                    for (String line : result.stderr.split("(?<=\n)")) {
+                        if (!line.startsWith(SprigRuntime.FAILURE_PREFIX)
+                                && !line.startsWith(SprigRuntime.FRAME_PREFIX)) programErrors.append(line);
+                    }
+                    Map<String, Object> details = programErrors.length() == 0 ? Map.of()
+                            : Map.of("programErrorOutput", programErrors.toString());
+                    System.out.print(JsonWriter.result(diagnostics.all(), null, "run", result.exitCode,
+                            result.stdout, details));
+                } else {
+                    report(diagnostics, false, "run", result.exitCode, null);
+                }
                 return result.exitCode;
             } finally {
                 if (!options.keep) {
