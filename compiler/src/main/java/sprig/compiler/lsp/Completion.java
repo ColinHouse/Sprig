@@ -248,7 +248,8 @@ final class Completion {
             add("toString", METHOD, "func toString() -> String", "2");
         } else if (type instanceof JavaType javaType) {
             if (Throwable.class.isAssignableFrom(javaType.clazz)) {
-                add("message", FIELD, "message: String", "1");
+                add("message", FIELD, sprig.runtime.SprigError.class.isAssignableFrom(javaType.clazz)
+                        ? "message: String" : "message: String?", "1");
             }
             javaMembers(javaType.clazz, false);
         } else {

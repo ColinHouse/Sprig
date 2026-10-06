@@ -21,6 +21,7 @@ import sprig.compiler.types.JavaType;
 import sprig.compiler.types.ListType;
 import sprig.compiler.types.MapType;
 import sprig.compiler.types.NativeType;
+import sprig.compiler.types.NullableType;
 import sprig.compiler.types.Type;
 import sprig.compiler.types.TypeParameterType;
 import sprig.compiler.types.VariantCaseType;
@@ -520,7 +521,9 @@ final class SymbolIndex {
                         "Java " + (resolved.kind == ResolvedField.Kind.JAVA_FIELD ? "field" : "method")
                                 + (resolved.jvm == null ? "." : " of `" + resolved.jvm.owner.getName() + "`.")));
                 case ERROR_MESSAGE -> reference(access.nameSpan, null,
-                        new Info("message: String", "The error's message."));
+                        new Info("message: " + display(resolved.type), resolved.type instanceof NullableType
+                                ? "The exception's message from Java's getMessage(), which may be null."
+                                : "The error's message."));
             };
         }
 
@@ -639,6 +642,10 @@ final class SymbolIndex {
     }
 
     static String display(Type type) {
+        // Sprig's Error is sprig.runtime.SprigError underneath; show the Sprig name.
+        if (type instanceof JavaType javaType && javaType.clazz == sprig.runtime.SprigError.class) {
+            return "Error";
+        }
         return type == null ? "?" : type.display();
     }
 }

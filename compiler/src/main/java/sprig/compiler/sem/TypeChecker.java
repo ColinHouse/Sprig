@@ -92,7 +92,8 @@ public final class TypeChecker {
             Map.entry("String.charAt", new int[]{1, 1}), Map.entry("String.codeAt", new int[]{1, 1}),
             Map.entry("String.substring", new int[]{1, 2}), Map.entry("String.indexOf", new int[]{1, 1}),
             Map.entry("String.contains", new int[]{1, 1}), Map.entry("String.startsWith", new int[]{1, 1}),
-            Map.entry("String.endsWith", new int[]{1, 1}), Map.entry("String.toUpperCase", new int[]{0, 0}),
+            Map.entry("String.endsWith", new int[]{1, 1}), Map.entry("String.compareTo", new int[]{1, 1}),
+            Map.entry("String.toUpperCase", new int[]{0, 0}),
             Map.entry("String.toLowerCase", new int[]{0, 0}), Map.entry("String.trim", new int[]{0, 0}),
             Map.entry("String.split", new int[]{1, 1}), Map.entry("String.replace", new int[]{2, 2}),
             Map.entry("String.repeat", new int[]{1, 1}), Map.entry("String.toInt", new int[]{0, 0}),
@@ -616,6 +617,10 @@ public final class TypeChecker {
                     "for requires a collection or String", module.uri, forStmt.iterable.span)
                     .withTypes("List, MutableList, Map, MutableMap or String", iterable.display()));
             element = NativeType.ERROR;
+        }
+        if (kind == ForKind.LIST && forStmt.iterable instanceof Expr.Call call && call.resolved != null
+                && call.resolved.kind == ResolvedCall.Kind.BUILTIN && "range".equals(call.resolved.builtinId)) {
+            kind = ForKind.RANGE;
         }
         forStmt.forKind = kind;
         if (forStmt.symbol != null) {
@@ -1721,11 +1726,21 @@ public final class TypeChecker {
         if (left == NativeType.ERROR || right == NativeType.ERROR) {
             return NativeType.ERROR;
         }
-        if (op.equals("+") && (left == NativeType.STRING || right == NativeType.STRING)) {
-            Type other = left == NativeType.STRING ? right : left;
+        if (op.equals("+") && (left.nonNull() == NativeType.STRING || right.nonNull() == NativeType.STRING)) {
+            Type other = left.nonNull() == NativeType.STRING ? right : left;
             if (other == NativeType.UNIT || other == NativeType.NULL) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
                         "Cannot concatenate " + other.display() + " with String", module.uri, span));
+                return NativeType.ERROR;
+            }
+            // A null would be joined as the text "null"; absence must be handled
+            // before the value becomes text, as for any other use.
+            if (left.isNullable() || right.isNullable()) {
+                Type nullable = left.isNullable() ? left : right;
+                diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
+                        "Cannot join " + nullable.display() + " into a String; it may be null", module.uri, span)
+                        .withTypes(nullable.nonNull().display(), nullable.display())
+                        .withHint(operandHint(left, right, leftExpr, rightExpr)));
                 return NativeType.ERROR;
             }
             return NativeType.STRING;
@@ -1781,6 +1796,18 @@ public final class TypeChecker {
         if (expr instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Name receiver) {
             return receiver.name + "." + access.name;
         }
+        Expr receiver = expr instanceof Expr.Index index ? index.receiver
+                : expr instanceof Expr.Subscript subscript ? subscript.base : null;
+        Expr key = expr instanceof Expr.Index index ? index.index
+                : expr instanceof Expr.Subscript subscript
+                        ? (subscript.resolvedIndex != null ? subscript.resolvedIndex : subscript.index) : null;
+        if (receiver instanceof Expr.Name base) {
+            if (key instanceof Expr.Name name) return base.name + "[" + name.name + "]";
+            if (key instanceof Expr.IntLit literal) return base.name + "[" + literal.value + "]";
+            if (key instanceof Expr.StringLit literal && literal.value.matches("[A-Za-z0-9_ .-]*")) {
+                return base.name + "[\"" + literal.value + "\"]";
+            }
+        }
         return fallback;
     }
 
@@ -1793,6 +1820,14 @@ public final class TypeChecker {
             Type type = side == 0 ? left : right;
             if (type instanceof NullableType nullable) {
                 Expr operand = side == 0 ? leftExpr : rightExpr;
+                if (!(operand instanceof Expr.Name)) {
+                    // Only a binding narrows; a field, an index or a call is read again.
+                    String text = operandText(operand, null);
+                    return (text == null ? "This value" : text) + " may be null (" + type.display()
+                            + "), and only a let narrows: write 'let value = " + (text == null ? "..." : text)
+                            + "', check 'if value != null:', and use value inside that block"
+                            + ", or give a fallback with or_else from @std/nulls.spr.";
+                }
                 String name = operandText(operand, "the value");
                 if (operand instanceof Expr.Name binding && binding.symbol != null && binding.symbol.mutable) {
                     return name + " may be null (" + type.display() + "), and a var never narrows: copy it into a let "
@@ -2844,6 +2879,14 @@ public final class TypeChecker {
             return variantPayload(caseType, access);
         }
         if (receiver instanceof JavaType javaType) {
+            // toString() is the text print shows, as for every value: an Error's
+            // message, also for the errors built on it and one caught as
+            // RuntimeException. SprigRuntime.str gives Java's own text for every
+            // other exception, while Java code keeps Throwable.toString, whose
+            // "class: message" header stack traces and `run --stacktrace` read.
+            if (access.name.equals("toString") && Throwable.class.isAssignableFrom(javaType.clazz)) {
+                return builtin(access, "toString", NativeType.STRING, javaType);
+            }
             return javaMember(javaType, access, false);
         }
         if (receiver instanceof EnumType enumType) {
@@ -3028,12 +3071,19 @@ public final class TypeChecker {
         return errorField(access);
     }
 
+    /** "Java class X" in a diagnostic, but Sprig's own Error under its Sprig name. */
+    private static String javaOwner(Class<?> clazz) {
+        return clazz == SprigError.class ? "Error" : "Java class " + clazz.getSimpleName();
+    }
+
     private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext) {
         Class<?> clazz = javaType.clazz;
-        if (Throwable.class.isAssignableFrom(clazz) && access.name.equals("message")) {
+        if (!staticContext && Throwable.class.isAssignableFrom(clazz) && access.name.equals("message")) {
+            // An Error always has a message; Java's getMessage() may return null.
             ResolvedField field = new ResolvedField();
             field.kind = ResolvedField.Kind.ERROR_MESSAGE;
-            field.type = NativeType.STRING;
+            field.type = SprigError.class.isAssignableFrom(clazz)
+                    ? NativeType.STRING : NullableType.of(NativeType.STRING);
             return field;
         }
         try {
@@ -3090,7 +3140,7 @@ public final class TypeChecker {
             return field;
         }
         diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
-                "Java class " + clazz.getSimpleName() + " has no "
+                javaOwner(clazz) + " has no "
                         + (staticContext ? "static " : "") + "member '" + access.name + "'",
                 module.uri, access.span));
         return errorField(access);
@@ -3301,6 +3351,13 @@ public final class TypeChecker {
                 checkArity(call, 1, 1, id);
                 requireString(call.args.get(0));
                 return NativeType.BOOL;
+            }
+            case "String.compareTo" -> {
+                // Int32, like the int a Java Comparator returns, so
+                // fn(a: String, b: String) => a.compareTo(b) is a comparator.
+                checkArity(call, 1, 1, id);
+                requireString(call.args.get(0));
+                return NativeType.INT32;
             }
             case "String.replace" -> {
                 checkArity(call, 2, 2, id);
@@ -3777,9 +3834,13 @@ public final class TypeChecker {
                 return NativeType.ERROR;
             }
             Diagnostic diagnostic = Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
-                    "Java class " + clazz.getSimpleName() + " has no method '" + field.jvm.name
+                    javaOwner(clazz) + " has no method '" + field.jvm.name
                             + "' matching " + argTypes.size() + " argument(s)",
                     module.uri, call.span);
+            String resultHint = callableResultHint(candidates, argTypes);
+            if (resultHint != null) {
+                diagnostic.withHint(resultHint);
+            }
             Map<String, Object> data = jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates);
             if (explicitMethodArgs != null) {
                 data.put("explicitTypeArguments", explicitMethodArgs.stream().map(Type::display).toList());
@@ -3807,6 +3868,12 @@ public final class TypeChecker {
                     best.getParameterTypes()[i], bestBindings));
         }
         member.returnType = JavaTypes.mapValue(best.getGenericReturnType(), best.getReturnType(), bestBindings);
+        // toString() returns a representation by Object's contract, never null,
+        // so "at " + date.toString() needs no check; Kotlin reads it the same way.
+        if (best.getName().equals("toString") && best.getParameterCount() == 0
+                && best.getReturnType() == String.class) {
+            member.returnType = NativeType.STRING;
+        }
         field.jvm = member;
         if (call.resolved != null && explicitMethodArgs != null) {
             call.resolved.typeArgs = explicitMethodArgs;
@@ -4136,6 +4203,35 @@ public final class TypeChecker {
             }
         }
         return false;
+    }
+
+    /**
+     * A function value that would fit a Java functional interface except for an
+     * Int result where Java returns int, the usual comparator mistake: the hint
+     * names the Int32 the interface needs and how to produce it.
+     */
+    private static String callableResultHint(List<? extends Executable> candidates, List<Type> argTypes) {
+        for (int i = 0; i < argTypes.size(); i++) {
+            if (!(argTypes.get(i) instanceof FunctionType actual) || actual.result != NativeType.INT) {
+                continue;
+            }
+            for (Executable candidate : candidates) {
+                Class<?>[] params = candidate.getParameterTypes();
+                if (params.length != argTypes.size()) {
+                    continue;
+                }
+                Method functional = JavaTypes.functionalMethod(params[i]);
+                if (functional == null || functional.getReturnType() != int.class
+                        || functional.getParameterCount() != actual.params.size()) {
+                    continue;
+                }
+                return params[i].getSimpleName() + "." + functional.getName()
+                        + " returns int, which is Int32 in Sprig, but this function value returns Int. "
+                        + "Return an Int32: a.compareTo(b) compares two Strings, and an Int converts with "
+                        + "value.toInt32Exact().";
+            }
+        }
+        return null;
     }
 
     /**

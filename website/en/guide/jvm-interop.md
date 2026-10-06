@@ -2,7 +2,7 @@
 
 Sprig compiles to Java before it runs, so the JDK's classes and Java libraries from Maven are right there for you to use. This page covers importing and calling Java classes, and the checks Sprig makes where your code meets Java.
 
-The general rule is cautious. Java can't promise that a returned value isn't `null`, so Sprig assumes it might be. In the other direction, nothing you pass to Java may be `null`.
+The general rule is cautious. Java can't promise that a returned value isn't `null`, so Sprig assumes it might be; the one exception is `toString()`, which is always a `String`. In the other direction, nothing you pass to Java may be `null`.
 
 The [JVM interop reference](/en/reference/jvm/interop) has the complete rules. To plug Sprig into an existing build such as Gradle or Loom, see [Gradle integration](/en/guide/gradle) and [Fabric mods](/en/guide/fabric).
 
@@ -64,6 +64,8 @@ A Java checked exception can go in a Sprig `throws` clause and be caught with `c
 example.com
 bad uri
 ```
+
+A caught Java exception shows Java's text, class name first, whether you print it, join it or call `toString()`. Its `message` is a `String?`, because Java's `getMessage()` may return `null`; check it before joining it. A Sprig `Error` shows only its message.
 
 ## Java collections and Sprig collections
 
@@ -130,7 +132,7 @@ false
 a/b/c
 ```
 
-- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32` (`CharSequence.compare` does here).
+- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32`, which `a.compareTo(b)` does. A lambda that returns an `Int` is reported with the conversion to write.
 - Wildcards inside the interface's type arguments are fine: a lambda implementing `Consumer<String>` is a `Consumer<? super String>`.
 - Type variables are never inferred. `names.forEach` works because `ArrayList[String]` fixes `E`; `stream.map(fn(...) => ...)` needs `stream.map[String](...)` because `R` is the method's own.
 - A function value whose type says `throws Error` can't cross into Java, because Java can't see the clause (`SPR-TYPE-CALLABLE-THROWS`). Handle the error inside a named function and pass a lambda that calls it.

@@ -29,6 +29,6 @@ try:
         else:
             print(json.stringify(selected))
 catch problem: Error:
-    print("json-select: " + problem.toString())
+    print("json-select: " + problem.message)
     print(cli.usage("json-select", "Select one top-level member from a JSON object.", specs))
     throw problem

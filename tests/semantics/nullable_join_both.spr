@@ -1,0 +1,4 @@
+# Two nullable Strings do not join either; the first one is reported.
+let first: String? = "a"
+let second: String? = "b"
+print(first + second)

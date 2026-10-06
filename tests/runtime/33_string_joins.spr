@@ -1,0 +1,48 @@
+# `+` with a String on either side joins the other value's text, the same
+# text print shows, for every kind of value. A chain evaluates from the left.
+
+enum Level:
+    Low
+    High
+
+variant Shape:
+    Circle(radius: Float)
+    Point
+
+class Item:
+    let name: String
+    let count: Int
+
+let big = 9223372036854775807
+let small: Int32 = -2147483648
+let half = 0.5
+let ratio: Float32 = 1.25
+let zero = -0.0
+let ok = true
+print("Int " + big + ", Int32 " + small + ", Bool " + ok + " " + false)
+print("Float " + half + " " + zero + " " + (0.1 + 0.2) + " " + 1e21 + " " + (1.0 / 0.0) + " " + (0.0 / 0.0))
+print("Float32 " + ratio)
+print("Decimal " + Decimal.parse("12.50") + ", BigInt " + BigInt.parse("123456789012345678901234567890"))
+let none: List[Int] = []
+print("List " + [1, 2, 3] + ", empty " + none + ", nested " + [["a"], ["b", "c"]])
+print("Map " + {"a": 1, "b": 2})
+print("enum " + Level.High + ", variant " + Shape.Circle(radius=2.0) + " " + Shape.Point)
+print("class " + Item(name="pen", count=3))
+print(1 + 2 + " then " + 1 + 2)
+print("left " + (1 + 2) + " right")
+print(half + " first")
+
+var text = "x"
+text += 1
+text += true
+text += 2.5
+text += [4]
+print(text)
+
+let empty = ""
+print(empty + empty + "|")
+
+try:
+    throw Error("bad input")
+catch problem: Error:
+    print("message " + problem.message)

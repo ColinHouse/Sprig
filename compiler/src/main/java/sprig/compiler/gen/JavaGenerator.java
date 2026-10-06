@@ -965,8 +965,7 @@ public final class JavaGenerator {
         String value = emitExpr(assign.value);
         String op = assign.op.substring(0, 1);
         if (targetType == NativeType.STRING && op.equals("+")) {
-            return "(sprig.runtime.SprigRuntime.str(" + oldValue + ") + sprig.runtime.SprigRuntime.str("
-                    + value + "))";
+            return "(" + oldValue + " + " + joinOperand(assign.value.type, value) + ")";
         }
         return numericOp(op, targetType, oldValue, value);
     }
@@ -997,6 +996,10 @@ public final class JavaGenerator {
     private void emitFor(JavaWriter w, Stmt.ForStmt forStmt) {
         w.map(forStmt.span);
         String var = localName(forStmt.symbol);
+        if (forStmt.forKind == sprig.compiler.sem.ForKind.RANGE) {
+            emitRangeFor(w, forStmt, var);
+            return;
+        }
         String iterable = "(" + emitExpr(forStmt.iterable) + ")";
         boolean erased = containsTypeParameter(forStmt.iterable.type);
         String values = forStmt.forKind == sprig.compiler.sem.ForKind.MAP_KEYS
@@ -1012,6 +1015,33 @@ public final class JavaGenerator {
                     + values + ")");
             default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + values + ")");
         }
+        for (Stmt child : forStmt.body) {
+            emitStmt(w, child);
+        }
+        w.close();
+    }
+
+    /**
+     * {@code for x in range(...)} counts instead of building the list: the bounds
+     * are evaluated once, in source order, the runtime computes how many values the
+     * list would hold (and rejects a zero step, as range does), and each iteration
+     * binds a fresh x, so lambdas still capture one value per iteration.
+     */
+    private void emitRangeFor(JavaWriter w, Stmt.ForStmt forStmt, String var) {
+        Expr.Call call = (Expr.Call) forStmt.iterable;
+        List<Expr.Arg> args = call.args;
+        String start = freshTemp("rangeStart");
+        String end = freshTemp("rangeEnd");
+        String step = freshTemp("rangeStep");
+        String index = freshTemp("rangeIndex");
+        String left = freshTemp("rangeLeft");
+        w.line("long " + start + " = " + (args.size() == 1 ? "0L" : emitExpr(args.get(0).value)) + ";");
+        w.line("long " + end + " = " + emitExpr(args.get(args.size() == 1 ? 0 : 1).value) + ";");
+        w.line("long " + step + " = " + (args.size() == 3 ? emitExpr(args.get(2).value) : "1L") + ";");
+        w.open("for (long " + index + " = " + start + ", " + left + " = sprig.runtime.SprigRuntime.rangeCount("
+                + start + ", " + end + ", " + step + "); " + left + " != 0L; " + left + "--, "
+                + index + " += " + step + ")");
+        w.line("long " + var + " = " + index + ";");
         for (Stmt child : forStmt.body) {
             emitStmt(w, child);
         }
@@ -1282,6 +1312,22 @@ public final class JavaGenerator {
         return "(" + unary.op + emitExpr(unary.operand) + ")";
     }
 
+    /**
+     * One side of a string join. Java's own concatenation renders String,
+     * Int, Int32, Float, Float32 and Bool exactly as {@code SprigRuntime.str}
+     * does, so only other types go through it. Every {@code str} call inlines
+     * the general formatter; in one long top-level block those copies used up
+     * HotSpot's inlining budget and left a later hot loop's arithmetic as real
+     * calls. The checker guarantees one side is a String, so Java concatenates.
+     */
+    private static String joinOperand(Type type, String code) {
+        if (type == NativeType.STRING || type == NativeType.INT || type == NativeType.INT32
+                || type == NativeType.FLOAT || type == NativeType.FLOAT32 || type == NativeType.BOOL) {
+            return code;
+        }
+        return "sprig.runtime.SprigRuntime.str(" + code + ")";
+    }
+
     private String emitBinary(Expr.Binary binary) {
         String op = binary.op;
         String left = emitExpr(binary.left);
@@ -1330,7 +1376,7 @@ public final class JavaGenerator {
             return wrapNegate(negate, comparison);
         }
         if (op.equals("+") && (binary.type == NativeType.STRING)) {
-            return "(sprig.runtime.SprigRuntime.str(" + left + ") + sprig.runtime.SprigRuntime.str(" + right + "))";
+            return "(" + joinOperand(binary.left.type, left) + " + " + joinOperand(binary.right.type, right) + ")";
         }
         if (binary.genericOrdering) {
             String helper = switch (op) {
@@ -1896,6 +1942,7 @@ public final class JavaGenerator {
             case "String.contains" -> recv + ".contains(" + a0 + ")";
             case "String.startsWith" -> recv + ".startsWith(" + a0 + ")";
             case "String.endsWith" -> recv + ".endsWith(" + a0 + ")";
+            case "String.compareTo" -> "java.lang.Integer.signum(" + recv + ".compareTo(" + a0 + "))";
             case "String.toUpperCase" -> recv + ".toUpperCase()";
             case "String.toLowerCase" -> recv + ".toLowerCase()";
             case "String.trim" -> recv + ".trim()";

@@ -288,8 +288,13 @@ def main():
         edited = base / "direct_edited.spr"
         verify("wrap-edit-copy", wrap("audit.Direct", edited).returncode == 0)
         edited_text = edited.read_text(encoding="utf-8")
-        assert "return host.label()" in edited_text, edited_text[:500]
-        edited.write_text(edited_text.replace("return host.label()", 'return host.label() + "!"'),
+        assert "        return host.label()" in edited_text, edited_text[:500]
+        # A Java String result is String?, so the edit checks it before joining.
+        edited.write_text(edited_text.replace("        return host.label()",
+                                              "        let text = host.label()\n"
+                                              "        if text == null:\n"
+                                              "            return null\n"
+                                              '        return text + "!"'),
                           encoding="utf-8")
         edited_use = base / "use_edited.spr"
         edited_use.write_text(DIRECT_USE.replace('"./direct.spr"', '"./direct_edited.spr"'),

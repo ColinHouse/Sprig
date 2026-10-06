@@ -34,9 +34,11 @@ public final class Explanations {
                 out.put("whyMatters", "null must be handled explicitly; Sprig never dereferences a possibly-absent value.");
                 out.put("confusedWith", List.of("Kotlin safe calls (?.)", "Java unchecked references"));
                 out.put("commonCauses", List.of("A nullable Sprig value is dereferenced or passed to a non-null parameter.",
-                        "A Java reference result was used without a null check."));
+                        "A Java reference result was used without a null check.",
+                        "A T? value, such as a map lookup, is joined into a String with +."));
                 out.put("safeFixes", List.of("Check value != null before use, and handle the absent branch.",
-                        "Return a default, throw Error, or narrow through an if/elif chain."));
+                        "Return a default, throw Error, or narrow through an if/elif chain.",
+                        "Give a fallback with or_else from @std/nulls.spr."));
                 out.put("badExample", "let value: String? = null\nprint(value.length())");
                 out.put("goodExample", "if value != null:\n    print(value.length())");
                 out.put("relatedCodes", List.of(Codes.TYPE_NULL));

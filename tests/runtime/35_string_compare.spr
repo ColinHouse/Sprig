@@ -1,0 +1,28 @@
+# a.compareTo(b) is -1, 0 or 1 in the order < uses for Strings (UTF-16 code
+# units), and it is an Int32, the int a Java Comparator returns, so a lambda
+# that returns it can be passed to Java's sort.
+import java.util.ArrayList
+
+print("apple".compareTo("banana"))
+print("pear".compareTo("pear"))
+print("pear".compareTo("fig"))
+print("Zebra".compareTo("apple"))
+
+let words = ArrayList[String]()
+words.add("pear")
+words.add("fig")
+words.add("apple")
+words.sort(fn(a: String, b: String) => a.compareTo(b))
+print(words)
+words.sort(fn(a: String, b: String) => b.compareTo(a))
+print(words)
+
+let samples = ["", "a", "b", "aa", "Z", "東", "😀", "｡"]
+var checked = 0
+for x in samples:
+    for y in samples:
+        let order = x.compareTo(y)
+        assert((order < 0) == (x < y) and (order == 0) == (x == y) and (order > 0) == (x > y),
+               "compareTo agrees with < for " + x + " and " + y)
+        checked += 1
+print("checked " + checked)

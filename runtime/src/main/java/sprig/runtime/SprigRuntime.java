@@ -201,6 +201,22 @@ public final class SprigRuntime {
         return out;
     }
 
+    /**
+     * How many values range(start, end, step) holds, as an unsigned count, without
+     * building the list: the bound a counted {@code for x in range(...)} loop runs to.
+     * A zero step fails exactly as range does.
+     */
+    public static long rangeCount(long start, long end, long step) {
+        if (step == 0) {
+            throw new SprigError("range step must not be zero");
+        }
+        if (step > 0) {
+            return start < end ? Long.divideUnsigned(end - start - 1, step) + 1 : 0L;
+        }
+        // -step is the magnitude as an unsigned value, Long.MIN_VALUE included.
+        return start > end ? Long.divideUnsigned(start - end - 1, -step) + 1 : 0L;
+    }
+
     public static long parseInt(String text) {
         try {
             return Long.parseLong(text.trim());

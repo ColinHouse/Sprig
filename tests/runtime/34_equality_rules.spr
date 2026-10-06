@@ -1,0 +1,42 @@
+# == compares numbers, Bool, String, enums, variants, lists and maps by value,
+# and class objects by identity: two objects whose fields match are still two
+# objects, and changing one does not change the other.
+
+class Point:
+    let x: Int
+    var y: Int
+
+variant Shape:
+    Circle(radius: Float)
+    Square(side: Float)
+
+enum Level:
+    Low
+    High
+
+let a = Point(x=1, y=2)
+let b = Point(x=1, y=2)
+let same = a
+print(a == b)
+print(a != b)
+print(a == same)
+print(a.x == b.x and a.y == b.y)
+same.y = 5
+print(a.y)
+print(b.y)
+
+let circle: Shape = Shape.Circle(radius=1.0)
+let square: Shape = Shape.Square(side=1.0)
+print(circle == Shape.Circle(radius=1.0))
+print(circle == square)
+print(Level.High == Level.High)
+print("ab" == "a" + "b")
+
+let first: MutableList[Int] = [1, 2]
+let second: MutableList[Int] = [1, 2]
+print(first == second)
+second.append(3)
+print(first == second)
+print({"a": 1} == {"a": 1})
+print([a] == [b])
+print([a] == [same])

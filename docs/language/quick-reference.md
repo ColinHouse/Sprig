@@ -15,7 +15,7 @@ class Hero:
 
 let hero = Hero(name="Ada")
 hero.health += 1
-let label = "health " + hero.health  # + joins text with any value
+let label = "health " + hero.health  # + joins text with any non-null value
 
 variant Expr:
     Literal(value: Int)
@@ -46,9 +46,14 @@ or `continue`), the statements below see `value` as non-null, in a function body
 and at the top level alike. Only `let` bindings narrow; copy a `var` into a `let`
 to check it.
 `List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
-`==`/`!=` compare values; nullable `Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?`
-comparisons are null-safe and widen to the common type (`Int32?` → `Int?`,
-`Float32?` → `Float?`). Binary operands evaluate left to right, each exactly
+`==`/`!=` compare numbers, `Bool`, `String`, enums, variants, lists and maps by
+value, and class objects by identity: two objects whose fields match are still
+two objects, so compare the fields you mean (`a.id == b.id`). Nullable
+`Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?` comparisons are null-safe and widen
+to the common type (`Int32?` → `Int?`, `Float32?` → `Float?`). A `T?` value is
+not joined into a `String`; check it or give it a fallback with `or_else` first.
+`for x in range(...)` counts without building a list; `range(...)` used as a
+value is a `MutableList[Int]`. Binary operands evaluate left to right, each exactly
 once, so `needle in haystack` evaluates `needle` first. Map indexing reads
 return `V?`; `m[key] += x` requires an existing `key` and raises a catchable
 `Error` when it is missing.

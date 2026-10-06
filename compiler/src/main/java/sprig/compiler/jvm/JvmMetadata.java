@@ -62,7 +62,7 @@ public final class JvmMetadata {
                         .thenComparing(Field::toGenericString))
                 .forEach(field -> fields.add(describe(field)));
         out.put("fields", fields);
-        out.put("nullabilityPolicy", "Java reference results are nullable; parameters require non-null values unless future metadata proves otherwise");
+        out.put("nullabilityPolicy", "Java reference results are nullable, except a toString() result; parameters require non-null values unless future metadata proves otherwise");
         out.put("interopLevels", List.of(
                 Map.of("level", "direct", "meaning", "no generic or array shape is involved"),
                 Map.of("level", "concrete-generic", "meaning", "every generic argument is concrete and preserved"),
@@ -96,12 +96,17 @@ public final class JvmMetadata {
         out.put("typeParameters", Arrays.stream(executable.getTypeParameters())
                 .map(TypeVariable::getName).toList());
         if (executable instanceof Method method) {
+            // toString() is a non-null String in Sprig, as the checker types it.
+            boolean textResult = method.getName().equals("toString") && method.getParameterCount() == 0
+                    && method.getReturnType() == String.class;
+            String sprigReturn = textResult ? "String"
+                    : JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display();
             out.put("javaReturnType", method.getReturnType().getTypeName());
-            out.put("sprigReturnType", JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
-            out.put("sprigBoundaryType", JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
+            out.put("sprigReturnType", sprigReturn);
+            out.put("sprigBoundaryType", sprigReturn);
             out.put("genericReturnType", method.getGenericReturnType().getTypeName());
             out.put("returnTypeShape", JavaTypes.shapeJson(method.getGenericReturnType()));
-            out.put("nullableResult", !method.getReturnType().isPrimitive());
+            out.put("nullableResult", !textResult && !method.getReturnType().isPrimitive());
         } else {
             out.put("javaReturnType", executable.getDeclaringClass().getTypeName());
             out.put("sprigReturnType", executable.getDeclaringClass().getSimpleName());
