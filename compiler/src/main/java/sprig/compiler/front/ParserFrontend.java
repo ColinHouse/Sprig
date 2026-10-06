@@ -9,8 +9,11 @@ import java.nio.file.Path;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.TokenStream;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
@@ -46,7 +49,13 @@ public final class ParserFrontend {
                                     int charPositionInLine, String msg, RecognitionException e) {
                 String pretty = msg;
                 String targetedHint = null;
-                if (offendingSymbol instanceof org.antlr.v4.runtime.Token token
+                String foreign = offendingSymbol instanceof org.antlr.v4.runtime.Token token
+                        ? foreignSyntax(parser, token, msg) : null;
+                if (foreign != null) {
+                    int split = foreign.indexOf('\n');
+                    pretty = foreign.substring(0, split);
+                    targetedHint = foreign.substring(split + 1);
+                } else if (offendingSymbol instanceof org.antlr.v4.runtime.Token token
                         && token.getType() == org.antlr.v4.runtime.Token.EOF) {
                     pretty = message(msg, "unexpected end of file");
                 } else if (offendingSymbol instanceof org.antlr.v4.runtime.Token token
@@ -60,7 +69,9 @@ public final class ParserFrontend {
                 }
                 Diagnostic diagnostic = Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX, pretty, uri,
                         new Span(line - 1, charPositionInLine, line - 1, charPositionInLine + 1, -1, -1));
-                if (targetedHint != null) {
+                if (foreign != null) {
+                    diagnostic.withHint(targetedHint).withRelatedHelp("language");
+                } else if (targetedHint != null) {
                     diagnostic.withHint(targetedHint).withRelatedHelp("functions");
                 } else {
                     for (var context = parser.getContext(); context != null; context = context.getParent()) {
@@ -74,6 +85,88 @@ public final class ParserFrontend {
             }
         });
         return parser.program();
+    }
+
+    /**
+     * A message and hint (separated by a newline) for a construct from another
+     * language that the grammar rejects, or null. These are the mistakes people
+     * and models make first when they have only seen Python, Java or C.
+     */
+    private static String foreignSyntax(SprigParser parser, Token token, String raw) {
+        TokenStream stream = parser.getTokenStream();
+        int index = token.getTokenIndex();
+        int previous = index > 0 ? stream.get(index - 1).getType() : Token.INVALID_TYPE;
+        int beforePrevious = index > 1 ? stream.get(index - 2).getType() : Token.INVALID_TYPE;
+        int type = token.getType();
+        if (type == SprigLexer.IF && previous == SprigLexer.ELSE) {
+            return "Sprig spells else-if as 'elif'\n"
+                    + "Write 'elif condition:' in place of 'else if condition:'.";
+        }
+        if (type == SprigLexer.NEWLINE && (previous == SprigLexer.PLUS && beforePrevious == SprigLexer.PLUS
+                || previous == SprigLexer.MINUS && beforePrevious == SprigLexer.MINUS)) {
+            return "Sprig has no ++ or -- operator\n"
+                    + "Write 'count += 1' or 'count -= 1'.";
+        }
+        if (type == SprigLexer.NEWLINE && within(parser, SprigParser.VariableDeclarationContext.class)
+                && !lineHas(stream, index, SprigLexer.ASSIGN)) {
+            return "A variable declaration needs an initial value\n"
+                    + "Write 'var name: Type = value', for example 'var label: String = \"\"' or "
+                    + "'var count = 0'; Sprig has no uninitialized variables.";
+        }
+        // A '<' the grammar rejects while it could still take '[' follows a type name.
+        if (type == SprigLexer.LT && previous == SprigLexer.IDENT && raw.contains("'['")) {
+            return "Type arguments are written in square brackets\n"
+                    + "Write List[Int], MutableList[String] or Map[String, Int], not List<Int>.";
+        }
+        if (type == SprigLexer.LBRACE && startsBlockHeader(stream, index)) {
+            return "Sprig blocks are indented after ':', not wrapped in braces\n"
+                    + "End the header with ':' and indent the body on the following lines, for example "
+                    + "'if count > 0:' then the body indented by four spaces.";
+        }
+        if (type == SprigLexer.COLON && raw.contains("expecting '->'")) {
+            return "A function declares its result type before ':'\n"
+                    + "Write 'func name(parameter: Type) -> ResultType:', and '-> Unit' when it returns nothing.";
+        }
+        return null;
+    }
+
+    private static boolean within(SprigParser parser, Class<? extends ParserRuleContext> rule) {
+        for (ParserRuleContext context = parser.getContext(); context != null; context = context.getParent()) {
+            if (rule.isInstance(context)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether the line holding the token at index begins with a block keyword. */
+    private static boolean startsBlockHeader(TokenStream stream, int index) {
+        int first = stream.get(lineStart(stream, index)).getType();
+        return first == SprigLexer.IF || first == SprigLexer.ELIF || first == SprigLexer.ELSE
+                || first == SprigLexer.WHILE || first == SprigLexer.FOR || first == SprigLexer.FUNC
+                || first == SprigLexer.CLASS || first == SprigLexer.TRY || first == SprigLexer.CATCH;
+    }
+
+    /** Whether a token of the given type appears on the line before the token at index. */
+    private static boolean lineHas(TokenStream stream, int index, int type) {
+        for (int i = lineStart(stream, index); i < index; i++) {
+            if (stream.get(i).getType() == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int lineStart(TokenStream stream, int index) {
+        int start = index;
+        while (start > 0) {
+            int type = stream.get(start - 1).getType();
+            if (type == SprigLexer.NEWLINE || type == SprigLexer.INDENT || type == SprigLexer.DEDENT) {
+                break;
+            }
+            start--;
+        }
+        return start;
     }
 
     private static String message(String raw, String unexpected) {

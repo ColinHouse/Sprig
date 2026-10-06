@@ -13,6 +13,7 @@ import sprig.compiler.ast.Stmt;
 import sprig.compiler.ast.TypeRef;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
+import sprig.compiler.diag.Newcomer;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
@@ -729,8 +730,13 @@ public final class NameResolver {
             symbol = module.scope.importAliases.get(name.name);
         }
         if (symbol == null) {
-            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
-                    "Unresolved name '" + name.name + "'", module.uri, name.span));
+            Diagnostic unresolved = Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+                    "Unresolved name '" + name.name + "'", module.uri, name.span);
+            String hint = Newcomer.nameHint(name.name);
+            if (hint != null) {
+                unresolved.withHint(hint);
+            }
+            diagnostics.add(unresolved);
             symbol = errorSymbol(name.name, name.span);
         }
         name.symbol = symbol;

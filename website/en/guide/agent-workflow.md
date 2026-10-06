@@ -17,6 +17,8 @@ sprig api java.time.LocalDate --json
 
 `capabilities` lists what this SDK really implements. Keep in mind that code which parses isn't necessarily fine at every later stage. Type checking, Java generation and running on the JVM each count only once you've actually run them, for every stage your change depends on.
 
+If you (or the assistant) are new to Sprig, start with `sprig help language`. It's a complete small program that uses `if/elif/else`, loops, variables, functions and standard input. Each topic also lists the built-in methods and shows an example program. Habits from Python, Java or C, such as `else if`, `readLine()` or `List<Int>`, get an error that tells you how Sprig writes it.
+
 ## A loop for fixing errors
 
 1. Read the relevant reference page and the existing tests nearby. If you're working in the Sprig repository, read `AGENTS.md` first.

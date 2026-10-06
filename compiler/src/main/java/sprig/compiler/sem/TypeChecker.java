@@ -22,6 +22,7 @@ import sprig.compiler.ast.Module;
 import sprig.compiler.ast.Stmt;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
+import sprig.compiler.diag.Newcomer;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
@@ -2865,9 +2866,18 @@ public final class TypeChecker {
             if (access.name.equals("toString")) {
                 return builtin(access, "toString", NativeType.STRING, receiver);
             }
-            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+            Diagnostic missing = Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                     "Type " + receiver.display() + " has no method '" + access.name + "'",
-                    module.uri, access.span));
+                    module.uri, access.span);
+            String hint = Newcomer.memberHint(receiver.display(), access.name);
+            List<String> available = BuiltinMembers.instanceNames(receiver);
+            if (hint == null && !available.isEmpty()) {
+                hint = receiver.display() + " methods: " + String.join(", ", available) + ".";
+            }
+            if (hint != null) {
+                missing.withHint(hint);
+            }
+            diagnostics.add(missing);
             return errorField(access);
         }
         return builtin(access, id, NativeType.ERROR, receiver);

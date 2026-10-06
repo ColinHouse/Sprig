@@ -66,6 +66,18 @@ public final class LayoutTokenSource implements TokenSource {
         return token;
     }
 
+    /** The Sprig spelling for an operator or separator from another language, or null. */
+    private static String foreignCharacterHint(String text) {
+        return switch (text) {
+            case ";" -> "Statements end at the line break; remove the ';'.";
+            case "&" -> "Write 'and' for logical and, for example 'if ready and count > 0:'.";
+            case "|" -> "Write 'or' for logical or, for example 'if empty or done:'.";
+            case "!" -> "Write 'not' for negation, for example 'if not done:'; '!=' is inequality.";
+            case "$", "`" -> "Build text with +, for example \"total: \" + total; Sprig has no string interpolation.";
+            default -> null;
+        };
+    }
+
     private void error(String code, String message, Token near, String hint) {
         Diagnostic diagnostic = Diagnostic.error(code, Phase.LEX, message, uri, spanOf(near));
         if (hint != null) {
@@ -97,7 +109,8 @@ public final class LayoutTokenSource implements TokenSource {
                 continue;
             }
             if (type == SprigLexer.ERROR_CHAR) {
-                error(Codes.LEX_CHAR, "Invalid character '" + token.getText() + "'", token, null);
+                error(Codes.LEX_CHAR, "Invalid character '" + token.getText() + "'", token,
+                        foreignCharacterHint(token.getText()));
                 continue;
             }
             if (type == SprigLexer.NEWLINE) {

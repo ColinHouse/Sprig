@@ -7,6 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import sprig.compiler.sem.BuiltinMembers;
+import sprig.compiler.types.ListType;
+import sprig.compiler.types.MapType;
+import sprig.compiler.types.NativeType;
 
 /** Versioned, packaged source of truth for agent-facing language/tool metadata. */
 public final class Catalog {
@@ -55,8 +59,68 @@ public final class Catalog {
         result.put("topic", topic);
         result.put("syntax", splitLines(get("help." + topic + ".syntax")));
         result.put("rules", List.of(get("help." + topic + ".rules").split(";\\s*")));
+        Map<String, List<String>> methods = builtinMethods(topic);
+        if (!methods.isEmpty()) {
+            result.put("methods", methods);
+        }
         result.put("examples", splitLines(get("help." + topic + ".examples")));
         return result;
+    }
+
+    /**
+     * The built-in members a topic covers, read from the same tables the checker
+     * resolves against, so help cannot list a method the compiler rejects.
+     */
+    public static Map<String, List<String>> builtinMethods(String topic) {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        switch (topic) {
+            case "language" -> out.put("built-in functions", List.of("print", "range", "assert"));
+            case "strings" -> {
+                out.put("String", BuiltinMembers.instanceNames(NativeType.STRING));
+                out.put("String (static)", statics(NativeType.STRING));
+            }
+            case "collections" -> {
+                out.put("List[T]", BuiltinMembers.instanceNames(new ListType(NativeType.INT, false)));
+                out.put("MutableList[T]", BuiltinMembers.instanceNames(new ListType(NativeType.INT, true)));
+                out.put("Map[K, V]", BuiltinMembers.instanceNames(new MapType(NativeType.STRING, NativeType.INT, false)));
+                out.put("MutableMap[K, V]", BuiltinMembers.instanceNames(new MapType(NativeType.STRING, NativeType.INT, true)));
+            }
+            case "numerics" -> {
+                for (NativeType type : List.of(NativeType.INT, NativeType.INT32, NativeType.FLOAT, NativeType.FLOAT32,
+                        NativeType.DECIMAL, NativeType.BIGINT)) {
+                    List<String> instance = BuiltinMembers.instanceNames(type);
+                    if (!instance.isEmpty()) out.put(type.display(), instance);
+                    List<String> statics = statics(type);
+                    if (!statics.isEmpty()) out.put(type.display() + " (static)", statics);
+                }
+            }
+            default -> {
+            }
+        }
+        return out;
+    }
+
+    private static List<String> statics(NativeType type) {
+        List<String> out = new ArrayList<>();
+        for (String name : BuiltinMembers.staticNames(type)) {
+            out.add(type.display() + "." + name);
+        }
+        return out;
+    }
+
+    /** An example's source text, read from the installed SDK or checkout, or null when absent. */
+    public static String exampleSource(String example) {
+        String home = System.getProperty("sprig.home");
+        if (home == null || !example.endsWith(".spr")) return null;
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of(home).resolve(example).normalize();
+            if (!path.startsWith(java.nio.file.Path.of(home).normalize()) || !java.nio.file.Files.isRegularFile(path)) {
+                return null;
+            }
+            return java.nio.file.Files.readString(path, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
     }
 
     private static List<String> splitLines(String value) {

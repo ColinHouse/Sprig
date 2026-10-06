@@ -151,6 +151,7 @@ public final class Main {
         out.println("  fmt <file.spr|directory> [--check] [--json] canonical comment-preserving formatting");
         out.println("  lsp [--stdio] [--classpath PATH]            language server on standard input/output");
         out.println("  version");
+        out.println("New to Sprig? Start with 'sprig help language'; each topic lists its syntax, rules and an example.");
     }
 
     private static int help(String[] args) {
@@ -180,7 +181,22 @@ public final class Main {
             for (String line : (List<String>) data.get("syntax")) System.out.println("  " + line);
             System.out.println("Rules:");
             for (String line : (List<String>) data.get("rules")) System.out.println("  - " + line);
-            System.out.println("Example (Sprig source repository): " + String.join(", ", (List<String>) data.get("examples")));
+            Object methods = data.get("methods");
+            if (methods instanceof Map<?, ?> table) {
+                System.out.println("Methods:");
+                for (Map.Entry<?, ?> entry : table.entrySet()) {
+                    System.out.println("  " + entry.getKey() + ": " + String.join(", ", (List<String>) entry.getValue()));
+                }
+            }
+            for (String example : (List<String>) data.get("examples")) {
+                String text = Catalog.exampleSource(example);
+                if (text == null) {
+                    System.out.println("Example (Sprig source repository): " + example);
+                    continue;
+                }
+                System.out.println("Example (" + example + "):");
+                text.lines().forEach(line -> System.out.println("  " + line));
+            }
         }
         return 0;
     }
@@ -904,6 +920,11 @@ public final class Main {
                             source.toAbsolutePath().toUri().toString(), lineMaps, uris,
                             options.stacktrace));
                 }
+                String uncalledMain = result.exitCode == 0 && result.stdout.isEmpty()
+                        ? uncalledMainNote(compilation.main) : null;
+                if (uncalledMain != null && !options.json) {
+                    System.err.println(uncalledMain);
+                }
                 if (options.json) {
                     // What the program wrote to standard error, as written, without the
                     // runtime's own failure records (those become the diagnostic above).
@@ -912,8 +933,9 @@ public final class Main {
                         if (!line.startsWith(SprigRuntime.FAILURE_PREFIX)
                                 && !line.startsWith(SprigRuntime.FRAME_PREFIX)) programErrors.append(line);
                     }
-                    Map<String, Object> details = programErrors.length() == 0 ? Map.of()
-                            : Map.of("programErrorOutput", programErrors.toString());
+                    Map<String, Object> details = new LinkedHashMap<>();
+                    if (programErrors.length() > 0) details.put("programErrorOutput", programErrors.toString());
+                    if (uncalledMain != null) details.put("note", uncalledMain);
                     System.out.print(JsonWriter.result(diagnostics.all(), null, "run", result.exitCode,
                             result.stdout, details));
                 } else {
@@ -930,6 +952,20 @@ public final class Main {
         }
         report(diagnostics, options.json, "run", 1, null);
         return 1;
+    }
+
+    /**
+     * A program that only declares functions runs nothing: Sprig executes
+     * top-level statements and never calls main by itself. Said after a run that
+     * printed nothing, because that is when the surprise happens.
+     */
+    static String uncalledMainNote(sprig.compiler.ast.Module entry) {
+        if (entry == null || entry.findFunction("main") == null || !entry.topStatements.isEmpty()) {
+            return null;
+        }
+        return "note: this file declares func main but has no top-level statements, so nothing ran. "
+                + "Sprig runs top-level statements in order and does not call main itself: "
+                + "add the line main() at the end of the file, or write the statements at the top level.";
     }
 
     private static final class Prepared {

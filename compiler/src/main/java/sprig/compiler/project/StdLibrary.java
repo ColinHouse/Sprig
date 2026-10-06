@@ -22,6 +22,19 @@ public final class StdLibrary {
         return root;
     }
 
+    /** The bundled module names, as they are imported: @std/text.spr and so on. */
+    static java.util.List<String> available(Path base) {
+        try (java.util.stream.Stream<Path> files = Files.list(base)) {
+            return files.map(path -> path.getFileName().toString())
+                    .filter(name -> name.endsWith(".spr"))
+                    .sorted()
+                    .map(name -> "@std/" + name)
+                    .toList();
+        } catch (IOException e) {
+            return java.util.List.of();
+        }
+    }
+
     public static Path resolve(String spec, Diagnostics diagnostics, String uri, Span span) {
         try {
             String module = spec.substring("@std/".length());
@@ -32,7 +45,8 @@ public final class StdLibrary {
             Path target = base.resolve(module);
             if (!Files.isRegularFile(target) || Files.isSymbolicLink(target)
                     || !target.toRealPath().startsWith(base))
-                throw new DepError(Codes.DEP_NOT_FOUND, "Bundled std module not found: " + spec, null);
+                throw new DepError(Codes.DEP_NOT_FOUND, "Bundled std module not found: " + spec
+                        + "; the bundled modules are " + String.join(", ", available(base)), null);
             return target;
         } catch (DepError | IOException e) {
             diagnostics.error(Codes.DEP_NOT_FOUND, Phase.NAME, e.getMessage(), uri, span);

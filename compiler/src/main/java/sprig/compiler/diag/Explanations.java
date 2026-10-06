@@ -124,8 +124,12 @@ public final class Explanations {
             case Codes.NAME_UNRESOLVED -> {
                 out.put("whyMatters", "Every name is declared before use; there is no implicit global or dynamic lookup.");
                 out.put("confusedWith", List.of("Python implicit globals", "JavaScript hoisting"));
-                out.put("commonCauses", List.of("A typo, a missing import, or a declaration placed after first use."));
-                out.put("safeFixes", List.of("Check the spelling, add the import, or move the declaration before use."));
+                out.put("commonCauses", List.of("A typo, a missing import, or a declaration placed after first use.",
+                        "A spelling from another language, such as readLine, input, len, str, True, None, self "
+                                + "or the types int and str; the hint names the Sprig spelling.",
+                        "A Java class such as Math or Scanner used without 'import java.lang.Math as Math'."));
+                out.put("safeFixes", List.of("Check the spelling, add the import, or move the declaration before use.",
+                        "Read standard input with @std/process.spr (read_lines, read_line, read_all)."));
                 out.put("relatedCodes", List.of(Codes.NAME_IMPORT, Codes.NAME_NOT_A_VALUE));
             }
             case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> {
@@ -436,7 +440,9 @@ public final class Explanations {
                 out.put("whyMatters", "The grammar is small and explicit; fixing the first syntax error removes most later ones.");
                 out.put("commonCauses", List.of("A block header without a trailing ':'.",
                         "Mismatched indentation or an unexpected token.",
-                        "A construct from another language (braces, semicolons, ternaries)."));
+                        "A construct from another language: 'else if' (Sprig writes elif), braces around a block, "
+                                + "a declaration without an initial value, ++, List<Int> (Sprig writes List[Int]) "
+                                + "or a function header without '-> Type'. The message and hint name the Sprig spelling."));
                 out.put("safeFixes", List.of("Fix the first reported error, then re-check; cascades are common.",
                         "Query sprig help language --json and sprig help <topic> --json for accepted syntax."));
                 out.put("relatedCodes", List.of(Codes.LEX_INDENT_INCONSISTENT, Codes.LEX_INDENT_FIRST, Codes.LEX_CHAR));

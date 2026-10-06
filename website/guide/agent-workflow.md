@@ -17,6 +17,8 @@ sprig api java.time.LocalDate --json
 
 `capabilities` 列出的是这个 SDK 实际实现了的功能。注意，一段代码能通过语法解析，不代表后面每一步都没问题。类型检查、生成 Java、在 JVM 上运行，你的改动依赖哪一步，就要实际跑过哪一步才算数。
 
+第一次用 Sprig 的话（不管是你还是助手），先看 `sprig help language`。它就是一段完整的小程序，用到了 `if/elif/else`、循环、变量、函数和读标准输入。每个主题还会列出内置方法，并附上一个示例程序。从 Python、Java 或 C 带过来的写法，比如 `else if`、`readLine()`、`List<Int>`，报错会直接告诉你 Sprig 里怎么写。
+
 ## 一个修错的循环
 
 1. 先读相关的参考页和附近已有的测试。如果是在 Sprig 仓库里工作，还要先读 `AGENTS.md`。

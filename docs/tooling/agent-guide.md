@@ -30,6 +30,18 @@ bin/sprig help testing --json
 bin/sprig fmt program.spr --check --json
 ```
 
+Start with `help language`: its syntax block is a complete program (imports,
+standard input, `if/elif/else`, loops, `var`/`let`, functions) that compiles and
+runs. `help <topic> --json` also returns `methods` for `language` (built-in
+functions), `strings`, `collections` and `numerics`, read from the tables the
+checker resolves against; text help prints each example's source. Diagnostics
+for constructs from other languages (`else if`, `var x: T` without a value,
+`List<Int>`, braces, `++`, `;`, `&&`, `readLine()`, `len()`, `True`, `str`, an
+unimported `Math`) name the Sprig spelling in the message or hint, and a missing
+`@std` module lists the bundled ones. When a file declares `func main`, has no
+top-level statements and prints nothing, `run` adds a note (standard error, or
+`note` with `--json`).
+
 Use `help` topics before writing unfamiliar constructs. `capabilities` lists
 deliberately unsupported features; grammar acceptance alone does not imply
 runtime support. `explain` returns structured causes and safe fixes for every
