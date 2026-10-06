@@ -4053,9 +4053,31 @@ public final class TypeChecker {
                         ? "Error" : type.display();
                 diagnostics.add(Diagnostic.error(Codes.FLOW_THROWS, Phase.FLOW,
                         "Call may throw " + name + "; declare 'throws " + name + "' or handle it with try/catch",
-                        module.uri, span).withHint("Sprig keeps recoverable errors explicit; there is no implicit propagation."));
+                        module.uri, span).withHint(throwsHint(name)));
             }
         }
+    }
+
+    /** Names the two repairs with the enclosing function's own header, so they can be applied as written. */
+    private String throwsHint(String name) {
+        String handle = "or handle it where it happens: 'try:' around the call, then 'catch problem: " + name
+                + ":' with what to do instead. Sprig keeps recoverable errors explicit; there is no implicit propagation.";
+        if (lambdaDepth > 0 || currentFunction == null || currentFunction.returnTypeRef == null) {
+            return "Declare it on the enclosing function, " + handle;
+        }
+        StringBuilder header = new StringBuilder("func ").append(currentFunction.name).append('(');
+        for (int i = 0; i < currentFunction.params.size(); i++) {
+            Decl.Param param = currentFunction.params.get(i);
+            if (i > 0) header.append(", ");
+            header.append(param.name).append(": ").append(param.typeRef == null ? "?" : param.typeRef.display());
+        }
+        header.append(") -> ").append(currentFunction.returnTypeRef.display()).append(" throws ");
+        List<String> declared = new ArrayList<>();
+        for (sprig.compiler.ast.TypeRef ref : currentFunction.throwsRefs) declared.add(ref.display());
+        if (!declared.contains(name)) declared.add(name);
+        header.append(String.join(", ", declared)).append(':');
+        return "Declare it on '" + currentFunction.name + "' by changing its header to '" + header + "', and its callers "
+                + "then handle or declare it too (top-level statements need neither), " + handle;
     }
 
     private Type narrowedType(Symbol symbol) {

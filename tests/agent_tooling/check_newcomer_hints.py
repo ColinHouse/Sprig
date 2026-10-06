@@ -25,7 +25,11 @@ CASES = [
     ("angle-generics", "let xs: List<Int> = [1]\n", "SPR-SYNTAX-ERROR", "List[Int]"),
     ("angle-generics-parameter", "func f(xs: Map<String, Int>) -> Int:\n    return 1\n", "SPR-SYNTAX-ERROR", "square brackets"),
     ("braces", "if true {\n    print(1)\n}\n", "SPR-SYNTAX-ERROR", "not wrapped in braces"),
-    ("missing-result-type", "func main():\n    print(1)\n", "SPR-SYNTAX-ERROR", "-> Unit"),
+    ("missing-result-type", "func main():\n    print(1)\n", "SPR-SYNTAX-ERROR", "'func main() -> Unit:'"),
+    ("missing-result-type-with-parameters", "func f(a: Int, b: String):\n    print(a)\n", "SPR-SYNTAX-ERROR",
+     "'func f(a: Int, b: String) -> Unit:'"),
+    ("undeclared-throw", "import \"@std/process.spr\" as process\nfunc main() -> Unit:\n    for line in process.read_lines():\n"
+     "        print(line)\nmain()\n", "SPR-FLOW-THROWS", "'func main() -> Unit throws Error:'"),
     ("semicolon", "let x = 1;\n", "SPR-LEX-CHAR", "line break"),
     ("double-ampersand", "if true && false:\n    print(1)\n", "SPR-LEX-CHAR", "'and'"),
     ("double-bar", "if true || false:\n    print(1)\n", "SPR-LEX-CHAR", "'or'"),
@@ -112,6 +116,11 @@ def main():
             data = json.loads(result.stdout)
             check("valid-" + name, result.returncode == 0 and not data["diagnostics"] and "note" not in data,
                   result.stdout)
+
+        # After a broken header, the body's INDENT and DEDENT are not reported as new errors.
+        (work / "case.spr").write_text("func main():\n    print(1)\n    print(2)\nprint(3)\n", encoding="utf-8")
+        data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+        check("no-layout-cascade", len(data) == 1 and "<INDENT>" not in json.dumps(data), json.dumps(data))
 
         # Text output shows a repeated hint once; JSON keeps it on every diagnostic.
         (work / "case.spr").write_text("let a = 1;\nlet b = 2;\nlet c = 3;\n", encoding="utf-8")

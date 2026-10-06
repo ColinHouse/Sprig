@@ -43,11 +43,19 @@ public final class ParserFrontend {
         });
         CommonTokenStream tokens = new CommonTokenStream(new LayoutTokenSource(lexer, diagnostics, uri));
         SprigParser parser = new SprigParser(tokens);
+        boolean[] reported = {false};
         parser.removeErrorListeners();
         parser.addErrorListener(new BaseErrorListener() {
             @Override
             public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line,
                                     int charPositionInLine, String msg, RecognitionException e) {
+                // An INDENT or DEDENT that only fails because an earlier error broke the
+                // block structure says nothing new, and reads like an indentation mistake.
+                if (reported[0] && offendingSymbol instanceof Token layout
+                        && (layout.getType() == SprigLexer.INDENT || layout.getType() == SprigLexer.DEDENT)) {
+                    return;
+                }
+                reported[0] = true;
                 String pretty = msg;
                 String targetedHint = null;
                 String foreign = offendingSymbol instanceof org.antlr.v4.runtime.Token token
@@ -137,7 +145,14 @@ public final class ParserFrontend {
                     + "End the header with ':' and indent the body on the following lines, for example "
                     + "'if count > 0:' then the body indented by four spaces.";
         }
-        if (type == SprigLexer.COLON && raw.contains("expecting '->'")) {
+        if (type == SprigLexer.COLON && stream.get(lineStart(stream, index)).getType() == SprigLexer.FUNC
+                && !lineHas(stream, index, SprigLexer.ARROW)) {
+            String header = sourceBefore(stream, lineStart(stream, index), index, token).trim();
+            if (header.startsWith("func ")) {
+                return "'" + header + "' has no result type\n"
+                        + "Write '" + header + " -> Unit:' when it returns nothing, or put the result type after "
+                        + "'->', for example '" + header + " -> Int:'.";
+            }
             return "A function declares its result type before ':'\n"
                     + "Write 'func name(parameter: Type) -> ResultType:', and '-> Unit' when it returns nothing.";
         }
@@ -159,6 +174,16 @@ public final class ParserFrontend {
         return first == SprigLexer.IF || first == SprigLexer.ELIF || first == SprigLexer.ELSE
                 || first == SprigLexer.WHILE || first == SprigLexer.FOR || first == SprigLexer.FUNC
                 || first == SprigLexer.CLASS || first == SprigLexer.TRY || first == SprigLexer.CATCH;
+    }
+
+    /** The source text from the token at start up to (not including) the token at end. */
+    private static String sourceBefore(TokenStream stream, int start, int end, Token endToken) {
+        Token first = stream.get(start);
+        if (first.getStartIndex() < 0 || endToken.getStartIndex() <= first.getStartIndex()) {
+            return "";
+        }
+        return endToken.getInputStream().getText(
+                org.antlr.v4.runtime.misc.Interval.of(first.getStartIndex(), endToken.getStartIndex() - 1));
     }
 
     /** Whether a token of the given type appears on the line before the token at index. */
