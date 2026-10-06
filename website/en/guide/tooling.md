@@ -2,7 +2,7 @@
 
 Sprig comes as one command-line program, `sprig`, and everything it does is a subcommand. There's no background process: even the language server is a subcommand, `sprig lsp`, which your editor starts itself. For VS Code, see the [VS Code extension](/en/guide/editor).
 
-Every command on this page except `sprig lsp` is in the published v0.5.0-beta.1. For exactly what your installed SDK supports, run `sprig capabilities --json`.
+Every command on this page is in the published v0.6.0-beta.1. For exactly what your installed SDK supports, run `sprig capabilities --json`.
 
 ## The commands
 
@@ -61,14 +61,14 @@ Inside a project, `check`, `run` and `build` don't need a file name; they use th
 
 ## JSON output
 
-Almost every command accepts `--json`. With it, standard output holds exactly one JSON document, even when your program fails. Whatever the program printed goes in `programOutput` and errors go in `diagnostics`, so the two never mix. In versions newer than v0.5.0-beta.1, what the program wrote to standard error goes in `programErrorOutput`, and a program run with `--json` gets an empty standard input.
+Almost every command accepts `--json`. With it, standard output holds exactly one JSON document, even when your program fails. Whatever the program printed goes in `programOutput` and errors go in `diagnostics`, so the two never mix. Since v0.6.0-beta.1, what the program wrote to standard error goes in `programErrorOutput`, and a program run with `--json` gets an empty standard input.
 
 A small greeting program that runs successfully:
 
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.5.0-beta.1",
+  "toolVersion": "sprig-compiler 0.6.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -94,7 +94,7 @@ And with `--json` (the real `uri` is a full `file:` path, shortened here):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.5.0-beta.1",
+  "toolVersion": "sprig-compiler 0.6.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},
@@ -128,7 +128,7 @@ Exit codes work like this:
 
 - A mistake in the command-line arguments, or a failure in the tool itself, returns `2`.
 - Errors in your source and runtime errors usually return `1`.
-- `run` passes your program's own exit status through, so a program that exits on purpose can also return `2` or any other value. In versions newer than v0.5.0-beta.1 a program chooses its status with `process.exit` from `@std/process`, which also has `print_error` for standard error and `read_line`, `read_lines` and `read_all` for standard input. When a program exits with a nonzero status without a JVM exception, Sprig reports `SPR-PROGRAM-EXIT` and puts the program's status in the JSON field `data.programExitCode`.
+- `run` passes your program's own exit status through, so a program that exits on purpose can also return `2` or any other value. Since v0.6.0-beta.1, a program chooses its status with `process.exit` from `@std/process`, which also has `print_error` for standard error and `read_line`, `read_lines` and `read_all` for standard input. When a program exits with a nonzero status without a JVM exception, Sprig reports `SPR-PROGRAM-EXIT` and puts the program's status in the JSON field `data.programExitCode`.
 
 ## For AI assistants
 
@@ -144,7 +144,7 @@ The full approach is in [working with AI assistants](/en/guide/agent-workflow).
 
 ## Language server
 
-`sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly, and the [VS Code extension](/en/guide/editor) starts it for you. It's new in the development version, so the published v0.5.0-beta.1 doesn't have it yet.
+`sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly, and the [VS Code extension](/en/guide/editor) starts it for you. It's new in v0.6.0-beta.1.
 
 It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, and rename for local variables and parameters. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. While your code doesn't parse, the server answers with nothing rather than a guess.
 

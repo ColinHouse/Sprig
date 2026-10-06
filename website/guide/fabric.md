@@ -2,8 +2,8 @@
 
 Sprig 可以负责一个模组里的数据模型、状态、存档和业务逻辑，跟 Minecraft、Fabric 打交道的部分则留给 Java。新项目最好直接从 SDK 自带的 Fabric 模板开始，模板已经配好了官方的 `dev.sprig` Gradle 插件。
 
-::: warning 需要比 v0.5.0-beta.1 更新的版本
-模板和 Gradle 插件都是在 v0.5.0-beta.1 发布之后才加入的，已发布的 SDK 里还没有。在下一个版本发布之前，可以克隆 Sprig 仓库，运行 `python3 scripts/build.py` 构建，然后把下面的 `SPRIG_HOME` 设成这个仓库的目录。
+::: tip 需要 v0.6.0-beta.1 或更新的版本
+模板和 Gradle 插件从 v0.6.0-beta.1 开始随 SDK 一起发布。如果 `sprig version` 显示的版本更旧，先运行 `sprig upgrade`。
 :::
 
 ## 从模板开始

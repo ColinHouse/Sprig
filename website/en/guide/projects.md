@@ -129,7 +129,7 @@ Only modules listed in `exports` can be imported. Paths are normalized first, so
 - **Git dependencies are locked to a commit.** Wherever the branch moves later, a locked build stays the same. To pick up changes, run `sprig resolve` again.
 - **Resolve again after switching SDKs.** The lock file records the compiler version. With a different one, `check` reports `SPR-PROJECT-LOCK-STALE`; running `sprig resolve` once fixes it.
 - **The lock format is version 5.** Local dependencies declared with relative paths are stored as relative locations (`portable = true`), so you can move the whole workspace; absolute paths are stored as `portable = false`. The bundled `@std` library comes from the SDK you installed and isn't written to the lock file.
-- **The published v0.5.0-beta.1 uses version 4.** That version also records the `@std` version in the lock file. Run `sprig resolve` before using an older lock file with a newer compiler.
+- **v0.5.0-beta.1 used version 4.** That version also recorded the `@std` version in the lock file. After upgrading, run `sprig resolve` once to rewrite an older lock file as version 5.
 
 ## Working offline
 

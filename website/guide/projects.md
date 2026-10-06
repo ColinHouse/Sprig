@@ -128,7 +128,7 @@ print(vector.length_squared(3, 4))
 - **Git 依赖锁定到具体的 commit。** 之后分支怎么移动，已经锁定的构建都不受影响。想更新，就重新运行 `sprig resolve`。
 - **换了 SDK 要重新解析。** 锁文件记录了编译器版本，换成别的版本后，`check` 会报 `SPR-PROJECT-LOCK-STALE`，运行一次 `sprig resolve` 就好。
 - **锁文件格式目前是第 5 版。** 用相对路径声明的本地依赖记成相对位置（`portable = true`），整个工作区可以一起搬走；用绝对路径声明的记为 `portable = false`。内置的 `@std` 标准库来自你安装的 SDK，不写进锁文件。
-- **已发布的 v0.5.0-beta.1 用的是第 4 版。** 那一版还会把 `@std` 的版本记进锁文件。旧格式的锁文件拿到新版编译器上用之前，需要重新运行 `sprig resolve`。
+- **v0.5.0-beta.1 用的是第 4 版。** 那一版还会把 `@std` 的版本记进锁文件。升级以后，运行一次 `sprig resolve`，旧的锁文件就会按第 5 版重写。
 
 ## 离线使用
 

@@ -32,7 +32,7 @@ main()
 
 For each step below, replace the contents of `src/main.spr` with the example and run `sprig run`.
 
-> The error messages in this tutorial come from the latest Sprig source. If you installed v0.5.0-beta.1, a few hints are worded differently, but the error codes are the same.
+> The error messages in this tutorial come from the latest Sprig source. With an older SDK, a few hints may be worded differently, but the error codes are the same.
 
 ## 1. Values and types
 

@@ -29,7 +29,7 @@ language server, so there is nothing to configure:
 
 | Compiler | What you get |
 |---|---|
-| With `sprig lsp`: a source build newer than v0.5.0-beta.1 | The language server, as described below |
+| v0.6.0-beta.1 or newer, with `sprig lsp` | The language server, as described below |
 | v0.5.0-beta.1 | Checks on save, and hover, completion and navigation from separate compiler commands on saved files |
 | 0.4.0-alpha.1 | As v0.5.0-beta.1, without the Testing view |
 

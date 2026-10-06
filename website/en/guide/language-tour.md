@@ -62,7 +62,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 - Indexing, `in`, `get`, `set`, `append`, `sort` and the lambda-taking methods `map`, `filter` and `forEach` all work.
 - Floating-point numbers can't be `Map` keys, because `NaN` and signed zero don't behave consistently under equality and hashing.
 
-To sort by a field, group, total things up or search, use `@std/lists` from the standard library. It is newer than v0.5.0-beta.1:
+To sort by a field, group, total things up or search, use `@std/lists` from the standard library (new in v0.6.0-beta.1):
 
 <<< @/snippets/guide/lists_group.spr
 
@@ -88,13 +88,13 @@ true
 <<< @/snippets/nullable.spr
 
 - A type that might have no value is written `T?`. Only `T?` accepts `null`.
-- Check before you use it. Inside `if x != null:`, `x` has a value. In versions newer than v0.5.0-beta.1, `if x != null and x.length() > 3:` works too.
+- Check before you use it. Inside `if x != null:`, `x` has a value. Since v0.6.0-beta.1, `if x != null and x.length() > 3:` works too.
 - Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
 - Objects returned by Java methods are always treated as possibly `null`; see [JVM interop](/en/guide/jvm-interop).
 
-When all you want is a fallback value or an error, `@std/nulls` (newer than v0.5.0-beta.1) saves the `if`:
+When all you want is a fallback value or an error, `@std/nulls` (new in v0.6.0-beta.1) saves the `if`:
 
 <<< @/snippets/guide/nulls_fallback.spr
 
@@ -151,7 +151,7 @@ When you pass a function value to Java, the Java parameter has to be one of Spri
 
 `json.find_member` has three outcomes: `Missing` (no such key), `Found` (the value is in `value`) and `NotObject` (you didn't look inside an object). A key whose value is `null`, `false`, `0` or an empty string is still `Found`, so it never gets confused with a missing key. Duplicate keys in an object throw an `Error`, and members keep their order. The [standard library notes](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md) cover parsing, lookup and serialization in full.
 
-To read whole records, `@std/json_codec` (newer than v0.5.0-beta.1) takes a field by name and type, so you don't write a `match` for every field:
+To read whole records, `@std/json_codec` (new in v0.6.0-beta.1) takes a field by name and type, so you don't write a `match` for every field:
 
 <<< @/snippets/json_fields.spr
 

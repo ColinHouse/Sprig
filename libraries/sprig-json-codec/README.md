@@ -10,7 +10,7 @@ use it without a dependency: `import "@std/json_codec.spr" as codec`. This
 package remains for projects that already depend on it. Its `codec.spr`
 reexports every declaration of the std module, so both imports name the same
 types and functions. The package therefore needs an SDK that bundles
-`@std/json_codec.spr`, which v0.5.0-beta.1 does not; with that SDK, pin the
+`@std/json_codec.spr`: v0.6.0-beta.1 or newer. With v0.5.0-beta.1, pin the
 package at the `v0.5.0-beta.1` tag.
 
 ```sprig

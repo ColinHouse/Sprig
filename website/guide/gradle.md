@@ -2,8 +2,8 @@
 
 已经有一个用 Gradle 构建的 Java 项目？可以用官方的 `dev.sprig` 插件把 Sprig 代码加进去。插件会读取项目真实的编译 classpath，编译可选的 Java 桥接代码，运行 Sprig 的检查和测试，把生成的 Java 和运行时源码加进项目，并接入 Gradle 平常的构建流程。
 
-::: warning 需要比 v0.5.0-beta.1 更新的版本
-这个插件是在 v0.5.0-beta.1 发布之后才加入的，已发布的 SDK 里还没有。在下一个版本发布之前，可以克隆 Sprig 仓库，运行 `python3 scripts/build.py` 构建，然后把下面的 `SPRIG_HOME` 设成这个仓库的目录。
+::: tip 需要 v0.6.0-beta.1 或更新的版本
+这个插件从 v0.6.0-beta.1 开始随 SDK 一起发布。如果 `sprig version` 显示的版本更旧，先运行 `sprig upgrade`。
 :::
 
 ## 接入插件

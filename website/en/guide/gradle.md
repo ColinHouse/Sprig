@@ -2,8 +2,8 @@
 
 Already have a Java project built with Gradle? The official `dev.sprig` plugin lets you add Sprig code to it. The plugin reads the project's real compile classpath, compiles the optional Java bridge code, runs Sprig's checks and tests, adds the generated Java and runtime sources to the project, and hooks all of it into Gradle's usual build.
 
-::: warning Needs a version newer than v0.5.0-beta.1
-The plugin was added after v0.5.0-beta.1 was released, so the published SDK doesn't include it yet. Until the next release, clone the Sprig repository, build it with `python3 scripts/build.py`, and point `SPRIG_HOME` below at that checkout.
+::: tip Needs v0.6.0-beta.1 or newer
+The plugin ships with the SDK starting with v0.6.0-beta.1. If `sprig version` shows an older version, run `sprig upgrade` first.
 :::
 
 ## Adding the plugin
