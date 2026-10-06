@@ -2,7 +2,7 @@
 
 Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，连语言服务器也是一个子命令 `sprig lsp`，由编辑器自己启动。VS Code 里的支持见 [VS Code 插件](/guide/editor)。
 
-这页列出的命令，除了 `sprig lsp`，已发布的 v0.5.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
+这页列出的命令，已发布的 v0.6.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
 
 ## 命令一览
 
@@ -61,14 +61,14 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 
 ## JSON 输出
 
-几乎每个命令都能加 `--json`。加了以后，标准输出里只有一个 JSON 文档，程序运行失败时也是这样。程序打印的内容放在 `programOutput` 里，错误放在 `diagnostics` 里，两者不会混在一起。比 v0.5.0-beta.1 新的版本里，程序写到标准错误的内容放在 `programErrorOutput` 里；用 `--json` 运行时，程序读到的标准输入是空的。
+几乎每个命令都能加 `--json`。加了以后，标准输出里只有一个 JSON 文档，程序运行失败时也是这样。程序打印的内容放在 `programOutput` 里，错误放在 `diagnostics` 里，两者不会混在一起。从 v0.6.0-beta.1 开始，程序写到标准错误的内容放在 `programErrorOutput` 里；用 `--json` 运行时，程序读到的标准输入是空的。
 
 成功运行一个打招呼的小程序：
 
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.5.0-beta.1",
+  "toolVersion": "sprig-compiler 0.6.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -94,7 +94,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.5.0-beta.1",
+  "toolVersion": "sprig-compiler 0.6.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},
@@ -128,7 +128,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 - 命令行参数写错，或者工具本身出错，返回 `2`。
 - 源码错误和运行时错误，一般返回 `1`。
-- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。比 v0.5.0-beta.1 新的版本里，程序用 `@std/process` 的 `process.exit` 指定退出码；同一个模块还有写标准错误的 `print_error`，以及读标准输入的 `read_line`、`read_lines`、`read_all`。程序以非零状态退出、又没有抛出 JVM 异常时，Sprig 会报 `SPR-PROGRAM-EXIT`，程序的退出码记在 JSON 的 `data.programExitCode` 里。
+- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。从 v0.6.0-beta.1 开始，程序用 `@std/process` 的 `process.exit` 指定退出码；同一个模块还有写标准错误的 `print_error`，以及读标准输入的 `read_line`、`read_lines`、`read_all`。程序以非零状态退出、又没有抛出 JVM 异常时，Sprig 会报 `SPR-PROGRAM-EXIT`，程序的退出码记在 JSON 的 `data.programExitCode` 里。
 
 ## 给 AI 助手用
 
@@ -144,7 +144,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 ## 语言服务器
 
-`sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是开发版新加的，已发布的 v0.5.0-beta.1 里还没有。
+`sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是 v0.6.0-beta.1 新加的。
 
 它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化，以及局部变量和参数的重命名。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。
 

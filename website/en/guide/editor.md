@@ -36,7 +36,7 @@ Highlighting, the outline and snippets work right away, without Java or the comp
 
 Everything else needs JDK 17+ and the [Sprig SDK](/en/guide/getting-started). Then set **Sprig: Compiler Path** (`sprig.compilerPath`) to the SDK's `bin/sprig`. If you don't set it, the extension looks for `sprig` on your `PATH` first, then searches parent directories for a `bin/sprig` built from source. The Testing view needs compiler v0.5.0-beta.1 or newer.
 
-The language server is in the development version, not in the published v0.5.0-beta.1. With a compiler built from source, the extension uses it automatically; with v0.5.0-beta.1, it falls back to running separate compiler commands, as the table below shows. To turn the server off, set `sprig.languageServer.enabled` to `false`.
+The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the extension uses it automatically; with v0.5.0-beta.1, it falls back to running separate compiler commands, as the table below shows. To turn the server off, set `sprig.languageServer.enabled` to `false`.
 
 ## While you write
 

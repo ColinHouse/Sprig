@@ -2,8 +2,8 @@
 
 Sprig can take care of a mod's data model, state, saving and game logic, while the parts that talk to Minecraft and Fabric stay in Java. For a new project, start from the Fabric template that ships with the SDK; it already has the official `dev.sprig` Gradle plugin set up.
 
-::: warning Needs a version newer than v0.5.0-beta.1
-The template and the Gradle plugin were added after v0.5.0-beta.1 was released, so the published SDK doesn't include them yet. Until the next release, clone the Sprig repository, build it with `python3 scripts/build.py`, and point `SPRIG_HOME` below at that checkout.
+::: tip Needs v0.6.0-beta.1 or newer
+The template and the Gradle plugin ship with the SDK starting with v0.6.0-beta.1. If `sprig version` shows an older version, run `sprig upgrade` first.
 :::
 
 ## Start from the template

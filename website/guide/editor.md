@@ -36,7 +36,7 @@ code --install-extension dist/sprig-language-0.3.0.vsix
 
 其他功能还需要装好 JDK 17+ 和 [Sprig SDK](/guide/getting-started)，然后在设置里把 **Sprig: Compiler Path**（`sprig.compilerPath`）设成 SDK 里的 `bin/sprig`。不设置的话，插件会先在 `PATH` 里找 `sprig`，再沿着上级目录查找源码构建出来的 `bin/sprig`。测试面板需要 v0.5.0-beta.1 或更新的编译器。
 
-语言服务器是开发版新加的，已发布的 v0.5.0-beta.1 里还没有。用源码构建的编译器时，插件会自动用上它；用 v0.5.0-beta.1 时，插件改为每次单独调用编译器命令，区别见下表。想关掉语言服务器，把 `sprig.languageServer.enabled` 设成 `false`。
+语言服务器是 v0.6.0-beta.1 新加的。用 v0.6.0-beta.1 或更新的编译器时，插件会自动用上它；用 v0.5.0-beta.1 时，插件改为每次单独调用编译器命令，区别见下表。想关掉语言服务器，把 `sprig.languageServer.enabled` 设成 `false`。
 
 ## 写代码时
 

@@ -61,7 +61,7 @@
 - 支持下标、`in`、`get`、`set`、`append`、`sort`，以及 `map`、`filter`、`forEach` 这几个接收 lambda 的方法。
 - `Map` 的键不能是浮点数，因为 `NaN` 和正负零在相等比较和哈希上对不上。
 
-按某个字段排序、分组、汇总或查找，用标准库的 `@std/lists`。它比 v0.5.0-beta.1 新：
+按某个字段排序、分组、汇总或查找，用标准库的 `@std/lists`（v0.6.0-beta.1 新增）：
 
 <<< @/snippets/guide/lists_group.spr
 
@@ -87,13 +87,13 @@ true
 <<< @/snippets/nullable.spr
 
 - 可能没有值的类型写成 `T?`。`null` 只能赋给 `T?`。
-- 用之前先检查。在 `if x != null:` 的分支里，`x` 就当作有值。比 v0.5.0-beta.1 更新的版本里，`if x != null and x.length() > 3:` 这样写也可以。
+- 用之前先检查。在 `if x != null:` 的分支里，`x` 就当作有值。从 v0.6.0-beta.1 开始，`if x != null and x.length() > 3:` 这样写也可以。
 - 提前返回也行：写了 `if x == null: return ...` 之后，后面的代码都把 `x` 当作有值。
 - 把可能为 `null` 的值用在需要非空的地方，会报 `SPR-TYPE-NULLABLE`。
 - `var` 字段检查过之后，只要中间调用了函数，之前的检查就不算数了，因为函数可能改了它。
 - Java 方法返回的对象一律当作可能为 `null`，见 [JVM 互操作](/guide/jvm-interop)。
 
-如果只是想要一个默认值，或者没有值就报错，用 `@std/nulls`（比 v0.5.0-beta.1 新）可以省掉 `if`：
+如果只是想要一个默认值，或者没有值就报错，用 `@std/nulls`（v0.6.0-beta.1 新增）可以省掉 `if`：
 
 <<< @/snippets/guide/nulls_fallback.spr
 
@@ -150,7 +150,7 @@ port must be a number: eighty
 
 `json.find_member` 的结果有三种：`Missing`（没有这个键）、`Found`（有，值在 `value` 里）和 `NotObject`（查的不是对象）。键存在但值是 `null`、`false`、`0` 或空字符串时，结果都是 `Found`，不会和「没有这个键」混在一起。对象里有重复的键会抛出 `Error`；成员保持原来的顺序。解析、查找和序列化的完整规则见[标准库说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md)。
 
-要读整条记录，用 `@std/json_codec`（比 v0.5.0-beta.1 新）按名字和类型取字段，不用给每个字段写一遍 `match`：
+要读整条记录，用 `@std/json_codec`（v0.6.0-beta.1 新增）按名字和类型取字段，不用给每个字段写一遍 `match`：
 
 <<< @/snippets/json_fields.spr
 
