@@ -1,4 +1,4 @@
-# Sprig agent bootstrap guide (v0.6.0-beta.1)
+# Sprig agent bootstrap guide (v0.7.0-beta.1)
 
 This guide assumes only the release archive and a JDK 17+ are available.
 The compiler's versioned catalog is the quickest source of implemented syntax.
