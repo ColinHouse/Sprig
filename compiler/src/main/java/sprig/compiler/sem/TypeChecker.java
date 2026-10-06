@@ -2076,8 +2076,13 @@ public final class TypeChecker {
                         resolved.jvm = member;
                         return checkErrorConstructor(call);
                     }
-                    diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
-                            "Type " + name.name + " is not constructible", module.uri, call.span));
+                    Diagnostic notConstructible = Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
+                            "Type " + name.name + " is not constructible", module.uri, call.span);
+                    String conversion = Newcomer.conversionHint(name.name);
+                    if (conversion != null) {
+                        notConstructible.withHint(conversion);
+                    }
+                    diagnostics.add(notConstructible);
                     checkArgsUnchecked(call);
                     return NativeType.ERROR;
                 }

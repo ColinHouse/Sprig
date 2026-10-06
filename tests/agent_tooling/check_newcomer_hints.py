@@ -51,6 +51,13 @@ CASES = [
     ("list-add", "let xs: MutableList[Int] = []\nxs.add(1)\n", "SPR-NAME-UNRESOLVED", "append"),
     ("unknown-string-method", "print(\"ab\".shout())\n", "SPR-NAME-UNRESOLVED", "String methods: length"),
     ("unknown-std-module", "import \"@std/io.spr\" as io\nprint(1)\n", "SPR-DEP-NOT-FOUND", "@std/process.spr"),
+    ("java-class-main", "public class Main {\n    public static void main(String[] args) {\n    }\n}\n", "SPR-SYNTAX-ERROR", "no class Main"),
+    ("python-def", "def main():\n    print(1)\n", "SPR-SYNTAX-ERROR", "declared with func"),
+    ("javascript-function", "function f() {\n}\n", "SPR-SYNTAX-ERROR", "declared with func"),
+    ("const", "const x = 1\n", "SPR-SYNTAX-ERROR", "let (cannot be reassigned)"),
+    ("star-import", "import java.io.*\nprint(1)\n", "SPR-SYNTAX-ERROR", "one at a time"),
+    ("int-conversion", "let n = Int(\"3\")\n", "SPR-TYPE-NOT-CALLABLE", "toIntOrNull()"),
+    ("string-conversion", "let s = String(3)\n", "SPR-TYPE-NOT-CALLABLE", "toString()"),
 ]
 
 # Ordinary syntax errors keep the parser's own message: the targeted hints do not misfire.
@@ -105,6 +112,13 @@ def main():
             data = json.loads(result.stdout)
             check("valid-" + name, result.returncode == 0 and not data["diagnostics"] and "note" not in data,
                   result.stdout)
+
+        # Text output shows a repeated hint once; JSON keeps it on every diagnostic.
+        (work / "case.spr").write_text("let a = 1;\nlet b = 2;\nlet c = 3;\n", encoding="utf-8")
+        text = run("check", "case.spr", cwd=work).stderr
+        data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+        check("repeated-hint-shown-once", text.count("hint: Statements end at the line break") == 1
+              and text.count("Invalid character ';'") == 3 and all(d.get("hint") for d in data), text)
 
         # A program that only declares main runs nothing; the run says why.
         (work / "main.spr").write_text("func main() -> Unit:\n    print(\"hi\")\n", encoding="utf-8")

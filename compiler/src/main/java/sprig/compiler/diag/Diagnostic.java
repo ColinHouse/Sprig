@@ -79,6 +79,11 @@ public final class Diagnostic {
     }
 
     public String format() {
+        return format(true);
+    }
+
+    /** The text form; a caller that already showed this hint can leave it out. */
+    public String format(boolean includeHint) {
         StringBuilder sb = new StringBuilder();
         sb.append(code).append(" [").append(phase).append("] ");
         if (uri != null) {
@@ -93,7 +98,7 @@ public final class Diagnostic {
             sb.append(" (expected ").append(expectedType == null ? "?" : expectedType)
               .append(", actual ").append(actualType == null ? "?" : actualType).append(')');
         }
-        if (hint != null) {
+        if (hint != null && includeHint) {
             sb.append("\n  hint: ").append(hint);
         }
         for (Related r : related) {

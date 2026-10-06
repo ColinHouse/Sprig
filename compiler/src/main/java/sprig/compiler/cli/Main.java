@@ -1730,8 +1730,12 @@ public final class Main {
             System.out.print(JsonWriter.result(diagnostics.all(), null, command, exitCode, programOutput));
             return;
         }
+        // The same hint on every repetition of one mistake (a ';' on each line)
+        // buries the other errors; JSON output keeps every hint.
+        java.util.Set<String> shownHints = new java.util.HashSet<>();
         for (Diagnostic diagnostic : diagnostics.all()) {
-            System.err.println(diagnostic.format());
+            boolean newHint = diagnostic.hint == null || shownHints.add(diagnostic.hint);
+            System.err.println(diagnostic.format(newHint));
         }
         if (diagnostics.hasErrors()) {
             System.err.println(diagnostics.errorCount() + " error(s); "

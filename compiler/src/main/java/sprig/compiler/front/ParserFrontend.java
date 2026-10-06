@@ -17,6 +17,7 @@ import org.antlr.v4.runtime.TokenStream;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
+import sprig.compiler.diag.Newcomer;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
 
@@ -98,6 +99,19 @@ public final class ParserFrontend {
         int previous = index > 0 ? stream.get(index - 1).getType() : Token.INVALID_TYPE;
         int beforePrevious = index > 1 ? stream.get(index - 2).getType() : Token.INVALID_TYPE;
         int type = token.getType();
+        String declaration = previous == SprigLexer.IDENT ? Newcomer.declarationHint(stream.get(index - 1).getText()) : null;
+        if (declaration == null && type == SprigLexer.IDENT && lineStart(stream, index) == index) {
+            declaration = Newcomer.declarationHint(token.getText());
+        }
+        if (declaration != null) {
+            return "'" + (previous == SprigLexer.IDENT ? stream.get(index - 1).getText() : token.getText())
+                    + "' is not Sprig syntax\n" + declaration;
+        }
+        if (type == SprigLexer.STAR && previous == SprigLexer.DOT && lineHas(stream, index, SprigLexer.IMPORT)) {
+            return "Java classes are imported one at a time\n"
+                    + "Write 'import java.io.BufferedReader as BufferedReader', one line per class; "
+                    + "for standard input, 'import \"@std/process.spr\" as process' is simpler.";
+        }
         if (type == SprigLexer.IF && previous == SprigLexer.ELSE) {
             return "Sprig spells else-if as 'elif'\n"
                     + "Write 'elif condition:' in place of 'else if condition:'.";

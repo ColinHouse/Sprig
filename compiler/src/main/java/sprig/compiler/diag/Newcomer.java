@@ -113,6 +113,36 @@ public final class Newcomer {
                 + "Map[K, V] and MutableMap[K, V]; T? admits null.";
     }
 
+    /** A hint for calling a built-in type like a conversion function, such as Int("3"), or null. */
+    public static String conversionHint(String typeName) {
+        return switch (typeName) {
+            case "Int", "Int32", "BigInt" -> "A type is not a conversion function. " + TO_INT
+                    + " A Float converts with value.toIntTrunc() or value.toIntExact().";
+            case "Float", "Float32" -> "A type is not a conversion function. " + TO_FLOAT;
+            case "String" -> "A type is not a conversion function. " + TO_STRING;
+            case "Bool" -> "A type is not a conversion function; compare to get a Bool, for example text == \"true\".";
+            default -> null;
+        };
+    }
+
+    /**
+     * A hint for a word another language uses to start a declaration, seen just
+     * before a syntax error (public static ..., def f(), const x = 1), or null.
+     */
+    public static String declarationHint(String word) {
+        return switch (word) {
+            case "public", "private", "protected", "static", "final", "abstract" ->
+                    "Sprig has no access or static modifiers, and a program needs no class Main or main method: "
+                            + "top-level statements run in order. Run 'sprig help language' for a complete program.";
+            case "def", "function", "fun", "fn", "sub", "proc" ->
+                    "Functions are declared with func: 'func name(parameter: Type) -> ResultType:', "
+                            + "with '-> Unit' when nothing is returned.";
+            case "const", "val", "auto", "mut" ->
+                    "Declare with let (cannot be reassigned) or var (can be): 'let limit = 10', 'var count = 0'.";
+            default -> null;
+        };
+    }
+
     /** A hint for a member that a built-in type does not have but a newcomer expects, or null. */
     public static String memberHint(String typeDisplay, String member) {
         boolean text = typeDisplay.equals("String");
