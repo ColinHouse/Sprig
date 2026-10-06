@@ -28,7 +28,7 @@ signatures. It works from any directory, with or without a project.
 | Module | Public operations |
 |---|---|
 | `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
-| `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?`; `exit(Int)`, `print_error(String)`; `read_line() -> String?`, `read_lines() -> List[String]`, `read_all() -> String` |
+| `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?`; `exit(Int)`, `print_error(String)`; `run(List[String]) -> ProcessResult throws Error`; `read_line() -> String?`, `read_lines() -> List[String]`, `read_all() -> String` |
 | `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter` |
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
 | `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by` |
@@ -36,13 +36,38 @@ signatures. It works from any directory, with or without a project.
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
 | `json_codec` | typed field access over `json`: `root`, `root_array`, `required_*`, `optional_*`, `field`, `reject_unknown_fields`; builders `object`, `member`, `array`, `text`, `int`, `bool` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
-| `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code); `equal_int`, `equal_bool`, `equal_text` |
+| `test` | `check(name, body)`, `check_error[T](name, body)`, `finish()`; `equal_int`, `equal_bool`, `equal_text`, `equal[T]`; `temp_dir() -> String throws Error`; `run_process` is `process.run` under its earlier name |
 
 `test` is intended for ordinary programs run through `sprig test`. Its
-temporary directory helper requires the runner-provided environment. The
-process helper remains available to a standalone program, but it neither
-invokes a shell nor turns a nonzero child status into an exception. See
+temporary directory helper requires the runner-provided environment. See
 [testing](../tooling/testing.md) for isolation, timeout and failure behavior.
+
+```sprig
+import "@std/test.spr" as test
+
+test.check("adds", fn() => test.equal_int(add(1, 2), 3, "sum"))
+test.check("keeps order", fn() => test.equal[List[Int]](sorted([2, 1]), [1, 2], "sorted"))
+test.check_error[Int]("rejects text", fn() => parse("x"))
+test.finish()
+```
+
+- `check(name, body)` runs the body now and prints `ok name`, or
+  `FAIL name: message` when the body throws `Error`; the program goes on
+  to the next check. The body is a lambda, so it may call the `equal_*`
+  checks and any function that throws `Error`.
+- `check_error[T](name, body)` passes when the body throws `Error`. The
+  body may return a value, so the call names its result type.
+- `finish()` prints `N passed, M failed` and ends the program with status 1
+  when a check failed, which `sprig test` reports as a failed program.
+- `equal[T](actual, expected, what)` compares any value that supports `==`,
+  lists included, and shows both values the way `print` shows them.
+
+`process.run(command)` runs an argv vector directly (no shell), with
+standard input closed and standard output and error captured as UTF-8,
+and returns a `ProcessResult` with `exit_code`, `stdout` and `stderr`. A
+nonzero status is an ordinary value; a missing executable or a child that
+runs longer than 30 seconds is an `Error`. `test.run_process` is the same
+function under its earlier name.
 
 `equal_int(actual, expected, what)`, `equal_bool` and `equal_text` do nothing
 when the two values are equal. Otherwise they throw an `Error` whose message
