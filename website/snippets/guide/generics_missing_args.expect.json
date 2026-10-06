@@ -1,3 +1,5 @@
 {
-  "diagnostics": ["SPR-TYPE-GENERIC-ARGS-REQUIRED", "SPR-TYPE-MISMATCH"]
+  "diagnostics": [
+    "SPR-TYPE-GENERIC-ARGS-REQUIRED"
+  ]
 }

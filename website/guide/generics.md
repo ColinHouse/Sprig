@@ -39,11 +39,11 @@ let none: Option[Int] = Option[Int].None
 
 ```text
 SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:5:7: Function 'identity' is generic; a call requires explicit type arguments, e.g. identity[Type](...)
-SPR-TYPE-MISMATCH [TYPE] main.spr:5:16: Type mismatch in argument 1 of identity (expected T, actual Int)
-2 error(s); run 'sprig explain <code>' for details on a diagnostic code.
+  hint: Write identity[Int](...); the arguments you passed say which type. Sprig does not infer type arguments.
+1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-第二条错误是第一条连带出来的，改成 `identity[Int](42)` 以后两条都会消失。
+提示会说出实参暗示的类型，但写还是要你来写：`identity[Int](42)`。用 `--json` 时，同样的改写会放在这条诊断的 `suggestedEdits` 里。
 
 类型参数的个数写错了，会报 `SPR-TYPE-GENERIC-ARITY`。在类型的位置只写 `Box`、不带参数，或者给不是泛型的类型加了参数，都属于这种情况。
 
