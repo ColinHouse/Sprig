@@ -413,6 +413,7 @@ public final class TypeChecker {
         Expr target = assign.target;
         Type targetType = null;
         Type javaWriteType = null; // a Java field whose write type differs from its read type
+        Class<?> javaFieldClass = null;
         if (target instanceof Expr.Name name) {
             Symbol symbol = name.symbol;
             if (symbol == null) {
@@ -448,6 +449,7 @@ public final class TypeChecker {
                             module.uri, target.span));
                 }
             } else if (field.kind == ResolvedField.Kind.JAVA_FIELD) {
+                javaFieldClass = field.jvm.field.getType();
                 if (java.lang.reflect.Modifier.isFinal(field.jvm.field.getModifiers())) {
                     diagnostics.add(Diagnostic.error(Codes.NAME_LET_ASSIGN, Phase.TYPE,
                             "Cannot assign to final Java field '" + access.name + "'",
@@ -528,6 +530,10 @@ public final class TypeChecker {
         }
         if (assign.op.equals("=")) {
             Type valueType = checkExpr(assign.value, targetType);
+            if ((javaFieldClass == int.class || javaFieldClass == Integer.class)
+                    && valueType == NativeType.INT) {
+                return; // an Int written to an int/Integer Java field narrows with a run-time check
+            }
             requireAssignable(targetType, valueType, assign.value.span, Codes.TYPE_ASSIGN, "assignment");
         } else {
             String op = assign.op.substring(0, 1);
@@ -3947,8 +3953,18 @@ public final class TypeChecker {
         if (arg.isNullable() || !(arg instanceof FunctionType actual)) return -1;
         FunctionType expected = JavaTypes.javaCallable(generic, raw, bindings);
         if (expected == null || actual.throwsAny() || !expected.params.equals(actual.params)) return -1;
-        if (expected.result != NativeType.UNIT && !Semantics.isAssignable(expected.result, actual.result)) return -1;
+        if (expected.result != NativeType.UNIT && !Semantics.isAssignable(expected.result, actual.result)
+                && !narrowsToInt32(expected.result, actual.result)) return -1;
         return 4;
+    }
+
+    /**
+     * Whether an {@code Int} crosses into an {@code int}/{@code Integer} Java
+     * slot: a comparator written in Sprig returns {@code Int}; the adapter
+     * narrows the result with a run-time range check, as a parameter does.
+     */
+    public static boolean narrowsToInt32(Type expected, Type actual) {
+        return expected == NativeType.INT32 && actual == NativeType.INT;
     }
 
     /**
@@ -4129,6 +4145,13 @@ public final class TypeChecker {
             }
             if (param == Long.class) {
                 return 2;
+            }
+            if (param == int.class || param == Integer.class) {
+                // Checked narrowing at the boundary: the generator emits
+                // NumericOps.toInt32Exact, which fails outside the Int32 range.
+                // The lowest weight keeps an exact long or a widening Object
+                // formal ahead, as Java's own phases order them for a long.
+                return 0;
             }
             return JavaTypes.rawAssignable(param, arg) ? 1 : -1;
         }

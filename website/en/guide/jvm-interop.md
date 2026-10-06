@@ -51,7 +51,7 @@ In the other direction, an argument you pass to Java can never be `null`, even w
 
 A few things to watch for:
 
-- **Numbers are never narrowed for you.** An integer literal that fits can be passed straight to an `int`, `short` or `byte` parameter. A variable is never narrowed silently, though. To pass an `Int` variable to an `int` parameter, convert it with `toInt32Exact()` first. For `short` and `byte` parameters, only literals work for now, because there's no conversion to those types yet.
+- **`Int` narrows to `int` with a check.** An `Int` passed where Java wants an `int` or `Integer` (a parameter, a constructor argument, a varargs element, a plain field assignment, or the result of a callback such as a comparator) is converted with a range check that fails at run time if the value doesn't fit. An exact `long` overload is still preferred, so `Math.max(a, b)` keeps using the `long` version. An integer literal that fits can also go to a `short` or `byte` parameter, but variables don't narrow to those, and `Float` never narrows to `float`, because that loses precision rather than range; use `toFloat32Exact()`.
 - **A `char` parameter takes a one-character literal.** `char` and `Character` parameters accept only a string literal of exactly one UTF-16 unit. `"a"` works, but `"ab"` doesn't, and neither does `"😀"`, which one Java `char` can't hold. Sprig's own strings count positions in Unicode code points instead (see `sprig help strings`).
 
 ## Catching Java exceptions
