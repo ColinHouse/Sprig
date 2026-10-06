@@ -43,7 +43,8 @@ metadata are the adapters the generator emits.
 | `java.util.List<T>` result | `List[T]?` via `jvm.list_snapshot[T]` (immutable snapshot) |
 | `java.util.Map<K,V>` | `Map[K, V]` via the explicit adapters |
 | checked exceptions | preserved in the generated `throws` declaration |
-| arrays, varargs, wildcards, generic arrays | skipped with the shared reason |
+| arrays, varargs, generic arrays | skipped with the shared reason |
+| wildcards | skipped (`wildcard-unsupported`): a Sprig façade cannot spell a wildcard, although the checker binds one at its bound |
 | callable (`Fn0..Fn3`) shapes | skipped in v1 (`sprig-callable-boundary`) |
 | direct `char`/`Character`/`Short`/`Byte` parameters | skipped (`value-adapter-unsupported`) |
 | nested collections inside adapter elements | skipped (`nested-collection-unsupported`) |

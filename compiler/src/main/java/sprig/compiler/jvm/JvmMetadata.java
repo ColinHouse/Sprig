@@ -139,6 +139,8 @@ public final class JvmMetadata {
                 "A functional-interface parameter accepts a Sprig function value of the shown fn(...) -> R type without a throws clause; the compiler emits the Java adapter. void accepts any result.");
         if (support.reasonCodes().contains("varargs-expansion")) interopNotes.add(
                 "Trailing arguments are packed into the final array parameter (zero of them is allowed); an opaque Java array of exactly that class is passed through. Fixed-arity overloads are preferred.");
+        if (support.reasonCodes().contains("wildcard-bounds")) interopNotes.add(
+                "A wildcard keeps its bound: a result of List<? extends T> reads elements as T, a parameter List<? extends T> accepts any List whose element type fits T, and an element cannot be added through ? extends.");
         out.put("interopNotes", interopNotes);
         return out;
     }
@@ -252,9 +254,10 @@ public final class JvmMetadata {
             return unsupported("generic-bound-unsupported",
                     "Java method type parameters with recursive or intersection bounds are not supported");
         }
-        if (hasShape(scanned, JavaTypes.Shape.WILDCARD)) {
-            return unsupported("wildcard-unsupported", "Java wildcards are not supported");
-        }
+        // Wildcards keep their bounds: a value reads at the upper bound, an
+        // argument must fit the bound, and a write through ? extends has no
+        // type to offer, so that one call is rejected rather than the member.
+        boolean wildcards = hasShape(scanned, JavaTypes.Shape.WILDCARD);
         if (genericWrapper(executable)) {
             return unsupported("generic-wrapper-unsupported",
                     "Short/Byte/Character generic arguments require an element adapter");
@@ -268,6 +271,7 @@ public final class JvmMetadata {
         if (array) codes.add("array-source-syntax-unavailable");
         if (varargs) codes.add("varargs-expansion");
         if (javaCallable) codes.add("java-callable-adapter");
+        if (wildcards) codes.add("wildcard-bounds");
         if (typeVariable) codes.add("raw-generic-boundary");
         if (executable.getTypeParameters().length > 0) codes.add("explicit-type-arguments-required");
         String level;
@@ -306,15 +310,13 @@ public final class JvmMetadata {
         if (containsShape(generic, JavaTypes.Shape.GENERIC_ARRAY)) {
             return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
         }
-        if (containsShape(generic, JavaTypes.Shape.WILDCARD)) {
-            return unsupported("wildcard-unsupported", "Java wildcards are not supported");
-        }
         if (JavaTypes.wrapperArgument(generic)) {
             return unsupported("generic-wrapper-unsupported",
                     "Short/Byte/Character generic arguments require an element adapter");
         }
         List<String> codes = new ArrayList<>();
         if (array) codes.add("array-source-syntax-unavailable");
+        if (containsShape(generic, JavaTypes.Shape.WILDCARD)) codes.add("wildcard-bounds");
         boolean typeVariable = containsShape(generic, JavaTypes.Shape.TYPE_VARIABLE);
         boolean parameterized = containsShape(generic, JavaTypes.Shape.PARAMETERIZED);
         if (typeVariable) codes.add("raw-generic-boundary");

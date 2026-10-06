@@ -208,6 +208,6 @@ $[1].id: expected integer, found string
 - 元组和解构
 - 字符串插值：`"${name}"` 只是普通文本。拼接用 `+`：两边放什么值都可以，`"count " + count` 不用写 `toString()`，显示效果和 `print` 一样。`null`、可能为 `null` 的值（比如 `Int?`）和返回 `Unit` 的调用不能拼。运算从左到右，所以 `1 + 2 + " items"` 是 `3 items`。
 
-和 Java 打交道时，Sprig 没有数组语法，通配符类型只在回调的类型参数里能用。Java 数组可以原样接收和传递，变长参数方法直接把参数依次写在后面就行，见 [JVM 互操作](/guide/jvm-interop)。
+和 Java 打交道时，Sprig 没有数组语法，也没有自己的通配符语法。Java 数组可以原样接收和传递，变长参数方法直接把参数依次写在后面就行，Java 通配符会保留它的边界，见 [JVM 互操作](/guide/jvm-interop)。
 
 完整列表见[已知限制（英文）](/en/reference/language/known-limitations)，后面的计划见[路线图（英文）](/en/reference/language/stage1-roadmap)。

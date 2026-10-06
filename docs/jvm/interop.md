@@ -36,7 +36,7 @@ adapter), `erased-generic`
 (generic information exists but this raw context binds the erased boundary) and
 `unsupported`. Additive machine-readable fields are
 `interopReasonCodes` (stable ids such as `varargs-expansion`,
-`java-callable-adapter`, `wildcard-unsupported`, `raw-generic-boundary`,
+`java-callable-adapter`, `wildcard-bounds`, `raw-generic-boundary`,
 `explicit-type-arguments-required`, `generic-array-unsupported`,
 `generic-bound-unsupported`, `generic-wrapper-unsupported`,
 `array-source-syntax-unavailable`, `bridge-superseded`), `parameterTypeShapes`/`returnTypeShape` (recursive
@@ -138,14 +138,32 @@ arguments are rejected. Concrete generic targets such as
 `Comparable[String]` also use the projection, so `String` is accepted while
 `Int32` or an unrelated reference is not.
 
-Shape inspection is recursive for members and fields: a wildcard or a generic
-array nested inside a parameterized type (`List<?>`, `List<T[]>`) is rejected
-with `wildcard-unsupported`/`generic-array-unsupported` in both `sprig api`
-and the checker, except for the wildcards inside a functional-interface
-parameter's own type arguments and the element of a varargs parameter, which
-the rules above cover. `Short`, `Byte` and `Character` need value adapters, so they
-are rejected in generic argument position with `generic-wrapper-unsupported`;
-direct Java calls keep their scalar adapters.
+Wildcards keep their bounds. A result such as `List<? extends Number>` is
+typed `java.util.List[? extends Number]?`: an element read through it (`get`,
+`forEach`) has the upper bound (`Number?`), and a member that would write
+through it (`add(E)`, `addAll(Collection<? extends E>)`, a field of type `T` on a
+`Holder<? extends Number>`) is rejected with `SPR-JVM-MEMBER`, because no type
+can be passed in, exactly as Java's capture rule says. A `? super Long` slot
+reads as `Object?` and accepts an `Int`. A parameter such as
+`List<? extends Number>` accepts any Java `List` whose element fits the bound
+(`ArrayList[Int]`, `ArrayList[Float]`, not `ArrayList[String]`), a `? super X`
+parameter accepts an element type that `X` fits, and a bare `?`
+(`Collection<?>`, `Class<?>`) accepts anything, including a raw value. A
+wildcard value fits another wildcard only when the bounds contain it
+(`? extends Integer` fits `? extends Number`) and never fits a concrete
+argument, so a `List<? extends Number>` is not a `List[Number]`. Such members
+carry the `wildcard-bounds` reason code in `sprig api`. Sprig itself has no
+wildcard syntax: a wildcard-typed value can be held and passed on, but not
+written in a declaration. Public fields keep their generic signature on every
+owner (`List<String>` reads as `java.util.List[String]?`), as `sprig api`
+reports.
+
+Shape inspection is recursive for members and fields: a generic array nested
+inside a parameterized type (`List<T[]>`) is rejected with
+`generic-array-unsupported` in both `sprig api` and the checker. `Short`,
+`Byte` and `Character` need value adapters, so they are rejected in generic
+argument position with `generic-wrapper-unsupported`; direct Java calls keep
+their scalar adapters.
 
 ## Collection adapters
 

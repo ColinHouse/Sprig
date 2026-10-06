@@ -69,7 +69,7 @@ paths resolve against cwd and follow locked entries. Inspect
 can bind and emit the JVM signature; it does not promise generic element
 safety. `interopLevel` is `direct`, `concrete-generic`, `opaque-array`,
 `adaptable`, `sprig-callable`, `erased-generic`, or `unsupported`; reason codes
-are stable ids (`varargs-unsupported`, `wildcard-unsupported`,
+are stable ids (`varargs-expansion`, `wildcard-bounds`,
 `raw-generic-boundary`, `explicit-type-arguments-required`,
 `generic-wrapper-unsupported`, ...) and
 `adaptation` names an explicit helper when one exists (`byte-array` via
@@ -77,8 +77,10 @@ are stable ids (`varargs-unsupported`, `wildcard-unsupported`,
 arrays cross as opaque values with their exact JVM class; concrete generic
 arguments require explicit `Type[Arg]` application. Raw generic values never
 become concrete evidence: a parameterized target requires matching arguments
-(or a hierarchy projection), and wildcard or Short/Byte/Character generic
-shapes are rejected rather than erased silently. Use `--member NAME` to
+(or a hierarchy projection), Short/Byte/Character generic shapes are
+rejected rather than erased silently, and a wildcard keeps its bound
+(`wildcard-bounds`: reads at the upper bound, no writes through `? extends`).
+Use `--member NAME` to
 limit the metadata result while preserving overloads. `api` does not
 initialize classes.
 

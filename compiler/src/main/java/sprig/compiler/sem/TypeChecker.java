@@ -412,6 +412,7 @@ public final class TypeChecker {
     private void checkAssign(Stmt.Assign assign) {
         Expr target = assign.target;
         Type targetType = null;
+        Type javaWriteType = null; // a Java field whose write type differs from its read type
         if (target instanceof Expr.Name name) {
             Symbol symbol = name.symbol;
             if (symbol == null) {
@@ -457,6 +458,19 @@ public final class TypeChecker {
                                     + field.jvm.field.getType().getTypeName()
                                     + "; this boundary requires an explicit Java setter or adapter",
                             module.uri, target.span));
+                } else if (field.jvm.bindings != null
+                        && JavaTypes.capturedWrite(field.jvm.field.getGenericType(), field.jvm.bindings)) {
+                    diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
+                            "Cannot assign to Java field '" + access.name
+                                    + "' through a '? extends' wildcard of the receiver; no type can be written",
+                            module.uri, target.span));
+                    return;
+                } else if (field.jvm.bindings != null
+                        && field.jvm.field.getGenericType() instanceof TypeVariable<?> variable
+                        && field.jvm.bindings.get(variable) instanceof sprig.compiler.types.JavaWildcardType wildcard
+                        && wildcard.lower != null) {
+                    // T on a Holder<? super Long> receiver reads as Object but takes only an Int.
+                    javaWriteType = NullableType.of(wildcard.lower);
                 }
             } else if (field.kind == ResolvedField.Kind.VARIANT_PAYLOAD
                     || field.kind == ResolvedField.Kind.ERROR_MESSAGE) {
@@ -468,8 +482,8 @@ public final class TypeChecker {
                         "Cannot assign to '" + access.name + "'", module.uri, target.span));
                 return;
             }
-            targetType = field.type;
-            access.type = targetType;
+            targetType = javaWriteType != null ? javaWriteType : field.type;
+            access.type = field.type;
         } else if (target instanceof Expr.Index index) {
             Type receiver = checkExpr(index.receiver, null);
             if (receiver.isNullable()) {
@@ -3109,9 +3123,7 @@ public final class TypeChecker {
                         .hierarchyBindings(javaType.clazz, javaType.args)
                         .getOrDefault(javaField.getDeclaringClass(), Map.of());
                 member.bindings = fieldBindings;
-                member.returnType = fieldBindings.isEmpty()
-                        ? JavaTypes.mapValue(javaField.getType())
-                        : JavaTypes.mapValue(javaField.getGenericType(), javaField.getType(), fieldBindings);
+                member.returnType = JavaTypes.mapValue(javaField.getGenericType(), javaField.getType(), fieldBindings);
                 field.jvm = member;
                 field.type = member.returnType;
                 return field;
@@ -3841,7 +3853,7 @@ public final class TypeChecker {
             if (resultHint != null) {
                 diagnostic.withHint(resultHint);
             }
-            Map<String, Object> data = jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates);
+            Map<String, Object> data = jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates, hierarchy);
             if (explicitMethodArgs != null) {
                 data.put("explicitTypeArguments", explicitMethodArgs.stream().map(Type::display).toList());
             }
@@ -3914,6 +3926,11 @@ public final class TypeChecker {
         }
         if (arg.nonNull() instanceof FunctionType && JavaTypes.functionalMethod(raw[index]) != null) {
             return scoreJavaCallable(generic[index], raw[index], arg, bindings);
+        }
+        if (JavaTypes.capturedWrite(generic[index], bindings)) {
+            // add(E) or addAll(Collection<? extends E>) on a List<? extends Number>
+            // receiver: nothing can be passed in, as Java's capture rule says.
+            return -1;
         }
         Type formal = JavaTypes.mapFormal(generic[index], raw[index], bindings);
         return scoreBoundArgument(formal, arg, expr);
@@ -4266,6 +4283,12 @@ public final class TypeChecker {
 
     private static Map<String, Object> jvmDiagnosticData(Class<?> owner, String member,
             List<Type> argumentTypes, Expr.Call call, List<? extends Executable> candidates) {
+        return jvmDiagnosticData(owner, member, argumentTypes, call, candidates, Map.of());
+    }
+
+    private static Map<String, Object> jvmDiagnosticData(Class<?> owner, String member,
+            List<Type> argumentTypes, Expr.Call call, List<? extends Executable> candidates,
+            Map<Class<?>, Map<TypeVariable<?>, Type>> hierarchy) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("member", member);
         data.put("receiverType", owner.getName());
@@ -4286,8 +4309,14 @@ public final class TypeChecker {
                     } else if (support.reasonCodes().contains("explicit-type-arguments-required")) {
                         reason = "explicit type arguments required";
                     } else {
+                        Map<TypeVariable<?>, Type> bindings =
+                                hierarchy.getOrDefault(candidate.getDeclaringClass(), Map.of());
                         for (int i = 0; i < params.length; i++) {
                             if (argumentTypes.get(i).isNullable()) { reason = "nullable argument " + (i + 1); break; }
+                            if (JavaTypes.capturedWrite(candidate.getGenericParameterTypes()[i], bindings)) {
+                                reason = "argument " + (i + 1) + " would write through a '? extends' wildcard of the receiver; no type can be passed in";
+                                break;
+                            }
                             if (scoreJvmArgument(candidate, i, argumentTypes.get(i), call.args.get(i).value) < 0) {
                                 reason = "incompatible or narrowing argument " + (i + 1); break;
                             }
