@@ -21,7 +21,10 @@ NEGATIVE = {
     # code cannot use a binding declared below it, so no inference cycle forms.
     'global_cycle': 'SPR-NAME-FORWARD-REFERENCE', 'global_null_infer': 'SPR-TYPE-INFER',
     'global_lambda_bad': 'SPR-TYPE-MISMATCH', 'global_field_bad': 'SPR-TYPE-MISMATCH',
-    'default_earlier_caller': 'SPR-FLOW-THROWS', 'default_lambda_effect': 'SPR-FLOW-THROWS',
+    'default_earlier_caller': 'SPR-FLOW-THROWS',
+    # The lambda may throw (B's default calls fail()), so storing it in a field
+    # typed fn() -> B without a clause is the callable-throws mismatch.
+    'default_lambda_effect': 'SPR-TYPE-CALLABLE-THROWS',
     'global_wrong': 'SPR-TYPE-RETURN', 'global_generic': 'SPR-TYPE-RETURN',
     'forward_default_effect': 'SPR-FLOW-THROWS',
     'mutable_loop': 'SPR-TYPE-NULLABLE', 'generic_wrong_nested': 'SPR-TYPE-RETURN',
