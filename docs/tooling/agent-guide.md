@@ -117,7 +117,10 @@ and `diagnostics`. Each diagnostic has a stable code, phase, severity, URI,
 zero-based range, message, and optional types/hint/data. Diagnostics may also
 carry `relatedHelp` (a help topic) and `repair`
 (`{"kind": ..., "machineApplicable": bool}`); `machineApplicable` is false when
-the fix needs a semantic decision. `capabilities --json` includes
+the fix needs a semantic decision. `suggestedEdits` lists the mechanical
+rewrites the hint describes, each as `{"range", "newText", "description"}`
+(see [diagnostic codes](diagnostic-codes.md)); apply one, then rerun `check`
+to see what the program needs next. `capabilities --json` includes
 `featureGuidance` with alternatives for unsupported features. `CLI` is the phase for
 option errors. JVM overload failures
 include candidate signatures in `data.candidates`. CLI tooling errors use 2;

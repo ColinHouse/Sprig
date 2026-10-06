@@ -36,6 +36,14 @@ CASES = [
     ("bang", "if !true:\n    print(1)\n", "SPR-LEX-CHAR", "'not'"),
     ("interpolation", "let n = 1\nprint($\"{n}\")\n", "SPR-LEX-CHAR", "interpolation"),
     ("read-line", "let line = readLine()\n", "SPR-NAME-UNRESOLVED", "@std/process.spr"),
+    ("std-module-without-import", "let text = files.read_utf8(\"x.txt\")\n", "SPR-NAME-UNRESOLVED",
+     "import \"@std/files.spr\" as files"),
+    ("positional-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2)\n",
+     "SPR-CALL-NAMED-REQUIRED", "P(x=1, y=2)"),
+    ("generic-without-type-arguments", "import \"@std/lists.spr\" as lists\nprint(lists.sorted([3, 1, 2]))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "lists.sorted[Int](...)"),
+    ("generic-without-implied-type", "generic T:\n    func make() -> List[T]:\n        return []\nprint(make())\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "make[Type](...)"),
     ("input", "let line = input()\n", "SPR-NAME-UNRESOLVED", "process.read_lines()"),
     ("println", "println(1)\n", "SPR-NAME-UNRESOLVED", "print(value)"),
     ("int-call", "let n = int(\"3\")\n", "SPR-NAME-UNRESOLVED", "toIntOrNull()"),
@@ -135,6 +143,59 @@ def main():
             data = json.loads(result.stdout)
             check("valid-" + name, result.returncode == 0 and not data["diagnostics"] and "note" not in data,
                   result.stdout)
+
+        # suggestedEdits carry the hint's mechanical rewrite; applying it makes the
+        # program check cleanly (or move on to its next, unrelated diagnostic).
+        def apply_edit(source, edit):
+            lines = source.split("\n")
+            start, end = edit["range"]["start"], edit["range"]["end"]
+            before = "\n".join(lines[:start["line"]] + [lines[start["line"]][:start["character"]]])
+            after = "\n".join([lines[end["line"]][end["character"]:]] + lines[end["line"] + 1:])
+            return before + edit["newText"] + after
+
+        EDITS = [
+            ("std-import", 'let text = files.read_utf8("x.txt")\nprint(text.length())\n', "SPR-NAME-UNRESOLVED",
+             'import "@std/files.spr" as files\n', None),
+            ("throws-on-header", 'import "@std/process.spr" as process\nfunc count() -> Int:\n'
+             '    return process.read_lines().size()\nprint(count())\n', "SPR-FLOW-THROWS", " throws Error", 0),
+            ("throws-added-to-list", 'import java.io.IOException as IOException\nfunc fail() -> Unit throws IOException:\n'
+             '    throw IOException("x")\nfunc parse(text: String) -> Int throws Error:\n    throw Error(text)\n'
+             'func wrap(text: String) -> Int throws IOException:\n    fail()\n    return parse(text)\nprint(wrap("1"))\n',
+             "SPR-FLOW-THROWS", ", Error", 0),
+            ("named-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2 + 3)\nprint(p.y)\n",
+             "SPR-CALL-NAMED-REQUIRED", "x=1, y=2 + 3", 0),
+            ("generic-type-arguments", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n',
+             "SPR-TYPE-GENERIC-ARGS-REQUIRED", "[Int]", 0),
+            ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", "elif", 0),
+        ]
+        for name, source, code, new_text, expected_exit in EDITS:
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            diagnostics = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            first = diagnostics[0] if diagnostics else {}
+            edits = first.get("suggestedEdits") or []
+            ok = first.get("code") == code and len(edits) == 1 and edits[0]["newText"] == new_text \
+                and edits[0].get("description")
+            check("edit-" + name, ok, json.dumps(first))
+            if not ok:
+                continue
+            (work / "case.spr").write_text(apply_edit(source, edits[0]), encoding="utf-8")
+            again = run("check", "case.spr", "--json", cwd=work)
+            remaining = json.loads(again.stdout)["diagnostics"]
+            if expected_exit is None:
+                # The import is right; what remains is the missing throws declaration of the caller.
+                check("edit-applied-" + name, all(d["code"] != code for d in remaining), again.stdout)
+            else:
+                check("edit-applied-" + name, again.returncode == expected_exit and not remaining, again.stdout)
+
+        # One diagnostic for a positional constructor call and for a generic call without
+        # type arguments: the follow-on field and element errors are not reported.
+        for name, source, code in (
+            ("positional-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2)\n", "SPR-CALL-NAMED-REQUIRED"),
+            ("generic-call", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n', "SPR-TYPE-GENERIC-ARGS-REQUIRED"),
+        ):
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            diagnostics = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            check("single-" + name, [d["code"] for d in diagnostics] == [code], json.dumps(diagnostics))
 
         # After a broken header, the body's INDENT and DEDENT are not reported as new errors.
         (work / "case.spr").write_text("func main():\n    print(1)\n    print(2)\nprint(3)\n", encoding="utf-8")

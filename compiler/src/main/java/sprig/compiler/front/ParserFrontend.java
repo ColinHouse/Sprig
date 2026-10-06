@@ -86,6 +86,9 @@ public final class ParserFrontend {
                         new Span(line - 1, charPositionInLine, line - 1, charPositionInLine + 1, -1, -1));
                 if (foreign != null) {
                     diagnostic.withHint(targetedHint).withRelatedHelp("language");
+                    if (offendingSymbol instanceof org.antlr.v4.runtime.Token token) {
+                        elifEdit(parser, token, diagnostic);
+                    }
                 } else if (targetedHint != null) {
                     diagnostic.withHint(targetedHint).withRelatedHelp("functions");
                 } else {
@@ -107,6 +110,23 @@ public final class ParserFrontend {
      * language that the grammar rejects, or null. These are the mistakes people
      * and models make first when they have only seen Python, Java or C.
      */
+    /** 'else if' on one line is the one foreign spelling with a mechanical rewrite: 'elif'. */
+    private static void elifEdit(SprigParser parser, Token token, Diagnostic diagnostic) {
+        TokenStream stream = parser.getTokenStream();
+        int index = token.getTokenIndex();
+        if (token.getType() != SprigLexer.IF || index == 0) {
+            return;
+        }
+        Token previous = stream.get(index - 1);
+        if (previous.getType() != SprigLexer.ELSE || previous.getLine() != token.getLine()) {
+            return;
+        }
+        int line = token.getLine() - 1;
+        diagnostic.withEdit(new Span(line, previous.getCharPositionInLine(), line,
+                token.getCharPositionInLine() + token.getText().length(), -1, -1), "elif",
+                "replace 'else if' with 'elif'");
+    }
+
     private static String foreignSyntax(SprigParser parser, Token token, String raw) {
         TokenStream stream = parser.getTokenStream();
         int index = token.getTokenIndex();

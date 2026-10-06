@@ -733,6 +733,14 @@ public final class NameResolver {
             Diagnostic unresolved = Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                     "Unresolved name '" + name.name + "'", module.uri, name.span);
             String hint = Newcomer.nameHint(name.name);
+            if (hint == null && sprig.compiler.project.StdLibrary.bundledModuleNames().contains(name.name)) {
+                // The bundled module's own name used without its import: the
+                // one line that fixes it is known, so it is the hint and the edit.
+                String importLine = "import \"@std/" + name.name + ".spr\" as " + name.name;
+                hint = "'" + name.name + "' is a bundled module; add the line " + importLine
+                        + " at the top of the file (imports precede declarations).";
+                unresolved.withEdit(sprig.compiler.diag.Span.point(0, 0), importLine + "\n", "add the import");
+            }
             if (hint != null) {
                 unresolved.withHint(hint);
             }

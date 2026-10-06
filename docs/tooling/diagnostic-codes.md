@@ -114,6 +114,16 @@ Diagnostic JSON keeps the stable fields (`code`, `phase`, `severity`, `uri`,
 | `relatedHelp` | Help topic accepted by `sprig help <topic>`. |
 | `repair` | `{ "kind": ..., "machineApplicable": bool }` repair strategy. |
 
+`suggestedEdits` is always present. It is usually empty; when the hint names
+one mechanical rewrite, the list holds it as
+`{ "range": {start, end}, "newText": "...", "description": "..." }` with the
+same zero-based positions as `range`, a zero-length range for an insertion,
+and `newText` replacing exactly that range. Applying an edit moves the program
+past the diagnostic; whether it is what the author meant (adding `throws Error`
+to a function, say) is still theirs to judge. Edits exist today for a missing
+`@std` import, an undeclared `throws`, positional constructor arguments, a
+generic call whose arguments imply its type arguments, and `else if`.
+
 `machineApplicable` is true only for a correction that is semantics-preserving
 and unambiguous. When it is false, treat `repair.kind` as a strategy, not a
 patch: for example a nullable value needs an explicit narrow/handle decision,
