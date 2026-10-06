@@ -54,8 +54,10 @@ editors.
 
 The VS Code extension (0.3.0 and later) starts `sprig lsp` itself when
 `sprig capabilities --json` reports `"languageServer": true`, and keeps its
-separate CLI commands for compilers without it. Its Extension Host tests run
-the server through VS Code's own client. See `editors/vscode/README.md`.
+separate CLI commands for compilers without it. Its lightbulb shows the
+server's quick fixes next to its own Explain and help actions; the separate
+CLI commands offer no quick fixes. Its Extension Host tests run the server
+through VS Code's own client. See `editors/vscode/README.md`.
 
 ## Features
 
@@ -73,6 +75,7 @@ server.
 | Completion | After `.`: members of the value's type, a module's declarations, enum and variant cases, built-in methods and public Java members. Elsewhere: names in scope, module declarations, imports, built-ins and keywords. In a type position, it offers types and the module names that qualify them. |
 | Formatting | The output of `sprig fmt`, as one edit. A file that does not parse is left unchanged. A CRLF document (common on Windows) keeps CRLF line endings, and needs no edit when only its line endings differ from `sprig fmt`. |
 | Rename | Local variables and parameters only. See below. |
+| Code actions | Quick fixes: the `suggestedEdits` of the diagnostics under the cursor or selection. See below. |
 
 ## Projects and unsaved files
 
@@ -115,6 +118,42 @@ any use would refer to a different declaration, if another name would start
 referring to the renamed one, or if a new error would appear. Keywords and
 invalid identifiers are refused too.
 
+## Quick fixes
+
+Some diagnostics carry `suggestedEdits`: the mechanical rewrite their hint
+describes (see [diagnostic codes](diagnostic-codes.md)). Today that is a missing
+`@std` import, an undeclared `throws`, positional constructor arguments, a
+generic call whose arguments imply its type arguments, and `else if`.
+
+For a `textDocument/codeAction` request, the server checks the current text
+and takes every diagnostic of the document whose range overlaps the requested
+range; a cursor at either end of a diagnostic counts. Each suggested edit of
+such a diagnostic becomes one code action:
+
+- `kind` is `quickfix`, and `title` is the edit's `description`, such as
+  `replace 'else if' with 'elif'`.
+- `diagnostics` holds that diagnostic, exactly as it was published.
+- `edit` is a `WorkspaceEdit` that changes only this document. Its range is
+  converted to UTF-16, and a line it inserts into a CRLF document ends in CRLF.
+- `isPreferred` is true when it is the diagnostic's only edit, so an editor's
+  auto fix can apply it.
+
+Applying a fix removes the diagnostic it came from. Whether the rewrite is
+what you meant (adding `throws Error` to a function, say) is still yours to
+judge, as with `sprig check --json`.
+
+The diagnostics a client sends in the request's context are ignored: the
+actions come from the server's own check, so a stale or invented diagnostic
+gets no fix. An error inside an imported file, shown on the `import`, has no
+fix here; open that file to fix it. A request whose `only` asks for other
+kinds, such as `refactor` or `source`, gets none.
+
+Every fix is an edit, which a bare `Command` cannot carry. The server
+therefore advertises `codeActionProvider` (with the `quickfix` kind) only to
+clients that accept code action literals,
+`textDocument.codeAction.codeActionLiteralSupport`; current versions of VS
+Code, Neovim and Helix do.
+
 ## Positions
 
 The compiler counts columns in Unicode code points. LSP counts UTF-16 code
@@ -123,5 +162,6 @@ emoji lines up in the editor.
 
 ## Not supported yet
 
-Incremental document sync, workspace symbols, signature help, code actions,
-semantic tokens and renaming names that other files can use.
+Incremental document sync, workspace symbols, signature help, code actions
+other than these quick fixes (refactorings, organize imports), semantic tokens
+and renaming names that other files can use.

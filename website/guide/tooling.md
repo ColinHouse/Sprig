@@ -122,7 +122,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 }
 ```
 
-注意 JSON 里的行号和列号从 0 开始，所以 `"line": 5, "character": 11` 就是普通输出里的第 6 行第 12 列。`relatedHelp` 告诉你该看 `sprig help` 的哪个主题。提示归结为一处机械改写时——比如缺一行 `import "@std/files.spr" as files`，或者函数头要加 `throws Error`——`suggestedEdits` 会直接给出范围和替换文本，照着应用即可。
+注意 JSON 里的行号和列号从 0 开始，所以 `"line": 5, "character": 11` 就是普通输出里的第 6 行第 12 列。`relatedHelp` 告诉你该看 `sprig help` 的哪个主题。提示归结为一处机械改写时——比如缺一行 `import "@std/files.spr" as files`，或者函数头要加 `throws Error`——`suggestedEdits` 会直接给出范围和替换文本，照着应用即可。在编辑器里，[语言服务器](#语言服务器)会把同样的改写做成快速修复。
 
 退出码的规则：
 
@@ -146,7 +146,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 `sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是 v0.6.0-beta.1 新加的。
 
-它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化，以及局部变量和参数的重命名。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。
+它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。
 
 编辑器怎么配置、每项功能的细节，见[语言服务器参考（英文）](/en/reference/tooling/lsp)。
 
