@@ -1,0 +1,6 @@
+import java.lang.String as JString
+
+func noop() -> Unit:
+    print("ran")
+
+print(JString.valueOf(noop()))

@@ -419,5 +419,35 @@
     "expected_diagnostic": "SPR-TYPE-CALLABLE-THROWS",
     "status": "implemented",
     "source": "Java callables"
+  },
+  {
+    "file": "unit_member_access.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "Unit is not a value"
+  },
+  {
+    "file": "unit_list_element.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "Unit is not a value"
+  },
+  {
+    "file": "unit_equality_operand.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "Unit is not a value"
+  },
+  {
+    "file": "unit_return_value.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "Unit is not a value"
+  },
+  {
+    "file": "unit_java_argument.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "Unit is not a value"
   }
 ]
