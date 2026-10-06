@@ -34,7 +34,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 | `sprig codes` | 列出所有错误码 |
 | `sprig help [主题]` | 语法速查；不带主题时会列出所有主题 |
 | `sprig api <Java 类>` | 查看一个 Java 类在 Sprig 里的签名 |
-| `sprig api <模块.spr>` | 查看一个 Sprig 模块对外提供哪些声明 |
+| `sprig api <模块.spr>` | 查看一个 Sprig 模块对外提供哪些声明，以及每个声明上方写的注释 |
 | `sprig capabilities` | 查看当前编译器实现了哪些功能 |
 | `sprig doctor` | 检查 JDK 和编译器等环境 |
 

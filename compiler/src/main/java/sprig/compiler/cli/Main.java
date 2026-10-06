@@ -517,17 +517,20 @@ public final class Main {
         System.out.println("declarations:");
         for (Map<String, Object> declaration : (List<Map<String, Object>>) data.get("declarations")) {
             System.out.println("  " + declaration.get("kind") + " " + declaration.get("name"));
+            printDoc(declaration.get("doc"), "    ");
             if (declaration.get("fields") instanceof List<?> fields) {
                 for (Object field : fields) {
                     Map<String, Object> entry = (Map<String, Object>) field;
                     System.out.println("    field " + entry.get("name") + ": " + entry.get("type")
                             + (Boolean.TRUE.equals(entry.get("required")) ? "" : " = default"));
+                    printDoc(entry.get("doc"), "      ");
                 }
             }
             if (declaration.get("methods") instanceof List<?> methods) {
                 for (Object method : methods) {
                     Map<String, Object> entry = (Map<String, Object>) method;
                     System.out.println("    method " + signature(entry));
+                    printDoc(entry.get("doc"), "      ");
                 }
             }
             if (declaration.get("cases") instanceof List<?> cases) {
@@ -535,6 +538,7 @@ public final class Main {
                     if (item instanceof Map<?, ?> variantCase) {
                         System.out.println("    case " + variantCase.get("name") + "("
                                 + payload((List<Map<String, Object>>) variantCase.get("fields")) + ")");
+                        printDoc(variantCase.get("doc"), "      ");
                     } else {
                         System.out.println("    case " + item);
                     }
@@ -543,6 +547,14 @@ public final class Main {
             if (declaration.get("kind").equals("function")) {
                 System.out.println("    " + signature(declaration));
             }
+        }
+    }
+
+    /** A declaration's comment, printed the way it was written in the source. */
+    private static void printDoc(Object doc, String indent) {
+        if (doc == null) return;
+        for (String line : doc.toString().split("\n", -1)) {
+            System.out.println(indent + ("# " + line).stripTrailing());
         }
     }
 

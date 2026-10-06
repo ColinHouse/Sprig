@@ -15,8 +15,9 @@ import sprig.compiler.sem.Symbol;
 import sprig.compiler.types.Type;
 
 /**
- * Compiler-owned, resolved API metadata for one checked Sprig module. This
- * describes signatures only; behavior and policy belong in human docs.
+ * Compiler-owned, resolved API metadata for one checked Sprig module: the
+ * signatures, and as {@code doc} the comment written directly above a
+ * declaration or member, the text editor hover shows.
  */
 public final class SprigApi {
     private SprigApi() {}
@@ -76,12 +77,14 @@ public final class SprigApi {
     private static List<Map<String, Object>> declarations(Module module) {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Decl decl : module.decls) {
-            Map<String, Object> item = declaration(decl);
+            Map<String, Object> item = declaration(module.source, decl);
             if (item != null) out.add(item);
         }
         for (Module.Export exported : module.exports) {
             if (exported.symbol == null || exported.symbol.decl == null) continue;
-            Map<String,Object> item = declaration(exported.symbol.decl);
+            // A reexported declaration keeps the comment written at its origin.
+            String origin = exported.symbol.module != null ? exported.symbol.module.source : null;
+            Map<String,Object> item = declaration(origin, exported.symbol.decl);
             if (item != null) { exportOrigin(module,exported.symbol,item); out.add(item); }
         }
         return out;
@@ -110,40 +113,45 @@ public final class SprigApi {
         return relative.startsWith(".") ? relative : "./" + relative;
     }
 
-    private static Map<String, Object> declaration(Decl decl) {
+    private static Map<String, Object> declaration(String source, Decl decl) {
+        Map<String, Object> item = null;
         if (decl instanceof Decl.Func func && !func.isMethod()) {
-            return function(func);
-        }
-        if (decl instanceof Decl.ClassDecl clazz) {
-            Map<String, Object> item = head("class", clazz.name, clazz.typeParams);
+            item = function(source, func);
+        } else if (decl instanceof Decl.ClassDecl clazz) {
+            item = head("class", clazz.name, clazz.typeParams);
             List<Map<String, Object>> fields = new ArrayList<>();
-            for (Decl.Field field : clazz.fields) fields.add(field(field));
+            for (Decl.Field field : clazz.fields) fields.add(field(source, field));
             List<Map<String, Object>> methods = new ArrayList<>();
-            for (Decl.Func method : clazz.methods) methods.add(function(method));
+            for (Decl.Func method : clazz.methods) methods.add(function(source, method));
             item.put("fields", fields);
             item.put("methods", methods);
-            return item;
-        }
-        if (decl instanceof Decl.EnumDecl enums) {
-            Map<String, Object> item = head("enum", enums.name, List.of());
+        } else if (decl instanceof Decl.EnumDecl enums) {
+            item = head("enum", enums.name, List.of());
             item.put("cases", new ArrayList<>(enums.cases));
-            return item;
-        }
-        if (decl instanceof Decl.VariantDecl variant) {
-            Map<String, Object> item = head("variant", variant.name, variant.typeParams);
+        } else if (decl instanceof Decl.VariantDecl variant) {
+            item = head("variant", variant.name, variant.typeParams);
             List<Map<String, Object>> cases = new ArrayList<>();
             for (Decl.VariantCase variantCase : variant.cases) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 entry.put("name", variantCase.name);
                 List<Map<String, Object>> fields = new ArrayList<>();
-                for (Decl.Field field : variantCase.fields) fields.add(field(field));
+                for (Decl.Field field : variantCase.fields) fields.add(field(source, field));
                 entry.put("fields", fields);
+                doc(entry, source, variantCase.span);
                 cases.add(entry);
             }
             item.put("cases", cases);
-            return item;
         }
-        return null;
+        if (item != null && !(decl instanceof Decl.Func)) {
+            doc(item, source, decl.span);
+        }
+        return item;
+    }
+
+    /** The comment written directly above a declaration, as hover shows it. */
+    private static void doc(Map<String, Object> item, String source, sprig.compiler.diag.Span span) {
+        String doc = span == null ? null : DocComments.above(source, span.startLine);
+        if (doc != null) item.put("doc", doc);
     }
 
     private static Map<String, Object> head(String kind, String name, List<String> typeParams) {
@@ -154,16 +162,17 @@ public final class SprigApi {
         return item;
     }
 
-    private static Map<String, Object> field(Decl.Field field) {
+    private static Map<String, Object> field(String source, Decl.Field field) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("name", field.name);
         item.put("type", display(field.type));
         item.put("mutable", field.mutable);
         item.put("required", field.defaultExpr == null);
+        doc(item, source, field.span);
         return item;
     }
 
-    private static Map<String, Object> function(Decl.Func func) {
+    private static Map<String, Object> function(String source, Decl.Func func) {
         Map<String, Object> item = head("function", func.name, func.typeParams);
         List<Map<String, Object>> parameters = new ArrayList<>();
         for (Decl.Param param : func.params) {
@@ -180,6 +189,7 @@ public final class SprigApi {
         if (func.rethrows) {
             item.put("rethrows", true);
         }
+        doc(item, source, func.span);
         if (!func.equatableParams.isEmpty() || !func.comparableParams.isEmpty()) {
             List<String> requires = new ArrayList<>();
             for (String name : func.equatableParams) requires.add(name + ": Equatable");

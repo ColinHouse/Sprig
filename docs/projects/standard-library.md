@@ -23,7 +23,8 @@ SDK's exact bytes. See the
 [published release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
 
 `sprig api @std/text.spr --json` lists what a bundled module declares, with
-signatures. It works from any directory, with or without a project.
+signatures and the comment above each declaration (`doc`). It works from any
+directory, with or without a project.
 
 | Module | Public operations |
 |---|---|

@@ -34,7 +34,7 @@ Looking things up:
 | `sprig codes` | Lists every error code |
 | `sprig help [topic]` | Quick syntax reference; without a topic, it lists the topics |
 | `sprig api <Java class>` | Shows a Java class's signatures as Sprig sees them |
-| `sprig api <module.spr>` | Shows the declarations a Sprig module offers |
+| `sprig api <module.spr>` | Shows the declarations a Sprig module offers, with the comment written above each one |
 | `sprig capabilities` | Shows which features this compiler implements |
 | `sprig doctor` | Checks your environment, such as the JDK and the compiler |
 
