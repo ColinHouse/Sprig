@@ -18,13 +18,21 @@ public final class TypeRef extends Node {
     public Span nameSpan;
     /** Non-null for source callable types; args then hold the parameter types. */
     public final TypeRef functionResult;
+    /** The written {@code throws} clause of a source callable type, or null. */
+    public final TypeRef functionThrows;
 
     public TypeRef(List<String> parts, List<TypeRef> args, boolean nullable) {
-        this(parts, args, nullable, null);
+        this(parts, args, nullable, null, null);
     }
 
     public TypeRef(List<String> parts, List<TypeRef> args, boolean nullable, TypeRef functionResult) {
+        this(parts, args, nullable, functionResult, null);
+    }
+
+    public TypeRef(List<String> parts, List<TypeRef> args, boolean nullable, TypeRef functionResult,
+                   TypeRef functionThrows) {
         this.functionResult = functionResult;
+        this.functionThrows = functionThrows;
         this.parts = List.copyOf(parts);
         this.args = List.copyOf(args);
         this.nullable = nullable;
@@ -33,7 +41,8 @@ public final class TypeRef extends Node {
     public String display() {
         if (functionResult != null) {
             String text = "fn(" + String.join(", ", args.stream().map(TypeRef::display).toList())
-                    + ") -> " + functionResult.display();
+                    + ") -> " + functionResult.display()
+                    + (functionThrows == null ? "" : " throws " + functionThrows.display());
             return nullable ? "(" + text + ")?" : text;
         }
         StringBuilder sb = new StringBuilder(String.join(".", parts));

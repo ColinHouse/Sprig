@@ -137,6 +137,11 @@ public final class Catalog {
         guidance(out, "macros", "language", "ordinary functions and modules");
         guidance(out, "blockLambdas", "functions", "named function plus expression lambda fn(x: T) => named(x)");
         guidance(out, "namedFunctionReferences", "functions", "expression lambda forwarding fn(x: T) => named(x)");
+        out.put("callableThrows", Map.of("supported", true, "helpTopic", "errors",
+                "rules", List.of("a lambda that calls a function throwing Error has the type fn(A) -> R throws Error",
+                        "a value without the clause is accepted where the clause is expected, never the reverse",
+                        "a rethrows function throws exactly what its callable arguments throw",
+                        "only Error crosses a function value; checked Java exceptions stay in named functions")));
         guidance(out, "reflectionDerivedSchemas", "jvm", "explicit typed schema and JSON construction");
         guidance(out, "async", "jvm", "synchronous host adapter");
         guidance(out, "genericVariance", "generics", "invariant generics", "explicit conversion helpers");

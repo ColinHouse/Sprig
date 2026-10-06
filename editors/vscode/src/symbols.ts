@@ -13,14 +13,14 @@ export interface Reference { word: string; start: number; end: number; qualifier
 
 export const KEYWORDS = ['generic', 'class', 'enum', 'variant', 'conform', 'match', 'case', 'func', 'fn', 'var', 'let',
   'if', 'elif', 'else', 'while', 'for', 'in', 'return', 'break', 'continue', 'pass', 'import', 'as', 'try', 'catch',
-  'finally', 'throw', 'throws', 'requires', 'and', 'or', 'not', 'true', 'false', 'null'];
+  'finally', 'throw', 'throws', 'rethrows', 'requires', 'and', 'or', 'not', 'true', 'false', 'null'];
 export const BUILTIN_TYPES = ['Int', 'Int32', 'Float', 'Float32', 'Bool', 'String', 'Unit', 'List', 'MutableList', 'Map', 'MutableMap', 'Error'];
 
 /** `sprig help` topic for keywords and built-in type names. */
 export const HELP_TOPICS: Record<string, string> = {
   match: 'match', case: 'match', variant: 'variants', enum: 'variants', class: 'classes',
   func: 'functions', fn: 'functions', return: 'functions', generic: 'generics', requires: 'generics',
-  throws: 'errors', throw: 'errors', try: 'errors', catch: 'errors', finally: 'errors', Error: 'errors',
+  throws: 'errors', rethrows: 'errors', throw: 'errors', try: 'errors', catch: 'errors', finally: 'errors', Error: 'errors',
   import: 'modules', as: 'modules', null: 'nullability', conform: 'conform', let: 'types', var: 'types',
   Int: 'numerics', Int32: 'numerics', Float: 'numerics', Float32: 'numerics', String: 'strings',
   List: 'collections', MutableList: 'collections', Map: 'collections', MutableMap: 'collections',

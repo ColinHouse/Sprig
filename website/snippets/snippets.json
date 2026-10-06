@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "executable": [
+    "callable_throws.spr",
     "classes.spr",
     "collections.spr",
     "errors.spr",

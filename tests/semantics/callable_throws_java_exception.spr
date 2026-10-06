@@ -1,0 +1,2 @@
+import java.io.IOException as IOException
+let read: fn(String) -> String throws IOException = fn(path: String) => path

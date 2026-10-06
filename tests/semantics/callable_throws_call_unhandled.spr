@@ -1,0 +1,8 @@
+func to_number(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+let parse: fn(String) -> Int throws Error = fn(text: String) => to_number(text)
+func use() -> Int:
+    return parse("1")

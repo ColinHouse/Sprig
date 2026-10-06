@@ -32,6 +32,7 @@ CATCH: 'catch';
 FINALLY: 'finally';
 THROW: 'throw';
 THROWS: 'throws';
+RETHROWS: 'rethrows';
 REQUIRES: 'requires';
 AND: 'and';
 OR: 'or';

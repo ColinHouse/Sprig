@@ -130,7 +130,7 @@ port must be a number: eighty
 <<< @/snippets/lambdas.spr
 
 - lambda 是一个表达式：`fn(x: Int) => x * 2`。
-- 参数 0 到 3 个，函数体只能是一个表达式，不能声明 `throws`。
+- 参数 0 到 3 个，函数体只能是一个表达式。函数体里可以调用会抛出 `Error` 的函数，这时 lambda 的类型会带上这一点（见下面的「函数类型」）。
 - lambda 不能捕获 `var` 局部变量，否则报 `SPR-TYPE-CAPTURE`。先把值复制到一个 `let` 里再用。
 
 ## 函数类型
@@ -141,7 +141,18 @@ port must be a number: eighty
 - 参数 0 到 3 个。参数和返回类型必须完全一致：没有函数子类型，也不会自动转换。
 - 整个函数可空时要加括号：`(fn(Int) -> Int)?`。而 `fn(Int) -> Int?` 表示返回值可空。可空的函数值和其他可空值一样，调用前先判空。
 - 函数类型可以用在变量、字段、参数和返回值上，也可以作为显式的泛型参数。
-- 函数类型不能声明 `throws`，所以里面可能出现的受检错误要在函数内部处理掉。
+- 函数类型末尾可以写 `throws Error`，而且只能是 `Error`：`fn(String) -> Int throws Error`。调用了会抛 `Error` 的函数的 lambda 就是这个类型；调用这样的值和调用任何会抛错的函数一样，要么自己声明 `throws Error`，要么 `try`/`catch`。没有这个子句的值可以用在要求这个子句的地方，反过来不行（`SPR-TYPE-CALLABLE-THROWS`）。Java 的受检异常不能穿过函数值，要在具名函数里处理掉。
+- 只负责把回调的错误往外传的函数，用 `rethrows` 代替 `throws`：`func twice(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:`。调用它时抛出的正好就是你传进去的 lambda 会抛的东西，所以传一个不会失败的 lambda 就是普通调用。`@std/lists` 里的函数都是这样写的。
+
+<<< @/snippets/callable_throws.spr
+
+```text
+[1, 2]
+caught: not a number: x
+18
+21
+caught: not a number: three
+```
 
 函数值传给 Java 时，只能传给参数类型是 Sprig 自带的 `sprig.runtime.Fn0` 到 `Fn3` 的方法，不会自动转换成 Java 的 `Function`、`Consumer`、`Runnable` 或其他接口。不确定的时候，用 `sprig api <类名> --json` 查一下实际签名。
 

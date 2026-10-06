@@ -1,0 +1,2 @@
+func twice(step: fn(Int) -> Int, value: Int) -> Int rethrows:
+    return step(step(value))

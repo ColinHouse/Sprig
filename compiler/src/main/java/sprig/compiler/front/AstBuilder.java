@@ -181,11 +181,12 @@ public final class AstBuilder {
             }
         }
         List<TypeRef> throwsRefs = new ArrayList<>();
-        for (SprigParser.TypeRefContext ref : ctx.typeRef().subList(1, ctx.typeRef().size())) {
+        for (SprigParser.TypeRefContext ref : ctx.typeRef()) {
             throwsRefs.add(buildTypeRef(ref));
         }
-        Decl.Func func = new Decl.Func(ctx.IDENT().getText(), params, buildTypeRef(ctx.typeRef(0)),
+        Decl.Func func = new Decl.Func(ctx.IDENT().getText(), params, buildReturnTypeRef(ctx.returnTypeRef()),
                 throwsRefs, buildSuite(ctx.suite()));
+        func.rethrows = ctx.RETHROWS() != null;
         func.span = span(ctx);
         func.nameSpan = span(ctx.IDENT());
         return func;
@@ -193,25 +194,54 @@ public final class AstBuilder {
 
     private TypeRef buildTypeRef(SprigParser.TypeRefContext ctx) {
         if (ctx.functionType() != null) {
-            List<SprigParser.TypeRefContext> written = ctx.functionType().typeRef();
-            List<TypeRef> params = new ArrayList<>();
-            for (int i = 0; i < written.size() - 1; i++) params.add(buildTypeRef(written.get(i)));
-            TypeRef ref = new TypeRef(List.of("fn"), params, ctx.QUESTION() != null,
-                    buildTypeRef(written.get(written.size() - 1)));
+            TypeRef ref = buildFunctionType(ctx.functionType(), ctx.QUESTION() != null);
             ref.span = span(ctx);
             return ref;
         }
+        return buildNamedTypeRef(ctx, ctx.qualifiedName(), ctx.typeRef(), ctx.QUESTION() != null);
+    }
+
+    /** A declaration's return type: a bare function type here carries no throws clause. */
+    private TypeRef buildReturnTypeRef(SprigParser.ReturnTypeRefContext ctx) {
+        if (ctx.functionType() != null) {
+            TypeRef ref = buildFunctionType(ctx.functionType(), ctx.QUESTION() != null);
+            ref.span = span(ctx);
+            return ref;
+        }
+        if (ctx.plainFunctionType() != null) {
+            SprigParser.PlainFunctionTypeContext plain = ctx.plainFunctionType();
+            List<TypeRef> params = new ArrayList<>();
+            for (SprigParser.TypeRefContext param : plain.typeRef()) params.add(buildTypeRef(param));
+            TypeRef ref = new TypeRef(List.of("fn"), params, false, buildReturnTypeRef(plain.returnTypeRef()));
+            ref.span = span(ctx);
+            return ref;
+        }
+        return buildNamedTypeRef(ctx, ctx.qualifiedName(), ctx.typeRef(), ctx.QUESTION() != null);
+    }
+
+    private TypeRef buildFunctionType(SprigParser.FunctionTypeContext ctx, boolean nullable) {
+        List<SprigParser.TypeRefContext> written = ctx.typeRef();
+        int resultIndex = written.size() - (ctx.THROWS() != null ? 2 : 1);
+        List<TypeRef> params = new ArrayList<>();
+        for (int i = 0; i < resultIndex; i++) params.add(buildTypeRef(written.get(i)));
+        TypeRef thrown = ctx.THROWS() != null ? buildTypeRef(written.get(written.size() - 1)) : null;
+        return new TypeRef(List.of("fn"), params, nullable, buildTypeRef(written.get(resultIndex)), thrown);
+    }
+
+    private TypeRef buildNamedTypeRef(org.antlr.v4.runtime.ParserRuleContext ctx,
+                                      SprigParser.QualifiedNameContext name,
+                                      List<SprigParser.TypeRefContext> writtenArgs, boolean nullable) {
         List<String> parts = new ArrayList<>();
-        for (TerminalNode ident : ctx.qualifiedName().IDENT()) {
+        for (TerminalNode ident : name.IDENT()) {
             parts.add(ident.getText());
         }
         List<TypeRef> args = new ArrayList<>();
-        for (SprigParser.TypeRefContext arg : ctx.typeRef()) {
+        for (SprigParser.TypeRefContext arg : writtenArgs) {
             args.add(buildTypeRef(arg));
         }
-        TypeRef ref = new TypeRef(parts, args, ctx.QUESTION() != null);
+        TypeRef ref = new TypeRef(parts, args, nullable);
         ref.span = span(ctx);
-        List<TerminalNode> idents = ctx.qualifiedName().IDENT();
+        List<TerminalNode> idents = name.IDENT();
         ref.nameSpan = span(idents.get(idents.size() - 1));
         return ref;
     }

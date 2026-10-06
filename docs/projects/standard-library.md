@@ -169,8 +169,23 @@ Every function is eager, returns a new list and leaves its input unchanged.
   other `Int` overflow, and both return 0 for an empty list. Other numeric
   types use `fold`.
 
-A lambda cannot call a function that declares `throws`, so a step that can
-fail, such as parsing each item, still needs a `for` loop.
+Every helper that takes a callable is `rethrows`: its parameter is written
+`fn(T) -> K throws Error`, and a call throws exactly what the lambda you pass
+throws. A lambda that only reads fields makes an ordinary call, as above. A
+lambda that calls a function declaring `throws Error`, such as a parser,
+makes the helper call throw `Error`, so that call needs `throws Error` on the
+enclosing function or a `try`/`catch`:
+
+```sprig
+func cents(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+
+func total(prices: List[String]) -> Int throws Error:
+    return lists.sum_by[String](prices, fn(p: String) => cents(p))
+```
 
 ```sprig
 import "@std/lists.spr" as lists

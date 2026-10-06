@@ -46,6 +46,12 @@ public abstract class Decl extends Node {
         public final List<Stmt> body;
         public Type returnType;
         public final List<Type> throwsTypes = new java.util.ArrayList<>();
+        /**
+         * Declared {@code rethrows}: the function throws exactly what its
+         * callable parameters with a {@code throws} clause throw, and nothing
+         * of its own.
+         */
+        public boolean rethrows;
         public ClassDecl owner; // non-null for methods
         /** True when this method witnesses a declared foreign conformance. */
         public boolean foreignBoundary;

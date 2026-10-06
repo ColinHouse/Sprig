@@ -177,6 +177,9 @@ public final class SprigApi {
         if (!func.throwsTypes.isEmpty()) {
             item.put("throws", func.throwsTypes.stream().map(SprigApi::display).toList());
         }
+        if (func.rethrows) {
+            item.put("rethrows", true);
+        }
         if (!func.equatableParams.isEmpty() || !func.comparableParams.isEmpty()) {
             List<String> requires = new ArrayList<>();
             for (String name : func.equatableParams) requires.add(name + ": Equatable");

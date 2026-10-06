@@ -25,6 +25,13 @@ public final class Semantics {
         if (target.equals(source)) {
             return true;
         }
+        if (target instanceof FunctionType targetFunction && source instanceof FunctionType sourceFunction) {
+            // Parameters and results are invariant. A value that throws less
+            // than the target declares is accepted; never the other way round.
+            return targetFunction.params.equals(sourceFunction.params)
+                    && targetFunction.result.equals(sourceFunction.result)
+                    && targetFunction.throwsTypes.containsAll(sourceFunction.throwsTypes);
+        }
         if ((target == NativeType.INT && source == NativeType.INT32)
                 || (target == NativeType.FLOAT && source == NativeType.FLOAT32)) {
             return true;
@@ -120,6 +127,11 @@ public final class Semantics {
             return Throwable.class.isAssignableFrom(javaType.clazz);
         }
         return false;
+    }
+
+    /** The built-in Error type (sprig.runtime.SprigError), the only error a callable may declare. */
+    public static boolean isSprigError(Type type) {
+        return type instanceof JavaType javaType && javaType.clazz == sprig.runtime.SprigError.class;
     }
 
     /** JVM-checked exceptions must be declared or caught. */

@@ -371,5 +371,47 @@
     "expected_diagnostic": "SPR-TYPE-NULLABLE",
     "status": "implemented",
     "source": "standard library helpers"
+  },
+  {
+    "file": "callable_throws_to_plain_param.spr",
+    "expected_diagnostic": "SPR-TYPE-CALLABLE-THROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
+  },
+  {
+    "file": "callable_throws_java_exception.spr",
+    "expected_diagnostic": "SPR-TYPE-CALLABLE-THROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
+  },
+  {
+    "file": "rethrows_without_throwing_parameter.spr",
+    "expected_diagnostic": "SPR-FLOW-RETHROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
+  },
+  {
+    "file": "callable_throws_call_unhandled.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
+  },
+  {
+    "file": "lambda_throws_checked_java.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
+  },
+  {
+    "file": "rethrows_throws_on_its_own.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
+  },
+  {
+    "file": "rethrows_call_unhandled.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "callable throws and rethrows"
   }
 ]

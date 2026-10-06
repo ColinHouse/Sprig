@@ -130,7 +130,7 @@ Your own classes, variants and functions can go inside a `generic T:` (or `gener
 <<< @/snippets/lambdas.spr
 
 - A lambda is an expression: `fn(x: Int) => x * 2`.
-- It takes 0 to 3 parameters, its body is a single expression, and it can't declare `throws`.
+- It takes 0 to 3 parameters and its body is a single expression. It may call a function that throws `Error`; its type then says so (see Function types below).
 - A lambda can't capture a `var` local; that's rejected with `SPR-TYPE-CAPTURE`. Copy the value into a `let` first.
 
 ## Function types
@@ -141,7 +141,18 @@ Your own classes, variants and functions can go inside a `generic T:` (or `gener
 - Function types take 0 to 3 parameters. Parameter and result types must match exactly: there's no function subtyping and no automatic conversion.
 - To make the whole function nullable, add parentheses: `(fn(Int) -> Int)?`. `fn(Int) -> Int?` means the result is nullable. Check a nullable function value before calling it, like any nullable value.
 - Function types can be used for variables, fields, parameters and results, and as explicit generic arguments.
-- A function type can't declare `throws`, so checked errors have to be handled inside the function.
+- A function type may end with `throws Error`, and nothing else: `fn(String) -> Int throws Error`. A lambda that calls a function throwing `Error` has that type, and calling such a value needs `throws Error` or `try`/`catch`, like any throwing call. A value without the clause is accepted where the clause is expected, never the other way round (`SPR-TYPE-CALLABLE-THROWS`). A checked Java exception never crosses a function value; handle it inside a named function.
+- A function that only passes its callable's errors on is declared `rethrows` instead of `throws`: `func twice(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:`. A call to it throws exactly what the lambda you pass throws, so a lambda that cannot fail makes an ordinary call. The `@std/lists` helpers work this way.
+
+<<< @/snippets/callable_throws.spr
+
+```text
+[1, 2]
+caught: not a number: x
+18
+21
+caught: not a number: three
+```
 
 When you pass a function value to Java, the Java parameter has to be one of Sprig's own `sprig.runtime.Fn0` to `Fn3` types. Sprig doesn't convert functions to Java's `Function`, `Consumer`, `Runnable` or any other interface. If you're not sure, `sprig api <Class> --json` shows the actual signature.
 

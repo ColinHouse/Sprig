@@ -1,0 +1,31 @@
+import "@std/lists.spr" as lists
+
+func to_number(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+
+# The lambda calls a throwing function, so its type is
+# fn(String) -> Int throws Error, and the call through map throws too.
+func numbers(items: List[String]) -> List[Int] throws Error:
+    return items.map(fn(item: String) => to_number(item))
+
+# rethrows: twice throws exactly what step throws. With a lambda that cannot
+# fail, the call needs no try and no throws.
+generic T:
+    func twice(step: fn(T) -> T throws Error, value: T) -> T rethrows:
+        return step(step(value))
+
+try:
+    print(numbers(["1", "2"]))
+    print(numbers(["1", "x"]))
+catch problem: Error:
+    print("caught: " + problem)
+print(twice[Int](fn(n: Int) => n * 3, 2))
+let parse: fn(String) -> Int throws Error = fn(text: String) => to_number(text)
+try:
+    print(parse("21"))
+    print(lists.sum_by[String](["1", "2", "three"], fn(text: String) => parse(text)))
+catch problem: Error:
+    print("caught: " + problem)

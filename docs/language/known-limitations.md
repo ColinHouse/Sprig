@@ -124,8 +124,12 @@ by the historical design kit in `docs/history/design-kit/`.
 ## Callable boundary
 
 Source function types now use `fn(A) -> R`, arities 0–3. Parameters and results
-are invariant. Callable types carry no recoverable `throws` effects: handle
-those inside named wrappers before placing them in a lambda. Arbitrary Java
+are invariant. A callable type may declare `throws Error` and nothing else: a
+lambda that calls a function throwing `Error` has that clause, a value without
+the clause is accepted where the clause is expected (not the reverse), and a
+`rethrows` function throws exactly what its callable arguments throw. A checked
+Java exception never crosses a function value; handle it inside a named
+function and call that from the lambda. Arbitrary Java
 SAM interfaces are not converted. Only concrete Fn0..Fn3 generic signatures
 preserve callable types; raw, wildcard or unresolved type variables are rejected.
 `Character`/`Short`/`Byte` callable slots and arbitrary parameterized Java slots

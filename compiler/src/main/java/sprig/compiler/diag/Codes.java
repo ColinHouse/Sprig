@@ -49,6 +49,7 @@ public final class Codes {
     public static final String TYPE_UNIT = "SPR-TYPE-UNIT";
     public static final String TYPE_FUNCTION_ARITY = "SPR-TYPE-FUNCTION-ARITY";
     public static final String TYPE_CAPTURE = "SPR-TYPE-CAPTURE";
+    public static final String TYPE_CALLABLE_THROWS = "SPR-TYPE-CALLABLE-THROWS";
     public static final String NUM_RANGE = "SPR-NUM-RANGE";
     public static final String NUM_CONVERSION = "SPR-NUM-CONVERSION";
     public static final String NUM_DIVISION = "SPR-NUM-DIVISION";
@@ -102,6 +103,7 @@ public final class Codes {
     public static final String FLOW_BREAK = "SPR-FLOW-BREAK";
     public static final String FLOW_CONTINUE = "SPR-FLOW-CONTINUE";
     public static final String FLOW_THROWS = "SPR-FLOW-THROWS";
+    public static final String FLOW_RETHROWS = "SPR-FLOW-RETHROWS";
 
     // CONFORM (foreign JVM nominal contract)
     public static final String CONFORM_SOURCE = "SPR-CONFORM-SOURCE";

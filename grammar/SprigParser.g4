@@ -58,8 +58,8 @@ variantFields: variantField (COMMA variantField)* COMMA?;
 variantField: IDENT COLON typeRef;
 
 functionDefinition
-    : FUNC IDENT LPAREN parameters? RPAREN ARROW typeRef
-      (THROWS typeRef (COMMA typeRef)*)? COLON suite
+    : FUNC IDENT LPAREN parameters? RPAREN ARROW returnTypeRef
+      (THROWS typeRef (COMMA typeRef)* | RETHROWS)? COLON suite
     ;
 parameters: parameter (COMMA parameter)* COMMA?;
 parameter: IDENT COLON typeRef;
@@ -69,9 +69,19 @@ parameter: IDENT COLON typeRef;
 typeRef
     : qualifiedName (LBRACK typeRef (COMMA typeRef)* RBRACK)? QUESTION?
     | functionType
-    | LPAREN functionType RPAREN QUESTION
+    | LPAREN functionType RPAREN QUESTION?
     ;
-functionType: FN LPAREN (typeRef (COMMA typeRef)*)? RPAREN ARROW typeRef;
+// A function type's own throws clause binds to the nearest fn.
+functionType: FN LPAREN (typeRef (COMMA typeRef)*)? RPAREN ARROW typeRef (THROWS typeRef)?;
+// In a declaration's return position an unparenthesized function type takes no
+// clause of its own, so `-> fn(Int) -> Int throws Error:` still declares that the
+// function throws; a returned callable with a clause is written in parentheses.
+returnTypeRef
+    : qualifiedName (LBRACK typeRef (COMMA typeRef)* RBRACK)? QUESTION?
+    | plainFunctionType
+    | LPAREN functionType RPAREN QUESTION?
+    ;
+plainFunctionType: FN LPAREN (typeRef (COMMA typeRef)*)? RPAREN ARROW returnTypeRef;
 variableDeclaration: (VAR | LET) IDENT typeAnnotation? ASSIGN expression;
 typeAnnotation: COLON typeRef;
 
