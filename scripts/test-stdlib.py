@@ -81,6 +81,36 @@ def main():
         assert host.returncode == 0, host.stderr
         assert host.stdout == expected, repr(host.stdout)
         assert (Path(work) / 'nested/héllo.txt').read_text(encoding='utf-8') == '你好\nSprig'
+    with tempfile.TemporaryDirectory(prefix='sprig std file errors ') as work:
+        data = Path(work) / 'data'
+        (data / 'sub').mkdir(parents=True)
+        (data / 'ok.txt').write_text('café', encoding='utf-8')
+        (data / 'input.bin').write_bytes(b'\xff\xfe\x00bad')
+        (data / 'exists.txt').write_text('x', encoding='utf-8')
+        errors = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/file_errors.spr')], cwd=work, text=True, encoding='utf-8', capture_output=True)
+        assert errors.returncode == 0, errors.stderr
+        assert errors.stdout.splitlines() == [
+            'read ok: ok café',
+            'read missing: cannot read data/missing.txt: no such file',
+            'read directory: cannot read data: it is a directory',
+            'read invalid: cannot read data/input.bin: not valid UTF-8',
+            'read lines missing: cannot read data/missing.txt: no such file',
+            'write missing parent: cannot write data/no-such-dir/out.txt: the parent directory does not exist',
+            'write directory: cannot write data/sub: it is a directory',
+            'atomic missing parent: cannot write data/no-such-dir/out.txt: the parent directory does not exist',
+            'make dir over file: cannot create directory data/exists.txt: a file with that name already exists',
+            'copy missing: cannot copy data/missing.txt to data/copy.txt: the source does not exist',
+            'copy onto existing: cannot copy data/ok.txt to data/exists.txt: the target already exists',
+            "copy into missing dir: cannot copy data/ok.txt to data/nowhere/copy.txt: the target's parent directory does not exist",
+            'copy directory: cannot copy data/sub to data/copy2: the source is a directory',
+            'move missing: cannot move data/missing.txt to data/moved.txt: the source does not exist',
+            'remove missing: cannot remove data/missing.txt: no such file',
+            'remove directory: cannot remove data/sub: it is a directory',
+            'list missing: cannot list data/missing: no such directory',
+            'list file: cannot list data/ok.txt: it is not a directory',
+            'walk missing: cannot list data/missing: no such directory',
+            '2',
+        ], repr(errors.stdout)
     result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json.spr')], cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
     expected = '{"ok":true,"nested":[null,12.50,"a\\nb",{"x":-2e3}]}\n"你好"\nrejected trailing comma\nrejected duplicate key\nrejected leading zero\nrejected trailing text\n'
     assert result.returncode == 0, result.stderr
@@ -221,7 +251,7 @@ def main():
             ], (timezone, repr(lines))
             practical_outputs.append(lines)
     assert practical_outputs[0] == practical_outputs[1], practical_outputs
-    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks and runner, process input/output/exit/run, sets/random/regex/dates and recursive JSON contracts passed')
+    print('stdlib: UTF-8/path/file operations/temp file, file failure messages, UTC parse/format across timezones, text.join, list/null/text helpers, test checks and runner, process input/output/exit/run, sets/random/regex/dates and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()

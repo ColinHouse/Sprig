@@ -1,13 +1,17 @@
 package sprig.runtime.host;
 
 import java.io.IOException;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.LinkOption;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
@@ -17,12 +21,39 @@ import java.util.List;
 public final class HostFiles {
     private HostFiles() {}
 
+    /**
+     * A failure whose reason is already in plain words. The common cases are
+     * checked before the operation, so the reason does not depend on the JDK's
+     * message text or on the operating system's wording.
+     */
+    public static final class Failure extends IOException {
+        public Failure(String reason) { super(reason); }
+    }
+
+    /** The reason an operation failed, for @std/files: "cannot read data/x.txt: " + reason(problem). */
+    public static String reason(IOException problem) {
+        if (problem instanceof Failure) return problem.getMessage();
+        if (problem instanceof CharacterCodingException) return "not valid UTF-8";
+        if (problem instanceof NoSuchFileException) return "no such file";
+        if (problem instanceof FileAlreadyExistsException) return "it already exists";
+        if (problem instanceof DirectoryNotEmptyException) return "the directory is not empty";
+        if (problem instanceof NotDirectoryException) return "it is not a directory";
+        if (problem instanceof AccessDeniedException) return "access denied";
+        String message = problem.getMessage();
+        return message == null || message.isBlank() ? problem.getClass().getSimpleName() : message;
+    }
+
     public static String readUtf8(String path) throws IOException {
-        return Files.readString(Path.of(path), StandardCharsets.UTF_8);
+        Path file = Path.of(path);
+        if (Files.isDirectory(file)) throw new Failure("it is a directory");
+        if (!Files.exists(file)) throw new Failure("no such file");
+        return Files.readString(file, StandardCharsets.UTF_8);
     }
 
     public static void writeUtf8(String path, String text) throws IOException {
-        Files.writeString(Path.of(path), text, StandardCharsets.UTF_8);
+        Path file = Path.of(path);
+        requireWritable(file);
+        Files.writeString(file, text, StandardCharsets.UTF_8);
     }
 
     public static boolean fileExists(String path) {
@@ -36,7 +67,11 @@ public final class HostFiles {
     public static boolean exists(String path) { return Files.exists(Path.of(path), LinkOption.NOFOLLOW_LINKS); }
     public static boolean isDirectory(String path) { return Files.isDirectory(Path.of(path), LinkOption.NOFOLLOW_LINKS); }
     public static boolean isRegularFile(String path) { return Files.isRegularFile(Path.of(path), LinkOption.NOFOLLOW_LINKS); }
-    public static void makeDirectory(String path) throws IOException { Files.createDirectories(Path.of(path)); }
+    public static void makeDirectory(String path) throws IOException {
+        Path directory = Path.of(path);
+        if (Files.exists(directory) && !Files.isDirectory(directory)) throw new Failure("a file with that name already exists");
+        Files.createDirectories(directory);
+    }
     public static String join(String base, String child) { return Path.of(base).resolve(child).normalize().toString(); }
     public static String normalize(String path) { return Path.of(path).normalize().toString(); }
     public static String fileName(String path) { return Path.of(path).getFileName().toString(); }
@@ -55,25 +90,25 @@ public final class HostFiles {
     /** Copy one regular, non-symlink file; existing targets are never overwritten. */
     public static void copyFile(String source, String target) throws IOException {
         Path from = Path.of(source);
-        requireRegularFile(from, "copy source");
+        requireRegularFile(from, "the source");
         Path to = Path.of(target);
-        if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) throw new FileAlreadyExistsException(to.toString());
+        requireNewTarget(to);
         Files.copy(from, to);
     }
 
     /** Move one regular, non-symlink file; existing targets are never overwritten. */
     public static void move(String source, String target) throws IOException {
         Path from = Path.of(source);
-        requireRegularFile(from, "move source");
+        requireRegularFile(from, "the source");
         Path to = Path.of(target);
-        if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) throw new FileAlreadyExistsException(to.toString());
+        requireNewTarget(to);
         Files.move(from, to);
     }
 
     /** Remove exactly one regular, non-symlink file; directories and links are rejected. */
     public static void removeFile(String path) throws IOException {
         Path file = Path.of(path);
-        requireRegularFile(file, "remove target");
+        requireRegularFile(file, null);
         Files.delete(file);
     }
 
@@ -84,10 +119,9 @@ public final class HostFiles {
      * This method does not promise fsync/crash durability.
      */
     public static void atomicWriteUtf8(String path, String text) throws IOException {
+        requireWritable(Path.of(path));
         Path target = Path.of(path).toAbsolutePath().normalize();
         Path parent = target.getParent();
-        if (parent == null || !Files.isDirectory(parent))
-            throw new NoSuchFileException("Parent directory does not exist for " + target);
         String name = target.getFileName() == null ? "sprig" : target.getFileName().toString();
         Path temporary = Files.createTempFile(parent, "." + name + ".", ".tmp");
         try {
@@ -109,10 +143,25 @@ public final class HostFiles {
         return Files.createTempFile("sprig-", ".tmp").toAbsolutePath().normalize().toString();
     }
 
-    private static void requireRegularFile(Path file, String description) throws IOException {
-        if (Files.isSymbolicLink(file) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
-            throw new IOException(description + " must be an existing regular file: " + file);
-        }
+    /** Only an existing regular file that is not a symbolic link; role is "the source", or null for the path itself. */
+    private static void requireRegularFile(Path file, String role) throws IOException {
+        String subject = role == null ? "it" : role;
+        if (Files.isSymbolicLink(file)) throw new Failure(subject + " is a symbolic link");
+        if (Files.isDirectory(file, LinkOption.NOFOLLOW_LINKS)) throw new Failure(subject + " is a directory");
+        if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS))
+            throw new Failure(role == null ? "no such file" : role + " does not exist");
+    }
+
+    private static void requireNewTarget(Path target) throws IOException {
+        if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) throw new Failure("the target already exists");
+        Path parent = target.toAbsolutePath().normalize().getParent();
+        if (parent != null && !Files.isDirectory(parent)) throw new Failure("the target's parent directory does not exist");
+    }
+
+    private static void requireWritable(Path file) throws IOException {
+        if (Files.isDirectory(file)) throw new Failure("it is a directory");
+        Path parent = file.toAbsolutePath().normalize().getParent();
+        if (parent == null || !Files.isDirectory(parent)) throw new Failure("the parent directory does not exist");
     }
 
     /** Typed indexed snapshot for an explicit Sprig List[String] copy adapter. */
@@ -126,7 +175,10 @@ public final class HostFiles {
 
     /** Sorted snapshot; exposed as an opaque Java list until explicit adapters exist. */
     public static List<String> listFiles(String directory) throws IOException {
-        try (var stream = Files.list(Path.of(directory))) {
+        Path folder = Path.of(directory);
+        if (!Files.exists(folder)) throw new Failure("no such directory");
+        if (!Files.isDirectory(folder)) throw new Failure("it is not a directory");
+        try (var stream = Files.list(folder)) {
             return stream.map(path -> path.toAbsolutePath().normalize().toString())
                     .sorted().toList();
         }

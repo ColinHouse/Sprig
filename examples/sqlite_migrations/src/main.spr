@@ -1,9 +1,8 @@
 import "@sqlite/sqlite.spr" as sqlite
 import "@sqlite/migrations.spr" as migrations
 import "@std/process.spr" as process
-import java.io.IOException as IOException
 
-func main() -> Unit throws Error, IOException:
+func main() -> Unit throws Error:
     let args = process.arguments()
     var database_path = "migrations.sqlite"
     var migration_path = "migrations"

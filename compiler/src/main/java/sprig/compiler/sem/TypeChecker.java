@@ -125,6 +125,10 @@ public final class TypeChecker {
     private int lambdaDepth;
     private final Deque<Map<Symbol, Type>> narrowing = new ArrayDeque<>();
     private final Deque<List<Type>> caughtStack = new ArrayDeque<>();
+    /** Per open try, innermost first: the types its block can throw that no inner catch handles. */
+    private final Deque<List<Type>> tryThrown = new ArrayDeque<>();
+    /** Types the current function's body lets escape; null outside a function body. */
+    private List<Type> escaping;
     private final Deque<List<Type>> effectCollectors = new ArrayDeque<>();
     /** Thrown types met inside the lambda bodies being checked, innermost first; they become the lambda's throws clause. */
     private final Deque<List<Type>> lambdaEffects = new ArrayDeque<>();
@@ -201,6 +205,7 @@ public final class TypeChecker {
         loopDepth = 0;
         narrowing.clear();
         caughtStack.clear();
+        tryThrown.clear();
         effectCollectors.clear();
         // The base frame a function body also gets: early-exit narrowing
         // (if x == null: throw ...) records into it for the statements after.
@@ -218,6 +223,7 @@ public final class TypeChecker {
         activeTypeParams = owner.typeParamTypes;
         narrowing.clear();
         caughtStack.clear();
+        tryThrown.clear();
         List<Type> effects = new ArrayList<>();
         effectCollectors.push(effects);
         collectingDefault = field;
@@ -292,9 +298,13 @@ public final class TypeChecker {
         loopDepth = 0;
         narrowing.clear();
         caughtStack.clear();
+        tryThrown.clear();
+        escaping = new ArrayList<>();
         narrowing.push(new HashMap<>());
         checkSequence(func.body);
         narrowing.pop();
+        checkDeclaredThrows(func, escaping);
+        escaping = null;
         activeTypeParams = previousTypeParams;
         Type returnType = func.returnType;
         if (returnType != NativeType.UNIT && returnType != NativeType.ERROR && !definitelyReturns(func.body)) {
@@ -535,7 +545,11 @@ public final class TypeChecker {
         }
         Type actual = checkExpr(ret.value, expected);
         if (expected == NativeType.UNIT) {
-            if (actual != NativeType.UNIT && actual != NativeType.ERROR) {
+            if (actual == NativeType.UNIT) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                        "Cannot return a Unit result; Unit is not a value", module.uri, ret.value.span)
+                        .withHint("Call the function as a statement of its own, then write a bare return."));
+            } else if (actual != NativeType.ERROR) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_RETURN, Phase.TYPE,
                         "Unit function cannot return a value", module.uri, ret.span)
                         .withTypes("Unit", actual.display()));
@@ -642,10 +656,21 @@ public final class TypeChecker {
             caught.add(type);
         }
         caughtStack.push(caught);
+        tryThrown.push(new ArrayList<>());
         narrowing.push(new HashMap<>());
         checkSequence(tryStmt.body);
         narrowing.pop();
         caughtStack.pop();
+        List<Type> thrown = tryThrown.pop();
+        for (Stmt.Try.CatchClause clause : tryStmt.catches) {
+            Type type = clause.caughtType;
+            if (isTrackedChecked(type) && !related(type, thrown)) {
+                diagnostics.add(Diagnostic.error(Codes.FLOW_CATCH_NEVER_THROWN, Phase.FLOW,
+                        "Catch of " + type.display() + " can never run: nothing in the try block can throw it",
+                        module.uri, clause.typeRef.span)
+                        .withHint("Remove this catch clause; catch Error if the block calls Sprig functions that fail with Error."));
+            }
+        }
         for (Stmt.Try.CatchClause clause : tryStmt.catches) {
             narrowing.push(new HashMap<>());
             if (clause.symbol != null) {
@@ -1617,6 +1642,11 @@ public final class TypeChecker {
     }
 
     private Type checkEquality(Expr.Binary binary, Type left, Type right) {
+        if (left == NativeType.UNIT || right == NativeType.UNIT) {
+            requireValue(left, binary.left, "an operand of '" + binary.op + "'");
+            requireValue(right, binary.right, "an operand of '" + binary.op + "'");
+            return NativeType.BOOL;
+        }
         if (left == NativeType.NULL || right == NativeType.NULL) {
             Type other = left == NativeType.NULL ? right : left;
             if (other == NativeType.NULL) {
@@ -1805,7 +1835,7 @@ public final class TypeChecker {
         }
         Type inferred = null;
         for (Expr item : lit.items) {
-            Type itemType = checkExpr(item, element);
+            Type itemType = requireValue(checkExpr(item, element), item, "a list element");
             if (element != null) {
                 requireAssignable(element, itemType, item.span, Codes.TYPE_MISMATCH, "list element");
             } else {
@@ -1854,8 +1884,8 @@ public final class TypeChecker {
         for (int i = 0; i < lit.keys.size(); i++) {
             Expr key = lit.keys.get(i);
             Expr value = lit.values.get(i);
-            Type keyActual = checkExpr(key, keyType);
-            Type valueActual = checkExpr(value, valueType);
+            Type keyActual = requireValue(checkExpr(key, keyType), key, "a map key");
+            Type valueActual = requireValue(checkExpr(value, valueType), value, "a map value");
             if (keyType != null) {
                 requireAssignable(keyType, keyActual, key.span, Codes.TYPE_MISMATCH, "map key");
             } else {
@@ -2228,6 +2258,11 @@ public final class TypeChecker {
                         return functionType.result;
                     }
                     if (rejectNullableCallable(type, call)) return NativeType.ERROR;
+                    if (type == NativeType.ERROR) {
+                        // The member already failed to resolve and was reported.
+                        checkArgsUnchecked(call);
+                        return NativeType.ERROR;
+                    }
                     diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                             "'" + access.name + "' is not callable", module.uri, call.span)
                             .withTypes("function value", type == null ? "?" : type.display()));
@@ -2650,6 +2685,13 @@ public final class TypeChecker {
         Type receiver = checkExpr(access.receiver, null);
         ResolvedField resolved;
         if (receiver == null || receiver == NativeType.ERROR) {
+            resolved = errorField(access);
+        } else if (receiver == NativeType.UNIT) {
+            // A Unit result is not a value, so it has no members, toString included.
+            diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                    "Cannot access '" + access.name + "' on a Unit result; Unit is not a value",
+                    module.uri, access.nameSpan != null ? access.nameSpan : access.span)
+                    .withHint("Call the function as a statement of its own; it returns nothing to use."));
             resolved = errorField(access);
         } else if (receiver.isNullable()) {
             // Point at the member: in a chain such as a.b().c() every access
@@ -3449,7 +3491,7 @@ public final class TypeChecker {
         }
         List<Type> argTypes = new ArrayList<>();
         for (Expr.Arg arg : call.args) {
-            argTypes.add(checkExpr(arg.value, null));
+            argTypes.add(requireValue(checkExpr(arg.value, null), arg.value, "a Java argument"));
         }
         Map<TypeVariable<?>, Type> receiverBindings = JavaTypes
                 .hierarchyBindings(javaType.clazz, javaType.args)
@@ -3542,7 +3584,7 @@ public final class TypeChecker {
         }
         List<Type> argTypes = new ArrayList<>();
         for (Expr.Arg arg : call.args) {
-            argTypes.add(checkExpr(arg.value, null));
+            argTypes.add(requireValue(checkExpr(arg.value, null), arg.value, "a Java argument"));
         }
         Map<Class<?>, Map<TypeVariable<?>, Type>> hierarchy =
                 JavaTypes.hierarchyBindings(receiver.clazz, receiver.args);
@@ -4064,6 +4106,7 @@ public final class TypeChecker {
             }
             return;
         }
+        recordThrown(thrown);
         if (!effectCollectors.isEmpty() && lambdaDepth == 0) {
             for (Type type : thrown) {
                 if (type == null || type == NativeType.ERROR) continue;
@@ -4142,6 +4185,77 @@ public final class TypeChecker {
         header.append(String.join(", ", declared)).append(':');
         return "Declare it on '" + currentFunction.name + "' by changing its header to '" + header + "', and its callers "
                 + "then handle or declare it too (top-level statements need neither), " + handle;
+    }
+
+    /** Unit is a function's result, never a value: report it where a value is needed. */
+    private Type requireValue(Type type, Expr expr, String role) {
+        if (type != NativeType.UNIT) {
+            return type;
+        }
+        diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                "Cannot use a Unit result as " + role + "; Unit is not a value", module.uri, expr.span)
+                .withHint("Call the function as a statement of its own; it returns nothing to use."));
+        return NativeType.ERROR;
+    }
+
+    /**
+     * Note where a thrown type can go: every open try it reaches, innermost
+     * first, until a catch handles it; when none does, it escapes the function.
+     * The two flow checks below compare catch and throws clauses with this.
+     */
+    private void recordThrown(List<Type> thrown) {
+        if (lambdaDepth != 0) {
+            return;
+        }
+        for (Type type : thrown) {
+            if (type == null || type == NativeType.ERROR) {
+                continue;
+            }
+            boolean handled = false;
+            var frames = caughtStack.iterator();
+            var seen = tryThrown.iterator();
+            while (frames.hasNext() && seen.hasNext()) {
+                List<Type> frame = frames.next();
+                seen.next().add(type);
+                if (frame.stream().anyMatch(caught -> caught != NativeType.ERROR && Semantics.isAssignable(caught, type))) {
+                    handled = true;
+                    break;
+                }
+            }
+            if (!handled && escaping != null) {
+                escaping.add(type);
+            }
+        }
+    }
+
+    /** Checked Java exceptions follow Java's rule; Exception and Throwable also cover unchecked ones. */
+    private static boolean isTrackedChecked(Type type) {
+        return type instanceof JavaType javaType && Semantics.isJvmChecked(type)
+                && javaType.clazz != Exception.class && javaType.clazz != Throwable.class;
+    }
+
+    /** Whether some thrown type is the given class, a subclass of it, or a superclass of it. */
+    private static boolean related(Type type, List<Type> thrown) {
+        for (Type candidate : thrown) {
+            if (Semantics.isAssignable(type, candidate) || Semantics.isAssignable(candidate, type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void checkDeclaredThrows(Decl.Func func, List<Type> escaped) {
+        for (int i = 0; i < func.throwsTypes.size(); i++) {
+            Type declared = func.throwsTypes.get(i);
+            if (!isTrackedChecked(declared) || related(declared, escaped)) {
+                continue;
+            }
+            Span span = i < func.throwsRefs.size() ? func.throwsRefs.get(i).span : func.span;
+            diagnostics.add(Diagnostic.error(Codes.FLOW_THROWS_UNUSED, Phase.FLOW,
+                    "'" + func.name + "' declares throws " + declared.display()
+                            + ", but nothing in its body can throw it", module.uri, span)
+                    .withHint("Remove " + declared.display() + " from the throws clause, then remove the catch clauses this reports in callers."));
+        }
     }
 
     private Type narrowedType(Symbol symbol) {

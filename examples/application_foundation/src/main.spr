@@ -5,7 +5,6 @@ import "@std/json.spr" as json
 import "@std/process.spr" as process
 import "@std/text.spr" as text
 import "@std/time.spr" as time
-import java.io.IOException as IOException
 
 try:
     let url = process.argument(0)
@@ -24,7 +23,5 @@ try:
             files.make_directory(output_parent)
     files.atomic_write_utf8(output_path, line)
     print(files.read_utf8(output_path))
-catch problem: IOException:
-    print("file error: " + problem.message)
 catch problem: Error:
     print("application error: " + problem.message)

@@ -1,0 +1,6 @@
+import java.io.IOException as IOException
+
+func twice(value: Int) -> Int throws IOException:
+    return value * 2
+
+print(twice(2))

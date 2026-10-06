@@ -1,0 +1,13 @@
+import java.io.IOException as IOException
+
+func load(path: String) -> String throws Error:
+    if path == "":
+        throw Error("empty path")
+    return path
+
+try:
+    print(load("a"))
+catch problem: IOException:
+    print("io")
+catch problem: Error:
+    print(problem.message)

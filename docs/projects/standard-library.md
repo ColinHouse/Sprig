@@ -104,9 +104,16 @@ success or failure. No API here promises fsync or crash durability. `temp_file`
 creates an empty file in the operating system temporary directory; callers can
 remove it with `remove_file`.
 
-IO failures preserve `java.io.IOException`; catch or declare that type. Null
-guards and argument bounds report Sprig `Error`; OS invalid-path failures remain
-JVM errors. The host is unrestricted local IO under the invoking user's
+A failed file operation is a Sprig `Error` whose message names the operation,
+the path as the caller wrote it and the reason, for example
+`cannot read data/notes.txt: no such file`, `cannot write out/report.txt: the
+parent directory does not exist` or `cannot read data/input.bin: not valid
+UTF-8`. The reason does not depend on the JDK's wording or the operating system.
+Because the functions throw only `Error`, they can be called inside a lambda,
+for example in `paths.map(fn(path: String) => files.read_utf8(path))`. A program
+that must tell IO failures apart by Java type calls `java.nio.file.Files`
+directly and catches `java.io.IOException`. Null guards and argument bounds
+report Sprig `Error`; OS invalid-path failures remain JVM errors. The host is unrestricted local IO under the invoking user's
 permissions.
 
 `process.arguments()` contains only arguments after `sprig run --`; the generated

@@ -1,0 +1,7 @@
+func noop() -> Unit:
+    print("ran")
+
+func twice() -> Unit:
+    return noop()
+
+twice()

@@ -251,7 +251,7 @@ Total: 111.50
 `parse_amount` 要求小数点后正好两位，所以这一行会解析失败。错误一路抛到最外层的 `catch`：
 
 ```text
-bad data: not an amount: 45.5
+not an amount: 45.5
 ```
 
 想读你自己的记录，就把 `temp_file()` 和 `write_utf8` 那两行去掉，把 `path` 换成你的文件路径。
