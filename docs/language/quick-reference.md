@@ -15,6 +15,7 @@ class Hero:
 
 let hero = Hero(name="Ada")
 hero.health += 1
+let label = "health " + hero.health  # + joins text with any value
 
 variant Expr:
     Literal(value: Int)

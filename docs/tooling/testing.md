@@ -78,7 +78,7 @@ import "@std/test.spr" as testing
 
 let quantity = 3
 testing.equal_int(2 + 2, 4, "sum")
-testing.equal_text("tea x" + quantity.toString(), "tea x2", "order line")
+testing.equal_text("tea x" + quantity, "tea x2", "order line")
 ```
 
 The second check fails with `order line: expected "tea x2", got "tea x3"`. The

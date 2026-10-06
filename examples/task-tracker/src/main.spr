@@ -55,14 +55,14 @@ try:
             var marker = " "
             if task.done:
                 marker = "x"
-            print(task.id.toString() + " [" + marker + "] " + task.title)
+            print(task.id + " [" + marker + "] " + task.title)
     elif args.get(0) == "add" and args.size() == 2:
         let tasks = load_tasks()
         let task = Task(id=tasks.size() + 1, title=args.get(1), done=false)
         let updated: MutableList[Task] = tasks.toMutableList()
         updated.append(task)
         save_tasks(updated.toList())
-        print("Added " + task.id.toString() + ": " + task.title)
+        print("Added " + task.id + ": " + task.title)
     elif args.get(0) == "done" and args.size() == 2:
         let raw_id = args.get(1).toIntOrNull()
         if raw_id == null:
@@ -77,9 +77,9 @@ try:
             else:
                 updated.append(task)
         if not found:
-            throw Error("no task with id " + raw_id.toString())
+            throw Error("no task with id " + raw_id)
         save_tasks(updated.toList())
-        print("Completed " + raw_id.toString())
+        print("Completed " + raw_id)
     else:
         usage()
         throw Error("invalid command")

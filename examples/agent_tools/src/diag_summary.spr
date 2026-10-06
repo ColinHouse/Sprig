@@ -26,14 +26,14 @@ func summarize(document: json.Value) -> String throws Error:
             warnings += 1
         meta.bump(phases, meta.or_empty(meta.text_field(item, "phase")))
         meta.bump(codes, meta.or_empty(meta.text_field(item, "code")))
-    var output = "diagnostics: " + items.size().toString() + " (" + errors.toString()
-    output += " error, " + warnings.toString() + " warning)\n"
+    var output = "diagnostics: " + items.size() + " (" + errors
+    output += " error, " + warnings + " warning)\n"
     output += "\nby phase:\n"
     for key in meta.sort_strings(phases.keys()):
-        output += "  " + key + ": " + meta.or_zero(phases.get(key)).toString() + "\n"
+        output += "  " + key + ": " + meta.or_zero(phases.get(key)) + "\n"
     output += "\nby code:\n"
     for key in meta.sort_strings(codes.keys()):
-        output += "  " + key + ": " + meta.or_zero(codes.get(key)).toString() + "\n"
+        output += "  " + key + ": " + meta.or_zero(codes.get(key)) + "\n"
     output += "\ndetails:\n"
     for item in items:
         let code = meta.or_empty(meta.text_field(item, "code"))

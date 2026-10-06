@@ -19,6 +19,7 @@ Blocks are defined by indentation, as in Python:
 
 - A `let` binding can't be changed after it's set; a `var` can.
 - Local variables can leave out the type, and Sprig infers it from the right-hand side. Class fields always need a type.
+- To put a number or any other value into text, use `+`: `"visits " + visits`. There is nothing to convert first.
 - Conditions must be `Bool`. Neither `0` nor an empty string counts as false, and `if count:` is rejected with `SPR-TYPE-CONDITION`.
 
 ## Functions
@@ -191,7 +192,7 @@ None of these exist yet:
 - inheritance and interfaces
 - `%=`
 - tuples and destructuring
-- string interpolation: `"${name}"` is just text, and you join strings with `+`
+- string interpolation: `"${name}"` is just text. Join with `+` instead: it accepts any value on either side, so `"count " + count` works without `toString()`, and the value appears as `print` would show it. Only `null` and a `Unit` result are rejected. A chain evaluates from the left, so `1 + 2 + " items"` is `3 items`.
 
 When working with Java, Sprig has no array syntax and doesn't support varargs or wildcard types. Java arrays themselves can still be received and passed along as they are; see [JVM interop](/en/guide/jvm-interop).
 

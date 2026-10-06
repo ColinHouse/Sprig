@@ -20,7 +20,7 @@ class Span:
     let column: Int
 
     func describe() -> String:
-        return line.toString() + ":" + column.toString() + " [" + start.toString() + "," + end.toString() + ")"
+        return line + ":" + column + " [" + start + "," + end + ")"
 
 class Issue:
     let code: String

@@ -43,9 +43,9 @@ func compare(old: Map[String, String], new: Map[String, String]) -> String:
     for key in old.keys():
         if not new.containsKey(key):
             removed.append(key + " = " + meta.or_empty(old.get(key)))
-    var output = "api diff: added=" + added.size().toString()
-    output += " removed=" + removed.size().toString()
-    output += " changed=" + changed.size().toString() + "\n"
+    var output = "api diff: added=" + added.size()
+    output += " removed=" + removed.size()
+    output += " changed=" + changed.size() + "\n"
     for item in meta.sort_strings(added.toList()):
         output += "+ " + item + "\n"
     for item in meta.sort_strings(removed.toList()):

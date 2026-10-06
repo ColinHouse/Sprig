@@ -29,9 +29,9 @@ func summarize(text: String) -> String throws Error:
                 throw Error(target.path + ": item_id must be non-empty and amount must be positive")
             target_count += 1
 
-    return String.join(["schema=" + schema.toString(), "active=" + active,
-        "projects=" + names.size().toString() + " (" + String.join(names.toList(), ", ") + ")",
-        "targets=" + target_count.toString()], "\n")
+    return String.join(["schema=" + schema, "active=" + active,
+        "projects=" + names.size() + " (" + String.join(names.toList(), ", ") + ")",
+        "targets=" + target_count], "\n")
 
 let arguments = process.arguments()
 if arguments.size() != 1:

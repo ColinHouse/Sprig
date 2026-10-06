@@ -17,9 +17,9 @@ class Canvas:
         let suffix = unit_suffix(unit)
         match shape:
             case Shape.Circle as circle:
-                return "circle r=" + circle.radius.toString() + suffix
+                return "circle r=" + circle.radius + suffix
             case Shape.Rect as rect:
-                return "rect " + rect.width.toString() + "x" + rect.height.toString() + suffix
+                return "rect " + rect.width + "x" + rect.height + suffix
 
     func unit_suffix(unit: Measure) -> String:
         match unit:
@@ -49,9 +49,9 @@ let shapes: List[Shape] = [
 ]
 for shape in shapes:
     print(canvas.render(shape, Measure.Metric))
-    print("area=" + area(shape).toString())
+    print("area=" + area(shape))
 
 let radius = largest_radius(shapes.get(0))
 if radius != null:
-    print("radius=" + radius.toString())
-print("drawn=" + canvas.drawn.toString())
+    print("radius=" + radius)
+print("drawn=" + canvas.drawn)

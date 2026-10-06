@@ -10,6 +10,6 @@ func main() -> Unit throws Error:
     database.execute("CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL)", [])
     database.execute("INSERT INTO notes(body) VALUES (?)", [sqlite.Parameter.Text(value="Sprig's SQLite; user text stays data")])
     let rows = database.query("SELECT COUNT(*) AS total FROM notes", [])
-    print("persisted notes=" + rows.integer(0, "total").toString())
+    print("persisted notes=" + rows.integer(0, "total"))
 
 main()

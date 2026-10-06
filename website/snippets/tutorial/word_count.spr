@@ -18,8 +18,8 @@ let counts = count_words(text)
 for word in counts.keys():
     let count = counts.get(word)
     if count != null:
-        print(word + ": " + count.toString())
+        print(word + ": " + count)
 
 let words = counts.keys().toMutableList()
 words.sort()
-print("sorted keys: " + words.toString())
+print("sorted keys: " + words)

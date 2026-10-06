@@ -13,7 +13,7 @@ func main() -> Unit throws Error, IOException:
         migration_path = args.get(1)
     let database = sqlite.open(database_path)
     let runner = migrations.Migrations(database=database, directory=migration_path)
-    print("applied=" + runner.apply().toString())
+    print("applied=" + runner.apply())
     let rows = database.query("SELECT message FROM messages ORDER BY id", [])
     var index: Int = 0
     while index < rows.size():

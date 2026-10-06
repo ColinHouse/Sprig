@@ -21,7 +21,7 @@ func optional_strings_error(text: String) -> String:
         let values = codec.optional_string_array(root, "tags")
         if values == null:
             return "null"
-        return "decoded: " + values.size().toString()
+        return "decoded: " + values.size()
     catch problem: Error:
         return problem.message
 
@@ -31,7 +31,7 @@ func optional_array_error(text: String) -> String:
         let values = codec.optional_array(root, "tags")
         if values == null:
             return "null"
-        return "decoded: " + values.size().toString()
+        return "decoded: " + values.size()
     catch problem: Error:
         return problem.message
 

@@ -12,7 +12,7 @@ func root_error(value: json.Value) -> String:
 
 func root_array_error(value: json.Value) -> String:
     try:
-        return "decoded: " + codec.root_array(value).size().toString()
+        return "decoded: " + codec.root_array(value).size()
     catch problem: Error:
         return problem.message
 
@@ -40,25 +40,25 @@ func required_string_error(reader: codec.Reader, name: String) -> String:
 
 func required_bool_error(reader: codec.Reader, name: String) -> String:
     try:
-        return "decoded: " + codec.required_bool(reader, name).toString()
+        return "decoded: " + codec.required_bool(reader, name)
     catch problem: Error:
         return problem.message
 
 func required_int_error(reader: codec.Reader, name: String) -> String:
     try:
-        return "decoded: " + codec.required_int(reader, name).toString()
+        return "decoded: " + codec.required_int(reader, name)
     catch problem: Error:
         return problem.message
 
 func required_decimal_error(reader: codec.Reader, name: String) -> String:
     try:
-        return "decoded: " + codec.required_decimal(reader, name).toString()
+        return "decoded: " + codec.required_decimal(reader, name)
     catch problem: Error:
         return problem.message
 
 func required_array_error(reader: codec.Reader, name: String) -> String:
     try:
-        return "decoded: " + codec.required_array(reader, name).size().toString()
+        return "decoded: " + codec.required_array(reader, name).size()
     catch problem: Error:
         return problem.message
 

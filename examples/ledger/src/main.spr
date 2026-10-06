@@ -40,6 +40,6 @@ func main() -> Unit throws Error:
     app.route(web.Route(method=web.Method.DELETE, path="/api/transactions/{id}", handler=fn(req: web.Request) => ledger.delete_transaction(req), summary="Delete transaction", response_status=204))
     app.route(web.Route(method=web.Method.GET, path="/api/statistics/monthly", handler=fn(req: web.Request) => ledger.monthly(req), summary="Monthly minor-unit totals", query_parameters=[web.QueryParameter(name="month", schema=string_schema, required=true)]))
     app.run(port)
-    print("LEDGER_READY " + app.port().toString())
+    print("LEDGER_READY " + app.port())
 
 main()
