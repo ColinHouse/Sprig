@@ -15,7 +15,7 @@ stability or API compatibility promise.
 - ZIP: [`sprig-v0.6.0-beta.1-jdk.zip`](https://github.com/ColinHouse/Sprig/releases/download/v0.6.0-beta.1/sprig-v0.6.0-beta.1-jdk.zip),
   **6,126,199 bytes**.
 - SHA-256: `b64e90cc644fa8a41202bcd59d0859d7a96d945031c09040625ea50115790990`;
-  this is the GitHub asset digest; the release also publishes a
+  this matches the GitHub asset digest and the published
   [`.sha256` file](https://github.com/ColinHouse/Sprig/releases/download/v0.6.0-beta.1/sprig-v0.6.0-beta.1-jdk.zip.sha256).
 - Release workflow [run 37408465542](https://github.com/ColinHouse/Sprig/actions/runs/37408465542)
   completed successfully. It built the exact tagged source, ran the tagged test
@@ -33,8 +33,8 @@ stability or API compatibility promise.
 | Tagged-source release workflow | Build and full `scripts/test.py` completed successfully on the tag before packaging was handed to validation (package job 03:19:54–03:40:41 UTC). |
 | Downloaded ZIP smoke matrix | Passed on Ubuntu and macOS with JDK 17 and JDK 26; each job tested the actual release ZIP outside the source checkout. |
 | Release notes | The GitHub release body is `docs/releases/v0.6.0-beta.1.md`. The notes path fixed in #91 replaced the generated PR list that v0.5.0-beta.1 shipped with. |
-| Public asset checksum | GitHub reports the ZIP asset digest `sha256:b64e90cc644fa8a41202bcd59d0859d7a96d945031c09040625ea50115790990`. A separate download-and-verify of the public asset was not run for this record. |
-| Managed SDK upgrade | Not run for this record; the installer and upgrade paths are covered by `tests/installer` and `tests/upgrade` in the tagged test suite. |
+| Public asset checksum | Passed after downloading the published ZIP (6,126,199 bytes): `shasum -a 256 -c sprig-v0.6.0-beta.1-jdk.zip.sha256`. The value equals the GitHub asset digest. |
+| Managed SDK upgrade | In an isolated `HOME`, `install-sprig.sh --version v0.5.0-beta.1` installed the previous Beta; `sprig upgrade --check` reported v0.6.0-beta.1 as available; `sprig upgrade` switched to it and retained the previous SDK directory; `sprig version` then reported `0.6.0-beta.1`, and a second check reported it as the latest published SDK. |
 
 #92 (`@std/process` exit status, standard error and standard input) merged
 into `main` while the release preparation #91 was in CI, so the tag includes
