@@ -93,7 +93,7 @@ Imported Java classes and generic methods can take concrete type arguments, like
 - Results are still treated as possibly `null`, so `get` on an `ArrayList[String]` returns `String?`.
 - Type arguments of generic methods aren't inferred, so write them out.
 - A raw type (one with no type arguments) can't stand in for a parameterized one. `ArrayList[String]` works as a `List[String]`; `ArrayList[Int32]` doesn't.
-- Wildcards (like `List<?>`) and generic arrays (`T[]`) aren't supported; `sprig api` shows the reason code for each one it rejects.
+- Wildcards keep their bounds: a `List<? extends Number>` result gives you `Number?` elements, a `List<? extends Number>` parameter takes an `ArrayList[Int]`, and anything that would write through `? extends` (like `add`) is rejected. Generic arrays (`T[]`) aren't supported; `sprig api` shows the reason code.
 
 ## Arrays and bytes
 
@@ -159,7 +159,7 @@ Before writing the file, `wrap` checks the generated code against the same class
 ## Not supported yet
 
 - **Array syntax**: there are no array literals, array type annotations, indexing or loops over arrays; arrays can only be passed along.
-- **Wildcard types**: outside a callback parameter's type arguments, members that use wildcards are rejected with a reason. Deeply nested builder APIs such as Brigadier need a small Java adapter; see [Fabric mods](/en/guide/fabric).
+- **Wildcard syntax**: a wildcard-typed value can be held and passed on, but you can't write a wildcard in a Sprig declaration, and nothing can be added through `? extends`. Deeply nested builder APIs such as Brigadier may still want a small Java adapter; see [Fabric mods](/en/guide/fabric).
 - **Varargs of a type variable** (`T...`): there is no element class to pack into.
 - **Generic inference**: write the type arguments yourself; there's no variance either.
 - **Nullability annotations**: Java's nullability annotations aren't read.

@@ -406,6 +406,13 @@ public final class JavaGenerator {
         if (type == NativeType.UNIT || type == NativeType.ERROR || type == NativeType.NULL) {
             return "java.lang.Object";
         }
+        if (type instanceof sprig.compiler.types.JavaWildcardType wildcard) {
+            // Only ever a type argument: List<? extends Number> stays itself.
+            if (wildcard.lower != null) {
+                return "? super " + boxedJavaType(wildcard.lower);
+            }
+            return wildcard.upper != null ? "? extends " + boxedJavaType(wildcard.upper) : "?";
+        }
         return javaType(type);
     }
 
@@ -2142,6 +2149,11 @@ public final class JavaGenerator {
         }
         if (type instanceof java.lang.reflect.TypeVariable<?> variable) {
             Type bound = bindings.get(variable);
+            if (bound instanceof sprig.compiler.types.JavaWildcardType wildcard) {
+                // A lambda parameter for T on a List<? extends Number> receiver
+                // is spelled as the bound; a wildcard is no standalone type.
+                return boxedJavaType(wildcard.readAs());
+            }
             return bound == null ? "java.lang.Object" : boxedJavaType(bound);
         }
         if (type instanceof java.lang.reflect.ParameterizedType applied

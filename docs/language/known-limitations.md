@@ -47,10 +47,10 @@ by the historical design kit in `docs/history/design-kit/`.
   trailing arguments or one opaque array of its element class; a
   type-variable element (`T...`) stays unsupported. Concrete
   generic arguments are preserved for explicit `Type[Arg]` application on
-  imported classes and methods; wildcards (except inside a functional-interface
-  parameter's type arguments), inference, recursive and
-  intersection bounds, generic arrays and Short/Byte/Character generic
-  arguments are rejected with structured reasons, class bounds are validated,
+  imported classes and methods; inference, recursive and intersection bounds,
+  generic arrays and Short/Byte/Character generic arguments are rejected with
+  structured reasons; a wildcard keeps its bound (reads at the upper bound, no
+  writes through `? extends`, no wildcard syntax in Sprig); class bounds are validated,
   raw evidence never promotes to concrete arguments, and raw boundaries stay
   erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
   implicit Java/Sprig collection conversion. Type-use nullability annotations

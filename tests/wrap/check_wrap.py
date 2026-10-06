@@ -15,6 +15,9 @@ failed = []
 GENERATOR_REASONS = {
     "value-adapter-unsupported", "nested-collection-unsupported",
     "overload-collision", "member-name-collision", "object-method-unsupported",
+    # the shared classification binds a wildcard at its bound (wildcard-bounds);
+    # a Sprig façade cannot spell one, so the generator skips the member.
+    "wildcard-unsupported",
     # the generator is intentionally stricter than the current shared Support
     # for recursive bounds until the follow-up safety classification lands.
     "generic-bound-unsupported",

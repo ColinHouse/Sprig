@@ -208,6 +208,6 @@ None of these exist yet:
 - tuples and destructuring
 - string interpolation: `"${name}"` is just text. Join with `+` instead: it accepts any value on either side, so `"count " + count` works without `toString()`, and the value appears as `print` would show it. `null`, a value that may be `null` (such as an `Int?`) and a `Unit` result are rejected. A chain evaluates from the left, so `1 + 2 + " items"` is `3 items`.
 
-When working with Java, Sprig has no array syntax, and it reads wildcard types only inside a callback's type arguments. Java arrays can still be received and passed along as they are, and varargs methods take their trailing arguments; see [JVM interop](/en/guide/jvm-interop).
+When working with Java, Sprig has no array syntax and no wildcard syntax of its own. Java arrays can still be received and passed along as they are, varargs methods take their trailing arguments, and Java wildcards keep their bounds; see [JVM interop](/en/guide/jvm-interop).
 
 The full list is in [known limitations](/en/reference/language/known-limitations), and what comes next is in the [roadmap](/en/reference/language/stage1-roadmap).

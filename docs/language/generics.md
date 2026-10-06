@@ -166,7 +166,8 @@ Explicit type arguments also apply to imported Java classes and methods
 (`ArrayList[String]`, `Host.method[String](value)`). Concrete arguments are
 preserved in Sprig types and in `sprig api` metadata; class type variables
 resolve through the receiver and its inherited hierarchy. The profile is
-deliberately bounded: no wildcard syntax, no capture conversion and no Java
+deliberately bounded: no wildcard syntax in Sprig (an imported wildcard keeps
+its bound and cannot be written through), no capture conversion and no Java
 generic inference; method type parameters require explicit arguments, and
 recursive/intersection bounds or generic arrays are rejected before codegen.
 Java reference results remain conservatively nullable. See

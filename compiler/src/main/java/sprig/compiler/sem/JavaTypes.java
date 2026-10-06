@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import sprig.compiler.types.JavaType;
+import sprig.compiler.types.JavaWildcardType;
 import sprig.compiler.types.ListType;
 import sprig.compiler.types.MapType;
 import sprig.compiler.types.NativeType;
@@ -102,6 +103,15 @@ public final class JavaTypes {
         if (generic instanceof TypeVariable<?> variable) {
             Type bound = bindings.get(variable);
             if (bound == null) return null;
+            if (bound instanceof JavaWildcardType wildcard) {
+                // A variable bound to a wildcard through the receiver, as E in
+                // List<? extends Number>: a result reads as the upper bound; a
+                // parameter takes the lower bound and nothing for ? extends.
+                if (valuePosition) {
+                    return NullableType.of(wildcard.readAs());
+                }
+                return wildcard.lower;
+            }
             return valuePosition ? NullableType.of(bound) : bound;
         }
         if (generic instanceof ParameterizedType applied
@@ -138,7 +148,12 @@ public final class JavaTypes {
         return null;
     }
 
-    /** Maps one concrete generic argument; no nullability, no wildcard capture. */
+    /**
+     * Maps one generic argument; no nullability. A wildcard keeps its bound
+     * as a {@link JavaWildcardType}, so {@code List<? extends Number>} stays
+     * distinguishable from {@code List<Number>}: reads yield the bound,
+     * writes through {@code ? extends} are rejected, as in Java.
+     */
     public static Type mapArgument(java.lang.reflect.Type generic,
             Map<TypeVariable<?>, Type> bindings) {
         if (generic instanceof Class<?> clazz) {
@@ -151,6 +166,19 @@ public final class JavaTypes {
         }
         if (generic instanceof TypeVariable<?> variable) {
             return bindings.get(variable);
+        }
+        if (generic instanceof WildcardType wildcard) {
+            java.lang.reflect.Type[] lower = wildcard.getLowerBounds();
+            java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
+            if (lower.length == 1) {
+                Type bound = mapArgument(lower[0], bindings);
+                return bound == null || bound instanceof JavaWildcardType ? null : new JavaWildcardType(null, bound);
+            }
+            if (upper.length == 1 && upper[0] != Object.class) {
+                Type bound = mapArgument(upper[0], bindings);
+                return bound == null || bound instanceof JavaWildcardType ? null : new JavaWildcardType(bound, null);
+            }
+            return new JavaWildcardType(null, null);
         }
         if (generic instanceof ParameterizedType applied
                 && applied.getRawType() instanceof Class<?> rawClass) {
@@ -250,11 +278,133 @@ public final class JavaTypes {
         if (target.args.isEmpty()) {
             return true; // concrete source to raw target stays an erased boundary
         }
+        if (source.args.isEmpty() && source.clazz.getTypeParameters().length > 0
+                && unboundedArguments(target.args)) {
+            // A raw value claims nothing and a target of bare wildcards asks
+            // nothing, so raw List enters List<?>; List<String> would be an
+            // unchecked conversion and fails the projection below.
+            return true;
+        }
         if (target.clazz == source.clazz) {
-            return target.args.equals(source.args);
+            return argumentsAccept(target.args, source.args);
         }
         List<Type> projected = projectedArguments(target.clazz, source.clazz, source.args);
-        return projected != null && target.args.equals(projected);
+        return projected != null && argumentsAccept(target.args, projected);
+    }
+
+    /**
+     * Invariant argument matching, with Java's one relaxation: a wildcard in
+     * the target accepts an argument within its bound ({@code ? extends Number}
+     * takes {@code Integer}, {@code ? super Integer} takes {@code Number}, a
+     * bare {@code ?} takes anything). A wildcard in the source fits a target
+     * wildcard that contains it ({@code ? extends Integer} fits
+     * {@code ? extends Number}, {@code ? super Number} fits
+     * {@code ? super Integer}, anything fits {@code ?}).
+     */
+    public static boolean argumentsAccept(List<Type> targets, List<Type> sources) {
+        if (targets.size() != sources.size()) {
+            return false;
+        }
+        for (int i = 0; i < targets.size(); i++) {
+            if (!argumentAccepts(targets.get(i), sources.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean argumentAccepts(Type target, Type source) {
+        if (target.equals(source)) {
+            return true;
+        }
+        if (!(target instanceof JavaWildcardType wildcard)) {
+            return false;
+        }
+        if (source instanceof JavaWildcardType given) {
+            if (wildcard.lower != null) {
+                return given.lower != null && fitsBound(given.lower, wildcard.lower);
+            }
+            if (wildcard.upper == null) {
+                return true;
+            }
+            return given.lower == null && given.upper != null && fitsBound(wildcard.upper, given.upper);
+        }
+        if (wildcard.lower != null) {
+            return fitsBound(source, wildcard.lower);
+        }
+        return wildcard.upper == null || fitsBound(wildcard.upper, source);
+    }
+
+    /**
+     * Whether {@code source} lies within {@code bound} on the JVM: a Java
+     * bound compares against the source's boxed image ({@code Int} is a
+     * {@code Long}, so it fits {@code ? extends Number}); a Sprig bound uses
+     * ordinary assignability.
+     */
+    private static boolean fitsBound(Type bound, Type source) {
+        if (bound.equals(source)) {
+            return true;
+        }
+        if (bound instanceof JavaType javaBound) {
+            if (source instanceof JavaType javaSource) {
+                return javaTypeCompatible(javaBound, javaSource);
+            }
+            if (!javaBound.args.isEmpty()) {
+                return javaArgumentCompatible(javaBound, source);
+            }
+            Class<?> image = boxedFor(source);
+            return image != null && image != Object.class && javaBound.clazz.isAssignableFrom(image);
+        }
+        return Semantics.isAssignable(bound, source);
+    }
+
+    /** Whether every argument is a bare {@code ?}, the one shape a raw value may enter. */
+    public static boolean unboundedArguments(List<Type> arguments) {
+        for (Type argument : arguments) {
+            if (!(argument instanceof JavaWildcardType wildcard) || wildcard.upper != null || wildcard.lower != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Whether a formal written against {@code bindings} would write through
+     * a wildcard: it mentions a type variable the receiver binds to a wildcard
+     * anywhere except as the whole formal bound to {@code ? super X}, whose
+     * lower bound is the one type Java lets in. Such a parameter, field or
+     * callback result has no type to offer, as Java's capture rule says.
+     */
+    public static boolean capturedWrite(java.lang.reflect.Type generic, Map<TypeVariable<?>, Type> bindings) {
+        if (generic instanceof TypeVariable<?> variable) {
+            return bindings.get(variable) instanceof JavaWildcardType wildcard && wildcard.lower == null;
+        }
+        return mentionsWildcardBound(generic, bindings);
+    }
+
+    private static boolean mentionsWildcardBound(java.lang.reflect.Type generic, Map<TypeVariable<?>, Type> bindings) {
+        if (generic instanceof TypeVariable<?> variable) {
+            return bindings.get(variable) instanceof JavaWildcardType;
+        }
+        if (generic instanceof ParameterizedType applied) {
+            for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                if (mentionsWildcardBound(argument, bindings)) return true;
+            }
+            return false;
+        }
+        if (generic instanceof WildcardType wildcard) {
+            for (java.lang.reflect.Type bound : wildcard.getUpperBounds()) {
+                if (mentionsWildcardBound(bound, bindings)) return true;
+            }
+            for (java.lang.reflect.Type bound : wildcard.getLowerBounds()) {
+                if (mentionsWildcardBound(bound, bindings)) return true;
+            }
+            return false;
+        }
+        if (generic instanceof GenericArrayType array) {
+            return mentionsWildcardBound(array.getGenericComponentType(), bindings);
+        }
+        return false;
     }
 
     /**
@@ -274,23 +424,23 @@ public final class JavaTypes {
             return boxedFor(source) != null;
         }
         if (target.clazz == sprig.runtime.SprigList.class && source instanceof ListType list) {
-            return target.args.equals(List.of(list.element));
+            return argumentsAccept(target.args, List.of(list.element));
         }
         if (target.clazz == sprig.runtime.SprigMutableList.class && source instanceof ListType list) {
-            return list.mutable && target.args.equals(List.of(list.element));
+            return list.mutable && argumentsAccept(target.args, List.of(list.element));
         }
         if (target.clazz == sprig.runtime.SprigMap.class && source instanceof MapType map) {
-            return target.args.equals(List.of(map.key, map.value));
+            return argumentsAccept(target.args, List.of(map.key, map.value));
         }
         if (target.clazz == sprig.runtime.SprigMutableMap.class && source instanceof MapType map) {
-            return map.mutable && target.args.equals(List.of(map.key, map.value));
+            return map.mutable && argumentsAccept(target.args, List.of(map.key, map.value));
         }
         Class<?> image = boxedFor(source);
         if (image == null || image == Object.class || !target.clazz.isAssignableFrom(image)) {
             return false;
         }
         List<Type> projected = projectedArguments(target.clazz, image, List.of());
-        return projected != null && target.args.equals(projected);
+        return projected != null && argumentsAccept(target.args, projected);
     }
 
     /** Projects source arguments onto target type variables through the hierarchy. */
@@ -511,18 +661,26 @@ public final class JavaTypes {
         if (sam == null || local == null) return null;
         List<Type> params = new ArrayList<>();
         for (java.lang.reflect.Type parameter : sam.getGenericParameterTypes()) {
-            Type mapped = functionalSlot(parameter, local);
+            Type mapped = functionalSlot(parameter, local, false);
             if (mapped == null || mapped == NativeType.UNIT) return null;
             params.add(mapped);
         }
         Type result = sam.getReturnType() == void.class
-                ? NativeType.UNIT : functionalSlot(sam.getGenericReturnType(), local);
+                ? NativeType.UNIT : functionalSlot(sam.getGenericReturnType(), local, true);
         if (result == null) return null;
         return new sprig.compiler.types.FunctionType(params, result);
     }
 
-    /** One parameter or result of the functional method: a class, a bound variable or a concrete generic. */
-    private static Type functionalSlot(java.lang.reflect.Type generic, Map<TypeVariable<?>, Type> bindings) {
+    /**
+     * One parameter or result of the functional method: a class, a bound
+     * variable or a concrete generic. A variable bound to a wildcard through
+     * the receiver (forEach on a List<? extends Number>) hands the lambda its
+     * upper bound where the lambda receives a value and asks for the lower
+     * bound where the lambda returns one; a result slot bound to
+     * {@code ? extends} has no type the lambda could return, so it is null.
+     */
+    private static Type functionalSlot(java.lang.reflect.Type generic, Map<TypeVariable<?>, Type> bindings,
+            boolean resultSlot) {
         if (generic instanceof Class<?> clazz) {
             // Character/Short/Byte need value adapters, as the Fn slots document.
             if (clazz.isArray() || needsValueAdapter(clazz) || clazz == short.class || clazz == byte.class) {
@@ -531,10 +689,14 @@ public final class JavaTypes {
             return map(clazz);
         }
         if (generic instanceof TypeVariable<?> variable) {
-            return bindings.get(variable);
+            Type bound = bindings.get(variable);
+            if (bound instanceof JavaWildcardType wildcard) {
+                return resultSlot ? wildcard.lower : wildcard.readAs();
+            }
+            return bound;
         }
         if (generic instanceof ParameterizedType) {
-            return mapBoundary(generic, bindings, false);
+            return mentionsWildcardBound(generic, bindings) ? null : mapBoundary(generic, bindings, false);
         }
         return null;
     }
@@ -762,6 +924,7 @@ public final class JavaTypes {
         if (type == NativeType.DECIMAL) return sprig.runtime.SprigDecimal.class;
         if (type == NativeType.BIGINT) return sprig.runtime.SprigBigInt.class;
         if (type instanceof JavaType javaType) return javaType.clazz;
+        if (type instanceof JavaWildcardType wildcard) return preferredRaw(wildcard.readAs());
         if (type instanceof ListType) return sprig.runtime.SprigList.class;
         if (type instanceof MapType) return sprig.runtime.SprigMap.class;
         return null;
@@ -798,6 +961,9 @@ public final class JavaTypes {
         }
         if (type instanceof JavaType javaType) {
             return boxed(javaType.clazz);
+        }
+        if (type instanceof JavaWildcardType wildcard) {
+            return boxedFor(wildcard.readAs());
         }
         if (type instanceof ListType) {
             return sprig.runtime.SprigList.class;

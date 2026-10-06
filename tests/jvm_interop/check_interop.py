@@ -2,9 +2,11 @@
 """Bounded JVM interop: opaque arrays, concrete generics, adapters and bytes.
 
 Independent Java fixtures are compiled locally; api metadata, check/build and
-JVM behavior are compared for the same shapes. Wildcards, generic inference,
-source arrays and type-variable varargs must stay honest negatives with structured
-reasons; functional-interface parameters and class-element varargs are positives.
+JVM behavior are compared for the same shapes. Generic inference, source
+arrays and type-variable varargs must stay honest negatives with structured
+reasons; wildcards keep their bounds (reads at the upper bound, no writes through
+? extends), and functional-interface parameters and class-element varargs are
+positives.
 """
 import base64
 import hashlib
@@ -92,6 +94,15 @@ public final class Interop {
     public static <T extends Comparable<T>> T pick(T a, T b) { return a.compareTo(b) <= 0 ? a : b; }
     public static <T> T[] genericArray(T value) { throw new UnsupportedOperationException(); }
     public static List<? extends Number> wildcardResult() { return List.of(1, 2); }
+    public static double wildcardSum(List<? extends Number> values) {
+        double total = 0; for (Number v : values) total += v.doubleValue(); return total;
+    }
+    public static void wildcardFill(List<? super Long> sink) { sink.add(7L); }
+    public static int wildcardCount(java.util.Collection<?> values) { return values.size(); }
+    public static Class<?> wildcardClass(Object value) { return value.getClass(); }
+    public static String wildcardName(Class<?> type) { return type.getSimpleName(); }
+    public static Holder<? extends Number> wildcardHolder() { Holder<Integer> h = new Holder<>(); h.value = 1; return h; }
+    public static Holder<? super Long> wildcardSink() { return new Holder<Number>(); }
     public static String join(String format, Object... args) { return String.format(format, args); }
     public static int total(int... values) { int sum = 0; for (int v : values) sum += v; return sum; }
     public static String first(String... values) { return values.length == 0 ? "none" : values[0]; }
@@ -121,6 +132,7 @@ public final class Interop {
 public class Holder<T> {
     public java.util.List<?> wildcardValues;
     public java.util.List<T[]> values;
+    public T value;
     public Holder() {}
 }
 ''',
@@ -306,7 +318,7 @@ def main():
         expected = {"sourceArrays": False, "jvmArrayPassThrough": True,
                     "jvmByteArrayHelpers": True, "jvmConcreteGenerics": True,
                     "jvmCollectionAdapters": True, "jvmGenericInference": False,
-                    "jvmWildcards": False, "jvmVarargs": True, "jvmFunctionalInterfaces": True}
+                    "jvmWildcards": True, "jvmVarargs": True, "jvmFunctionalInterfaces": True}
         verify("capabilities-interop-fields",
                catalog and all(catalog.get(key) == value for key, value in expected.items()),
                str({key: catalog.get(key) if catalog else None for key in expected}))
@@ -360,8 +372,19 @@ def main():
         unsupported = {
             "pick": "generic-bound-unsupported",
             "genericArray": "generic-array-unsupported",
-            "wildcardResult": "wildcard-unsupported",
         }
+        wildcard_api = members.get("wildcardResult", {})
+        verify("api-wildcard-result",
+               wildcard_api.get("usableFromSprig") and wildcard_api.get("signatureSupported")
+               and "wildcard-bounds" in wildcard_api.get("interopReasonCodes", [])
+               and "? extends Number" in wildcard_api.get("sprigBoundaryType", ""),
+               str(wildcard_api))
+        wildcard_fill_api = members.get("wildcardFill", {})
+        verify("api-wildcard-parameter",
+               wildcard_fill_api.get("usableFromSprig")
+               and "wildcard-bounds" in wildcard_fill_api.get("interopReasonCodes", [])
+               and wildcard_fill_api.get("sprigParameterTypes") == ["java.util.List[? super Int]"],
+               str(wildcard_fill_api))
         join_api = members.get("join", {})
         verify("api-varargs-expansion",
                join_api.get("usableFromSprig") and "varargs-expansion" in join_api.get("interopReasonCodes", [])
@@ -700,17 +723,105 @@ if value != null:
         verify("check-bounded-class-accepted", bounded_ok.returncode == 0,
                f"exit={bounded_ok.returncode} {bounded_ok.stdout}{bounded_ok.stderr}")
 
-        _, wildcard_call = check_file("wildcard-invocation.spr", '''import audit.Interop as Interop
+        # ------------------------------------------------ wildcard bounds
+        _, wildcard_run = run_file("wildcard-bounds.spr", '''import audit.Interop as Interop
+import java.lang.Number as Number
+import java.util.ArrayList as ArrayList
+
 let values = Interop.wildcardResult()
+if values != null:
+    print(values.size())
+    let first = values.get(0)
+    if first != null:
+        print(first.intValue())
+    print(Interop.wildcardSum(values))
+    print(Interop.wildcardCount(values))
+    values.forEach(fn(value: Number) => print(value.intValue()))
+let longs = ArrayList[Int]()
+longs.add(4)
+print(Interop.wildcardSum(longs))
+Interop.wildcardFill(longs)
+print(longs.size())
+let type = Interop.wildcardClass("text")
+if type != null:
+    print(Interop.wildcardName(type))
+let holder = Interop.wildcardHolder()
+if holder != null:
+    let held = holder.value
+    if held != null:
+        print(held.intValue())
+let sink = Interop.wildcardSink()
+if sink != null:
+    sink.value = 9
+    let stored = sink.value
+    if stored != null:
+        print(stored.toString())
+''')
+        verify("run-wildcard-bounds",
+               wildcard_run.returncode == 0
+               and wildcard_run.stdout == "2\n1\n3.0\n2\n1\n2\n4.0\n2\nString\n1\n9\n",
+               f"exit={wildcard_run.returncode} stdout={wildcard_run.stdout!r} stderr={wildcard_run.stderr!r}")
+
+        for name, source, expected in (
+            ("wildcard-add", "let values = Interop.wildcardResult()\nif values != null:\n    values.add(3)\n",
+             "would write through a '? extends' wildcard"),
+            ("wildcard-addall", "let values = Interop.wildcardResult()\nif values != null:\n    values.addAll(values)\n",
+             "would write through a '? extends' wildcard"),
+            ("wildcard-strings", "let names = ArrayList[String]()\nprint(Interop.wildcardSum(names))\n",
+             "incompatible or narrowing argument 1"),
+            ("wildcard-super", "let ints = ArrayList[Int32]()\nInterop.wildcardFill(ints)\n",
+             "incompatible or narrowing argument 1"),
+        ):
+            _, rejected = check_file(f"{name}.spr",
+                                     "import audit.Interop as Interop\nimport java.util.ArrayList as ArrayList\n" + source,
+                                     "--json")
+            rejected_diag = diagnostic(rejected)
+            rejected_reasons = [c.get("rejectedBecause") or "" for c in
+                                (rejected_diag or {}).get("data", {}).get("candidates", [])]
+            verify(f"check-{name}-rejected",
+                   rejected.returncode == 1 and rejected_diag
+                   and rejected_diag["code"] == "SPR-JVM-MEMBER"
+                   and any(expected in reason for reason in rejected_reasons)
+                   and "SPR-JVM-COMPILE" not in rejected.stdout + rejected.stderr,
+                   f"exit={rejected.returncode} reasons={rejected_reasons} {rejected.stderr}")
+
+        _, wildcard_assign = check_file("wildcard-assign.spr", '''import audit.Interop as Interop
+import java.util.List as JavaList
+import java.lang.Number as Number
+
+let values = Interop.wildcardResult()
+if values != null:
+    let typed: JavaList[Number] = values
 ''', "--json")
-        wildcard_diag = diagnostic(wildcard_call)
-        wildcard_reasons = [c.get("rejectedBecause") for c in
-                            (wildcard_diag or {}).get("data", {}).get("candidates", [])]
-        verify("check-wildcard-invocation-rejected",
-               wildcard_call.returncode == 1 and wildcard_diag
-               and wildcard_diag["code"] == "SPR-JVM-MEMBER"
-               and "Java wildcards are not supported" in wildcard_reasons,
-               f"exit={wildcard_call.returncode} reasons={wildcard_reasons}")
+        wildcard_assign_diag = diagnostic(wildcard_assign)
+        verify("check-wildcard-not-concrete",
+               wildcard_assign.returncode == 1 and wildcard_assign_diag
+               and wildcard_assign_diag["code"] == "SPR-TYPE-ASSIGN",
+               f"exit={wildcard_assign.returncode} {wildcard_assign.stdout}{wildcard_assign.stderr}")
+
+        _, wildcard_field = check_file("wildcard-field-write.spr", '''import audit.Interop as Interop
+let holder = Interop.wildcardHolder()
+if holder != null:
+    holder.value = 3
+''', "--json")
+        wildcard_field_diag = diagnostic(wildcard_field)
+        verify("check-wildcard-field-write-rejected",
+               wildcard_field.returncode == 1 and wildcard_field_diag
+               and wildcard_field_diag["code"] == "SPR-JVM-MEMBER"
+               and "? extends" in wildcard_field_diag["message"]
+               and len(body(wildcard_field)["diagnostics"]) == 1,
+               f"exit={wildcard_field.returncode} {wildcard_field.stdout}{wildcard_field.stderr}")
+
+        _, wildcard_sink_write = check_file("wildcard-sink-write.spr", '''import audit.Interop as Interop
+let sink = Interop.wildcardSink()
+if sink != null:
+    sink.value = "text"
+''', "--json")
+        wildcard_sink_diag = diagnostic(wildcard_sink_write)
+        verify("check-wildcard-super-write-rejected",
+               wildcard_sink_write.returncode == 1 and wildcard_sink_diag
+               and wildcard_sink_diag["code"] == "SPR-TYPE-ASSIGN",
+               f"exit={wildcard_sink_write.returncode} {wildcard_sink_write.stdout}{wildcard_sink_write.stderr}")
 
         # -------------------------------- concrete Comparable[T] projection
         _, comparable = run_file("comparable.spr", '''import audit.Interop as Interop
@@ -833,8 +944,8 @@ if typed != null:
         holder_api = body(call("api", "audit.Holder", "--classpath", cp, "--json")) or {}
         holder_fields = {f["name"]: f for f in holder_api.get("fields", [])}
         verify("api-recursive-field-shapes",
-               not holder_fields.get("wildcardValues", {}).get("signatureSupported")
-               and "wildcard-unsupported" in holder_fields.get("wildcardValues", {}).get("interopReasonCodes", [])
+               holder_fields.get("wildcardValues", {}).get("signatureSupported")
+               and "wildcard-bounds" in holder_fields.get("wildcardValues", {}).get("interopReasonCodes", [])
                and not holder_fields.get("values", {}).get("signatureSupported")
                and "generic-array-unsupported" in holder_fields.get("values", {}).get("interopReasonCodes", []),
                str({name: (f.get("interopLevel"), f.get("interopReasonCodes"))
@@ -852,16 +963,23 @@ let values = Interop.nestedGenericArray[String]("x")
                and any(reason and "generic array" in reason for reason in nested_reasons),
                f"exit={nested_call.returncode} reasons={nested_reasons}")
 
-        _, holder_wildcard = check_file("holder-wildcard.spr", '''import audit.Holder as Holder
+        _, holder_wildcard = run_file("holder-wildcard.spr", '''import audit.Holder as Holder
+import java.util.ArrayList as ArrayList
+
 let holder = Holder[String]()
+let names = ArrayList[String]()
+names.add("x")
+holder.wildcardValues = names
 let values = holder.wildcardValues
-''', "--json")
-        holder_wildcard_diag = diagnostic(holder_wildcard)
-        verify("check-wildcard-field-rejected",
-               holder_wildcard.returncode == 1 and holder_wildcard_diag
-               and holder_wildcard_diag["code"] == "SPR-JVM-MEMBER"
-               and "wildcard-unsupported" in holder_wildcard_diag.get("data", {}).get("interopReasonCodes", []),
-               f"exit={holder_wildcard.returncode} {holder_wildcard.stdout}{holder_wildcard.stderr}")
+if values != null:
+    print(values.size())
+    let first = values.get(0)
+    if first != null:
+        print(first.toString())
+''')
+        verify("run-wildcard-field",
+               holder_wildcard.returncode == 0 and holder_wildcard.stdout == "1\nx\n",
+               f"exit={holder_wildcard.returncode} stdout={holder_wildcard.stdout!r} stderr={holder_wildcard.stderr!r}")
 
         _, holder_array = check_file("holder-generic-array.spr", '''import audit.Holder as Holder
 let holder = Holder[String]()
