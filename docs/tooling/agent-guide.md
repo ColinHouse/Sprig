@@ -23,6 +23,7 @@ bin/sprig api . --json
 bin/sprig project --json
 bin/sprig deps --json
 bin/sprig check program.spr --json
+bin/sprig check --bin tool --json
 bin/sprig explain SPR-CODE --json
 bin/sprig run program.spr --json
 bin/sprig test examples/test_runner --json

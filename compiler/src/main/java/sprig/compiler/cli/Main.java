@@ -8,9 +8,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -126,10 +128,10 @@ public final class Main {
     private static void usage(java.io.PrintStream out) {
         out.println("Usage: sprig <command> [options]");
         out.println();
-        out.println("  check <file.spr> [--json] [--syntax-only]   parse and type-check");
-        out.println("  run   <file.spr> [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM");
+        out.println("  check [file.spr] [--bin NAME] [--json] [--syntax-only]   parse and type-check (every bin when a project has no entry)");
+        out.println("  run   [file.spr] [--bin NAME] [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM");
         out.println("  test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline] run project tests and compile-fail fixtures");
-        out.println("  build <file.spr> [-d dir] [--emit-java-only] [--json]          emit Java sources + .class files");
+        out.println("  build [file.spr] [--bin NAME] [-d dir] [--emit-java-only] [--json] emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
         out.println("  help [topic] [--json]                       language reference (topics: "
@@ -761,20 +763,39 @@ public final class Main {
             report(diagnostics, options.json, "check", 1, null);
             return 1;
         }
-        if (sourcePrep.source == null) {
+        if (sourcePrep.source == null && sourcePrep.bins.isEmpty()) {
             return commandError("check", "Missing <file.spr> and no sprig.toml found", options.json);
         }
-        if (options.syntaxOnly) {
-            new Compiler(diagnostics).parseOnly(sourcePrep.source);
-        } else {
-            Compiler compiler = new Compiler(diagnostics);
-            if (sourcePrep.graph != null) {
-                compiler.setImportResolver(sourcePrep.graph);
+        List<Path> sources = sourcePrep.bins.isEmpty()
+                ? List.of(sourcePrep.source) : List.copyOf(sourcePrep.bins.values());
+        Set<String> seen = new HashSet<>();
+        for (Path source : sources) {
+            // Each bin compiles on its own; a module they share reports its problems once.
+            Diagnostics own = new Diagnostics();
+            if (options.syntaxOnly) {
+                new Compiler(own).parseOnly(source);
+            } else {
+                Compiler compiler = new Compiler(own);
+                if (sourcePrep.graph != null) {
+                    compiler.setImportResolver(sourcePrep.graph);
+                }
+                compiler.compile(source);
             }
-            compiler.compile(sourcePrep.source);
+            for (Diagnostic diagnostic : own.all()) {
+                String key = diagnostic.code + "\u0000" + diagnostic.uri + "\u0000"
+                        + (diagnostic.span == null ? "" : diagnostic.span.display()) + "\u0000" + diagnostic.message;
+                if (seen.add(key)) {
+                    diagnostics.add(diagnostic);
+                }
+            }
         }
         int status = diagnostics.hasErrors() ? 1 : 0;
-        report(diagnostics, options.json, "check", status, null);
+        if (options.json && !sourcePrep.bins.isEmpty()) {
+            System.out.print(JsonWriter.result(diagnostics.all(), null, "check", status, null,
+                    Map.of("bins", List.copyOf(sourcePrep.bins.keySet()))));
+        } else {
+            report(diagnostics, options.json, "check", status, null);
+        }
         return status;
     }
 
@@ -935,6 +956,8 @@ public final class Main {
     private static final class Prepared {
         Path source;
         DependencyResolver.Result graph;
+        /** Every [[bin]] entry by name, set instead of source when check covers all bins. */
+        Map<String, Path> bins = new LinkedHashMap<>();
     }
 
     /**
@@ -960,25 +983,42 @@ public final class Main {
             if (options.bin != null) {
                 Path entry = project.entryForBin(options.bin);
                 if (entry == null) {
-                    diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                    diagnostics.add(binChoice(project, Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
                             "Project '" + project.name + "' has no --bin '" + options.bin + "'",
-                            project.manifest.toString(), null));
+                            project.manifest.toString(), null)));
                     return prepared;
                 }
                 prepared.source = entry;
+            } else if (explicit != null) {
+                // An explicit .spr file always wins, and inside the source root it
+                // still compiles against the project's locked dependencies.
+                prepared.source = explicit;
             } else if (project.bins.size() > 1 && !project.hasExplicitEntry) {
-                diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
-                        "Multiple binaries require --bin or an explicit [project] entry",
-                        project.manifest.toUri().toString(), null));
-                return prepared;
+                if (!command.equals("check")) {
+                    diagnostics.add(binChoice(project, Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                            "Multiple binaries require --bin or an explicit [project] entry",
+                            project.manifest.toUri().toString(), null)));
+                    return prepared;
+                }
+                // Checking has no side effects, so with no default it covers every bin.
+                for (Project.Bin bin : project.bins) {
+                    prepared.bins.put(bin.name, project.root.resolve(bin.entry));
+                }
             } else {
-                prepared.source = explicit != null ? explicit : project.entryPath();
+                prepared.source = project.entryPath();
             }
-            if (explicit == null && !Files.isRegularFile(prepared.source)) {
-                diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
-                        "Project entry does not exist: " + project.defaultEntry,
-                        project.manifest.toString(), null));
-                return prepared;
+            if (explicit == null) {
+                List<Path> entries = prepared.bins.isEmpty()
+                        ? List.of(prepared.source) : List.copyOf(prepared.bins.values());
+                for (Path entry : entries) {
+                    if (!Files.isRegularFile(entry)) {
+                        diagnostics.add(Diagnostic.error(Codes.PROJECT_ENTRY, Phase.CLI,
+                                "Project entry does not exist: "
+                                        + project.root.relativize(entry.normalize()).toString().replace('\\', '/'),
+                                project.manifest.toString(), null));
+                        return prepared;
+                    }
+                }
             }
             prepared.graph = loadProjectGraph(project, options);
             configureProjectClasspath(prepared.graph, options, diagnostics);
@@ -996,6 +1036,20 @@ public final class Main {
                     "Project I/O failure: " + e.getMessage(), null, null));
             return prepared;
         }
+    }
+
+    /** Names the bins a command can be pointed at, for a missing or unknown --bin. */
+    private static Diagnostic binChoice(Project project, Diagnostic diagnostic) {
+        if (project.bins.isEmpty()) {
+            return diagnostic;
+        }
+        List<String> choices = new ArrayList<>();
+        for (Project.Bin bin : project.bins) {
+            choices.add("--bin " + bin.name);
+        }
+        boolean noDefault = project.bins.size() > 1 && !project.hasExplicitEntry;
+        return diagnostic.withHint("Name one: " + String.join(", ", choices) + "."
+                + (noDefault ? " sprig check with no file checks every bin." : ""));
     }
 
     private static void configureProjectClasspath(DependencyResolver.Result graph, Options options,
@@ -1874,7 +1928,10 @@ public final class Main {
                 return "-d/--out is only valid with build or wrap";
             if (memberFilter != null && !List.of("api", "wrap").contains(command))
                 return "--member is only valid with api or wrap";
-            if (bin != null && !command.equals("run")) return "--bin is only valid with run";
+            if (bin != null && !List.of("check", "build", "run").contains(command))
+                return "--bin is only valid with check, build or run";
+            if (bin != null && file != null)
+                return "Give either a .spr file or --bin " + bin + ", not both";
             if (offline && !List.of("resolve", "check", "build", "run", "api", "doctor", "wrap")
                     .contains(command)) return "--offline is not valid with " + command;
             if (!classpath.isEmpty() && !List.of("check", "build", "run", "api", "doctor", "wrap").contains(command))

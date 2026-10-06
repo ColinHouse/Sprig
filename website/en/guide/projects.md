@@ -55,7 +55,7 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-Run it with `sprig run --bin server`. If you declare several bins and the project has no `entry` of its own, `--bin` is required.
+Run it with `sprig run --bin server`; `sprig check --bin server` and `sprig build --bin server` work on that one bin too. If you declare several bins and the project has no `entry` of its own, a plain `sprig check` checks every bin, while `build` and `run` handle one program and need `--bin`. You can also name a file in the project directly (`sprig check src/server.spr`); it still compiles against the project's dependencies.
 
 ## Adding dependencies
 
