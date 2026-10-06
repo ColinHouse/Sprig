@@ -63,6 +63,21 @@ CASES = [
     ("catch-java", "try:\n    print(1)\ncatch (e: Error):\n    pass\n", "SPR-SYNTAX-ERROR", "catch problem: Error:"),
     ("catch-as", "try:\n    print(1)\ncatch Error as e:\n    pass\n", "SPR-SYNTAX-ERROR", "catch problem: Error:"),
     ("python-except", "try:\n    print(1)\nexcept Exception as e:\n    pass\n", "SPR-SYNTAX-ERROR", "catch problem: Error:"),
+    ("slash-comment", "// note\nprint(1)\n", "SPR-SYNTAX-ERROR", "Comments start with '#'"),
+    ("block-comment", "/* note */\nprint(1)\n", "SPR-SYNTAX-ERROR", "Comments start with '#'"),
+    ("c-style-if", "let s = \"ab\"\nif (s.length() < 3) print(s)\n", "SPR-SYNTAX-ERROR", "header ends with ':'"),
+    ("one-line-if", "func f() -> Bool:\n    if true: return false\n    return true\n", "SPR-SYNTAX-ERROR", "no one-line if"),
+    ("dot-dot-range", "for i in 0..3:\n    print(i)\n", "SPR-SYNTAX-ERROR", "range(start, stop)"),
+    ("assignment-in-condition", "var line = \"a\"\nwhile (line = \"b\"):\n    print(1)\n", "SPR-SYNTAX-ERROR", "Compare with '=='"),
+    ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
+    ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
+     "sum.toFloat() / count.toFloat()"),
+    ("nullable-operand", "let n = \"3\".toIntOrNull()\nprint(n + 1)\n", "SPR-NUM-MIXED", "check it first with 'if n != null:'"),
+    ("nullable-ordering", "let n = \"3\".toIntOrNull()\nif n > 2:\n    print(1)\n", "SPR-TYPE-OPERAND", "'if n != null:'"),
+    ("nullable-var", "var v = \"3\".toIntOrNull()\nprint(v + 1)\n", "SPR-NUM-MIXED", "a var never narrows"),
+    ("module-member", "import \"@std/text.spr\" as text\nprint(text.format(\"a\"))\n", "SPR-NAME-UNRESOLVED",
+     "Module 'text' has: join"),
+    ("read-only-list", "let words: MutableList[String] = \"a b\".split(\" \")\n", "SPR-TYPE-ASSIGN", "toMutableList()"),
     ("star-import", "import java.io.*\nprint(1)\n", "SPR-SYNTAX-ERROR", "one at a time"),
     ("int-conversion", "let n = Int(\"3\")\n", "SPR-TYPE-NOT-CALLABLE", "toIntOrNull()"),
     ("string-conversion", "let s = String(3)\n", "SPR-TYPE-NOT-CALLABLE", "toString()"),
@@ -125,6 +140,26 @@ def main():
         (work / "case.spr").write_text("func main():\n    print(1)\n    print(2)\nprint(3)\n", encoding="utf-8")
         data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
         check("no-layout-cascade", len(data) == 1 and "<INDENT>" not in json.dumps(data), json.dumps(data))
+
+        # One error per line: ANTLR's follow-on errors on a broken line are not repeated.
+        (work / "case.spr").write_text("print(1 2 3 4)\nlet y = = 2\n", encoding="utf-8")
+        data = [d for d in json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+                if d["code"] == "SPR-SYNTAX-ERROR"]
+        lines = [d["range"]["start"]["line"] for d in data]
+        check("one-syntax-error-per-line", sorted(lines) == [0, 1], json.dumps(data))
+
+        # Checked-arithmetic failures at run time say how to handle them.
+        (work / "case.spr").write_text("var total = 9223372036854775807\ntotal += 1\n", encoding="utf-8")
+        overflow = run("run", "case.spr", cwd=work)
+        check("runtime-overflow-hint", overflow.returncode == 1 and "ArithmeticException" in overflow.stderr
+              and "9223372036854775807 - value" in overflow.stderr, overflow.stderr)
+        (work / "case.spr").write_text("print(2.5.toInt())\n", encoding="utf-8")
+        inexact = run("run", "case.spr", cwd=work)
+        check("runtime-inexact-int-hint", inexact.returncode == 1 and "toIntTrunc()" in inexact.stderr,
+              inexact.stderr)
+        numerics = " ".join(json.loads(run("help", "numerics", "--json", cwd=work).stdout)["rules"])
+        check("help-numerics-overflow-and-decimals", "ArithmeticException" in numerics and "text.fixed" in numerics,
+              numerics)
 
         # Text output shows a repeated hint once; JSON keeps it on every diagnostic.
         (work / "case.spr").write_text("let a = 1;\nlet b = 2;\nlet c = 3;\n", encoding="utf-8")

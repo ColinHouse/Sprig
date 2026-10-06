@@ -506,7 +506,7 @@ public final class TypeChecker {
             // and arithmetic: `Int32 += 1` follows the same literal rule as
             // `x = x + 1`. Variables still never narrow implicitly.
             Type valueType = checkExpr(assign.value, targetType);
-            Type result = checkArithmetic(op, targetType, valueType, assign.span, true);
+            Type result = checkArithmetic(op, targetType, valueType, assign.span, true, null, assign.value);
             requireAssignable(targetType, result, assign.value.span, Codes.TYPE_ASSIGN, "assignment");
         }
     }
@@ -1542,7 +1542,7 @@ public final class TypeChecker {
         }
         return switch (op) {
             case "==", "!=" -> checkEquality(binary, left, right);
-            case "+", "-", "*", "/", "%" -> checkArithmetic(op, left, right, binary.span, false);
+            case "+", "-", "*", "/", "%" -> checkArithmetic(op, left, right, binary.span, false, binary.left, binary.right);
             case "<", "<=", ">", ">=" -> checkOrdering(binary, left, right);
             default -> NativeType.ERROR;
         };
@@ -1670,14 +1670,20 @@ public final class TypeChecker {
             return NativeType.BOOL;
         }
         if (!numeric && !strings) {
-            diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+            Diagnostic operands = Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
                     "Operator '" + binary.op + "' requires matching Int, Float or String operands",
-                    module.uri, binary.span).withTypes("Int/Float/String pair", left.display() + " and " + right.display()));
+                    module.uri, binary.span).withTypes("Int/Float/String pair", left.display() + " and " + right.display());
+            if (left instanceof NullableType || right instanceof NullableType
+                    || (isInteger(left) && isBinaryFloat(right)) || (isBinaryFloat(left) && isInteger(right))) {
+                operands.withHint(operandHint(left, right, binary.left, binary.right));
+            }
+            diagnostics.add(operands);
         }
         return NativeType.BOOL;
     }
 
-    private Type checkArithmetic(String op, Type left, Type right, Span span, boolean compound) {
+    private Type checkArithmetic(String op, Type left, Type right, Span span, boolean compound,
+                                 Expr leftExpr, Expr rightExpr) {
         if (left == NativeType.ERROR || right == NativeType.ERROR) {
             return NativeType.ERROR;
         }
@@ -1692,10 +1698,14 @@ public final class TypeChecker {
         }
         if (isInteger(left) && isInteger(right)) {
             if (op.equals("/")) {
+                String a = operandText(leftExpr, "a");
+                String b = operandText(rightExpr, "b");
                 diagnostics.add(Diagnostic.error(Codes.NUM_DIVISION, Phase.TYPE,
                         "Integer / would truncate; use a.divTrunc(b), or convert both operands explicitly",
                         module.uri, span).withTypes("explicit division", left.display() + " / " + right.display())
-                        .withHint("Use divTrunc for deliberate truncation; use checked toFloat() for exact Float conversion."));
+                        .withHint("Write " + a + ".divTrunc(" + b + ") to drop the remainder on purpose, or "
+                                + a + ".toFloat() / " + b + ".toFloat() for a Float result. "
+                                + "text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals."));
                 return NativeType.ERROR;
             }
             return left == NativeType.INT32 && right == NativeType.INT32 ? NativeType.INT32 : NativeType.INT;
@@ -1725,8 +1735,47 @@ public final class TypeChecker {
                 "Operator '" + op + "' has no implicit conversion between " + left.display()
                         + " and " + right.display(), module.uri, span)
                 .withTypes("matching numeric families", left.display() + " and " + right.display())
-                .withHint("Convert deliberately with an exact or explicitly lossy numeric method."));
+                .withHint(operandHint(left, right, leftExpr, rightExpr)));
         return NativeType.ERROR;
+    }
+
+    /** A short source spelling for an operand in a hint: a name or a.b, else the fallback. */
+    private static String operandText(Expr expr, String fallback) {
+        if (expr instanceof Expr.Name name) {
+            return name.name;
+        }
+        if (expr instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Name receiver) {
+            return receiver.name + "." + access.name;
+        }
+        return fallback;
+    }
+
+    /**
+     * The concrete repair for two numeric operands that do not combine: a
+     * nullable one is checked first, an Int next to a Float is converted.
+     */
+    private static String operandHint(Type left, Type right, Expr leftExpr, Expr rightExpr) {
+        for (int side = 0; side < 2; side++) {
+            Type type = side == 0 ? left : right;
+            if (type instanceof NullableType nullable) {
+                Expr operand = side == 0 ? leftExpr : rightExpr;
+                String name = operandText(operand, "the value");
+                if (operand instanceof Expr.Name binding && binding.symbol != null && binding.symbol.mutable) {
+                    return name + " may be null (" + type.display() + "), and a var never narrows: copy it into a let "
+                            + "(let current = " + name + "), check 'if current != null:', and use current inside that block.";
+                }
+                return name + " may be null (" + type.display() + "): check it first with 'if " + name
+                        + " != null:', and inside that block it is " + nullable.inner.display()
+                        + ", or give a fallback with or_else from @std/nulls.spr.";
+            }
+        }
+        if (isInteger(left) && isBinaryFloat(right)) {
+            return "Convert the Int side: " + operandText(leftExpr, "value") + ".toFloat().";
+        }
+        if (isBinaryFloat(left) && isInteger(right)) {
+            return "Convert the Int side: " + operandText(rightExpr, "value") + ".toFloat().";
+        }
+        return "Convert deliberately with an exact or explicitly lossy numeric method.";
     }
 
     private static boolean isInteger(Type type) {
@@ -2679,9 +2728,20 @@ public final class TypeChecker {
             }
             return field;
         }
-        diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+        Diagnostic missing = Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                 "Module '" + target.name + "' has no member '" + access.name + "'",
-                module.uri, access.span));
+                module.uri, access.span);
+        List<String> members = new ArrayList<>();
+        for (Decl decl : target.decls) {
+            if (!(decl instanceof Decl.Func func) || !func.isMethod()) {
+                members.add(decl.name);
+            }
+        }
+        if (!members.isEmpty()) {
+            missing.withHint("Module '" + target.name + "' has: " + String.join(", ", members)
+                    + ". 'sprig api' on the module shows their types.");
+        }
+        diagnostics.add(missing);
         return errorField(access);
     }
 
@@ -4187,8 +4247,36 @@ public final class TypeChecker {
                             + " and make the receiving function rethrows or throws Error, or handle the error inside a named function."));
             return;
         }
-        diagnostics.add(Diagnostic.error(code, Phase.TYPE,
-                "Type mismatch in " + what, module.uri, span).withTypes(expected, got));
+        Diagnostic mismatch = Diagnostic.error(code, Phase.TYPE,
+                "Type mismatch in " + what, module.uri, span).withTypes(expected, got);
+        String collection = collectionHint(target, actual);
+        if (collection != null) {
+            mismatch.withHint(collection);
+        }
+        diagnostics.add(mismatch);
+    }
+
+    /** The snapshot method between read-only and mutable versions of the same collection. */
+    private static String collectionHint(Type target, Type actual) {
+        if (target == null || actual == null) {
+            return null;
+        }
+        Type want = target.nonNull();
+        Type have = actual.nonNull();
+        if (want instanceof ListType wantList && have instanceof ListType haveList
+                && wantList.element.equals(haveList.element) && wantList.mutable != haveList.mutable) {
+            return wantList.mutable
+                    ? "This is a read-only List; call .toMutableList() for a copy you can change, or declare it as List."
+                    : "Call .toList() for a read-only snapshot, or declare it as MutableList.";
+        }
+        if (want instanceof MapType wantMap && have instanceof MapType haveMap
+                && wantMap.key.equals(haveMap.key) && wantMap.value.equals(haveMap.value)
+                && wantMap.mutable != haveMap.mutable) {
+            return wantMap.mutable
+                    ? "This is a read-only Map; call .toMutableMap() for a copy you can change, or declare it as Map."
+                    : "Call .toMap() for a read-only snapshot, or declare it as MutableMap.";
+        }
+        return null;
     }
 
     /** Names the explicit conversion methods that exist for this numeric pair. */

@@ -44,6 +44,7 @@ public final class ParserFrontend {
         CommonTokenStream tokens = new CommonTokenStream(new LayoutTokenSource(lexer, diagnostics, uri));
         SprigParser parser = new SprigParser(tokens);
         boolean[] reported = {false};
+        java.util.Set<Integer> errorLines = new java.util.HashSet<>();
         parser.removeErrorListeners();
         parser.addErrorListener(new BaseErrorListener() {
             @Override
@@ -53,6 +54,11 @@ public final class ParserFrontend {
                 // block structure says nothing new, and reads like an indentation mistake.
                 if (reported[0] && offendingSymbol instanceof Token layout
                         && (layout.getType() == SprigLexer.INDENT || layout.getType() == SprigLexer.DEDENT)) {
+                    return;
+                }
+                // ANTLR's recovery reports a run of follow-on errors on a line it could not
+                // parse; the first one is the one to fix.
+                if (!errorLines.add(line)) {
                     return;
                 }
                 reported[0] = true;
@@ -123,6 +129,34 @@ public final class ParserFrontend {
                     + "Write 'import java.io.BufferedReader as BufferedReader', one line per class; "
                     + "for standard input, 'import \"@std/process.spr\" as process' is simpler.";
         }
+        Token next = index + 1 < stream.size() ? stream.get(index + 1) : null;
+        if (type == SprigLexer.SLASH && next != null
+                && (next.getType() == SprigLexer.SLASH || next.getType() == SprigLexer.STAR)) {
+            return "Comments start with '#'\n"
+                    + "Write '# comment'; Sprig has no // or /* */ comments.";
+        }
+        if (type == SprigLexer.DOT && previous == SprigLexer.DOT) {
+            return "Sprig has no '..' range operator\n"
+                    + "Write range(start, stop), which stops before stop, for example 'for i in range(0, count):'.";
+        }
+        int first = stream.get(lineStart(stream, index)).getType();
+        boolean blockHeader = first == SprigLexer.IF || first == SprigLexer.ELIF || first == SprigLexer.WHILE
+                || first == SprigLexer.FOR;
+        if (blockHeader && type == SprigLexer.ASSIGN) {
+            return "'=' assigns, and an assignment is a statement of its own\n"
+                    + "Compare with '==', or assign on the line before the condition.";
+        }
+        if ((blockHeader || first == SprigLexer.ELSE) && type != SprigLexer.NEWLINE && type != SprigLexer.COLON
+                && type != SprigLexer.LBRACE && !(type == SprigLexer.IF && previous == SprigLexer.ELSE)
+                && isStatementStart(type)) {
+            if (!lineHas(stream, index, SprigLexer.COLON)) {
+                return "A block header ends with ':' and its body goes on the following lines\n"
+                        + "Write the condition, then ':', then the body indented on the next line, for example "
+                        + "'if count < 3:' followed by '    return false'. Parentheses around the condition are optional.";
+            }
+            return "A block's body goes on its own lines after ':'\n"
+                    + "Sprig has no one-line if or loop: put the body on the next line, indented by four spaces.";
+        }
         if (type == SprigLexer.IF && previous == SprigLexer.ELSE) {
             return "Sprig spells else-if as 'elif'\n"
                     + "Write 'elif condition:' in place of 'else if condition:'.";
@@ -160,6 +194,13 @@ public final class ParserFrontend {
                     + "Write 'func name(parameter: Type) -> ResultType:', and '-> Unit' when it returns nothing.";
         }
         return null;
+    }
+
+    /** Tokens that begin a statement, where a header's body was expected on the next line. */
+    private static boolean isStatementStart(int type) {
+        return type == SprigLexer.RETURN || type == SprigLexer.BREAK || type == SprigLexer.CONTINUE
+                || type == SprigLexer.PASS || type == SprigLexer.THROW || type == SprigLexer.VAR
+                || type == SprigLexer.LET || type == SprigLexer.IDENT;
     }
 
     private static boolean within(SprigParser parser, Class<? extends ParserRuleContext> rule) {

@@ -1636,14 +1636,32 @@ public final class Main {
         return null;
     }
 
+    /** The repair for each family of checked-arithmetic failure, in the program's own terms. */
+    static String numericHint(String message) {
+        String text = message == null ? "" : message;
+        if (text.contains("overflow")) {
+            return "The exact result does not fit in the integer type. Check before the operation, for example "
+                    + "'if value > 0 and total > 9223372036854775807 - value:' for an Int addition, or catch it: "
+                    + "import java.lang.ArithmeticException as ArithmeticException, then put the operation in 'try:' "
+                    + "with 'catch problem: ArithmeticException:'. See `sprig help numerics`.";
+        }
+        if (text.contains("is not an exact Int value")) {
+            return "toInt() and toIntExact() need a whole number. Use toIntTrunc() to drop the fraction, or "
+                    + "Math.round(x) after 'import java.lang.Math as Math' to round to the nearest Int.";
+        }
+        if (text.contains("by zero")) {
+            return "Check that the divisor is not zero before dividing.";
+        }
+        return "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.";
+    }
+
     private static RuntimeOrigin runtimeOrigin(String className, String message) {
         if (className.equals("sprig.runtime.SprigError")) {
             return new RuntimeOrigin("sprig-error",
                     "Catch it with try/catch or declare throws in the calling function.");
         }
         if (className.equals("sprig.runtime.SprigNumericError")) {
-            return new RuntimeOrigin("checked-arithmetic",
-                    "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.");
+            return new RuntimeOrigin("checked-arithmetic", numericHint(message));
         }
         if (className.equals("sprig.runtime.SprigInitializationError")) {
             return new RuntimeOrigin("init-order",
