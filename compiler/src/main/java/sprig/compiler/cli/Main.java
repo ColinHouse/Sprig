@@ -160,7 +160,7 @@ public final class Main {
         for (int i = 1; i < args.length; i++) {
             if (args[i].equals("--json")) continue;
             if (topic != null || !Catalog.topics().contains(args[i])) {
-                return commandError("help", "Unknown help topic: " + args[i], json);
+                return commandError("help", unknownTopic(args[i]), json);
             }
             topic = args[i];
         }
@@ -199,6 +199,17 @@ public final class Main {
             }
         }
         return 0;
+    }
+
+    /** Lists the topics, and points a bundled module's name at its API listing. */
+    private static String unknownTopic(String name) {
+        String message = "Unknown help topic: " + name + ". Topics: " + String.join(", ", Catalog.topics()) + ".";
+        String home = System.getProperty("sprig.home");
+        if (home != null && name.matches("[A-Za-z][A-Za-z0-9_]*")
+                && Files.isRegularFile(Path.of(home, "std", name + ".spr"))) {
+            message += " For the bundled module, run 'sprig api @std/" + name + ".spr'.";
+        }
+        return message;
     }
 
     private static int capabilities(String[] args) {

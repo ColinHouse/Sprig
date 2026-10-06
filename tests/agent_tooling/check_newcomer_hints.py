@@ -182,6 +182,10 @@ def main():
         check("help-example-inline", "Example (website/snippets/tutorial/hello.spr):" in text_help
               and "print(greet(\"Ada\"))" in text_help, text_help[-400:])
         check("help-index-start-here", "sprig help language" in run("help", cwd=work).stdout)
+        unknown = run("help", "process", cwd=work)
+        check("help-module-name-points-at-api", unknown.returncode == 2
+              and "sprig api @std/process.spr" in unknown.stderr and "Topics: language" in unknown.stderr,
+              unknown.stderr)
 
     print(f"newcomer hints: {COUNT - len(FAILURES)} passed, {len(FAILURES)} failed")
     for failure in FAILURES:
