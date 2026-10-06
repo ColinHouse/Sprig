@@ -43,9 +43,12 @@ by the historical design kit in `docs/history/design-kit/`.
   CLI commands; see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java arrays cross the boundary as
-  opaque values (no source array syntax; varargs remain unsupported). Concrete
+  opaque values (no source array syntax). A varargs parameter takes the
+  trailing arguments or one opaque array of its element class; a
+  type-variable element (`T...`) stays unsupported. Concrete
   generic arguments are preserved for explicit `Type[Arg]` application on
-  imported classes and methods; wildcards, inference, recursive and
+  imported classes and methods; wildcards (except inside a functional-interface
+  parameter's type arguments), inference, recursive and
   intersection bounds, generic arrays and Short/Byte/Character generic
   arguments are rejected with structured reasons, class bounds are validated,
   raw evidence never promotes to concrete arguments, and raw boundaries stay
@@ -129,8 +132,11 @@ lambda that calls a function throwing `Error` has that clause, a value without
 the clause is accepted where the clause is expected (not the reverse), and a
 `rethrows` function throws exactly what its callable arguments throw. A checked
 Java exception never crosses a function value; handle it inside a named
-function and call that from the lambda. Arbitrary Java
-SAM interfaces are not converted. Only concrete Fn0..Fn3 generic signatures
+function and call that from the lambda. A Java functional-interface
+parameter accepts a Sprig function value without a throws clause: parameters
+match exactly after the Java mapping, `void` accepts any result, and the
+compiler emits the adapter; abstract classes and generic interface methods are
+not converted. For `Fn0..Fn3`, only concrete generic signatures
 preserve callable types; raw, wildcard or unresolved type variables are rejected.
 `Character`/`Short`/`Byte` callable slots and arbitrary parameterized Java slots
 are unsupported because they would require additional erased-value adapters.

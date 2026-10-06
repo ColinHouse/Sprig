@@ -21,6 +21,7 @@ public final class CallableFixture {
  public static String nullInput(Fn1<String,String> f) {return f.apply(null);}
  public static void unit(Fn0<Void> f) {f.apply();}
  public static void sam(java.util.function.Function<Long,String> f) {}
+ public static String samResult(java.util.function.Function<Long,String> f) {return f.apply(7L);}
  public static void raw(Fn1 f) {}
  public static <T> void unresolved(Fn1<T,T> f) {}
  public static String ambiguous(Fn0<Long> f, Object x) {return "object";}

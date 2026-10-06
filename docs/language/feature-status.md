@@ -46,6 +46,7 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | `BigInt` and `Decimal` | yes | distinct native types | BigInteger/BigDecimal wrappers | numeric acceptance suite |
 | Java checked exceptions + typed catch + `error.message` | yes | yes | Java try/catch | runtime 15 |
 | `sprig check/run/build/explain/codes/help/capabilities/api/doctor`, `--json`, `--syntax-only` | — | — | — | `scripts/test.sh`, agent tooling suite |
+| Java callables and varargs: a functional-interface parameter (`Runnable`, `Comparator<T>`, `Consumer<? super T>`, ...) accepts a Sprig `fn(...) -> R` value; a varargs parameter takes the trailing arguments or one opaque array | the compiler emits a typed Java lambda that calls the Sprig `Fn`; trailing arguments are packed into `new Element[] {...}` | exact parameter types after the Java mapping, `void` accepts any result, wildcards read as their bound only inside the interface's type arguments, no method type-variable inference, a throwing callable is rejected (`SPR-TYPE-CALLABLE-THROWS`); fixed-arity overloads win over expansion | `java-callable` level and `java-callable-adapter`/`varargs-expansion` reason codes in `sprig api` | runtime 29, `tests/jvm_interop`, `tests/callables` |
 | Explicit local `--classpath` on check/build/run/api | — | shared class loader + javac/JVM path | locked JVM JARs precede explicit entries; compiler libraries isolated | agent tooling suite |
 | Bounded JVM interop: opaque arrays, concrete generics, explicit collection adapters | explicit `Type[Arg]` application; `@std/jvm.spr`; `sprig.runtime.jvm.HostBytes` | structured `interopLevel`/`interopReasonCodes`; wildcards, inference, recursive bounds and varargs rejected before `javac` | arrays keep exact JVM classes; snapshots/copies are independent; no implicit conversion | JVM interop suite |
 | javac error and runtime frame → Sprig span translation | — | — | 1-based line map shared by javac diagnostics and runtime failures | runtime diagnostics |
@@ -73,7 +74,7 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 Not implemented (honest status): generic type inference, variance,
 user-defined capabilities, inheritance or interfaces,
 nested/positional patterns, `%=`,
-tuples/destructuring, varargs and source array syntax/annotations in interop,
-wildcard typing or Java generic inference, publishing/registry,
+tuples/destructuring, source array syntax/annotations in interop,
+wildcard typing outside callback parameters, Java generic inference, publishing/registry,
 incremental checking, self-hosting.
 See [`KNOWN_LIMITATIONS.md`](../language/known-limitations.md) for boundaries.

@@ -1,0 +1,10 @@
+import java.util.ArrayList as ArrayList
+
+func to_number(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+
+let names = ArrayList[String]()
+names.forEach(fn(name: String) => to_number(name))

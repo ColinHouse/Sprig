@@ -1,0 +1,44 @@
+import java.util.ArrayList as ArrayList
+import java.util.HashMap as HashMap
+import java.nio.file.Path as Path
+import java.nio.file.Files as Files
+import java.lang.String as JString
+import java.lang.Thread as Thread
+import java.lang.StringBuilder as StringBuilder
+import java.lang.CharSequence as CharSequence
+
+# A Sprig function value where Java wants a functional interface: the
+# compiler emits the adapter. Comparator.compare returns int, so the lambda
+# returns Int32; Consumer.accept is void, so any result is fine.
+let names = ArrayList[String]()
+names.add("grace")
+names.add("ada")
+names.add("linus")
+names.sort(fn(a: String, b: String) => CharSequence.compare(a, b))
+names.forEach(fn(name: String) => print(name))
+print(names.removeIf(fn(name: String) => name.length() > 4))
+print(names)
+let stored: fn(String) -> Unit = fn(name: String) => print("stored " + name)
+names.forEach(stored)
+
+# Varargs: trailing arguments are packed, and zero of them is allowed.
+let config = Path.of("etc", "sprig", "config.json")
+if config != null:
+    print(config.getFileName())
+    print(Files.exists(config))
+print(JString.format("%s-%d", "x", 7))
+print(JString.format("plain"))
+print(JString.join("/", "a", "b", "c"))
+
+# Type variables bound by the receiver: BiConsumer<? super String, ? super Long>.
+let counts = HashMap[String, Int]()
+counts.put("a", 1)
+counts.put("b", 2)
+counts.forEach(fn(key: String, value: Int) => print(key + "=" + value))
+
+# Runnable through a constructor.
+let text = StringBuilder()
+let worker = Thread(fn() => text.append("ran"))
+worker.start()
+worker.join()
+print(text.toString())

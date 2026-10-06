@@ -3379,26 +3379,31 @@ public final class TypeChecker {
         Constructor<?> best = null;
         int bestScore = -1;
         boolean ambiguous = false;
-        for (Constructor<?> constructor : javaType.clazz.getConstructors()) {
-            if (JvmMetadata.unsupportedReason(constructor) != null) continue;
-            if (constructor.getTypeParameters().length > 0) continue; // no Java inference
-            int score = bound
-                    ? scoreBoundCandidate(constructor, argTypes, call.args, receiverBindings)
-                    : scoreCandidate(constructor, argTypes, call.args);
-            if (score < 0) {
-                continue;
-            }
-            if (score > bestScore) {
-                best = constructor;
-                bestScore = score;
-                ambiguous = false;
-            } else if (score == bestScore) {
-                ambiguous = true;
+        boolean bestExpanded = false;
+        // Fixed-arity candidates first; the varargs expanded form only when none applies.
+        for (int pass = 0; pass < 2 && best == null; pass++) {
+            boolean expand = pass == 1;
+            for (Constructor<?> constructor : javaType.clazz.getConstructors()) {
+                if (JvmMetadata.unsupportedReason(constructor) != null) continue;
+                if (constructor.getTypeParameters().length > 0) continue; // no Java inference
+                int score = scoreExecutable(constructor, argTypes, call.args, receiverBindings, bound, expand);
+                if (score < 0) {
+                    continue;
+                }
+                if (score > bestScore) {
+                    best = constructor;
+                    bestScore = score;
+                    bestExpanded = expand;
+                    ambiguous = false;
+                } else if (score == bestScore) {
+                    ambiguous = true;
+                }
             }
         }
         if (best == null) {
             List<Constructor<?>> candidates = List.of(javaType.clazz.getConstructors());
-            if (reportNullableJavaArgument(javaType.clazz.getSimpleName(), candidates, argTypes, call)) {
+            if (reportNullableJavaArgument(javaType.clazz.getSimpleName(), candidates, argTypes, call)
+                    || reportThrowingCallableArgument(javaType.clazz.getSimpleName(), candidates, argTypes, call)) {
                 return NativeType.ERROR;
             }
             Diagnostic diagnostic = Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
@@ -3425,6 +3430,7 @@ public final class TypeChecker {
         member.name = "<init>";
         member.executable = best;
         member.bindings = receiverBindings;
+        member.varargsExpanded = bestExpanded;
         member.paramTypes = new ArrayList<>();
         for (int i = 0; i < best.getParameterCount(); i++) {
             member.paramTypes.add(bound
@@ -3465,44 +3471,48 @@ public final class TypeChecker {
         Method best = null;
         int bestScore = -1;
         boolean ambiguous = false;
+        boolean bestExpanded = false;
         Map<TypeVariable<?>, Type> bestBindings = Map.of();
-        for (Method method : clazz.getMethods()) {
-            if (!method.getName().equals(field.jvm.name)) {
-                continue;
-            }
-            boolean isStatic = java.lang.reflect.Modifier.isStatic(method.getModifiers());
-            if (isStaticJvmReceiver(call) != isStatic) {
-                continue;
-            }
-            if (JvmMetadata.unsupportedReason(method) != null) continue;
-            int methodVariables = method.getTypeParameters().length;
-            if (methodVariables > 0) {
-                if (explicitMethodArgs == null) continue; // explicit decisions, no inference
-                if (explicitMethodArgs.size() != methodVariables) continue;
-                if (!JavaTypes.boundsSatisfied(method, explicitMethodArgs)) continue;
-            }
-            Map<TypeVariable<?>, Type> bindings = new java.util.IdentityHashMap<>(
-                    hierarchy.getOrDefault(method.getDeclaringClass(), Map.of()));
-            if (methodVariables > 0) {
-                TypeVariable<?>[] variables = method.getTypeParameters();
-                for (int i = 0; i < variables.length; i++) {
-                    bindings.put(variables[i], explicitMethodArgs.get(i));
+        // Fixed-arity candidates first; the varargs expanded form only when none applies.
+        for (int pass = 0; pass < 2 && best == null; pass++) {
+            boolean expand = pass == 1;
+            for (Method method : clazz.getMethods()) {
+                if (!method.getName().equals(field.jvm.name)) {
+                    continue;
                 }
-            }
-            boolean bound = receiverBound || methodVariables > 0;
-            int score = bound
-                    ? scoreBoundCandidate(method, argTypes, call.args, bindings)
-                    : scoreCandidate(method, argTypes, call.args);
-            if (score < 0) {
-                continue;
-            }
-            if (score > bestScore) {
-                best = method;
-                bestScore = score;
-                bestBindings = bindings;
-                ambiguous = false;
-            } else if (score == bestScore && !sameSignature(best, method)) {
-                ambiguous = true;
+                boolean isStatic = java.lang.reflect.Modifier.isStatic(method.getModifiers());
+                if (isStaticJvmReceiver(call) != isStatic) {
+                    continue;
+                }
+                if (JvmMetadata.unsupportedReason(method) != null) continue;
+                int methodVariables = method.getTypeParameters().length;
+                if (methodVariables > 0) {
+                    if (explicitMethodArgs == null) continue; // explicit decisions, no inference
+                    if (explicitMethodArgs.size() != methodVariables) continue;
+                    if (!JavaTypes.boundsSatisfied(method, explicitMethodArgs)) continue;
+                }
+                Map<TypeVariable<?>, Type> bindings = new java.util.IdentityHashMap<>(
+                        hierarchy.getOrDefault(method.getDeclaringClass(), Map.of()));
+                if (methodVariables > 0) {
+                    TypeVariable<?>[] variables = method.getTypeParameters();
+                    for (int i = 0; i < variables.length; i++) {
+                        bindings.put(variables[i], explicitMethodArgs.get(i));
+                    }
+                }
+                boolean bound = receiverBound || methodVariables > 0;
+                int score = scoreExecutable(method, argTypes, call.args, bindings, bound, expand);
+                if (score < 0) {
+                    continue;
+                }
+                if (score > bestScore) {
+                    best = method;
+                    bestScore = score;
+                    bestBindings = bindings;
+                    bestExpanded = expand;
+                    ambiguous = false;
+                } else if (score == bestScore && !sameSignature(best, method)) {
+                    ambiguous = true;
+                }
             }
         }
         if (best == null) {
@@ -3515,6 +3525,8 @@ public final class TypeChecker {
                 candidates.add(method);
             }
             if (reportNullableJavaArgument(clazz.getSimpleName() + "." + field.jvm.name,
+                    candidates, argTypes, call)
+                    || reportThrowingCallableArgument(clazz.getSimpleName() + "." + field.jvm.name,
                     candidates, argTypes, call)) {
                 return NativeType.ERROR;
             }
@@ -3542,6 +3554,7 @@ public final class TypeChecker {
         member.name = best.getName();
         member.executable = best;
         member.bindings = bestBindings;
+        member.varargsExpanded = bestExpanded;
         member.paramTypes = new ArrayList<>();
         for (int i = 0; i < best.getParameterCount(); i++) {
             member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i],
@@ -3565,20 +3578,83 @@ public final class TypeChecker {
                                            List<Expr.Arg> writtenArgs,
                                            Map<TypeVariable<?>, Type> bindings) {
         Class<?>[] raw = executable.getParameterTypes();
-        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         if (raw.length != args.size()) return -1;
         int score = 0;
         for (int i = 0; i < raw.length; i++) {
             Type arg = args.get(i);
             if (arg == NativeType.ERROR) continue;
-            if (JavaTypes.isCallableClass(raw[i])) {
-                FunctionType expected = JavaTypes.callable(generic[i]);
-                if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
-                score += 4;
-                continue;
-            }
-            Type formal = JavaTypes.mapFormal(generic[i], raw[i], bindings);
-            int next = scoreBoundArgument(formal, arg, writtenArgs.get(i).value);
+            int next = scoreBoundFormal(executable, i, arg, writtenArgs.get(i).value, bindings);
+            if (next < 0) return -1;
+            score += next;
+        }
+        return score;
+    }
+
+    private static int scoreBoundFormal(Executable executable, int index, Type arg, Expr expr,
+                                        Map<TypeVariable<?>, Type> bindings) {
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        if (JavaTypes.isCallableClass(raw[index])) {
+            FunctionType expected = JavaTypes.callable(generic[index]);
+            if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
+            return 4;
+        }
+        if (arg.nonNull() instanceof FunctionType && JavaTypes.functionalMethod(raw[index]) != null) {
+            return scoreJavaCallable(generic[index], raw[index], arg, bindings);
+        }
+        Type formal = JavaTypes.mapFormal(generic[index], raw[index], bindings);
+        return scoreBoundArgument(formal, arg, expr);
+    }
+
+    /**
+     * A Sprig function value against a Java functional-interface formal.
+     * Parameters match exactly, as for Fn0..Fn3; a void method accepts any
+     * result, as Java does; a value with a throws clause never crosses,
+     * because Java cannot see the clause.
+     */
+    private static int scoreJavaCallable(java.lang.reflect.Type generic, Class<?> raw, Type arg,
+                                         Map<TypeVariable<?>, Type> bindings) {
+        if (arg.isNullable() || !(arg instanceof FunctionType actual)) return -1;
+        FunctionType expected = JavaTypes.javaCallable(generic, raw, bindings);
+        if (expected == null || actual.throwsAny() || !expected.params.equals(actual.params)) return -1;
+        if (expected.result != NativeType.UNIT && !Semantics.isAssignable(expected.result, actual.result)) return -1;
+        return 4;
+    }
+
+    /**
+     * Score of one Java candidate. Without {@code expand} the written
+     * arguments must match the parameters one to one, which also covers an
+     * opaque array passed to a varargs parameter. With it, a varargs
+     * candidate takes the trailing arguments one by one against its element
+     * type, the form Java tries only when no fixed-arity candidate applies.
+     */
+    private static int scoreExecutable(Executable executable, List<Type> args, List<Expr.Arg> writtenArgs,
+                                       Map<TypeVariable<?>, Type> bindings, boolean bound, boolean expand) {
+        if (!expand) {
+            return bound ? scoreBoundCandidate(executable, args, writtenArgs, bindings)
+                    : scoreCandidate(executable, args, writtenArgs);
+        }
+        Class<?> element = JavaTypes.varargsElement(executable);
+        int fixed = executable.getParameterCount() - 1;
+        if (element == null || args.size() < fixed) return -1;
+        int score = 0;
+        for (int i = 0; i < fixed; i++) {
+            Type arg = args.get(i);
+            if (arg == NativeType.ERROR) continue;
+            int next = bound ? scoreBoundFormal(executable, i, arg, writtenArgs.get(i).value, bindings)
+                    : scoreJvmArgument(executable, i, arg, writtenArgs.get(i).value);
+            if (next < 0) return -1;
+            score += next;
+        }
+        java.lang.reflect.Type elementType = JavaTypes.varargsElementType(executable);
+        Type formal = bound ? JavaTypes.mapFormal(elementType, element, bindings)
+                : JavaTypes.mapFormal(elementType, element);
+        for (int i = fixed; i < args.size(); i++) {
+            Type arg = args.get(i);
+            if (arg == NativeType.ERROR) continue;
+            int next = elementType == element && !bound
+                    ? scoreArgument(element, arg, writtenArgs.get(i).value)
+                    : scoreBoundArgument(formal, arg, writtenArgs.get(i).value);
             if (next < 0) return -1;
             score += next;
         }
@@ -3668,6 +3744,9 @@ public final class TypeChecker {
             FunctionType expected = JavaTypes.callable(generic[index]);
             if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
             return 4;
+        }
+        if (arg.nonNull() instanceof FunctionType && JavaTypes.functionalMethod(raw[index]) != null) {
+            return scoreJavaCallable(generic[index], raw[index], arg, JavaTypes.NO_BINDINGS);
         }
         if (generic[index] != raw[index]) {
             return scoreBoundArgument(JavaTypes.mapFormal(generic[index], raw[index]), arg, expr);
@@ -3808,6 +3887,36 @@ public final class TypeChecker {
                         .withData(jvmDiagnosticData(candidate.getDeclaringClass(), memberLabel,
                                 argTypes, call, candidates)));
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A Sprig function value with a throws clause never crosses into Java,
+     * because Java cannot see the clause: say so instead of "no match" when
+     * a candidate has a callable formal at that position.
+     */
+    private boolean reportThrowingCallableArgument(String memberLabel, List<? extends Executable> candidates,
+                                                   List<Type> argTypes, Expr.Call call) {
+        for (int i = 0; i < argTypes.size(); i++) {
+            if (!(argTypes.get(i) instanceof FunctionType actual) || !actual.throwsAny()) {
+                continue;
+            }
+            for (Executable candidate : candidates) {
+                Class<?>[] params = candidate.getParameterTypes();
+                if (i < params.length && (JavaTypes.isCallableClass(params[i])
+                        || JavaTypes.functionalMethod(params[i]) != null)) {
+                    diagnostics.add(Diagnostic.error(Codes.TYPE_CALLABLE_THROWS, Phase.TYPE,
+                            "A function value that may throw Error cannot be passed to Java parameter "
+                                    + (i + 1) + " of " + memberLabel + "; Java cannot see the throws clause",
+                            module.uri, call.args.get(i).value.span)
+                            .withTypes(actual.withoutThrows().display(), actual.display())
+                            .withHint("Handle the error inside a named function and pass a lambda that calls it.")
+                            .withData(jvmDiagnosticData(candidate.getDeclaringClass(), memberLabel,
+                                    argTypes, call, candidates)));
+                    return true;
+                }
             }
         }
         return false;

@@ -15,6 +15,8 @@ public final class JvmMember {
     public Type returnType;
     /** Concrete receiver/explicit-argument bindings used to resolve generics. */
     public java.util.Map<java.lang.reflect.TypeVariable<?>, Type> bindings = java.util.Map.of();
+    /** The call writes the trailing arguments that the generator packs into the varargs array. */
+    public boolean varargsExpanded;
 
     public boolean isStatic() {
         if (field != null) {

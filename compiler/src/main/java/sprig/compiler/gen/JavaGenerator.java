@@ -1546,15 +1546,7 @@ public final class JavaGenerator {
             case JVM_CTOR: {
                 String created = resolved.returnType instanceof JavaType javaType && !javaType.args.isEmpty()
                         ? javaType(javaType) : sourceName(resolved.jvm.owner);
-                StringBuilder sb = new StringBuilder("new ").append(created).append('(');
-                for (int i = 0; i < call.args.size(); i++) {
-                    if (i > 0) {
-                        sb.append(", ");
-                    }
-                    sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm,
-                            jvmParameter(resolved.jvm, i)));
-                }
-                return sb.append(')').toString();
+                return "new " + created + "(" + jvmArguments(call, resolved.jvm) + ")";
             }
             default:
                 return "null";
@@ -1964,15 +1956,7 @@ public final class JavaGenerator {
         } else {
             sb.append(emitExpr(((Expr.FieldAccess) callee).receiver));
         }
-        sb.append('.').append(resolved.jvm.name).append('(');
-        Class<?>[] params = resolved.jvm.executable.getParameterTypes();
-        for (int i = 0; i < call.args.size(); i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            Class<?> param = i < params.length ? jvmParameter(resolved.jvm, i) : Object.class;
-            sb.append(convertJvmArg(call.args.get(i).value, resolved.jvm, param));
-        }
+        sb.append('.').append(resolved.jvm.name).append('(').append(jvmArguments(call, resolved.jvm));
         Class<?> rawReturn = ((java.lang.reflect.Method) resolved.jvm.executable).getReturnType();
         return convertJvmResult(rawReturn, boundJvmResult(rawReturn, resolved.returnType,
                 sb.append(')').toString()));
@@ -2027,6 +2011,116 @@ public final class JavaGenerator {
                 member.executable.getGenericParameterTypes()[index], raw, member.bindings);
         Class<?> preferred = sprig.compiler.sem.JavaTypes.preferredRaw(mapped);
         return preferred != null ? preferred : raw;
+    }
+
+    /**
+     * The argument list of a Java call: one converted expression per fixed
+     * parameter, an adapter for a Sprig function value handed to a
+     * functional-interface formal, and the trailing arguments of an expanded
+     * varargs call packed into a new array of the element class.
+     */
+    private String jvmArguments(Expr.Call call, sprig.compiler.sem.JvmMember member) {
+        Class<?>[] params = member.executable.getParameterTypes();
+        int fixed = member.varargsExpanded ? params.length - 1 : call.args.size();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.min(fixed, call.args.size()); i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(jvmArgument(call.args.get(i).value, member, i));
+        }
+        if (member.varargsExpanded) {
+            Class<?> element = params[params.length - 1].getComponentType();
+            if (fixed > 0) {
+                sb.append(", ");
+            }
+            sb.append("new ").append(sourceName(element)).append("[] {");
+            for (int i = fixed; i < call.args.size(); i++) {
+                if (i > fixed) {
+                    sb.append(", ");
+                }
+                sb.append(convertJvmArg(call.args.get(i).value, member, element));
+            }
+            sb.append('}');
+        }
+        return sb.toString();
+    }
+
+    private String jvmArgument(Expr arg, sprig.compiler.sem.JvmMember member, int index) {
+        Class<?>[] params = member.executable.getParameterTypes();
+        if (index < params.length && arg.type != null && arg.type.nonNull() instanceof FunctionType
+                && sprig.compiler.sem.JavaTypes.functionalMethod(params[index]) != null) {
+            return javaCallableAdapter(arg, member, index);
+        }
+        Class<?> param = index < params.length ? jvmParameter(member, index) : Object.class;
+        return convertJvmArg(arg, member, param);
+    }
+
+    /**
+     * A Java lambda with explicitly typed parameters that calls the Sprig Fn
+     * object, so javac targets the functional-interface formal and no new
+     * runtime class is needed. The Fn's own boundary guards still apply to a
+     * null argument coming from Java.
+     */
+    private String javaCallableAdapter(Expr arg, sprig.compiler.sem.JvmMember member, int index) {
+        Class<?> raw = member.executable.getParameterTypes()[index];
+        java.lang.reflect.Type generic = member.executable.getGenericParameterTypes()[index];
+        java.lang.reflect.Method sam = sprig.compiler.sem.JavaTypes.functionalMethod(raw);
+        Map<java.lang.reflect.TypeVariable<?>, Type> local =
+                sprig.compiler.sem.JavaTypes.functionalBindings(generic, raw, member.bindings);
+        if (local == null) {
+            local = Map.of();
+        }
+        java.lang.reflect.Type[] samParams = sam.getGenericParameterTypes();
+        StringBuilder params = new StringBuilder("(");
+        StringBuilder names = new StringBuilder();
+        for (int i = 0; i < samParams.length; i++) {
+            if (i > 0) {
+                params.append(", ");
+                names.append(", ");
+            }
+            params.append(javaSourceType(samParams[i], local)).append(" a").append(i);
+            names.append('a').append(i);
+        }
+        params.append(')');
+        String invoke = "(" + emitExpr(arg) + ").apply(" + names + ")";
+        String body = sam.getReturnType() == void.class ? "{ " + invoke + "; }" : "{ return " + invoke + "; }";
+        return "(" + params + " -> " + body + ")";
+    }
+
+    /** Java source spelling of a reflected type with the given variable bindings. */
+    private String javaSourceType(java.lang.reflect.Type type, Map<java.lang.reflect.TypeVariable<?>, Type> bindings) {
+        if (type instanceof Class<?> clazz) {
+            return sourceName(clazz);
+        }
+        if (type instanceof java.lang.reflect.TypeVariable<?> variable) {
+            Type bound = bindings.get(variable);
+            return bound == null ? "java.lang.Object" : boxedJavaType(bound);
+        }
+        if (type instanceof java.lang.reflect.ParameterizedType applied
+                && applied.getRawType() instanceof Class<?> rawClass) {
+            StringBuilder sb = new StringBuilder(sourceName(rawClass)).append('<');
+            java.lang.reflect.Type[] arguments = applied.getActualTypeArguments();
+            for (int i = 0; i < arguments.length; i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append(javaSourceType(arguments[i], bindings));
+            }
+            return sb.append('>').toString();
+        }
+        if (type instanceof java.lang.reflect.WildcardType wildcard) {
+            if (wildcard.getLowerBounds().length == 1) {
+                return "? super " + javaSourceType(wildcard.getLowerBounds()[0], bindings);
+            }
+            java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
+            return upper.length == 1 && upper[0] != Object.class
+                    ? "? extends " + javaSourceType(upper[0], bindings) : "?";
+        }
+        if (type instanceof java.lang.reflect.GenericArrayType array) {
+            return javaSourceType(array.getGenericComponentType(), bindings) + "[]";
+        }
+        return "java.lang.Object";
     }
 
     private String convertJvmArg(Expr arg, sprig.compiler.sem.JvmMember member, Class<?> param) {
