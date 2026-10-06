@@ -98,7 +98,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
-          NOTES="docs/releases/RELEASE_NOTES-${TAG}.md"
+          NOTES="docs/releases/${TAG}.md"
           if [ -f "$NOTES" ]; then
             NOTES_ARG=(--notes-file "$NOTES")
           else

@@ -1,8 +1,8 @@
 # Language server
 
 `sprig lsp` runs a [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
-server on standard input and output, so any LSP client can use it. It is part
-of the development version and is not in the published v0.5.0-beta.1.
+server on standard input and output, so any LSP client can use it. It is new in
+v0.6.0-beta.1.
 
 ```text
 sprig lsp [--stdio] [--classpath JAR_OR_DIR]...
