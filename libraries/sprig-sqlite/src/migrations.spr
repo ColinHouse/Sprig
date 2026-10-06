@@ -1,13 +1,12 @@
 # Migration policy stays in Sprig; JDBC only executes trusted SQL atomically.
 import "./sqlite.spr" as sqlite
 import "@std/files.spr" as files
-import java.io.IOException as IOException
 
 class Migrations:
     let database: sqlite.Database
     let directory: String
 
-    func apply() -> Int throws Error, IOException:
+    func apply() -> Int throws Error:
         database.execute("CREATE TABLE IF NOT EXISTS sprig_schema_migrations (name TEXT PRIMARY KEY NOT NULL)", [])
         let applied_rows = database.query("SELECT name FROM sprig_schema_migrations ORDER BY name", [])
         let applied: MutableMap[String, Bool] = {}

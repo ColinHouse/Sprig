@@ -13,6 +13,7 @@ Sprig-written frontend. It contains no compiler language semantics. Methods:
 |---|---|---|
 | `readUtf8(String) throws IOException -> String` | UTF-8 source input | Reference result is treated nullable; check before use. |
 | `writeUtf8(String, String) throws IOException -> void` | UTF-8 output | `Unit`; catch/declare `IOException`. |
+| `reason(IOException) -> String` | Plain-words reason for a failure, independent of the JDK's message and the OS | `@std/files` builds its `Error` message from it; the common failures arrive as `HostFiles.Failure`, an `IOException` whose message is already the reason. |
 | `fileExists(String) -> boolean` | Regular-file test | `Bool`. |
 | `canonicalPath(String) throws IOException -> String` | Resolve a real path | Reference result is treated nullable. |
 | `listFiles(String) throws IOException -> java.util.List<String>` | Sorted path snapshot | Opaque Java list; no implied Sprig `List[String]` adapter. |

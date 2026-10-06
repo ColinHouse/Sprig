@@ -104,6 +104,8 @@ public final class Codes {
     public static final String FLOW_CONTINUE = "SPR-FLOW-CONTINUE";
     public static final String FLOW_THROWS = "SPR-FLOW-THROWS";
     public static final String FLOW_RETHROWS = "SPR-FLOW-RETHROWS";
+    public static final String FLOW_CATCH_NEVER_THROWN = "SPR-FLOW-CATCH-NEVER-THROWN";
+    public static final String FLOW_THROWS_UNUSED = "SPR-FLOW-THROWS-UNUSED";
 
     // CONFORM (foreign JVM nominal contract)
     public static final String CONFORM_SOURCE = "SPR-CONFORM-SOURCE";

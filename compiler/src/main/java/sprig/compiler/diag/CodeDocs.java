@@ -86,6 +86,8 @@ public final class CodeDocs {
             Map.entry(Codes.FLOW_CONTINUE, "continue is only valid inside a loop."),
             Map.entry(Codes.FLOW_THROWS, "A recoverable error must be declared with throws or caught."),
             Map.entry(Codes.FLOW_RETHROWS, "rethrows needs a parameter whose function type declares throws Error, and the function may throw nothing of its own."),
+            Map.entry(Codes.FLOW_CATCH_NEVER_THROWN, "A catch names a checked Java exception that nothing in its try block can throw."),
+            Map.entry(Codes.FLOW_THROWS_UNUSED, "A function declares a checked Java exception that its body can never throw."),
             Map.entry(Codes.CONFORM_SOURCE, "The conform source must be a non-generic Sprig class declared in this module."),
             Map.entry(Codes.CONFORM_TARGET, "The conform target must be an imported public, non-generic, non-sealed Java interface."),
             Map.entry(Codes.CONFORM_MEMBER, "An existing class method does not exactly match a required abstract Java method."),

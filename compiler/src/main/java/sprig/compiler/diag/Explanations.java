@@ -222,6 +222,28 @@ public final class Explanations {
                 out.put("goodExample", "func twice(f: fn(Int) -> Int throws Error, x: Int) -> Int rethrows:\n    return f(f(x))");
                 out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.TYPE_CALLABLE_THROWS));
             }
+            case Codes.FLOW_CATCH_NEVER_THROWN -> {
+                out.put("whyMatters", "A catch that can never run hides where failures really go: when a called function stops throwing the exception, its failures silently move to another catch.");
+                out.put("confusedWith", List.of("Java's 'exception is never thrown in body of corresponding try statement'", "catch problem: Error, which is not checked this way"));
+                out.put("commonCauses", List.of("A called function no longer throws the exception; @std/files, for example, fails with Error.",
+                        "An inner try already catches the exception.",
+                        "The exception class is unrelated to everything the block calls."));
+                out.put("safeFixes", List.of("Remove the catch clause.",
+                        "Catch Error instead if the block calls Sprig functions that fail with Error."));
+                out.put("badExample", "import java.io.IOException as IOException\nimport \"@std/files.spr\" as files\ntry:\n    print(files.read_utf8(\"notes.txt\"))\ncatch problem: IOException:\n    print(problem.message)");
+                out.put("goodExample", "import \"@std/files.spr\" as files\ntry:\n    print(files.read_utf8(\"notes.txt\"))\ncatch problem: Error:\n    print(problem.message)");
+                out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.FLOW_THROWS_UNUSED));
+            }
+            case Codes.FLOW_THROWS_UNUSED -> {
+                out.put("whyMatters", "A signature promises what a call can do. An exception that can never happen makes every caller handle it, and keeps their catch clauses alive after the code changed.");
+                out.put("confusedWith", List.of("Java, which allows declaring exceptions that are never thrown", "throws Error, which is not checked this way"));
+                out.put("commonCauses", List.of("The body called something that used to throw the exception, such as @std/files before it failed with Error.",
+                        "The body already catches the exception itself."));
+                out.put("safeFixes", List.of("Remove the exception from the throws clause, then remove the catch clauses the compiler reports in the callers."));
+                out.put("badExample", "import java.io.IOException as IOException\nimport \"@std/files.spr\" as files\nfunc load(path: String) -> String throws IOException, Error:\n    return files.read_utf8(path)");
+                out.put("goodExample", "import \"@std/files.spr\" as files\nfunc load(path: String) -> String throws Error:\n    return files.read_utf8(path)");
+                out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.FLOW_CATCH_NEVER_THROWN));
+            }
             case Codes.MATCH_RESULT -> {
                 out.put("whyMatters", "An expression match has one result type; every branch must produce a value assignable to it without implicit conversion.");
                 out.put("confusedWith", List.of("Java switch statement fallthrough", "Rust match arm coercion"));

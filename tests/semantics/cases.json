@@ -419,5 +419,23 @@
     "expected_diagnostic": "SPR-TYPE-CALLABLE-THROWS",
     "status": "implemented",
     "source": "Java callables"
+  },
+  {
+    "file": "catch_never_thrown.spr",
+    "expected_diagnostic": "SPR-FLOW-CATCH-NEVER-THROWN",
+    "status": "implemented",
+    "source": "truthful checked exceptions (#90)"
+  },
+  {
+    "file": "catch_never_thrown_inner_try.spr",
+    "expected_diagnostic": "SPR-FLOW-CATCH-NEVER-THROWN",
+    "status": "implemented",
+    "source": "truthful checked exceptions (#90)"
+  },
+  {
+    "file": "throws_unused_checked.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS-UNUSED",
+    "status": "implemented",
+    "source": "truthful checked exceptions (#90)"
   }
 ]
