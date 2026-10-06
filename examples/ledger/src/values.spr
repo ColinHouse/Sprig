@@ -1,49 +1,16 @@
-# Explicit JSON validation: absence, null and wrong kinds are different cases.
+# Request fields with their JSON kinds checked, and response values.
 import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
 import java.time.LocalDate as LocalDate
 import java.time.format.DateTimeParseException as DateTimeParseException
 
-func member(value: json.Value, key: String) -> json.Value throws Error:
-    match json.find_member(value, key):
-        case json.Lookup.Found as found:
-            return found.value
-        case json.Lookup.Missing:
-            throw Error("Missing field: " + key)
-        case json.Lookup.NotObject:
-            throw Error("Expected JSON object")
-
+# A missing field, a null and a wrong kind are different failures, each named
+# with its path: "$.name: required field is missing".
 func string_field(value: json.Value, key: String) -> String throws Error:
-    match member(value, key):
-        case json.Value.Text as text:
-            return text.value
-        case json.Value.Null:
-            throw Error("Field cannot be null: " + key)
-        case json.Value.Boolean:
-            throw Error("Expected string: " + key)
-        case json.Value.Number:
-            throw Error("Expected string: " + key)
-        case json.Value.Array:
-            throw Error("Expected string: " + key)
-        case json.Value.Object:
-            throw Error("Expected string: " + key)
+    return codec.required_string(codec.root(value), key)
 
 func integer_field(value: json.Value, key: String) -> Int throws Error:
-    match member(value, key):
-        case json.Value.Number as number:
-            let integer = number.text.toIntOrNull()
-            if integer != null:
-                return integer
-            throw Error("Expected exact signed 64-bit integer: " + key)
-        case json.Value.Null:
-            throw Error("Field cannot be null: " + key)
-        case json.Value.Boolean:
-            throw Error("Expected integer: " + key)
-        case json.Value.Text:
-            throw Error("Expected integer: " + key)
-        case json.Value.Array:
-            throw Error("Expected integer: " + key)
-        case json.Value.Object:
-            throw Error("Expected integer: " + key)
+    return codec.required_int(codec.root(value), key)
 
 func valid_date(value: String) -> Bool:
     if value.length() != 10:
@@ -54,7 +21,7 @@ func valid_date(value: String) -> Bool:
         return false
 
 func number(value: Int) -> json.Value:
-    return json.Value.Number(text=value.toString())
+    return codec.int(value)
 
 func text(value: String) -> json.Value:
-    return json.Value.Text(value=value)
+    return codec.text(value)
