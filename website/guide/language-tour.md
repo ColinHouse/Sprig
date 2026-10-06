@@ -82,6 +82,7 @@ true
 - `sum_by` 把每个元素算出的一个 `Int` 加起来，`sum` 把 `List[Int]` 加起来。
 - `find` 返回第一个通过检查的元素，一个都没有就返回 `null`。`any`、`all`、`count` 接收同样的检查函数。
 - `fold` 从左到右把元素累积成一个结果，上面几个函数做不了的再用它。
+- `first`、`last`、`take`、`drop`、`reversed`、`distinct`、`index_of`、`enumerate`、`zip` 负责列表上的小活；`@std/sets` 提供 `Set[T]`（`sets.of[String]([...])`、`has`、`add`、`union`）；`@std/random`、`@std/regex`、`@std/dates` 各自包了一个 JDK 设施。每个函数的说明见[标准库说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md)。
 
 ## 可空值
 

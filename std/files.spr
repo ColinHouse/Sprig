@@ -1,6 +1,7 @@
 # Ordinary Sprig API. IO failures preserve java.io.IOException.
 import sprig.runtime.host.HostFiles as HostFiles
 import java.io.IOException as IOException
+import "@std/text.spr" as text
 
 func read_utf8(path: String) -> String throws IOException, Error:
     let value = HostFiles.readUtf8(path)
@@ -82,3 +83,20 @@ func list(path: String) -> List[String] throws IOException, Error:
             index += 1
         return entries.toList()
     throw Error("host directory returned null")
+
+# The lines of a UTF-8 file without their line endings, as text.lines splits them.
+func read_lines(path: String) -> List[String] throws IOException, Error:
+    return text.lines(read_utf8(path))
+
+# Every file below a directory, with absolute paths, directories first in
+# sorted order and nested ones after their parent's files. Symbolic links are
+# listed but not followed.
+func walk(path: String) -> List[String] throws IOException, Error:
+    let found: MutableList[String] = []
+    for entry in list(path):
+        if is_directory(entry):
+            for nested in walk(entry):
+                found.append(nested)
+        else:
+            found.append(entry)
+    return found.toList()

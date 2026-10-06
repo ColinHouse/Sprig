@@ -82,6 +82,7 @@ true
 - `sum_by` adds up one `Int` per element, and `sum` adds up a `List[Int]`.
 - `find` gives you the first element that passes the test, or `null` when none does. `any`, `all` and `count` take the same kind of test.
 - `fold` combines the elements from left to right into one result, for anything the functions above don't cover.
+- `first`, `last`, `take`, `drop`, `reversed`, `distinct`, `index_of`, `enumerate` and `zip` cover the small list jobs; `@std/sets` adds `Set[T]` (`sets.of[String]([...])`, `has`, `add`, `union`); `@std/random`, `@std/regex` and `@std/dates` wrap one JDK facility each. The [standard library notes](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/standard-library.md) list every function.
 
 ## Nullable values
 

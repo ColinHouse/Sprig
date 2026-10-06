@@ -27,13 +27,17 @@ signatures. It works from any directory, with or without a project.
 
 | Module | Public operations |
 |---|---|
-| `files` | `read_utf8`, `write_utf8`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
+| `files` | `read_utf8`, `read_lines`, `write_utf8`, `walk`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?`; `exit(Int)`, `print_error(String)`; `read_line() -> String?`, `read_lines() -> List[String]`, `read_all() -> String` |
-| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter` |
+| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `strip_prefix`, `strip_suffix`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter`; `fixed(Float, Int) -> String` |
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
-| `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by` |
+| `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by`; `first`, `last`, `take`, `drop`, `reversed`, `distinct`, `index_of`, `enumerate` returning `List[Indexed[T]]`, `zip` returning `List[Pair[A, B]]` |
+| `sets` | `Set[T]` with `add`, `has`, `remove`, `size`, `to_list`; `of`, `union`, `intersection`, `difference` |
+| `random` | `seeded(Int)`/`fresh()` giving a `Random` with `next_int(bound)`, `next_float`, `next_bool`; `shuffled`, `choice`, `uuid` |
+| `regex` | `matches`, `find -> String?`, `find_all`, `replace_all`, `split`, all `throws Error` for an invalid pattern |
+| `dates` | ISO dates as text: `today_utc`, `parse`, `is_valid`, `plus_days`, `days_between`, `day_of_week`, `year`, `month`, `day` |
 | `nulls` | `or_else[T](T?, T) -> T`, `require[T](T?, String) -> T throws Error` |
-| `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int` |
+| `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int`; `sleep(Int)`, `monotonic_nanos() -> Int` |
 | `json_codec` | typed field access over `json`: `root`, `root_array`, `required_*`, `optional_*`, `field`, `reject_unknown_fields`; builders `object`, `member`, `array`, `text`, `int`, `bool` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 | `test` | `temp_dir() -> String throws Error`, `run_process(List[String]) -> ProcessResult throws Error` (argv, UTF-8 stdout/stderr, exit code); `equal_int`, `equal_bool`, `equal_text` |
@@ -374,3 +378,47 @@ Java generic collection interop contract. The old frontend probe's `HostFiles`
 methods remain available for compatibility.
 
 Verify actual JVM behavior with `python3 scripts/test-stdlib.py` in a source clone.
+
+## Sets, random values, regular expressions and dates
+
+These four modules wrap one JDK facility each behind a small Sprig surface,
+with the failure cases turned into `Error`:
+
+```sprig
+import "@std/sets.spr" as sets
+import "@std/random.spr" as random
+import "@std/regex.spr" as regex
+import "@std/dates.spr" as dates
+
+let seen = sets.of[String](["pear", "apple", "pear"])
+print(seen.to_list())                                    # [pear, apple]
+print(seen.has("apple"))                                 # true
+let dice = random.seeded(42)
+print(dice.next_int(6) >= 0)                             # true
+print(regex.find_all("\\d+", "order 66 of 99"))           # [66, 99]
+print(dates.plus_days("2026-10-06", 30))                 # 2026-11-05
+```
+
+- `sets.Set[T]` keeps members in insertion order and compares them the way map
+  keys are compared; `add` and `remove` report whether anything changed.
+  `union`, `intersection` and `difference` return new sets.
+- `random.seeded(seed)` gives the same sequence on every run; `fresh()` does
+  not. `next_int(bound)` checks the bound, `shuffled` returns a copy, `choice`
+  needs a non-empty list, and `uuid()` is the 36-character text form. None of
+  it is suitable for secrets.
+- `regex` uses Java's pattern and replacement syntax (`$1` for a group). An
+  invalid pattern is an `Error` with Java's message; `find` returns `null` for
+  no match and `split` drops a trailing empty piece, as Java does.
+- `dates` has no date type: a date is ISO text such as `2026-10-06`, checked by
+  every function. `day_of_week` is 1 for Monday through 7 for Sunday, and
+  `days_between` is negative when the end comes first.
+
+The list helpers `first`/`last` return `null` for an empty list, `take`/`drop`
+reject a negative count, `distinct` keeps the first occurrence, `index_of`
+returns -1 when absent, and `enumerate`/`zip` return small classes
+(`Indexed[T]` with `index` and `value`, `Pair[A, B]` with `first` and `second`)
+because Sprig has no tuples. `text.fixed(value, decimals)` formats a finite
+`Float` with that many decimals, rounding half away from zero.
+`files.read_lines` splits like `text.lines`, and `files.walk` lists every file
+below a directory in sorted order without following symbolic links.
+`time.sleep` pauses and `time.monotonic_nanos` measures elapsed time.

@@ -1,3 +1,5 @@
+import java.math.BigDecimal as BigDecimal
+import java.math.RoundingMode as RoundingMode
 # String position operations use Unicode code points; Java char interop remains UTF-16.
 func join(values: List[String], separator: String) -> String:
     var output = ""
@@ -89,3 +91,32 @@ func is_ascii_letter(value: String) -> Bool:
         if code < 65 or (code > 90 and code < 97) or code > 122:
             return false
     return value.length() > 0
+
+# The value without the prefix, or unchanged when it does not start with it.
+func strip_prefix(value: String, prefix: String) -> String:
+    if starts_with(value, prefix):
+        return value.substring(prefix.length(), value.length())
+    return value
+
+# The value without the suffix, or unchanged when it does not end with it.
+func strip_suffix(value: String, suffix: String) -> String:
+    if ends_with(value, suffix):
+        return value.substring(0, value.length() - suffix.length())
+    return value
+
+# A finite Float as plain fixed-point text with that many decimals, rounded
+# half away from zero: fixed(2.5, 0) is "3" and fixed(1.005, 2) is "1.01".
+func fixed(value: Float, decimals: Int) -> String throws Error:
+    if decimals < 0:
+        throw Error("fixed decimals must not be negative: " + decimals)
+    if not value.isFinite():
+        throw Error("fixed needs a finite value: " + value)
+    let mode = RoundingMode.HALF_UP
+    let exact = BigDecimal.valueOf(value)
+    if mode != null and exact != null:
+        let scaled = exact.setScale(decimals.toInt32Exact(), mode)
+        if scaled != null:
+            let text = scaled.toPlainString()
+            if text != null:
+                return text
+    throw Error("host returned no fixed-point text")

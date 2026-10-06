@@ -1,0 +1,57 @@
+# Pseudo-random values from java.util.Random: seeded for repeatable runs, or
+# fresh. Bounds are checked here, so an invalid one is an Error rather than a
+# Java exception. Not for secrets.
+import java.util.Random as JavaRandom
+import java.util.UUID as UUID
+
+class Random:
+    let source: JavaRandom
+
+    # 0 <= result < bound; the bound must be positive.
+    func next_int(bound: Int) -> Int throws Error:
+        if bound <= 0:
+            throw Error("next_int bound must be positive: " + bound)
+        return source.nextLong(bound)
+
+    # 0.0 <= result < 1.0
+    func next_float() -> Float:
+        return source.nextDouble()
+
+    func next_bool() -> Bool:
+        return source.nextBoolean()
+
+# The same seed gives the same sequence on every run.
+func seeded(seed: Int) -> Random:
+    return Random(source=JavaRandom(seed))
+
+func fresh() -> Random:
+    return Random(source=JavaRandom())
+
+# A copy of the list in random order; the input is unchanged.
+generic T:
+    func shuffled(random: Random, items: List[T]) -> List[T]:
+        let copy = items.toMutableList()
+        var index = copy.size() - 1
+        while index > 0:
+            let other = random.source.nextLong(index + 1)
+            let held = copy.get(index)
+            copy.set(index, copy.get(other))
+            copy.set(other, held)
+            index -= 1
+        return copy.toList()
+
+# One item of a non-empty list, each equally likely.
+generic T:
+    func choice(random: Random, items: List[T]) -> T throws Error:
+        if items.size() == 0:
+            throw Error("choice needs a non-empty list")
+        return items.get(random.source.nextLong(items.size()))
+
+# A random UUID in its usual 36-character text form.
+func uuid() -> String throws Error:
+    let value = UUID.randomUUID()
+    if value != null:
+        let text = value.toString()
+        if text != null:
+            return text
+    throw Error("host returned no UUID")
