@@ -16,10 +16,12 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-CALL-UNKNOWN-FIELD | Named argument does not match any field. |
 | SPR-COLLECTION-IMMUTABLE | List/Map are read-only; convert with toMutableList()/toMutableMap(). |
 | SPR-FLOW-BREAK | break is only valid inside a loop. |
+| SPR-FLOW-CATCH-NEVER-THROWN | A catch names a checked Java exception that nothing in its try block can throw. |
 | SPR-FLOW-CONTINUE | continue is only valid inside a loop. |
 | SPR-FLOW-MISSING-RETURN | A non-Unit function must return on every path. |
 | SPR-FLOW-RETHROWS | rethrows needs a parameter whose function type declares throws Error, and the function may throw nothing of its own. |
 | SPR-FLOW-THROWS | A recoverable error must be declared with throws or caught. |
+| SPR-FLOW-THROWS-UNUSED | A function declares a checked Java exception that its body can never throw. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-CONFORM-EFFECTS | A witness method declares checked exceptions the Java interface method does not permit. |
 | SPR-CONFORM-MEMBER | An existing class method does not exactly match a required abstract Java method. |

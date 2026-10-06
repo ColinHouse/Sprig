@@ -3,7 +3,6 @@ import "@std/files.spr" as files
 import "@std/json.spr" as json
 import "@std/process.spr" as process
 import "@cli/cli.spr" as cli
-import java.io.IOException as IOException
 import "./meta.spr" as meta
 
 func options() -> List[cli.OptionSpec]:
@@ -29,7 +28,7 @@ func report(document: json.Value) -> String throws Error:
         return output
     throw Error("unsupported API document kind: " + kind)
 
-func run() -> Unit throws IOException, Error:
+func run() -> Unit throws Error:
     let specs = options()
     let arguments = cli.parse(process.arguments(), specs)
     if arguments.flag("help") or arguments.positionals.size() == 0:
@@ -45,9 +44,6 @@ func run() -> Unit throws IOException, Error:
 
 try:
     run()
-catch problem: IOException:
-    print("api-report: " + problem.toString())
-    throw problem
 catch problem: Error:
     print("api-report: " + problem.message)
     throw problem

@@ -1,0 +1,40 @@
+# Every @std/files failure is an Error whose message names the operation, the
+# path as written and the reason. scripts/test-stdlib.py runs this in a
+# temporary directory holding data/ok.txt, data/input.bin (not UTF-8),
+# data/exists.txt and data/sub/.
+import "@std/files.spr" as files
+
+func attempt(label: String, action: fn() -> String throws Error) -> Unit:
+    try:
+        print(label + ": ok " + action())
+    catch problem: Error:
+        print(label + ": " + problem.message)
+
+func attempt_unit(label: String, action: fn() -> Unit throws Error) -> Unit:
+    try:
+        action()
+        print(label + ": ok")
+    catch problem: Error:
+        print(label + ": " + problem.message)
+
+attempt("read ok", fn() => files.read_utf8("data/ok.txt"))
+attempt("read missing", fn() => files.read_utf8("data/missing.txt"))
+attempt("read directory", fn() => files.read_utf8("data"))
+attempt("read invalid", fn() => files.read_utf8("data/input.bin"))
+attempt("read lines missing", fn() => files.read_lines("data/missing.txt").size().toString())
+attempt_unit("write missing parent", fn() => files.write_utf8("data/no-such-dir/out.txt", "x"))
+attempt_unit("write directory", fn() => files.write_utf8("data/sub", "x"))
+attempt_unit("atomic missing parent", fn() => files.atomic_write_utf8("data/no-such-dir/out.txt", "x"))
+attempt_unit("make dir over file", fn() => files.make_directory("data/exists.txt"))
+attempt_unit("copy missing", fn() => files.copy_file("data/missing.txt", "data/copy.txt"))
+attempt_unit("copy onto existing", fn() => files.copy_file("data/ok.txt", "data/exists.txt"))
+attempt_unit("copy into missing dir", fn() => files.copy_file("data/ok.txt", "data/nowhere/copy.txt"))
+attempt_unit("copy directory", fn() => files.copy_file("data/sub", "data/copy2"))
+attempt_unit("move missing", fn() => files.move("data/missing.txt", "data/moved.txt"))
+attempt_unit("remove missing", fn() => files.remove_file("data/missing.txt"))
+attempt_unit("remove directory", fn() => files.remove_file("data/sub"))
+attempt("list missing", fn() => files.list("data/missing").size().toString())
+attempt("list file", fn() => files.list("data/ok.txt").size().toString())
+attempt("walk missing", fn() => files.walk("data/missing").size().toString())
+let all = ["data/ok.txt", "data/exists.txt"].map(fn(p: String) => files.read_utf8(p))
+print(all.size())

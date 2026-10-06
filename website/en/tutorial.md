@@ -251,7 +251,7 @@ The complete program is [on GitHub](https://github.com/ColinHouse/Sprig/blob/mai
 `parse_amount` wants exactly two digits after the point, so that line fails to parse. The error travels up to the outermost `catch`:
 
 ```text
-bad data: not an amount: 45.5
+not an amount: 45.5
 ```
 
 To read your own expenses, delete the `temp_file()` and `write_utf8` lines and set `path` to your file.

@@ -124,6 +124,10 @@ public final class TypeChecker {
     private int lambdaDepth;
     private final Deque<Map<Symbol, Type>> narrowing = new ArrayDeque<>();
     private final Deque<List<Type>> caughtStack = new ArrayDeque<>();
+    /** Per open try, innermost first: the types its block can throw that no inner catch handles. */
+    private final Deque<List<Type>> tryThrown = new ArrayDeque<>();
+    /** Types the current function's body lets escape; null outside a function body. */
+    private List<Type> escaping;
     private final Deque<List<Type>> effectCollectors = new ArrayDeque<>();
     /** Thrown types met inside the lambda bodies being checked, innermost first; they become the lambda's throws clause. */
     private final Deque<List<Type>> lambdaEffects = new ArrayDeque<>();
@@ -200,6 +204,7 @@ public final class TypeChecker {
         loopDepth = 0;
         narrowing.clear();
         caughtStack.clear();
+        tryThrown.clear();
         effectCollectors.clear();
         checkSequence(module.topStatements);
     }
@@ -213,6 +218,7 @@ public final class TypeChecker {
         activeTypeParams = owner.typeParamTypes;
         narrowing.clear();
         caughtStack.clear();
+        tryThrown.clear();
         List<Type> effects = new ArrayList<>();
         effectCollectors.push(effects);
         collectingDefault = field;
@@ -287,9 +293,13 @@ public final class TypeChecker {
         loopDepth = 0;
         narrowing.clear();
         caughtStack.clear();
+        tryThrown.clear();
+        escaping = new ArrayList<>();
         narrowing.push(new HashMap<>());
         checkSequence(func.body);
         narrowing.pop();
+        checkDeclaredThrows(func, escaping);
+        escaping = null;
         activeTypeParams = previousTypeParams;
         Type returnType = func.returnType;
         if (returnType != NativeType.UNIT && returnType != NativeType.ERROR && !definitelyReturns(func.body)) {
@@ -637,10 +647,21 @@ public final class TypeChecker {
             caught.add(type);
         }
         caughtStack.push(caught);
+        tryThrown.push(new ArrayList<>());
         narrowing.push(new HashMap<>());
         checkSequence(tryStmt.body);
         narrowing.pop();
         caughtStack.pop();
+        List<Type> thrown = tryThrown.pop();
+        for (Stmt.Try.CatchClause clause : tryStmt.catches) {
+            Type type = clause.caughtType;
+            if (isTrackedChecked(type) && !related(type, thrown)) {
+                diagnostics.add(Diagnostic.error(Codes.FLOW_CATCH_NEVER_THROWN, Phase.FLOW,
+                        "Catch of " + type.display() + " can never run: nothing in the try block can throw it",
+                        module.uri, clause.typeRef.span)
+                        .withHint("Remove this catch clause; catch Error if the block calls Sprig functions that fail with Error."));
+            }
+        }
         for (Stmt.Try.CatchClause clause : tryStmt.catches) {
             narrowing.push(new HashMap<>());
             if (clause.symbol != null) {
@@ -3985,6 +4006,7 @@ public final class TypeChecker {
             }
             return;
         }
+        recordThrown(thrown);
         if (!effectCollectors.isEmpty() && lambdaDepth == 0) {
             for (Type type : thrown) {
                 if (type == null || type == NativeType.ERROR) continue;
@@ -4040,6 +4062,66 @@ public final class TypeChecker {
                         "Call may throw " + name + "; declare 'throws " + name + "' or handle it with try/catch",
                         module.uri, span).withHint("Sprig keeps recoverable errors explicit; there is no implicit propagation."));
             }
+        }
+    }
+
+    /**
+     * Note where a thrown type can go: every open try it reaches, innermost
+     * first, until a catch handles it; when none does, it escapes the function.
+     * The two flow checks below compare catch and throws clauses with this.
+     */
+    private void recordThrown(List<Type> thrown) {
+        if (lambdaDepth != 0) {
+            return;
+        }
+        for (Type type : thrown) {
+            if (type == null || type == NativeType.ERROR) {
+                continue;
+            }
+            boolean handled = false;
+            var frames = caughtStack.iterator();
+            var seen = tryThrown.iterator();
+            while (frames.hasNext() && seen.hasNext()) {
+                List<Type> frame = frames.next();
+                seen.next().add(type);
+                if (frame.stream().anyMatch(caught -> caught != NativeType.ERROR && Semantics.isAssignable(caught, type))) {
+                    handled = true;
+                    break;
+                }
+            }
+            if (!handled && escaping != null) {
+                escaping.add(type);
+            }
+        }
+    }
+
+    /** Checked Java exceptions follow Java's rule; Exception and Throwable also cover unchecked ones. */
+    private static boolean isTrackedChecked(Type type) {
+        return type instanceof JavaType javaType && Semantics.isJvmChecked(type)
+                && javaType.clazz != Exception.class && javaType.clazz != Throwable.class;
+    }
+
+    /** Whether some thrown type is the given class, a subclass of it, or a superclass of it. */
+    private static boolean related(Type type, List<Type> thrown) {
+        for (Type candidate : thrown) {
+            if (Semantics.isAssignable(type, candidate) || Semantics.isAssignable(candidate, type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void checkDeclaredThrows(Decl.Func func, List<Type> escaped) {
+        for (int i = 0; i < func.throwsTypes.size(); i++) {
+            Type declared = func.throwsTypes.get(i);
+            if (!isTrackedChecked(declared) || related(declared, escaped)) {
+                continue;
+            }
+            Span span = i < func.throwsRefs.size() ? func.throwsRefs.get(i).span : func.span;
+            diagnostics.add(Diagnostic.error(Codes.FLOW_THROWS_UNUSED, Phase.FLOW,
+                    "'" + func.name + "' declares throws " + declared.display()
+                            + ", but nothing in its body can throw it", module.uri, span)
+                    .withHint("Remove " + declared.display() + " from the throws clause, then remove the catch clauses this reports in callers."));
         }
     }
 

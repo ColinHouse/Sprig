@@ -57,10 +57,13 @@ by the historical design kit in `docs/history/design-kit/`.
   are not interpreted. Java reference results are conservatively nullable; Java
   reference parameters are conservatively non-null.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
-  exception classes and top-level execution remains provisional.
-- Lambdas have single-expression bodies, support arities zero through three,
-  and cannot declare a `throws` type. A lambda that calls a checked-throwing
-  operation must handle that effect inside the lambda.
+  exception classes and top-level execution remains provisional. Checked Java
+  exceptions follow Java's rule in one direction more: a catch nothing can
+  reach and a declared exception the body cannot throw are both errors.
+- Lambdas have single-expression bodies and support arities zero through
+  three. A lambda's `throws Error` comes from its body; it cannot be written
+  on the lambda, and a lambda cannot call a function that throws a checked
+  Java exception.
 - Runtime numeric failures report `SPR-RUNTIME-EXCEPTION` with the nearest
   statement range for local and imported `Int`/`Int32` checked arithmetic, plus
   `data.origin="checked-arithmetic"`; the span is the statement, not a
