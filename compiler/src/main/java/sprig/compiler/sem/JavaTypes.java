@@ -426,6 +426,179 @@ public final class JavaTypes {
         return out;
     }
 
+    // ------------------------------------------------------------------
+    // Java functional interfaces: where a Sprig fn value crosses into Java
+    // ------------------------------------------------------------------
+
+    /**
+     * The single abstract method of a public functional interface, or null.
+     * Methods of java.lang.Object do not count, as in the JLS. A method with
+     * type parameters of its own or more than three parameters is outside the
+     * Fn0..Fn3 profile, and Sprig's own Fn0..Fn3 keep their separate contract.
+     */
+    public static java.lang.reflect.Method functionalMethod(Class<?> type) {
+        if (type == null || !type.isInterface() || isCallableClass(type)
+                || !java.lang.reflect.Modifier.isPublic(type.getModifiers())) {
+            return null;
+        }
+        java.lang.reflect.Method found = null;
+        for (java.lang.reflect.Method method : type.getMethods()) {
+            if (!java.lang.reflect.Modifier.isAbstract(method.getModifiers()) || isObjectMethod(method)) {
+                continue;
+            }
+            if (found == null) {
+                found = method;
+            } else if (!found.getName().equals(method.getName())
+                    || !java.util.Arrays.equals(found.getParameterTypes(), method.getParameterTypes())) {
+                return null; // two distinct abstract methods
+            }
+        }
+        if (found == null || found.getTypeParameters().length > 0 || found.getParameterCount() > 3) {
+            return null;
+        }
+        return found;
+    }
+
+    private static boolean isObjectMethod(java.lang.reflect.Method method) {
+        try {
+            Object.class.getMethod(method.getName(), method.getParameterTypes());
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Type-variable bindings of the functional method's declaring interface
+     * for a formal such as {@code Consumer<? super E>}: the formal's type
+     * arguments, resolved through {@code bindings}, projected through the
+     * interface hierarchy. A wildcard argument reads as its bound, because a
+     * lambda implementing {@code Consumer<String>} satisfies
+     * {@code Consumer<? super String>} and the same holds for every other
+     * wildcard. Null when an argument stays unresolved.
+     */
+    public static Map<TypeVariable<?>, Type> functionalBindings(java.lang.reflect.Type generic, Class<?> raw,
+            Map<TypeVariable<?>, Type> bindings) {
+        java.lang.reflect.Method sam = functionalMethod(raw);
+        if (sam == null) return null;
+        TypeVariable<?>[] variables = raw.getTypeParameters();
+        List<Type> arguments = new ArrayList<>();
+        if (generic instanceof ParameterizedType applied) {
+            java.lang.reflect.Type[] written = applied.getActualTypeArguments();
+            if (written.length != variables.length) return null;
+            for (java.lang.reflect.Type argument : written) {
+                java.lang.reflect.Type bound = wildcardBound(argument);
+                Type mapped = bound == null ? null : mapArgument(bound, bindings);
+                if (mapped == null) return null;
+                arguments.add(mapped);
+            }
+        } else if (variables.length > 0) {
+            return null; // a raw functional interface names no element types
+        }
+        return hierarchyBindings(raw, arguments).getOrDefault(sam.getDeclaringClass(), Map.of());
+    }
+
+    /**
+     * The Sprig function type a functional-interface formal expects, or null
+     * when a type argument or a method parameter stays unresolved, so nothing
+     * is guessed. {@code void} is {@code Unit}; a lambda with any result
+     * satisfies it, as in Java.
+     */
+    public static sprig.compiler.types.FunctionType javaCallable(java.lang.reflect.Type generic, Class<?> raw,
+            Map<TypeVariable<?>, Type> bindings) {
+        java.lang.reflect.Method sam = functionalMethod(raw);
+        Map<TypeVariable<?>, Type> local = functionalBindings(generic, raw, bindings);
+        if (sam == null || local == null) return null;
+        List<Type> params = new ArrayList<>();
+        for (java.lang.reflect.Type parameter : sam.getGenericParameterTypes()) {
+            Type mapped = functionalSlot(parameter, local);
+            if (mapped == null || mapped == NativeType.UNIT) return null;
+            params.add(mapped);
+        }
+        Type result = sam.getReturnType() == void.class
+                ? NativeType.UNIT : functionalSlot(sam.getGenericReturnType(), local);
+        if (result == null) return null;
+        return new sprig.compiler.types.FunctionType(params, result);
+    }
+
+    /** One parameter or result of the functional method: a class, a bound variable or a concrete generic. */
+    private static Type functionalSlot(java.lang.reflect.Type generic, Map<TypeVariable<?>, Type> bindings) {
+        if (generic instanceof Class<?> clazz) {
+            // Character/Short/Byte need value adapters, as the Fn slots document.
+            if (clazz.isArray() || needsValueAdapter(clazz) || clazz == short.class || clazz == byte.class) {
+                return null;
+            }
+            return map(clazz);
+        }
+        if (generic instanceof TypeVariable<?> variable) {
+            return bindings.get(variable);
+        }
+        if (generic instanceof ParameterizedType) {
+            return mapBoundary(generic, bindings, false);
+        }
+        return null;
+    }
+
+    /** A wildcard type argument reads as its single bound; a bare {@code ?} stays unresolved. */
+    private static java.lang.reflect.Type wildcardBound(java.lang.reflect.Type argument) {
+        if (argument instanceof WildcardType wildcard) {
+            java.lang.reflect.Type[] lower = wildcard.getLowerBounds();
+            if (lower.length == 1) return lower[0];
+            java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
+            return upper.length == 1 && upper[0] != Object.class ? upper[0] : null;
+        }
+        return argument;
+    }
+
+    /**
+     * Whether a formal is a functional interface whose wildcards sit only in
+     * its own type arguments, the one place a lambda satisfies them.
+     */
+    public static boolean functionalFormal(java.lang.reflect.Type generic, Class<?> raw) {
+        if (functionalMethod(raw) == null) return false;
+        if (!(generic instanceof ParameterizedType applied)) return generic instanceof Class<?>;
+        for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+            java.lang.reflect.Type bound = wildcardBound(argument);
+            if (bound == null || containsWildcard(bound)) return false;
+        }
+        return true;
+    }
+
+    private static boolean containsWildcard(java.lang.reflect.Type type) {
+        if (type instanceof WildcardType) return true;
+        if (type instanceof ParameterizedType applied) {
+            for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                if (containsWildcard(argument)) return true;
+            }
+        }
+        if (type instanceof GenericArrayType array) return containsWildcard(array.getGenericComponentType());
+        return false;
+    }
+
+    /**
+     * The erased element class of a varargs parameter when trailing arguments
+     * can be packed into it: a class element, or a parameterized element taken
+     * at its raw class. A type-variable element ({@code T...}) stays null.
+     */
+    public static Class<?> varargsElement(java.lang.reflect.Executable executable) {
+        if (!executable.isVarArgs()) return null;
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type generic = executable.getGenericParameterTypes()[raw.length - 1];
+        if (generic instanceof GenericArrayType array
+                && !(array.getGenericComponentType() instanceof ParameterizedType)) {
+            return null;
+        }
+        return raw[raw.length - 1].getComponentType();
+    }
+
+    /** The generic element type of a varargs parameter, for mapping one trailing argument. */
+    public static java.lang.reflect.Type varargsElementType(java.lang.reflect.Executable executable) {
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type generic = executable.getGenericParameterTypes()[raw.length - 1];
+        return generic instanceof GenericArrayType array
+                ? array.getGenericComponentType() : raw[raw.length - 1].getComponentType();
+    }
+
     /** Only Sprig-owned Fn0..Fn3 carry a source callable contract. No Java SAM inference. */
     public static boolean isCallableClass(Class<?> clazz) {
         return clazz == sprig.runtime.Fn0.class || clazz == sprig.runtime.Fn1.class

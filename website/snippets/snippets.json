@@ -11,6 +11,7 @@
     "json_fields.spr",
     "json_lookup.spr",
     "jvm_exceptions.spr",
+    "jvm_callables.spr",
     "jvm_interop.spr",
     "lambdas.spr",
     "modules/main.spr",

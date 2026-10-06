@@ -161,7 +161,8 @@ public final class Widget {
         api = obj(run("api", "probe.Widget", "--classpath", jar, "--json", env=env))
         check("api-jar-no-init", api["className"] == "probe.Widget" and not marker.exists())
         methods = {m["name"]: m for m in api["staticMethods"]}
-        check("api-varargs-boundary", methods["join"]["unusableReason"] is not None)
+        check("api-varargs-boundary", methods["join"]["unusableReason"] is None
+              and "varargs-expansion" in methods["join"]["interopReasonCodes"])
         check("api-primitive-map", methods["plus"]["sprigReturnType"] == "Int32")
         program = directory / "valid.spr"
         program.write_text('''import probe.Widget as Widget

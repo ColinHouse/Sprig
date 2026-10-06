@@ -36,7 +36,7 @@ def main():
          "jvm-result": ('Fixture.one(fn(x: Int) => x)',"SPR-JVM-MEMBER"),
          "jvm-null": ('let f: (fn() -> Int)? = null\nFixture.zero(f)',"SPR-TYPE-NULLABLE"),
          "jvm-null-result": ('let s: String? = null\nFixture.one(fn(x: Int) => s)',"SPR-JVM-MEMBER"),
-         "jvm-sam": ('Fixture.sam(fn(x: Int) => x.toString())',"SPR-JVM-MEMBER"),
+         "jvm-sam-mismatch": ('Fixture.sam(fn(x: String) => x)',"SPR-JVM-MEMBER"),
          "jvm-raw": ('Fixture.raw(fn(x: Int) => x)',"SPR-JVM-MEMBER"),
          "jvm-adapter-slot": ('Fixture.shortSlot(fn(x: Int32) => x)',"SPR-JVM-MEMBER"),
          "jvm-wildcard": ('Fixture.wildcard(fn(x: Int) => x.toString())',"SPR-JVM-MEMBER"),
@@ -49,6 +49,11 @@ def main():
             data=json.loads(p.stdout)
             codes={d["code"] for d in data["diagnostics"]}
             expect(p.returncode!=0 and code in codes,(name,p.stdout,p.stderr))
+        # A Java functional interface accepts a Sprig function value; the result is adapted.
+        sam=Path(tmp)/"jvm-sam.spr"
+        sam.write_text('import fixture.CallableFixture as Fixture\nprint(Fixture.samResult(fn(x: Int) => x.toString() + "!"))\n')
+        p=run("run",sam,"--classpath",cp)
+        expect(p.returncode==0 and p.stdout=="7!\n",p.stdout+p.stderr)
         for name, source, message in (
             ("null-result", "let f = Fixture.badResult()\nif f != null:\n    print(f(1))\n", "non-null callable result"),
             ("null-input", "print(Fixture.nullInput(fn(s: String) => s))\n", "non-null callable argument"),
