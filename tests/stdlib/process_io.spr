@@ -1,0 +1,44 @@
+import "@std/process.spr" as process
+
+# Each mode exercises one contract of standard input, standard error and exit.
+func code_points(text: String) -> String:
+    var shown = text.length().toString() + ":"
+    for element in text:
+        shown = shown + " " + element.codeAt(0).toString()
+    return shown
+
+let mode = process.argument(0)
+if mode == "line":
+    var count = 0
+    while true:
+        let line = process.read_line()
+        if line == null:
+            break
+        count += 1
+        print(count.toString() + " [" + line + "] " + code_points(line))
+    print("end after " + count.toString())
+    print(process.read_line() == null)
+    print(process.read_all().length())
+elif mode == "lines":
+    let lines = process.read_lines()
+    print(lines.size())
+    for line in lines:
+        print("[" + line + "]")
+    print(process.read_lines().size())
+elif mode == "rest":
+    let first = process.read_line()
+    if first != null:
+        print("[" + first + "]")
+    print(code_points(process.read_all()))
+elif mode == "fail":
+    print("before")
+    process.print_error("problem: 说明 😀")
+    process.exit(3)
+    print("not reached")
+elif mode == "ok":
+    process.print_error("note")
+    print("done")
+    process.exit(0)
+    print("not reached")
+elif mode == "status":
+    process.exit(Int.parse(process.argument(1)))

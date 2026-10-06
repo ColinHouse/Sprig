@@ -119,7 +119,8 @@ and top-level `diagnostics`. Each test row has `name`, absolute `path`, `mode`
 and `programErrorOutput`; a failed row also has `failure`. Rows and diagnostics
 retain deterministic discovery/checking order. Program output and filesystem
 paths are the program's actual values and may vary if the program makes them
-vary.
+vary. A test's standard input is empty, so `process.read_line()` returns `null`
+at once.
 
 Exit 0 means every discovered test passed. Exit 1 means at least one program or
 expected-diagnostic comparison failed. Exit 2 means an invalid command,
