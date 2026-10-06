@@ -1,0 +1,65 @@
+# A set of values compared with ==, kept in first-insertion order. Membership
+# is a map lookup, so it does not scan the whole set. Like every generic
+# call, construction names the element type: sets.of[String](["a", "b"]).
+generic T:
+    class Set:
+        let members: MutableMap[T, Bool] = {}
+
+        # True when the value was not there before.
+        func add(value: T) -> Bool:
+            if members.containsKey(value):
+                return false
+            members.set(value, true)
+            return true
+
+        func has(value: T) -> Bool:
+            return members.containsKey(value)
+
+        # True when the value was there.
+        func remove(value: T) -> Bool:
+            if not members.containsKey(value):
+                return false
+            members.remove(value)
+            return true
+
+        func size() -> Int:
+            return members.size()
+
+        # The members in insertion order.
+        func to_list() -> List[T]:
+            return members.keys()
+
+generic T:
+    func of(values: List[T]) -> Set[T]:
+        let set = Set[T]()
+        for value in values:
+            set.add(value)
+        return set
+
+# A new set with every member of both, left's members first.
+generic T:
+    func union(left: Set[T], right: Set[T]) -> Set[T]:
+        let set = Set[T]()
+        for value in left.to_list():
+            set.add(value)
+        for value in right.to_list():
+            set.add(value)
+        return set
+
+# A new set with the members of left that are also in right.
+generic T:
+    func intersection(left: Set[T], right: Set[T]) -> Set[T]:
+        let set = Set[T]()
+        for value in left.to_list():
+            if right.has(value):
+                set.add(value)
+        return set
+
+# A new set with the members of left that are not in right.
+generic T:
+    func difference(left: Set[T], right: Set[T]) -> Set[T]:
+        let set = Set[T]()
+        for value in left.to_list():
+            if not right.has(value):
+                set.add(value)
+        return set

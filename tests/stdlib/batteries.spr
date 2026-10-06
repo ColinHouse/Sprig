@@ -1,0 +1,144 @@
+import "@std/sets.spr" as sets
+import "@std/random.spr" as random
+import "@std/regex.spr" as regex
+import "@std/dates.spr" as dates
+import "@std/lists.spr" as lists
+import "@std/text.spr" as text
+import "@std/files.spr" as files
+import "@std/time.spr" as time
+import "@std/process.spr" as process
+
+# sets: insertion order, membership, removal, algebra
+let fruit = sets.of[String](["pear", "apple", "pear", "fig"])
+print(fruit.to_list())
+print(fruit.size())
+print(fruit.has("apple"))
+print(fruit.has("plum"))
+print(fruit.add("plum"))
+print(fruit.add("plum"))
+print(fruit.remove("pear"))
+print(fruit.remove("pear"))
+print(fruit.to_list())
+let numbers = sets.of[Int]([3, 1, 2])
+let more = sets.of[Int]([2, 3, 4])
+print(sets.union[Int](numbers, more).to_list())
+print(sets.intersection[Int](numbers, more).to_list())
+print(sets.difference[Int](numbers, more).to_list())
+print(sets.of[Int]([]).size())
+
+# random: bounds, repeatability, permutations
+let seeded = random.seeded(42)
+let again = random.seeded(42)
+var same = true
+var in_bounds = true
+var draws = 0
+while draws < 200:
+    let value = seeded.next_int(6)
+    if value != again.next_int(6):
+        same = false
+    if value < 0 or value >= 6:
+        in_bounds = false
+    draws += 1
+print(same)
+print(in_bounds)
+let chance = seeded.next_float()
+print(chance >= 0.0 and chance < 1.0)
+let shuffled = random.shuffled[Int](seeded, [1, 2, 3, 4, 5])
+print(lists.sorted[Int](shuffled))
+print(shuffled.size())
+let picked = random.choice[String](seeded, ["only"])
+print(picked)
+try:
+    print(seeded.next_int(0))
+catch problem: Error:
+    print("caught " + problem)
+try:
+    print(random.choice[Int](seeded, []))
+catch problem: Error:
+    print("caught " + problem)
+print(random.uuid().length())
+print(random.fresh().next_float() < 1.0)
+
+# regex
+print(regex.matches("[a-z]+\\d", "abc1"))
+print(regex.matches("[a-z]+\\d", "abc12"))
+print(regex.find("\\d+", "order 66 of 99"))
+print(regex.find("\\d+", "none") == null)
+print(regex.find_all("\\d+", "order 66 of 99"))
+print(regex.replace_all("\\s+", "a  b   c", "-"))
+print(regex.replace_all("(\\w+)@(\\w+)", "ada@host", "$2:$1"))
+print(regex.split(",\\s*", "a, b,c"))
+try:
+    print(regex.matches("(", "x"))
+catch problem: Error:
+    print("caught invalid pattern")
+
+# dates
+print(dates.parse("2026-10-06"))
+print(dates.is_valid("2026-02-30"))
+print(dates.plus_days("2026-10-06", 30))
+print(dates.plus_days("2026-01-01", -1))
+print(dates.days_between("2026-10-06", "2027-01-01"))
+print(dates.days_between("2027-01-01", "2026-10-06"))
+print(dates.day_of_week("2026-10-06"))
+print(dates.year("2026-10-06") + " " + dates.month("2026-10-06") + " " + dates.day("2026-10-06"))
+print(dates.today_utc().length())
+try:
+    print(dates.parse("yesterday"))
+catch problem: Error:
+    print("caught " + problem)
+
+# lists extras
+let words: List[String] = ["pear", "apple", "fig", "apple"]
+print(lists.first[String](words))
+print(lists.last[String](words))
+let none: List[String] = []
+print(lists.first[String](none) == null)
+print(lists.take[String](words, 2))
+print(lists.take[String](words, 9))
+print(lists.drop[String](words, 3))
+print(lists.drop[String](words, 9))
+print(lists.reversed[String](words))
+print(lists.distinct[String](words))
+print(lists.index_of[String](words, "fig"))
+print(lists.index_of[String](words, "plum"))
+for entry in lists.enumerate[String](["a", "b"]):
+    print(entry.index + ":" + entry.value)
+for pair in lists.zip[String, Int](["a", "b", "c"], [1, 2]):
+    print(pair.first + "=" + pair.second)
+try:
+    print(lists.take[String](words, -1))
+catch problem: Error:
+    print("caught " + problem)
+
+# text extras
+print(text.strip_prefix("sprig.lock", "sprig."))
+print(text.strip_prefix("sprig.lock", "x"))
+print(text.strip_suffix("sprig.lock", ".lock"))
+print(text.fixed(2.5, 0))
+print(text.fixed(1.005, 2))
+print(text.fixed(3.0, 2))
+print(text.fixed(-1.25, 1))
+try:
+    print(text.fixed(1.0, -1))
+catch problem: Error:
+    print("caught " + problem)
+
+# files extras
+let root = files.join(process.argument(0), "walked")
+files.make_directory(files.join(root, "deep"))
+files.write_utf8(files.join(root, "b.txt"), "one\ntwo\r\nthree")
+files.write_utf8(files.join(root, "a.txt"), "")
+files.write_utf8(files.join(files.join(root, "deep"), "c.txt"), "x")
+print(files.read_lines(files.join(root, "b.txt")))
+for entry in files.walk(root):
+    print(text.strip_prefix(entry, root).replace("\\", "/"))
+
+# time extras
+let started = time.monotonic_nanos()
+time.sleep(20)
+print(time.monotonic_nanos() - started >= 20000000)
+try:
+    time.sleep(-1)
+catch problem: Error:
+    print("caught " + problem)

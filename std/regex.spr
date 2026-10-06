@@ -1,0 +1,61 @@
+# Regular expressions through java.util.regex, with Java's syntax. A pattern
+# that does not compile is an Error carrying Java's message. Replacements use
+# Java's rules too: $1 refers to a group and a backslash escapes.
+import "@std/jvm.spr" as jvm
+import java.util.regex.Pattern as Pattern
+import java.util.regex.PatternSyntaxException as PatternSyntaxException
+
+func compiled(pattern: String) -> Pattern throws Error:
+    try:
+        let value = Pattern.compile(pattern)
+        if value != null:
+            return value
+    catch problem: PatternSyntaxException:
+        let message = problem.getMessage()
+        if message != null:
+            throw Error("invalid pattern: " + message)
+        throw Error("invalid pattern: " + pattern)
+    throw Error("host returned no pattern")
+
+# Whether the whole text matches the pattern.
+func matches(pattern: String, text: String) -> Bool throws Error:
+    let matcher = compiled(pattern).matcher(text)
+    if matcher != null:
+        return matcher.matches()
+    throw Error("host returned no matcher")
+
+# The first match inside the text, or null when there is none.
+func find(pattern: String, text: String) -> String? throws Error:
+    let matcher = compiled(pattern).matcher(text)
+    if matcher != null and matcher.find():
+        return matcher.group()
+    return null
+
+# Every non-overlapping match, in order.
+func find_all(pattern: String, text: String) -> List[String] throws Error:
+    let matcher = compiled(pattern).matcher(text)
+    let found: MutableList[String] = []
+    if matcher != null:
+        while matcher.find():
+            let group = matcher.group()
+            if group != null:
+                found.append(group)
+    return found.toList()
+
+# The text with every match replaced.
+func replace_all(pattern: String, text: String, replacement: String) -> String throws Error:
+    let matcher = compiled(pattern).matcher(text)
+    if matcher != null:
+        let result = matcher.replaceAll(replacement)
+        if result != null:
+            return result
+    throw Error("host returned no replacement")
+
+# The pieces between matches. A trailing empty piece is dropped, as in Java.
+func split(pattern: String, text: String) -> List[String] throws Error:
+    let parts = compiled(pattern).splitAsStream(text)
+    if parts != null:
+        let listed = parts.toList()
+        if listed != null:
+            return jvm.list_snapshot[String](listed)
+    throw Error("host returned no parts")

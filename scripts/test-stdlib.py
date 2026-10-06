@@ -159,6 +159,33 @@ def main():
         r'body: expected "a\nb", got "a\r\nb\t\"q\"\\"',
     ], repr(helpers_result.stdout)
     check_process_io(launcher)
+    with tempfile.TemporaryDirectory(prefix='sprig std batteries ') as scratch:
+        batteries = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/batteries.spr'), '--', scratch],
+                                   cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
+    assert batteries.returncode == 0, (batteries.stdout, batteries.stderr)
+    assert batteries.stdout.splitlines() == [
+        # sets: insertion order, membership, add/remove report change, algebra
+        '[pear, apple, fig]', '3', 'true', 'false', 'true', 'false', 'true', 'false', '[apple, fig, plum]',
+        '[3, 1, 2, 4]', '[3, 2]', '[1]', '0',
+        # random: same seed same draws, bounds, a permutation, choice, checked bounds, UUID text
+        'true', 'true', 'true', '[1, 2, 3, 4, 5]', '5', 'only',
+        'caught next_int bound must be positive: 0', 'caught choice needs a non-empty list', '36', 'true',
+        # regex
+        'true', 'false', '66', 'true', '[66, 99]', 'a-b-c', 'host:ada', '[a, b, c]', 'caught invalid pattern',
+        # dates
+        '2026-10-06', 'false', '2026-11-05', '2025-12-31', '87', '-87', '2', '2026 10 6', '10',
+        'caught not a date: yesterday',
+        # lists: first/last, take/drop, reversed, distinct, index_of, enumerate, zip
+        'pear', 'apple', 'true', '[pear, apple]', '[pear, apple, fig, apple]', '[apple]', '[]',
+        '[apple, fig, apple, pear]', '[pear, apple, fig]', '2', '-1', '0:a', '1:b', 'a=1', 'b=2',
+        'caught take count must not be negative: -1',
+        # text: strip_prefix/strip_suffix, fixed rounds half away from zero
+        'lock', 'sprig.lock', 'sprig', '3', '1.01', '3.00', '-1.3', 'caught fixed decimals must not be negative: -1',
+        # files: read_lines splits like text.lines; walk is sorted and recursive
+        '[one, two, three]', '/a.txt', '/b.txt', '/deep/c.txt',
+        # time: sleep waits at least the given time on the monotonic clock
+        'true', 'caught sleep millis must not be negative: -1',
+    ], repr(batteries.stdout)
     practical_outputs = []
     for timezone in ('UTC', 'Pacific/Honolulu'):
         with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:
@@ -178,7 +205,7 @@ def main():
             ], (timezone, repr(lines))
             practical_outputs.append(lines)
     assert practical_outputs[0] == practical_outputs[1], practical_outputs
-    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks, process input/output/exit and recursive JSON contracts passed')
+    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks, process input/output/exit, sets/random/regex/dates and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()

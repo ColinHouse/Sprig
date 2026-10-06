@@ -1,0 +1,68 @@
+# Calendar dates as ISO text such as 2026-10-06, through java.time.LocalDate.
+# Text that is not a valid date is an Error. There is no date type: a date
+# is a String that these functions check.
+import java.time.LocalDate as LocalDate
+import java.time.ZoneOffset as ZoneOffset
+import java.time.format.DateTimeParseException as DateTimeParseException
+import java.time.temporal.ChronoUnit as ChronoUnit
+
+func parsed(text: String) -> LocalDate throws Error:
+    try:
+        let value = LocalDate.parse(text)
+        if value != null:
+            return value
+    catch problem: DateTimeParseException:
+        throw Error("not a date: " + text)
+    throw Error("host returned no date")
+
+func text_of(value: LocalDate?) -> String throws Error:
+    if value != null:
+        let text = value.toString()
+        if text != null:
+            return text
+    throw Error("host returned no date text")
+
+# Today's date in UTC.
+func today_utc() -> String throws Error:
+    let zone = ZoneOffset.UTC
+    if zone != null:
+        return text_of(LocalDate.now(zone))
+    throw Error("host returned no UTC zone")
+
+# The text normalized to ISO form; an Error when it is not a valid date.
+func parse(text: String) -> String throws Error:
+    return text_of(parsed(text))
+
+func is_valid(text: String) -> Bool:
+    try:
+        parsed(text)
+        return true
+    catch problem: Error:
+        return false
+
+# The date the given number of days later; a negative count goes back.
+func plus_days(date: String, days: Int) -> String throws Error:
+    return text_of(parsed(date).plusDays(days))
+
+# How many days from start to end; negative when end is earlier.
+func days_between(start: String, end: String) -> Int throws Error:
+    let unit = ChronoUnit.DAYS
+    if unit != null:
+        return unit.between(parsed(start), parsed(end))
+    throw Error("host returned no day unit")
+
+# 1 for Monday through 7 for Sunday.
+func day_of_week(date: String) -> Int throws Error:
+    let day = parsed(date).getDayOfWeek()
+    if day != null:
+        return day.getValue()
+    throw Error("host returned no weekday")
+
+func year(date: String) -> Int throws Error:
+    return parsed(date).getYear()
+
+func month(date: String) -> Int throws Error:
+    return parsed(date).getMonthValue()
+
+func day(date: String) -> Int throws Error:
+    return parsed(date).getDayOfMonth()

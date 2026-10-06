@@ -1,3 +1,6 @@
+import java.lang.InterruptedException as InterruptedException
+import java.lang.System as System
+import java.lang.Thread as Thread
 import sprig.runtime.host.HostSystem as HostSystem
 
 func epoch_millis() -> Int:
@@ -17,3 +20,18 @@ func format_utc(epoch_millis: Int) -> String throws Error:
 
 func parse_utc(value: String) -> Int throws Error:
     return HostSystem.parseUtc(value)
+
+# Pauses the program for that many milliseconds.
+func sleep(millis: Int) -> Unit throws Error:
+    if millis < 0:
+        throw Error("sleep millis must not be negative: " + millis)
+    try:
+        Thread.sleep(millis)
+    catch problem: InterruptedException:
+        throw Error("sleep was interrupted")
+
+# A monotonic clock reading in nanoseconds for measuring elapsed time. It has
+# no relation to the wall clock; only differences between two readings mean
+# anything.
+func monotonic_nanos() -> Int:
+    return System.nanoTime()

@@ -138,3 +138,103 @@ generic T:
         let copy = items.toMutableList()
         copy.sort()
         return copy.toList()
+
+# An item with its position, from enumerate.
+generic T:
+    class Indexed:
+        let index: Int
+        let value: T
+
+# Two items side by side, from zip.
+generic A, B:
+    class Pair:
+        let first: A
+        let second: B
+
+# The first or last item, or null for an empty list.
+generic T:
+    func first(items: List[T]) -> T?:
+        if items.size() == 0:
+            return null
+        return items.get(0)
+
+generic T:
+    func last(items: List[T]) -> T?:
+        if items.size() == 0:
+            return null
+        return items.get(items.size() - 1)
+
+# The first count items, or every item when the list is shorter.
+generic T:
+    func take(items: List[T], count: Int) -> List[T] throws Error:
+        if count < 0:
+            throw Error("take count must not be negative: " + count)
+        let out: MutableList[T] = []
+        var index = 0
+        while index < items.size() and index < count:
+            out.append(items.get(index))
+            index += 1
+        return out.toList()
+
+# Every item after the first count, or nothing when the list is shorter.
+generic T:
+    func drop(items: List[T], count: Int) -> List[T] throws Error:
+        if count < 0:
+            throw Error("drop count must not be negative: " + count)
+        let out: MutableList[T] = []
+        var index = count
+        while index < items.size():
+            out.append(items.get(index))
+            index += 1
+        return out.toList()
+
+generic T:
+    func reversed(items: List[T]) -> List[T]:
+        let out: MutableList[T] = []
+        var index = items.size() - 1
+        while index >= 0:
+            out.append(items.get(index))
+            index -= 1
+        return out.toList()
+
+# Each distinct item once, at the position of its first occurrence. Items
+# are compared the way map keys are.
+generic T:
+    func distinct(items: List[T]) -> List[T]:
+        let seen: MutableMap[T, Bool] = {}
+        let out: MutableList[T] = []
+        for item in items:
+            if not seen.containsKey(item):
+                seen.set(item, true)
+                out.append(item)
+        return out.toList()
+
+# The position of the first item equal to the value, or -1.
+generic T:
+    func index_of(items: List[T], value: T) -> Int:
+        requires T: Equatable
+        var index = 0
+        for item in items:
+            if item == value:
+                return index
+            index += 1
+        return -1
+
+generic T:
+    func enumerate(items: List[T]) -> List[Indexed[T]]:
+        let out: MutableList[Indexed[T]] = []
+        var index = 0
+        for item in items:
+            out.append(Indexed[T](index=index, value=item))
+            index += 1
+        return out.toList()
+
+# Pairs of items at the same position, as long as the shorter list.
+generic A, B:
+    func zip(left: List[A], right: List[B]) -> List[Pair[A, B]]:
+        let out: MutableList[Pair[A, B]] = []
+        var index = 0
+        while index < left.size() and index < right.size():
+            out.append(Pair[A, B](first=left.get(index), second=right.get(index)))
+            index += 1
+        return out.toList()
