@@ -177,7 +177,7 @@ import "@std/lists.spr" as lists
 
 for group in lists.group_by[Order, String](orders, fn(o: Order) => o.category):
     let total = lists.sum_by[Order](group.items, fn(o: Order) => o.cents)
-    print(group.key + " " + total.toString())
+    print(group.key + " " + total)
 
 let large = lists.find[Order](orders, fn(o: Order) => o.cents > 400)
 if large != null:
