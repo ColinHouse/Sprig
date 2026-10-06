@@ -1,6 +1,6 @@
 lock-version = 5
 language = "0.8"
-compiler = "0.6.0-beta.1"
+compiler = "0.7.0-beta.1"
 manifest-sha256 = "fe921ff96abc91f6f8ead57c5f0501101d9db566bbbe17cd87682c71dae0be7e"
 
 [[sprig]]
