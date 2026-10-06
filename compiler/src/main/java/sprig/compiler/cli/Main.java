@@ -153,6 +153,7 @@ public final class Main {
         out.println("  fmt <file.spr|directory> [--check] [--json] canonical comment-preserving formatting");
         out.println("  lsp [--stdio] [--classpath PATH]            language server on standard input/output");
         out.println("  version");
+        out.println("New to Sprig? Start with 'sprig help language'; each topic lists its syntax, rules and an example.");
     }
 
     private static int help(String[] args) {
@@ -161,7 +162,7 @@ public final class Main {
         for (int i = 1; i < args.length; i++) {
             if (args[i].equals("--json")) continue;
             if (topic != null || !Catalog.topics().contains(args[i])) {
-                return commandError("help", "Unknown help topic: " + args[i], json);
+                return commandError("help", unknownTopic(args[i]), json);
             }
             topic = args[i];
         }
@@ -182,9 +183,35 @@ public final class Main {
             for (String line : (List<String>) data.get("syntax")) System.out.println("  " + line);
             System.out.println("Rules:");
             for (String line : (List<String>) data.get("rules")) System.out.println("  - " + line);
-            System.out.println("Example (Sprig source repository): " + String.join(", ", (List<String>) data.get("examples")));
+            Object methods = data.get("methods");
+            if (methods instanceof Map<?, ?> table) {
+                System.out.println("Methods:");
+                for (Map.Entry<?, ?> entry : table.entrySet()) {
+                    System.out.println("  " + entry.getKey() + ": " + String.join(", ", (List<String>) entry.getValue()));
+                }
+            }
+            for (String example : (List<String>) data.get("examples")) {
+                String text = Catalog.exampleSource(example);
+                if (text == null) {
+                    System.out.println("Example (Sprig source repository): " + example);
+                    continue;
+                }
+                System.out.println("Example (" + example + "):");
+                text.lines().forEach(line -> System.out.println("  " + line));
+            }
         }
         return 0;
+    }
+
+    /** Lists the topics, and points a bundled module's name at its API listing. */
+    private static String unknownTopic(String name) {
+        String message = "Unknown help topic: " + name + ". Topics: " + String.join(", ", Catalog.topics()) + ".";
+        String home = System.getProperty("sprig.home");
+        if (home != null && name.matches("[A-Za-z][A-Za-z0-9_]*")
+                && Files.isRegularFile(Path.of(home, "std", name + ".spr"))) {
+            message += " For the bundled module, run 'sprig api @std/" + name + ".spr'.";
+        }
+        return message;
     }
 
     private static int capabilities(String[] args) {
@@ -925,6 +952,11 @@ public final class Main {
                             source.toAbsolutePath().toUri().toString(), lineMaps, uris,
                             options.stacktrace));
                 }
+                String uncalledMain = result.exitCode == 0 && result.stdout.isEmpty()
+                        ? uncalledMainNote(compilation.main) : null;
+                if (uncalledMain != null && !options.json) {
+                    System.err.println(uncalledMain);
+                }
                 if (options.json) {
                     // What the program wrote to standard error, as written, without the
                     // runtime's own failure records (those become the diagnostic above).
@@ -933,8 +965,9 @@ public final class Main {
                         if (!line.startsWith(SprigRuntime.FAILURE_PREFIX)
                                 && !line.startsWith(SprigRuntime.FRAME_PREFIX)) programErrors.append(line);
                     }
-                    Map<String, Object> details = programErrors.length() == 0 ? Map.of()
-                            : Map.of("programErrorOutput", programErrors.toString());
+                    Map<String, Object> details = new LinkedHashMap<>();
+                    if (programErrors.length() > 0) details.put("programErrorOutput", programErrors.toString());
+                    if (uncalledMain != null) details.put("note", uncalledMain);
                     System.out.print(JsonWriter.result(diagnostics.all(), null, "run", result.exitCode,
                             result.stdout, details));
                 } else {
@@ -951,6 +984,27 @@ public final class Main {
         }
         report(diagnostics, options.json, "run", 1, null);
         return 1;
+    }
+
+    /**
+     * A program whose work is all inside func main runs nothing: Sprig executes
+     * top-level statements and never calls main by itself. Said after a run that
+     * printed nothing, because that is when the surprise happens.
+     */
+    static String uncalledMainNote(sprig.compiler.ast.Module entry) {
+        if (entry == null || entry.findFunction("main") == null) {
+            return null;
+        }
+        for (sprig.compiler.ast.Stmt statement : entry.topStatements) {
+            if (statement instanceof sprig.compiler.ast.Stmt.ExprStmt expression
+                    && expression.expr instanceof sprig.compiler.ast.Expr.Call call
+                    && call.callee instanceof sprig.compiler.ast.Expr.Name name && name.name.equals("main")) {
+                return null;
+            }
+        }
+        return "note: nothing was printed, and no top-level statement calls main. "
+                + "Sprig runs top-level statements in order and does not call main itself: "
+                + "add the line main() at the end of the file, or write the statements at the top level.";
     }
 
     private static final class Prepared {
@@ -1636,14 +1690,32 @@ public final class Main {
         return null;
     }
 
+    /** The repair for each family of checked-arithmetic failure, in the program's own terms. */
+    static String numericHint(String message) {
+        String text = message == null ? "" : message;
+        if (text.contains("overflow")) {
+            return "The exact result does not fit in the integer type. Check before the operation, for example "
+                    + "'if value > 0 and total > 9223372036854775807 - value:' for an Int addition, or catch it: "
+                    + "import java.lang.ArithmeticException as ArithmeticException, then put the operation in 'try:' "
+                    + "with 'catch problem: ArithmeticException:'. See `sprig help numerics`.";
+        }
+        if (text.contains("is not an exact Int value")) {
+            return "toInt() and toIntExact() need a whole number. Use toIntTrunc() to drop the fraction, or "
+                    + "Math.round(x) after 'import java.lang.Math as Math' to round to the nearest Int.";
+        }
+        if (text.contains("by zero")) {
+            return "Check that the divisor is not zero before dividing.";
+        }
+        return "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.";
+    }
+
     private static RuntimeOrigin runtimeOrigin(String className, String message) {
         if (className.equals("sprig.runtime.SprigError")) {
             return new RuntimeOrigin("sprig-error",
                     "Catch it with try/catch or declare throws in the calling function.");
         }
         if (className.equals("sprig.runtime.SprigNumericError")) {
-            return new RuntimeOrigin("checked-arithmetic",
-                    "Guard the checked arithmetic or use an explicit conversion; see `sprig help numerics`.");
+            return new RuntimeOrigin("checked-arithmetic", numericHint(message));
         }
         if (className.equals("sprig.runtime.SprigInitializationError")) {
             return new RuntimeOrigin("init-order",
@@ -1748,8 +1820,12 @@ public final class Main {
             System.out.print(JsonWriter.result(diagnostics.all(), null, command, exitCode, programOutput));
             return;
         }
+        // The same hint on every repetition of one mistake (a ';' on each line)
+        // buries the other errors; JSON output keeps every hint.
+        java.util.Set<String> shownHints = new java.util.HashSet<>();
         for (Diagnostic diagnostic : diagnostics.all()) {
-            System.err.println(diagnostic.format());
+            boolean newHint = diagnostic.hint == null || shownHints.add(diagnostic.hint);
+            System.err.println(diagnostic.format(newHint));
         }
         if (diagnostics.hasErrors()) {
             System.err.println(diagnostics.errorCount() + " error(s); "

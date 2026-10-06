@@ -1,0 +1,23 @@
+# An immutable top-level binding narrows after an early exit, as in a function
+# body: the statements after `if x == null: throw ...` see x as non-null.
+import "@std/text.spr" as text
+
+let size = text.split("4 6", " ")
+let rows = size[0].toIntOrNull()
+let cols = size[1].toIntOrNull()
+if rows == null or cols == null:
+    throw Error("expected two numbers")
+print(rows * cols)
+
+let label = "x".toIntOrNull()
+if label == null:
+    print("no label")
+else:
+    print(label + 1)
+
+func area() -> Int:
+    if rows == null or cols == null:
+        return 0
+    return rows * cols
+
+print(area())

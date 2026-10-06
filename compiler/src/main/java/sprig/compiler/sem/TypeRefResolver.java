@@ -10,6 +10,7 @@ import sprig.compiler.ast.Module;
 import sprig.compiler.ast.TypeRef;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
+import sprig.compiler.diag.Newcomer;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.types.ClassType;
@@ -100,8 +101,7 @@ public final class TypeRefResolver {
             }
         }
         if (symbol == null) {
-            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
-                    "Unknown type '" + ref.display() + "'", module.uri, ref.span));
+            diagnostics.add(unknownType(module, ref));
             return NativeType.ERROR;
         }
         return symbol.type;
@@ -151,8 +151,7 @@ public final class TypeRefResolver {
             }
             Symbol symbol = findModuleType(module, last);
             if (symbol == null) {
-                diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
-                        "Unknown type '" + ref.display() + "'", module.uri, ref.span));
+                diagnostics.add(unknownType(module, ref));
                 return NativeType.ERROR;
             }
             return instantiateUserType(module, ref, symbol, typeParams);
@@ -171,8 +170,7 @@ public final class TypeRefResolver {
                 return instantiateUserType(module, ref, symbol, typeParams);
             }
         }
-        diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
-                "Unknown type '" + ref.display() + "'", module.uri, ref.span));
+        diagnostics.add(unknownType(module, ref));
         return NativeType.ERROR;
     }
 
@@ -580,4 +578,13 @@ public final class TypeRefResolver {
         return ref == null ? "?" : ref.resolved == null ? ref.display() : ref.resolved.display();
     }
 
+    private static Diagnostic unknownType(Module module, TypeRef ref) {
+        Diagnostic diagnostic = Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+                "Unknown type '" + ref.display() + "'", module.uri, ref.span);
+        String hint = Newcomer.typeHint(ref.simpleName());
+        if (hint != null) {
+            diagnostic.withHint(hint);
+        }
+        return diagnostic;
+    }
 }
