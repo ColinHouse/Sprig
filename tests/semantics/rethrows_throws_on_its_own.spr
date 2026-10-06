@@ -1,0 +1,4 @@
+func twice(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:
+    if value < 0:
+        throw Error("negative")
+    return step(step(value))

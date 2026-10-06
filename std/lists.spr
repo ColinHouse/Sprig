@@ -1,5 +1,8 @@
 # Sorting, grouping and folding for List[T]. Each function returns a new list
-# and leaves its input unchanged.
+# and leaves its input unchanged. The functions that take a callable are
+# rethrows: a call throws exactly what the callable throws, so a lambda that
+# cannot fail makes an ordinary call and one that calls a throwing function
+# makes a call that needs 'throws Error' or try/catch.
 import sprig.runtime.host.HostOrder as HostOrder
 
 generic K, T:
@@ -10,7 +13,7 @@ generic K, T:
 # Stable: items with equal keys keep their input order. Keys use the same
 # order as MutableList.sort(), so Float keys put -0.0 before 0.0 and NaN last.
 generic T, K:
-    func sort_by(items: List[T], key: fn(T) -> K) -> List[T]:
+    func sort_by(items: List[T], key: fn(T) -> K throws Error) -> List[T] rethrows:
         requires K: Comparable
         let keys: MutableList[K] = []
         var order: MutableList[Int] = []
@@ -50,7 +53,7 @@ generic T, K:
 # Keys match with Sprig ==, so a NaN key never joins another group and -0.0
 # joins 0.0; the group keeps the first key it saw.
 generic T, K:
-    func group_by(items: List[T], key: fn(T) -> K) -> List[Group[K, T]]:
+    func group_by(items: List[T], key: fn(T) -> K throws Error) -> List[Group[K, T]] rethrows:
         requires K: Equatable
         let keys: MutableList[K] = []
         let buckets: MutableList[MutableList[T]] = []
@@ -78,7 +81,7 @@ generic T, K:
         return groups.toList()
 
 generic T, A:
-    func fold(items: List[T], initial: A, step: fn(A, T) -> A) -> A:
+    func fold(items: List[T], initial: A, step: fn(A, T) -> A throws Error) -> A rethrows:
         var result = initial
         for item in items:
             result = step(result, item)
@@ -86,7 +89,7 @@ generic T, A:
 
 # The first item the test accepts, in list order, or null when none does.
 generic T:
-    func find(items: List[T], accept: fn(T) -> Bool) -> T?:
+    func find(items: List[T], accept: fn(T) -> Bool throws Error) -> T? rethrows:
         for item in items:
             if accept(item):
                 return item
@@ -95,21 +98,21 @@ generic T:
 # any and all stop at the first item that decides the answer. For an empty
 # list any is false and all is true.
 generic T:
-    func any(items: List[T], accept: fn(T) -> Bool) -> Bool:
+    func any(items: List[T], accept: fn(T) -> Bool throws Error) -> Bool rethrows:
         for item in items:
             if accept(item):
                 return true
         return false
 
 generic T:
-    func all(items: List[T], accept: fn(T) -> Bool) -> Bool:
+    func all(items: List[T], accept: fn(T) -> Bool throws Error) -> Bool rethrows:
         for item in items:
             if not accept(item):
                 return false
         return true
 
 generic T:
-    func count(items: List[T], accept: fn(T) -> Bool) -> Int:
+    func count(items: List[T], accept: fn(T) -> Bool throws Error) -> Int rethrows:
         var total = 0
         for item in items:
             if accept(item):
@@ -125,7 +128,7 @@ func sum(values: List[Int]) -> Int:
     return total
 
 generic T:
-    func sum_by(items: List[T], amount: fn(T) -> Int) -> Int:
+    func sum_by(items: List[T], amount: fn(T) -> Int throws Error) -> Int rethrows:
         var total = 0
         for item in items:
             total += amount(item)

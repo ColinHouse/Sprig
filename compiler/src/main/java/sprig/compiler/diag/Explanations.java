@@ -200,6 +200,28 @@ public final class Explanations {
                 out.put("commonCauses", List.of("A lambda body reads a var local."));
                 out.put("safeFixes", List.of("Copy the var into a let binding before the lambda."));
             }
+            case Codes.TYPE_CALLABLE_THROWS -> {
+                out.put("whyMatters", "A function value's throws clause is part of its type, so every call through it is checked like a call to a throwing function.");
+                out.put("confusedWith", List.of("Java lambdas that wrap checked exceptions", "Kotlin lambdas with no checked exceptions"));
+                out.put("commonCauses", List.of("A lambda that calls a function declaring throws Error is passed where fn(...) -> R without throws is expected.",
+                        "A function type names a Java exception in its throws clause; only Error crosses a function value.",
+                        "A function value with throws Error is passed to a Java method; Java cannot see the clause."));
+                out.put("safeFixes", List.of("Write the parameter or variable type as fn(T) -> R throws Error and mark the receiving function rethrows or throws Error.",
+                        "Handle the error inside a named function and pass a lambda that calls it."));
+                out.put("badExample", "func apply(f: fn(String) -> Int, text: String) -> Int:\n    return f(text)\nlet n = apply(fn(s: String) => parse(s), \"1\")");
+                out.put("goodExample", "func apply(f: fn(String) -> Int throws Error, text: String) -> Int rethrows:\n    return f(text)\nlet n = apply(fn(s: String) => parse(s), \"1\")");
+                out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.FLOW_RETHROWS));
+            }
+            case Codes.FLOW_RETHROWS -> {
+                out.put("whyMatters", "A rethrows function throws exactly what its callable arguments throw, so a call with a non-throwing lambda needs no try.");
+                out.put("confusedWith", List.of("Swift rethrows", "a function that declares throws Error"));
+                out.put("commonCauses", List.of("rethrows is written but no parameter has a function type with throws Error."));
+                out.put("safeFixes", List.of("Declare the callable parameter as fn(T) -> R throws Error.",
+                        "If the function fails on its own, declare throws Error instead of rethrows."));
+                out.put("badExample", "func twice(f: fn(Int) -> Int, x: Int) -> Int rethrows:\n    return f(f(x))");
+                out.put("goodExample", "func twice(f: fn(Int) -> Int throws Error, x: Int) -> Int rethrows:\n    return f(f(x))");
+                out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.TYPE_CALLABLE_THROWS));
+            }
             case Codes.MATCH_RESULT -> {
                 out.put("whyMatters", "An expression match has one result type; every branch must produce a value assignable to it without implicit conversion.");
                 out.put("confusedWith", List.of("Java switch statement fallthrough", "Rust match arm coercion"));

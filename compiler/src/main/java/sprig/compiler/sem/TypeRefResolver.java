@@ -117,7 +117,21 @@ public final class TypeRefResolver {
             List<Type> params = new ArrayList<>();
             for (TypeRef param : ref.args) params.add(resolve(module, param, typeParams, false));
             Type result = resolve(module, ref.functionResult, typeParams, true);
-            return new sprig.compiler.types.FunctionType(params, result);
+            List<Type> thrown = new ArrayList<>();
+            if (ref.functionThrows != null) {
+                // Only Error crosses a callable: it is unchecked on the JVM, so
+                // it passes through Fn.apply and still matches catch Error.
+                Type type = resolve(module, ref.functionThrows, typeParams, false);
+                if (Semantics.isSprigError(type)) {
+                    thrown.add(type);
+                } else if (type != NativeType.ERROR) {
+                    diagnostics.add(Diagnostic.error(Codes.TYPE_CALLABLE_THROWS, Phase.TYPE,
+                            "A function type can only declare 'throws Error'; " + type.display()
+                                    + " cannot cross a function value. Handle or declare it in a named function.",
+                            module.uri, ref.functionThrows.span).withTypes("Error", type.display()));
+                }
+            }
+            return new sprig.compiler.types.FunctionType(params, result, thrown);
         }
         String last = ref.simpleName();
         if (ref.parts.size() == 1) {

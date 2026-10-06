@@ -1,0 +1,1 @@
+let f: fn(String) -> Int throws Error, Error = fn(s: String) => 1

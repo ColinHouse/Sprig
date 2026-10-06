@@ -55,7 +55,7 @@ public final class Substitution {
             Type result = apply(function.result, map);
             return params.equals(function.params) && result == function.result
                     ? function
-                    : new FunctionType(params, result);
+                    : new FunctionType(params, result, function.throwsTypes);
         }
         if (type instanceof JavaType javaType && !javaType.args.isEmpty()) {
             List<Type> args = applyAll(javaType.args, map);

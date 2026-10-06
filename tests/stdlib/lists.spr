@@ -80,3 +80,23 @@ print(lists.sorted[String](names))
 print(names)
 print(lists.sorted[Float](floats))
 print(lists.sorted[Int](none).size())
+
+# The helpers are rethrows: a lambda that calls a throwing function makes the
+# call throw, and nothing else changes.
+func cents_of(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+
+let prices: List[String] = ["300", "450", "100"]
+try:
+    print(lists.sum_by[String](prices, fn(p: String) => cents_of(p)))
+    print(lists.count[String](prices, fn(p: String) => cents_of(p) > 200))
+    print(lists.sort_by[String, Int](prices, fn(p: String) => cents_of(p)))
+    print(lists.fold[String, Int](prices, 0, fn(total: Int, p: String) => total + cents_of(p)))
+    print(lists.find[String](prices, fn(p: String) => cents_of(p) < 200))
+    print(lists.any[String](["1", "x"], fn(p: String) => cents_of(p) > 0))
+    print(lists.all[String](["1", "x"], fn(p: String) => cents_of(p) > 0))
+catch problem: Error:
+    print("caught " + problem)

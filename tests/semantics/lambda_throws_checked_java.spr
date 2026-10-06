@@ -1,0 +1,4 @@
+import java.io.IOException as IOException
+func read(path: String) -> String throws IOException:
+    throw IOException(path)
+let reader = fn(path: String) => read(path)

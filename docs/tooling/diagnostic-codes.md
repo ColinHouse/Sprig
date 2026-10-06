@@ -18,6 +18,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-BREAK | break is only valid inside a loop. |
 | SPR-FLOW-CONTINUE | continue is only valid inside a loop. |
 | SPR-FLOW-MISSING-RETURN | A non-Unit function must return on every path. |
+| SPR-FLOW-RETHROWS | rethrows needs a parameter whose function type declares throws Error, and the function may throw nothing of its own. |
 | SPR-FLOW-THROWS | A recoverable error must be declared with throws or caught. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-CONFORM-EFFECTS | A witness method declares checked exceptions the Java interface method does not permit. |
@@ -70,6 +71,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-SYNTAX-ERROR | The token sequence does not match the Sprig grammar. |
 | SPR-TYPE-ASSIGN | Assignment value does not match the target type. |
 | SPR-TYPE-FUNCTION-ARITY | Function types and lambdas support zero to three explicitly typed parameters. |
+| SPR-TYPE-CALLABLE-THROWS | A function value's throws clause does not fit where it is used; only fn(...) -> R throws Error exists, and it is not accepted where a function type without throws is expected. |
 | SPR-TYPE-CAPTURE | A lambda captures a var local; copy it into a let binding first. |
 | SPR-TYPE-CONDITION | Conditions must be Bool; Sprig has no truthiness. |
 | SPR-TYPE-INFER | The type cannot be inferred without an annotation. |

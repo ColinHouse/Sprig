@@ -139,6 +139,9 @@ def main():
         '3', '0', '6', '0', '1400', '0',
         # sorted: a new list, input unchanged, the order of MutableList.sort()
         '[apple, apple, fig, pear]', '[pear, apple, fig, apple]', '[-0.0, 0.0, 1.0, 2.5, NaN]', '0',
+        # rethrows: a throwing lambda makes the helper call throw; the first
+        # bad value ends the try block
+        '850', '2', '[100, 300, 450]', '850', '100', 'true', 'caught not a number: x',
     ], repr(lists_result.stdout)
     helpers_result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/helpers.spr')],
                                     cwd=ROOT, text=True, encoding='utf-8', capture_output=True)

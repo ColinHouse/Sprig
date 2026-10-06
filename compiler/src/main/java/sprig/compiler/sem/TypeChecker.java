@@ -125,6 +125,8 @@ public final class TypeChecker {
     private final Deque<Map<Symbol, Type>> narrowing = new ArrayDeque<>();
     private final Deque<List<Type>> caughtStack = new ArrayDeque<>();
     private final Deque<List<Type>> effectCollectors = new ArrayDeque<>();
+    /** Thrown types met inside the lambda bodies being checked, innermost first; they become the lambda's throws clause. */
+    private final Deque<List<Type>> lambdaEffects = new ArrayDeque<>();
     /** v0.8 lexical generic parameters of the declaration being checked. */
     private Map<String, Type> activeTypeParams = Map.of();
 
@@ -1393,7 +1395,59 @@ public final class TypeChecker {
         for (int i = count; i < args.size(); i++) {
             checkExpr(args.get(i).value, null);
         }
-        requireHandled(func.throwsTypes, call.span);
+        requireFunctionEffects(func, call);
+    }
+
+    /**
+     * Effects of a call to a named function. A rethrows function throws what
+     * its callable arguments throw, so each throwing argument is checked at
+     * the call site; one of the current rethrows function's own callable
+     * parameters passed straight through contributes nothing here, because
+     * the current function's callers already account for it.
+     */
+    private void requireFunctionEffects(Decl.Func func, Expr.Call call) {
+        if (!func.rethrows) {
+            requireHandled(func.throwsTypes, call.span);
+            return;
+        }
+        int count = Math.min(call.args.size(), func.params.size());
+        for (int i = 0; i < count; i++) {
+            if (func.params.get(i).type instanceof FunctionType declared && declared.throwsAny()) {
+                Expr argument = call.args.get(i).value;
+                if (argument.type instanceof FunctionType actual) {
+                    requireCallableEffects(actual, argument, call.span);
+                }
+            }
+        }
+    }
+
+    /** A call through, or a pass of, a function value: its throws clause needs handling unless it is passed through. */
+    private void requireCallableEffects(FunctionType type, Expr argument, Span span) {
+        if (!type.throwsAny() || isPassThrough(argument)) {
+            return;
+        }
+        requireHandled(type.throwsTypes, span);
+    }
+
+    /**
+     * Inside the body of a rethrows function (not inside a lambda written in
+     * it), one of its own callable parameters with a throws clause is passed
+     * through: calling it, or handing it to another rethrows function or to
+     * map/filter/forEach, needs no handling.
+     */
+    private boolean isPassThrough(Expr argument) {
+        if (currentFunction == null || !currentFunction.rethrows || !lambdaEffects.isEmpty()) {
+            return false;
+        }
+        if (!(argument instanceof Expr.Name name) || name.symbol == null) {
+            return false;
+        }
+        for (Decl.Param param : currentFunction.params) {
+            if (param.symbol == name.symbol) {
+                return param.type instanceof FunctionType fn && fn.throwsAny();
+            }
+        }
+        return false;
     }
 
     private Type checkUnary(Expr.Unary unary, Type expected) {
@@ -1832,11 +1886,14 @@ public final class TypeChecker {
             params.add(param.type == null ? NativeType.ERROR : param.type);
         }
         lambdaDepth++;
+        List<Type> effects = new ArrayList<>();
+        lambdaEffects.push(effects);
         Type bodyType;
         try {
             bodyType = checkExpr(lambda.body, expected != null && expected.nonNull() instanceof FunctionType fn
                     ? fn.result : null);
         } finally {
+            lambdaEffects.pop();
             lambdaDepth--;
         }
         Set<Symbol> captures = new LinkedHashSet<>();
@@ -1846,14 +1903,36 @@ public final class TypeChecker {
                     "Lambda captures mutable local '" + capture.name + "'", module.uri, lambda.span)
                     .withHint("Copy it into a 'let' binding before the lambda, or use a class field."));
         }
+        // What the body may throw becomes the lambda's throws clause. Only
+        // Error crosses a function value: it is unchecked on the JVM, so it
+        // leaves Fn.apply unchanged and still matches catch Error. A checked
+        // Java exception would have to be wrapped, and then the caller's
+        // catch would no longer see it.
+        List<Type> thrown = new ArrayList<>();
+        for (Type effect : effects) {
+            if (Semantics.isSprigError(effect)) {
+                if (!thrown.contains(effect)) {
+                    thrown.add(effect);
+                }
+            } else if (Semantics.isJvmChecked(effect)) {
+                diagnostics.add(Diagnostic.error(Codes.FLOW_THROWS, Phase.FLOW,
+                        "A lambda cannot throw " + effect.display() + "; only Error crosses a function value",
+                        module.uri, lambda.span)
+                        .withHint("Call it from a named function that declares 'throws " + effect.display()
+                                + "' or handles it with try/catch, and pass a lambda that calls that function."));
+            }
+        }
         // A written target supplies the result type while constructing a lambda;
         // already-created function values remain invariant.
         Type resultType = bodyType;
         if (expected != null && expected.nonNull() instanceof FunctionType fn
                 && fn.params.equals(params) && Semantics.isAssignable(fn.result, bodyType))
             resultType = fn.result;
-        FunctionType functionType = new FunctionType(params, resultType);
-        if (expected != null && expected.nonNull() instanceof FunctionType expectedFunction) {
+        FunctionType functionType = new FunctionType(params, resultType, thrown);
+        if (expected != null && expected.nonNull() instanceof FunctionType expectedFunction
+                && !(expectedFunction.params.equals(params) && expectedFunction.result.equals(resultType))) {
+            // A difference in the throws clause alone is reported once, by the
+            // assignment, argument or return check that owns the target type.
             requireAssignable(expectedFunction, functionType, lambda.span, Codes.TYPE_MISMATCH, "lambda");
         }
         return functionType;
@@ -2171,7 +2250,7 @@ public final class TypeChecker {
         for (int i = count; i < args.size(); i++) {
             checkExpr(args.get(i).value, null);
         }
-        requireHandled(func.throwsTypes, call.span);
+        requireFunctionEffects(func, call);
     }
 
     private boolean rejectNullableCallable(Type type, Expr.Call call) {
@@ -2201,6 +2280,7 @@ public final class TypeChecker {
             requireAssignable(expected, actual, call.args.get(i).value.span, Codes.TYPE_MISMATCH,
                     "argument " + (i + 1) + " of function value");
         }
+        requireCallableEffects(functionType, call.callee, call.span);
     }
 
     private void checkClassConstructor(ClassType classType, Expr.Call call) {
@@ -3044,6 +3124,7 @@ public final class TypeChecker {
                 if (fn != null) {
                     requireAssignable(list.element, fn.params.get(0), call.args.get(0).value.span,
                             Codes.TYPE_MISMATCH, "map argument");
+                    requireCallableEffects(fn, call.args.get(0).value, call.span);
                     return new ListType(fn.result, false);
                 }
                 return new ListType(list.element, false);
@@ -3060,6 +3141,7 @@ public final class TypeChecker {
                                 "filter predicate must return Bool", module.uri, call.span)
                                 .withTypes("Bool", fn.result.display()));
                     }
+                    requireCallableEffects(fn, call.args.get(0).value, call.span);
                 }
                 return new ListType(list.element, false);
             }
@@ -3070,6 +3152,7 @@ public final class TypeChecker {
                 if (fn != null) {
                     requireAssignable(list.element, fn.params.get(0), call.args.get(0).value.span,
                             Codes.TYPE_MISMATCH, "forEach argument");
+                    requireCallableEffects(fn, call.args.get(0).value, call.span);
                 }
                 return NativeType.UNIT;
             }
@@ -3782,6 +3865,17 @@ public final class TypeChecker {
         if (thrown == null || thrown.isEmpty()) {
             return;
         }
+        if (!lambdaEffects.isEmpty()) {
+            // Inside a lambda body a thrown type is recorded on the lambda;
+            // checkLambda decides which of them the lambda's type may carry.
+            List<Type> effects = lambdaEffects.peek();
+            for (Type type : thrown) {
+                if (type != null && type != NativeType.ERROR && !effects.contains(type)) {
+                    effects.add(type);
+                }
+            }
+            return;
+        }
         if (!effectCollectors.isEmpty() && lambdaDepth == 0) {
             for (Type type : thrown) {
                 if (type == null || type == NativeType.ERROR) continue;
@@ -3933,6 +4027,18 @@ public final class TypeChecker {
                             + " in " + what + "; precision or range may change",
                     module.uri, span).withTypes(target.display(), actual.display())
                     .withHint(conversionHint(target.nonNull(), actual.nonNull())));
+            return;
+        }
+        if (target != null && actual != null
+                && target.nonNull() instanceof FunctionType targetFunction
+                && actual.nonNull() instanceof FunctionType actualFunction
+                && targetFunction.params.equals(actualFunction.params)
+                && targetFunction.result.equals(actualFunction.result)) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_CALLABLE_THROWS, Phase.TYPE,
+                    "A function value that may throw Error cannot be used as " + expected + " (" + what + ")",
+                    module.uri, span).withTypes(expected, got)
+                    .withHint("Declare the target as " + actualFunction.display()
+                            + " and make the receiving function rethrows or throws Error, or handle the error inside a named function."));
             return;
         }
         diagnostics.add(Diagnostic.error(code, Phase.TYPE,

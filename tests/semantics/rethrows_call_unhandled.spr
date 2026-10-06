@@ -1,0 +1,9 @@
+func to_number(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+func twice(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:
+    return step(step(value))
+func use() -> Int:
+    return twice(fn(x: Int) => to_number("1") + x, 1)

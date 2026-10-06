@@ -1,0 +1,75 @@
+import "@std/lists.spr" as lists
+
+func to_number(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+
+# A lambda may call a throwing function; the call through map then throws.
+func numbers(items: List[String]) -> List[Int] throws Error:
+    return items.map(fn(item: String) => to_number(item))
+
+# A non-throwing lambda makes an ordinary call: no try, no throws.
+func doubled(items: List[Int]) -> List[Int]:
+    return items.map(fn(item: Int) => item * 2)
+
+# rethrows: throws what the callable throws, nothing of its own.
+generic T:
+    func twice(step: fn(T) -> T throws Error, value: T) -> T rethrows:
+        return step(step(value))
+
+# A rethrows parameter passed straight on to another rethrows function.
+generic T:
+    func total(items: List[T], amount: fn(T) -> Int throws Error) -> Int rethrows:
+        return lists.sum_by[T](items, amount)
+
+# A returned callable with a clause is parenthesized; parser itself does not throw.
+func parser() -> (fn(String) -> Int throws Error):
+    return fn(text: String) => to_number(text)
+
+# Without parentheses the clause belongs to the function, as it always did.
+func maker() -> fn(Int) -> Int throws Error:
+    if false:
+        throw Error("never")
+    return fn(x: Int) => x + 1
+
+let stored: fn(String) -> Int throws Error = fn(text: String) => to_number(text)
+let harmless: fn(String) -> Int throws Error = fn(text: String) => text.length()
+
+try:
+    print(numbers(["1", "2", "3"]))
+    print(numbers(["1", "x"]))
+catch problem: Error:
+    print("caught " + problem)
+print(doubled([1, 2]))
+print(twice[Int](fn(x: Int) => x + 1, 5))
+try:
+    print(twice[String](fn(s: String) => s + "!", "hi"))
+    print(twice[Int](fn(x: Int) => to_number("nope"), 1))
+catch problem: Error:
+    print("caught " + problem)
+print(total[String](["a", "bb"], fn(s: String) => s.length()))
+try:
+    print(total[String](["4", "5"], fn(s: String) => to_number(s)))
+    print(total[String](["4", "five"], fn(s: String) => to_number(s)))
+catch problem: Error:
+    print("caught " + problem)
+try:
+    print(stored("12"))
+    print(parser()("13"))
+    print(harmless("abcd"))
+    print(stored("twelve"))
+catch problem: Error:
+    print("caught " + problem)
+try:
+    let make = maker()
+    print(make(41))
+catch problem: Error:
+    print("unreachable")
+print(lists.count[String](["1", "x", "3"], fn(s: String) => s.toIntOrNull() != null))
+try:
+    print(lists.find[String](["1", "x"], fn(s: String) => to_number(s) > 5) == null)
+catch problem: Error:
+    print("caught " + problem)
+print(lists.sort_by[String, Int](["10", "9", "100"], fn(s: String) => s.length()))

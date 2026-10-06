@@ -400,6 +400,12 @@ public final class NameResolver {
             }
             func.throwsTypes.add(type);
         }
+        if (func.rethrows && func.params.stream().noneMatch(param -> param.type instanceof FunctionType fn && fn.throwsAny())) {
+            diagnostics.add(Diagnostic.error(Codes.FLOW_RETHROWS, Phase.FLOW,
+                    "'" + func.name + "' is declared rethrows but no parameter has a function type with 'throws Error'",
+                    module.uri, func.nameSpan != null ? func.nameSpan : func.span)
+                    .withHint("Write the callable parameter as fn(T) -> R throws Error, or drop rethrows."));
+        }
         func.symbol.type = new FunctionType(paramTypes, func.returnType);
     }
 

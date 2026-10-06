@@ -1,0 +1,23 @@
+func parse(text: String) -> Int throws Error:
+    return 1
+let stored: fn(String) -> Int throws Error = fn(text: String) => parse(text)
+let optional: (fn(String) -> Int throws Error)? = null
+let plain: (fn(Int) -> Int) = fn(x: Int) => x
+let nested: fn(Int) -> fn(String) -> Int throws Error = fn(x: Int) => stored
+func apply(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:
+    return step(step(value))
+func maker() -> fn(Int) -> Int throws Error:
+    return fn(x: Int) => x + 1
+func parser() -> (fn(String) -> Int throws Error):
+    return stored
+func parsers() -> List[fn(String) -> Int throws Error]:
+    return [stored]
+generic T:
+    func twice(step: fn(T) -> T throws Error, value: T) -> T rethrows:
+        return step(step(value))
+class Holder:
+    let handler: fn(Int) -> Int throws Error
+    func run(value: Int) -> Int throws Error:
+        return handler(value)
+    func each(step: fn(Int) -> Unit throws Error) -> Unit rethrows:
+        step(1)
