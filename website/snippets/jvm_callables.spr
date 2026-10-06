@@ -2,13 +2,12 @@ import java.util.ArrayList as ArrayList
 import java.nio.file.Path as Path
 import java.nio.file.Files as Files
 import java.lang.String as JString
-import java.lang.CharSequence as CharSequence
 
 # A Sprig function value where Java wants a functional interface.
 let names = ArrayList[String]()
 names.add("grace")
 names.add("ada")
-names.sort(fn(a: String, b: String) => CharSequence.compare(a, b))
+names.sort(fn(a: String, b: String) => a.compareTo(b))
 names.forEach(fn(name: String) => print(name))
 print(names.removeIf(fn(name: String) => name.length() > 3))
 

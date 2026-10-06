@@ -89,6 +89,12 @@ CASES = [
     ("star-import", "import java.io.*\nprint(1)\n", "SPR-SYNTAX-ERROR", "one at a time"),
     ("int-conversion", "let n = Int(\"3\")\n", "SPR-TYPE-NOT-CALLABLE", "toIntOrNull()"),
     ("string-conversion", "let s = String(3)\n", "SPR-TYPE-NOT-CALLABLE", "toString()"),
+    ("nullable-join", "let n = \"x\".toIntOrNull()\nprint(\"n=\" + n)\n", "SPR-TYPE-NULLABLE",
+     "check it first with 'if n != null:'"),
+    ("nullable-index-join", "let m: Map[String, Int] = {\"k\": 1}\nprint(\"k=\" + m[\"k\"])\n", "SPR-TYPE-NULLABLE",
+     "write 'let value = m[\"k\"]'"),
+    ("comparator-returns-int", "import java.util.ArrayList\n\nlet words = ArrayList[String]()\n"
+     "words.sort(fn(a: String, b: String) => a.length() - b.length())\n", "SPR-JVM-MEMBER", "value.toInt32Exact()"),
 ]
 
 # Ordinary syntax errors keep the parser's own message: the targeted hints do not misfire.
@@ -257,7 +263,8 @@ def main():
         strings = json.loads(run("help", "strings", "--json", cwd=work).stdout)["methods"]["String"]
         calls = {"length": "length()", "isEmpty": "isEmpty()", "charAt": "charAt(0)", "codeAt": "codeAt(0)",
                  "substring": "substring(0, 1)", "indexOf": "indexOf(\"a\")", "contains": "contains(\"a\")",
-                 "startsWith": "startsWith(\"a\")", "endsWith": "endsWith(\"a\")", "toUpperCase": "toUpperCase()",
+                 "startsWith": "startsWith(\"a\")", "endsWith": "endsWith(\"a\")", "compareTo": "compareTo(\"a\")",
+                 "toUpperCase": "toUpperCase()",
                  "toLowerCase": "toLowerCase()", "trim": "trim()", "split": "split(\",\")",
                  "replace": "replace(\"a\", \"b\")", "repeat": "repeat(2)", "toInt": "toInt()",
                  "toIntOrNull": "toIntOrNull()", "toFloat": "toFloat()", "toString": "toString()"}

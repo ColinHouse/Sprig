@@ -80,7 +80,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-TYPE-MISMATCH | Expected and actual types are not compatible. |
 | SPR-TYPE-NOT-CALLABLE | The callee is not callable (or a method name was used as a value). |
 | SPR-TYPE-NULL | null is only assignable to an explicit nullable type T?. |
-| SPR-TYPE-NULLABLE | A possibly-null value is used where non-null is required; check for null first. |
+| SPR-TYPE-NULLABLE | A possibly-null value is used where non-null is required, including a `T?` joined into a String; check for null first. |
 | SPR-TYPE-OPERAND | Operator or method is not defined for this operand type. |
 | SPR-TYPE-RETURN | Returned value does not match the declared return type. |
 | SPR-TYPE-UNIT | Unit is only a function/method result; it cannot be a field, parameter, collection element, or ordinary value. |

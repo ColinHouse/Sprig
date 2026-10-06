@@ -48,7 +48,8 @@ is safe. Reflected public fields are ordered by field name and then full Java
 signature; inherited fields hidden by a same-named declaration remain visible
 as distinct rows in that deterministic order.
 Java reference and
-boxed return values are conservatively nullable. Java reference parameters,
+boxed return values are conservatively nullable, except `toString()`, whose
+`String` result is non-null by `Object`'s contract. Java reference parameters,
 including `Object`, require a non-null Sprig argument because the compiler
 does not infer a null contract from the Java type. Concrete generic arguments
 are preserved: `List<String>` maps to `java.util.List[String]?`, which is

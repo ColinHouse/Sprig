@@ -45,6 +45,14 @@ def main():
         check("capability-test-map-" + capability,
               value is not None and all((ROOT / item.split("#", 1)[0]).is_file() for item in fixtures))
     check("capabilities-text", "Implemented:" in run("capabilities").stdout)
+    # The syntax lists are prose for people; they must not contradict the flags.
+    unsupported = [item.lower() for item in catalog["unsupportedSyntax"]]
+    supported = " | ".join(catalog["supportedSyntax"]).lower()
+    check("capabilities-lists-match-flags",
+          (not catalog["jvmVarargs"] or ("varargs" not in unsupported and "java varargs calls" in supported))
+          and (not catalog["jvmFunctionalInterfaces"]
+               or (not any("sam" in item.split() for item in unsupported) and "functional interfaces" in supported))
+          and all(name.lower() + " capability" in supported for name in catalog["genericCapabilities"]))
     topics = obj(run("help", "--json"))["topics"]
     for topic in topics:
         result = run("help", topic, "--json")

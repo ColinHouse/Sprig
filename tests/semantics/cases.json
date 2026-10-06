@@ -467,5 +467,23 @@
     "expected_diagnostic": "SPR-FLOW-THROWS-UNUSED",
     "status": "implemented",
     "source": "truthful checked exceptions (#90)"
+  },
+  {
+    "file": "nullable_join.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "v0.7.1 evaluation: a T? joined into a String printed null"
+  },
+  {
+    "file": "nullable_join_compound.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "v0.7.1 evaluation: a T? joined into a String printed null"
+  },
+  {
+    "file": "nullable_join_both.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "v0.7.1 evaluation: a T? joined into a String printed null"
   }
 ]

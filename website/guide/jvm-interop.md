@@ -2,7 +2,7 @@
 
 Sprig 会先编译成 Java 再运行，所以 JDK 自带的类和 Maven 上的 Java 库都能直接用。这页讲怎么导入、调用 Java 类，以及 Sprig 在和 Java 交接的地方会做哪些检查。
 
-总的原则偏保守：Java 没法保证一个返回值不是 `null`，Sprig 就当它可能是 `null`；反过来，你传给 Java 的参数一律不能是 `null`。
+总的原则偏保守：Java 没法保证一个返回值不是 `null`，Sprig 就当它可能是 `null`，唯一的例外是 `toString()`，它总是返回 `String`；反过来，你传给 Java 的参数一律不能是 `null`。
 
 完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。
 
@@ -130,7 +130,7 @@ false
 a/b/c
 ```
 
-- 参数类型必须完全一致；方法返回 `void` 时，lambda 返回什么都可以。`Comparator.compare` 返回 `int`，所以 lambda 要返回 `Int32`（这里 `CharSequence.compare` 正好是）。
+- 参数类型必须完全一致；方法返回 `void` 时，lambda 返回什么都可以。`Comparator.compare` 返回 `int`，所以 lambda 要返回 `Int32`，`a.compareTo(b)` 正好是。返回 `Int` 的 lambda 会报错，并告诉你该怎么转换。
 - 接口类型参数里的通配符没关系：实现了 `Consumer<String>` 的 lambda 就是一个 `Consumer<? super String>`。
 - 类型变量从不推断。`names.forEach` 能用是因为 `ArrayList[String]` 定下了 `E`；`stream.map(fn(...) => ...)` 得写成 `stream.map[String](...)`，因为 `R` 是方法自己的类型变量。
 - 类型里带 `throws Error` 的函数值不能传给 Java，因为 Java 看不到这个子句（`SPR-TYPE-CALLABLE-THROWS`）。把错误在具名函数里处理掉，再传一个调用它的 lambda。

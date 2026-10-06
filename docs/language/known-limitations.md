@@ -54,8 +54,9 @@ by the historical design kit in `docs/history/design-kit/`.
   raw evidence never promotes to concrete arguments, and raw boundaries stay
   erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
   implicit Java/Sprig collection conversion. Type-use nullability annotations
-  are not interpreted. Java reference results are conservatively nullable; Java
-  reference parameters are conservatively non-null.
+  are not interpreted. Java reference results are conservatively nullable,
+  except a `toString()` result; Java reference parameters are conservatively
+  non-null.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
   exception classes and top-level execution remains provisional. Checked Java
   exceptions follow Java's rule in one direction more: a catch nothing can
@@ -73,7 +74,9 @@ by the historical design kit in `docs/history/design-kit/`.
   split automatically, but one generated method still holds at most 64 KB of
   bytecode: a very large literal collection or a very long top-level script can
   fail with `SPR-JVM-COMPILE` and a hint to load the data from a file or split
-  the code into functions.
+  the code into functions. Top-level statements run once, as one JVM method that
+  HotSpot compiles while it runs; a long script with several hot loops shares
+  one compilation and its inlining budget, so keep hot loops in functions.
 - Initialization order is checked rather than inferred: top-level code may not
   use a binding declared below it (`SPR-NAME-FORWARD-REFERENCE`), and a binding
   reached through a function before its initializer ran fails at runtime with

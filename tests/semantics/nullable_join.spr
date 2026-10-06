@@ -1,0 +1,4 @@
+# A value that may be null is not joined into text as "null": absence is
+# handled before the value becomes part of a String.
+let count = "x".toIntOrNull()
+print("count " + count)

@@ -19,7 +19,7 @@
 
 - `let` 绑定之后不能再改，`var` 可以。
 - 局部变量可以不写类型，Sprig 会从等号右边推断。类的字段则必须写类型。
-- 把数字或其他值放进文本，直接用 `+`：`"visits " + visits`，不需要先转换。
+- 把数字或其他值放进文本，直接用 `+`：`"visits " + visits`，不需要先转换。只有可能为 `null` 的值要先检查，见[可空值](#可空值)。
 - 条件必须是 `Bool`。`0`、空字符串都不会被当成 false，`if count:` 会报 `SPR-TYPE-CONDITION`。
 
 ## 函数
@@ -38,6 +38,7 @@
 - 创建对象时必须写字段名：`Hero(name="Ada", health=80)`。少写、写错名字、重复写，都会编译报错。
 - 方法里直接写字段名就能访问当前对象的字段，不用加前缀。
 - 参数和局部变量不能和字段同名。
+- 两个对象用 `==` 比较，问的是「是不是同一个对象」。两个 `Point(x=1, y=2)` 字段完全一样，也不相等：改了其中一个，另一个不会跟着变。想比较内容，就比较你关心的字段（`a.id == b.id`），或者改用 variant。
 
 ## enum、variant 和 match
 
@@ -46,6 +47,7 @@
 - `enum` 的每个值都不带数据，比如 `Mode.Fast`。
 - `variant` 的每种情况可以带自己的字段，字段不可变。比如 `Expr.Add` 带着 `left` 和 `right`。
 - `case Expr.Add as node:` 把匹配到的值绑定到 `node`，然后就能读它的字段。
+- variant 和 enum 的值按内容比较：`Shape.Circle(radius=1.0) == Shape.Circle(radius=1.0)` 是 `true`。字符串、数字、列表和 Map 也一样。
 - `match` 要把每种情况都写出来。没有 `default`，没有通配分支，也不会贯穿到下一个分支。漏写、重复、写了不可能出现的情况，都会编译报错。
 - `match` 可以当语句用，每个分支写多行；也可以当表达式用（比如 `return match ...`），这时每个分支只能写一个表达式。
 
@@ -204,8 +206,8 @@ $[1].id: expected integer, found string
 - 继承和接口
 - `%=`
 - 元组和解构
-- 字符串插值：`"${name}"` 只是普通文本。拼接用 `+`：两边放什么值都可以，`"count " + count` 不用写 `toString()`，显示效果和 `print` 一样。只有 `null` 和返回 `Unit` 的调用不能拼。运算从左到右，所以 `1 + 2 + " items"` 是 `3 items`。
+- 字符串插值：`"${name}"` 只是普通文本。拼接用 `+`：两边放什么值都可以，`"count " + count` 不用写 `toString()`，显示效果和 `print` 一样。`null`、可能为 `null` 的值（比如 `Int?`）和返回 `Unit` 的调用不能拼。运算从左到右，所以 `1 + 2 + " items"` 是 `3 items`。
 
-和 Java 打交道时，Sprig 没有数组语法，也不支持变长参数和通配符类型。Java 数组本身可以原样接收和传递，见 [JVM 互操作](/guide/jvm-interop)。
+和 Java 打交道时，Sprig 没有数组语法，通配符类型只在回调的类型参数里能用。Java 数组可以原样接收和传递，变长参数方法直接把参数依次写在后面就行，见 [JVM 互操作](/guide/jvm-interop)。
 
 完整列表见[已知限制（英文）](/en/reference/language/known-limitations)，后面的计划见[路线图（英文）](/en/reference/language/stage1-roadmap)。

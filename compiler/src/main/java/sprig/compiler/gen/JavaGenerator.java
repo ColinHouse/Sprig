@@ -1942,6 +1942,7 @@ public final class JavaGenerator {
             case "String.contains" -> recv + ".contains(" + a0 + ")";
             case "String.startsWith" -> recv + ".startsWith(" + a0 + ")";
             case "String.endsWith" -> recv + ".endsWith(" + a0 + ")";
+            case "String.compareTo" -> "java.lang.Integer.signum(" + recv + ".compareTo(" + a0 + "))";
             case "String.toUpperCase" -> recv + ".toUpperCase()";
             case "String.toLowerCase" -> recv + ".toLowerCase()";
             case "String.trim" -> recv + ".trim()";

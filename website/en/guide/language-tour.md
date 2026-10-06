@@ -19,7 +19,7 @@ Blocks are defined by indentation, as in Python:
 
 - A `let` binding can't be changed after it's set; a `var` can.
 - Local variables can leave out the type, and Sprig infers it from the right-hand side. Class fields always need a type.
-- To put a number or any other value into text, use `+`: `"visits " + visits`. There is nothing to convert first.
+- To put a number or any other value into text, use `+`: `"visits " + visits`. There is nothing to convert first. A value that may be `null` has to be checked first (see [Nullable values](#nullable-values)).
 - Conditions must be `Bool`. Neither `0` nor an empty string counts as false, and `if count:` is rejected with `SPR-TYPE-CONDITION`.
 
 ## Functions
@@ -38,6 +38,7 @@ Blocks are defined by indentation, as in Python:
 - You create objects with field names: `Hero(name="Ada", health=80)`. Missing, misspelled or repeated fields are compile errors.
 - Inside a method, a field's bare name refers to the current object's field; there's no prefix.
 - Parameters and local variables can't have the same name as a field.
+- `==` on two objects asks whether they're the same object. Two `Point(x=1, y=2)` objects are not `==`, even though every field matches: change one and the other stays as it was. To compare contents, compare the fields you mean (`a.id == b.id`), or use a variant.
 
 ## enum, variant and match
 
@@ -46,6 +47,7 @@ Blocks are defined by indentation, as in Python:
 - An `enum` value carries no data, for example `Mode.Fast`.
 - Each case of a `variant` can carry its own fields, which are immutable. `Expr.Add`, for example, carries `left` and `right`.
 - `case Expr.Add as node:` binds the matched value to `node` so you can read its fields.
+- Variant and enum values compare by value: `Shape.Circle(radius=1.0) == Shape.Circle(radius=1.0)` is `true`. Strings, numbers, lists and maps do too.
 - A `match` must handle every case. There's no `default`, no wildcard branch and no fallthrough. Missing, repeated and impossible branches are all compile errors.
 - `match` works as a statement, where a branch can hold several lines, and as an expression (as in `return match ...`), where each branch is a single expression.
 
@@ -204,8 +206,8 @@ None of these exist yet:
 - inheritance and interfaces
 - `%=`
 - tuples and destructuring
-- string interpolation: `"${name}"` is just text. Join with `+` instead: it accepts any value on either side, so `"count " + count` works without `toString()`, and the value appears as `print` would show it. Only `null` and a `Unit` result are rejected. A chain evaluates from the left, so `1 + 2 + " items"` is `3 items`.
+- string interpolation: `"${name}"` is just text. Join with `+` instead: it accepts any value on either side, so `"count " + count` works without `toString()`, and the value appears as `print` would show it. `null`, a value that may be `null` (such as an `Int?`) and a `Unit` result are rejected. A chain evaluates from the left, so `1 + 2 + " items"` is `3 items`.
 
-When working with Java, Sprig has no array syntax and doesn't support varargs or wildcard types. Java arrays themselves can still be received and passed along as they are; see [JVM interop](/en/guide/jvm-interop).
+When working with Java, Sprig has no array syntax, and it reads wildcard types only inside a callback's type arguments. Java arrays can still be received and passed along as they are, and varargs methods take their trailing arguments; see [JVM interop](/en/guide/jvm-interop).
 
 The full list is in [known limitations](/en/reference/language/known-limitations), and what comes next is in the [roadmap](/en/reference/language/stage1-roadmap).

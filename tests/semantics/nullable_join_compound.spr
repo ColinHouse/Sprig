@@ -1,0 +1,5 @@
+# Joining with += is a join too.
+let name: String? = null
+var line = "name: "
+line += name
+print(line)

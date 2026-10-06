@@ -47,7 +47,8 @@ public final class BuiltinMembers {
                 "toDecimal", "toJava", "toString"));
         INSTANCE.put(NativeType.BOOL, List.of("toString"));
         INSTANCE.put(NativeType.STRING, List.of("length", "isEmpty", "charAt", "codeAt", "substring",
-                "indexOf", "contains", "startsWith", "endsWith", "toUpperCase", "toLowerCase", "trim", "split",
+                "indexOf", "contains", "startsWith", "endsWith", "compareTo", "toUpperCase", "toLowerCase", "trim",
+                "split",
                 "replace", "repeat", "toInt", "toIntOrNull", "toFloat", "toString"));
     }
 
