@@ -30,8 +30,14 @@ commas and escapes for quote, backslash, newline, carriage return and tab.
 Other TOML constructs/escapes are rejected. Metadata semantic errors currently
 point to line 1; parse errors point to the offending line.
 
-`run --bin tool` selects a bin. Multiple bins without a declared project entry
-require `--bin`; a declared entry supplies an explicit default. `source` is
+`--bin tool` selects a bin for `check`, `build` and `run`; a declared project
+entry supplies the default. With several bins and no declared entry, `check`
+without a file checks every bin (diagnostics from a module the bins share are
+reported once, and `--json` lists the bins in `bins`), while `build` and `run`
+require `--bin`, and the `SPR-PROJECT-ENTRY` hint names the choices. An
+explicit `.spr` file always wins over the entry; inside the source root it still
+compiles against the locked dependencies. A file and `--bin` together are an
+option error (exit 2). `source` is
 metadata, not a sandbox; local file imports keep their v0.7 relative-path
 semantics. External package imports use `@alias/module.spr`; aliases are
 package-local and logical paths must be listed in the dependency exports.

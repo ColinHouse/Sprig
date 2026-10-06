@@ -55,7 +55,7 @@ name = "server"
 entry = "src/server.spr"
 ```
 
-然后用 `sprig run --bin server` 运行它。如果声明了多个 bin，又没有指定项目的 `entry`，运行时就必须加 `--bin`。
+然后用 `sprig run --bin server` 运行它，`sprig check --bin server` 和 `sprig build --bin server` 也一样只处理这一个 bin。如果声明了多个 bin，又没有指定项目的 `entry`：`sprig check` 不带参数时会检查所有 bin；`build` 和 `run` 只能处理一个程序，必须加 `--bin`。直接给出项目里的文件（比如 `sprig check src/server.spr`）也可以，它照样用项目的依赖来编译。
 
 ## 添加依赖
 
