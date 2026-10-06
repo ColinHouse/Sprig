@@ -1,10 +1,9 @@
 # Test facilities are ordinary functions; cases remain ordinary Sprig programs.
+import "@std/process.spr" as process
+import sprig.runtime.SprigRuntime as SprigRuntime
 import sprig.runtime.test.HostTest as HostTest
 
-class ProcessResult:
-    let exit_code: Int32
-    let stdout: String
-    let stderr: String
+export process.ProcessResult
 
 func temp_dir() -> String throws Error:
     let location = HostTest.tempDir()
@@ -12,28 +11,56 @@ func temp_dir() -> String throws Error:
         return location
     throw Error("test host returned no temporary directory")
 
-func run_process(command: List[String]) -> ProcessResult throws Error:
-    let host = HostTest.command()
-    if host != null:
-        for argument in command:
-            host.add(argument)
-        let result = host.run()
-        if result != null:
-            let output = result.stdout
-            let errors = result.stderr
-            if output != null and errors != null:
-                return ProcessResult(exit_code=result.exitCode, stdout=output, stderr=errors)
-    throw Error("test host returned no process result")
+# The same child process helper as process.run, kept under its earlier name.
+func run_process(command: List[String]) -> process.ProcessResult throws Error:
+    return process.run(command)
+
+# Cases run as they are declared, so a failing case does not stop the ones
+# after it. These are the program's tally; finish() reports it.
+var passed_cases = 0
+var failed_cases = 0
+
+# Runs one named check now. It passes when the body returns and fails when the
+# body throws Error, in which case the message is printed after the name.
+func check(name: String, body: fn() -> Unit throws Error) -> Unit:
+    try:
+        body()
+        passed_cases += 1
+        print("ok " + name)
+    catch problem: Error:
+        failed_cases += 1
+        print("FAIL " + name + ": " + problem)
+
+# Passes when the body throws Error and fails when it returns. The body may
+# return a value, so the call names its result type:
+# test.check_error[Int]("rejects text", fn() => parse("x")).
+generic T:
+    func check_error(name: String, body: fn() -> T throws Error) -> Unit:
+        try:
+            body()
+        catch problem: Error:
+            passed_cases += 1
+            print("ok " + name)
+            return
+        failed_cases += 1
+        print("FAIL " + name + ": no Error was thrown")
+
+# Prints the tally and ends the program with status 1 when a case failed, so
+# sprig test reports the program as failed.
+func finish() -> Unit:
+    print(passed_cases + " passed, " + failed_cases + " failed")
+    if failed_cases > 0:
+        process.exit(1)
 
 # A failed check throws an Error that names both values, so the report shows
 # what differed. `what` says which value was checked.
 func equal_int(actual: Int, expected: Int, what: String) -> Unit throws Error:
     if actual != expected:
-        throw Error(what + ": expected " + expected.toString() + ", got " + actual.toString())
+        throw Error(what + ": expected " + expected + ", got " + actual)
 
 func equal_bool(actual: Bool, expected: Bool, what: String) -> Unit throws Error:
     if actual != expected:
-        throw Error(what + ": expected " + expected.toString() + ", got " + actual.toString())
+        throw Error(what + ": expected " + expected + ", got " + actual)
 
 # Both texts are shown quoted with \\, \", \n, \r and \t escaped, so a
 # difference in line endings or surrounding spaces is visible.
@@ -42,3 +69,18 @@ func equal_text(actual: String, expected: String, what: String) -> Unit throws E
         let wanted = expected.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
         let found = actual.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
         throw Error(what + ": expected \"" + wanted + "\", got \"" + found + "\"")
+
+# Any value that supports ==, lists and maps included; both values are shown
+# the way print shows them.
+generic T:
+    func equal(actual: T, expected: T, what: String) -> Unit throws Error:
+        requires T: Equatable
+        if actual != expected:
+            throw Error(what + ": expected " + shown[T](expected) + ", got " + shown[T](actual))
+
+generic T:
+    func shown(value: T) -> String:
+        let text = SprigRuntime.str(value)
+        if text != null:
+            return text
+        return "null"

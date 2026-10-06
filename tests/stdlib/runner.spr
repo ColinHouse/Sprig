@@ -1,0 +1,26 @@
+import "@std/test.spr" as test
+import "@std/process.spr" as process
+
+func add(a: Int, b: Int) -> Int:
+    return a + b
+
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value != null:
+        return value
+    throw Error("not a number: " + text)
+
+# A case body is a lambda; it may call checks and other throwing functions.
+test.check("adds", fn() => test.equal_int(add(1, 2), 3, "sum"))
+test.check("parses", fn() => test.equal_int(parse("41") + 1, 42, "parsed"))
+test.check("compares lists", fn() => test.equal[List[Int]]([1, 2], [1, 2], "list"))
+test.check("compares text", fn() => test.equal[String]("a", "a", "text"))
+# A failing case prints the message and the program goes on.
+test.check("fails on purpose", fn() => test.equal_int(add(2, 2), 5, "sum"))
+test.check("sees the parse error", fn() => test.equal_int(parse("x"), 0, "parsed"))
+test.check_error[Int]("rejects text", fn() => parse("x"))
+test.check_error[Int]("expected an error", fn() => parse("7"))
+test.check("runs a child", fn() => test.equal_int(process.run(["java", "--version"]).exit_code, 0, "java exit"))
+test.check("keeps the old name", fn() => test.equal_int(test.run_process(["java", "--version"]).exit_code, 0, "java exit"))
+test.finish()
+print("not reached")
