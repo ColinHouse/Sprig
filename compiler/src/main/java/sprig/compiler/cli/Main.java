@@ -955,15 +955,22 @@ public final class Main {
     }
 
     /**
-     * A program that only declares functions runs nothing: Sprig executes
+     * A program whose work is all inside func main runs nothing: Sprig executes
      * top-level statements and never calls main by itself. Said after a run that
      * printed nothing, because that is when the surprise happens.
      */
     static String uncalledMainNote(sprig.compiler.ast.Module entry) {
-        if (entry == null || entry.findFunction("main") == null || !entry.topStatements.isEmpty()) {
+        if (entry == null || entry.findFunction("main") == null) {
             return null;
         }
-        return "note: this file declares func main but has no top-level statements, so nothing ran. "
+        for (sprig.compiler.ast.Stmt statement : entry.topStatements) {
+            if (statement instanceof sprig.compiler.ast.Stmt.ExprStmt expression
+                    && expression.expr instanceof sprig.compiler.ast.Expr.Call call
+                    && call.callee instanceof sprig.compiler.ast.Expr.Name name && name.name.equals("main")) {
+                return null;
+            }
+        }
+        return "note: nothing was printed, and no top-level statement calls main. "
                 + "Sprig runs top-level statements in order and does not call main itself: "
                 + "add the line main() at the end of the file, or write the statements at the top level.";
     }

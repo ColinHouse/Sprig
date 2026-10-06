@@ -140,6 +140,10 @@ def main():
               and "does not call main" in text_run.stderr, text_run.stderr)
         json_run = json.loads(run("run", "main.spr", "--json", cwd=work).stdout)
         check("uncalled-main-note-json", "main()" in json_run.get("note", ""), json.dumps(json_run))
+        (work / "main.spr").write_text("var total = 0\nfunc main() -> Unit:\n    print(total)\n", encoding="utf-8")
+        with_globals = run("run", "main.spr", cwd=work)
+        check("uncalled-main-note-with-top-level-variables", "does not call main" in with_globals.stderr,
+              with_globals.stderr)
 
         # The language topic is a complete first program: it compiles and runs on its own.
         language = json.loads(run("help", "language", "--json", cwd=work).stdout)
