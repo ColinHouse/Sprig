@@ -209,7 +209,13 @@ function, checked Java exceptions must be caught or covered by that function's
 checked Java exception uncaught; it then aborts the program at runtime. This
 top-level rule is provisional, as described in `KNOWN_LIMITATIONS.md`. Java
 library arithmetic and nullability are not magically upgraded to Sprig's
-checked numeric or non-null contracts.
+checked numeric or non-null contracts. A caught Java exception's `message` is
+`getMessage()`, a `String?`; Sprig's `Error` (and the first-party errors built on
+it) always has a `String` message. In Sprig, `toString()` on any exception value
+gives the text `print` shows: the message for an `Error`, Java's
+`ClassName: message` for a Java exception. Java code that turns an `Error` into
+text, such as `String.valueOf` or a Java collection's `toString()`, still sees
+`sprig.runtime.SprigError: message`.
 
 ## Sprig-owned callable ABI
 

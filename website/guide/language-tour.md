@@ -95,7 +95,7 @@ true
 - 提前返回也行：写了 `if x == null: return ...` 之后，后面的代码都把 `x` 当作有值。
 - 把可能为 `null` 的值用在需要非空的地方，会报 `SPR-TYPE-NULLABLE`。
 - `var` 字段检查过之后，只要中间调用了函数，之前的检查就不算数了，因为函数可能改了它。
-- Java 方法返回的对象一律当作可能为 `null`，见 [JVM 互操作](/guide/jvm-interop)。
+- Java 方法返回的对象一律当作可能为 `null`（`toString()` 的结果除外），见 [JVM 互操作](/guide/jvm-interop)。
 
 如果只是想要一个默认值，或者没有值就报错，用 `@std/nulls`（v0.6.0-beta.1 新增）可以省掉 `if`：
 
@@ -119,8 +119,8 @@ port must be a number: eighty
 
 - 函数在签名里用 `throws` 写明会抛出哪种错误。
 - 调用它的地方二选一：用 `try` / `catch` 处理（可以再加 `finally`），或者在自己的签名里也写上 `throws`。两样都不做，会报 `SPR-FLOW-THROWS`。
-- `Error` 有一个 `message` 字段。
-- Java 的受检异常也能这样捕获，`catch` 后面写导入的 Java 异常类就行。
+- `Error` 有一个 `message` 字段。`print(problem)`、`"failed: " + problem` 和 `problem.toString()` 显示的也都是这条消息。
+- Java 的受检异常也能这样捕获，`catch` 后面写导入的 Java 异常类就行。这类异常按 Java 的格式显示，类名在前；它的 `message` 是 `String?`，因为 Java 的 `getMessage()` 可能返回 `null`。
 
 ## 泛型
 
@@ -157,7 +157,7 @@ caught: not a number: x
 caught: not a number: three
 ```
 
-函数值传给 Java 时，只能传给参数类型是 Sprig 自带的 `sprig.runtime.Fn0` 到 `Fn3` 的方法，不会自动转换成 Java 的 `Function`、`Consumer`、`Runnable` 或其他接口。不确定的时候，用 `sprig api <类名> --json` 查一下实际签名。
+函数值可以传给 Java 期望函数式接口的参数（最多三个参数，比如 `Comparator`、`Consumer`、`Runnable`），也可以传给 Sprig 自带的 `sprig.runtime.Fn0` 到 `Fn3`，见 [JVM 互操作](/guide/jvm-interop)。不确定的时候，用 `sprig api <类名> --json` 查一下实际签名。
 
 ## 在 JSON 里查找字段
 

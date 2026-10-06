@@ -201,6 +201,19 @@ with tempfile.TemporaryDirectory(prefix="sprig-runtime-diag-") as work:
                and "at sprig.user." in stack and stack_diagnostic.get("range") is not None,
                f"exit={stack_json.returncode} {stack_diagnostic}")
 
+    # An uncaught Error is classified from Java's "sprig.runtime.SprigError: message"
+    # stack header, so SprigError keeps Java's toString(); Sprig's toString() on an
+    # Error is lowered to SprigRuntime.str instead.
+    error_stack = call("run", directory / "uncaught-error.spr", "--json", "--stacktrace")
+    try:
+        error_diagnostic = json.loads(error_stack.stdout)["diagnostics"][0]
+    except (ValueError, KeyError, IndexError):
+        error_diagnostic = {}
+    verify("stacktrace uncaught error", error_stack.returncode == 1
+           and error_diagnostic.get("code") == "SPR-RUNTIME-ERROR"
+           and "Uncaught Error: bad input" in error_diagnostic.get("message", ""),
+           f"exit={error_stack.returncode} {error_diagnostic} {error_stack.stderr!r}")
+
     # The flag is run-only, like --keep.
     foreign = call("check", directory / "string-index.spr", "--stacktrace", "--json")
     try:

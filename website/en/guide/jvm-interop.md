@@ -65,6 +65,8 @@ example.com
 bad uri
 ```
 
+A caught Java exception shows Java's text, class name first, whether you print it, join it or call `toString()`. Its `message` is a `String?`, because Java's `getMessage()` may return `null`; check it before joining it. A Sprig `Error` shows only its message.
+
 ## Java collections and Sprig collections
 
 A Java `List` or `Map` never turns into a Sprig collection by itself, and a Sprig collection is never quietly passed where Java expects one. When you need to convert, use the functions in `@std/jvm.spr`:

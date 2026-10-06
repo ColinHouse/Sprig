@@ -45,7 +45,8 @@ def main():
     }
     for args, message in expected_errors.items():
         out, _ = run(*args)
-        assert out.startswith("ERR:") and message in out, (args, message, out)
+        # toString() on an Error is its message, with no Java class name in front.
+        assert out.startswith("ERR:" + message), (args, message, out)
 
     help_block, _ = run()
     expected_usage = "Usage: probe [options] [--] [arguments...]\nCLI parser contract\n\nOptions:\n"

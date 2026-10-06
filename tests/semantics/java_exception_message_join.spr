@@ -1,0 +1,9 @@
+# Java's getMessage() may return null, so a Java exception's message is a
+# String? and is checked before it is joined into text.
+import java.lang.Integer as Integer
+import java.lang.NumberFormatException as NumberFormatException
+
+try:
+    print(Integer.parseInt("x"))
+catch problem: NumberFormatException:
+    print("not a number: " + problem.message)

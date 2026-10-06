@@ -60,7 +60,10 @@ by the historical design kit in `docs/history/design-kit/`.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
   exception classes and top-level execution remains provisional. Checked Java
   exceptions follow Java's rule in one direction more: a catch nothing can
-  reach and a declared exception the body cannot throw are both errors.
+  reach and a declared exception the body cannot throw are both errors. Sprig
+  shows an `Error` as its message; Java code that turns one into text, such as
+  `String.valueOf` or a Java collection's `toString()`, sees
+  `sprig.runtime.SprigError: message`.
 - Lambdas have single-expression bodies and support arities zero through
   three. A lambda's `throws Error` comes from its body; it cannot be written
   on the lambda, and a lambda cannot call a function that throws a checked

@@ -571,4 +571,4 @@ try:
     run_file("examples/stage1_frontend_probe/fixtures/function.spr")
     run_file("examples/stage1_frontend_probe/fixtures/duplicate_parameter.spr")
 catch problem: IOException:
-    print("IO error: " + problem.message)
+    print("IO error: " + problem)

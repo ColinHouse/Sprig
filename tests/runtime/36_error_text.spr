@@ -1,0 +1,85 @@
+# An Error's text is its message: print, a join, toString() and .message all
+# give it, wherever the Error is held, for the errors built on Error and for an
+# Error caught under a Java supertype. A Java exception keeps Java's text, and
+# its .message is Java's getMessage(), which may be null.
+import java.lang.Integer as Integer
+import java.lang.NumberFormatException as NumberFormatException
+import java.lang.RuntimeException as RuntimeException
+import java.util.ArrayDeque as ArrayDeque
+import java.util.NoSuchElementException as NoSuchElementException
+import sprig.runtime.web.BadRequest as BadRequest
+
+generic T:
+    class Box:
+        let value: T
+
+generic T:
+    func show(value: T) -> String:
+        return value.toString()
+
+variant Outcome:
+    Done(value: Int)
+    Failed(error: Error)
+
+class Report:
+    let error: Error
+
+    func line() -> String:
+        return "report: " + error.toString()
+
+func fail(reason: String) -> Int throws Error:
+    throw Error(reason)
+
+try:
+    fail("disk full")
+catch problem: Error:
+    print(problem)
+    print("failed: " + problem)
+    print(problem.toString())
+    print(problem.message)
+    print(problem.toString() == problem.message)
+
+print(Error("inline").toString())
+let local = Error("local")
+print(local.toString())
+let errors: List[Error] = [Error("first"), Error("second")]
+print(errors.map(fn(error: Error) => error.toString()))
+let maybe: Error? = Error("maybe")
+if maybe != null:
+    print(maybe.toString())
+print(Box[Error](value=Error("boxed")).value.toString())
+let outcome: Outcome = Outcome.Failed(error=Error("variant"))
+match outcome:
+    case Outcome.Done as done:
+        print(done.value)
+    case Outcome.Failed as failed:
+        print(failed.error.toString())
+print(Report(error=Error("field")).line())
+let describe = fn(error: Error) => error.toString()
+print(describe(Error("lambda")))
+print(show[Error](Error("generic")))
+
+try:
+    throw BadRequest("malformed query")
+catch problem: BadRequest:
+    print(problem.toString())
+try:
+    throw Error("broad")
+catch problem: RuntimeException:
+    print(problem.toString())
+
+try:
+    print(Integer.parseInt("x"))
+catch problem: NumberFormatException:
+    print(problem.toString())
+    print("joined: " + problem)
+    let message = problem.message
+    if message != null:
+        print("message: " + message)
+try:
+    let queue = ArrayDeque[String]()
+    print(queue.pop())
+catch problem: NoSuchElementException:
+    let message = problem.message
+    if message == null:
+        print("no message: " + problem)

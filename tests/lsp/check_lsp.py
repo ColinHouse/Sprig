@@ -58,6 +58,10 @@ if maybe != null:
 print("😀😀" + word.toUpperCase())
 print(moved.x)
 print(total([shapes.Shape.Circle(radius=1.0)]))
+try:
+    throw Error("bad")
+catch problem: Error:
+    print(problem.toString() + problem.message)
 '''
 
 BAD = '''func broken() -> Int:
@@ -224,7 +228,7 @@ def check_workspace(directory):
     bad.write_text(BAD, encoding="utf-8")
     uses_bad.write_text(USES_BAD, encoding="utf-8")
     run = subprocess.run([str(SPRIG), "run", str(main)], capture_output=True, text=True, cwd=directory)
-    check("fixture-runs", run.returncode == 0 and run.stdout.endswith("4\n3.0\n"), run.stdout + run.stderr)
+    check("fixture-runs", run.returncode == 0 and run.stdout.endswith("4\n3.0\nbadbad\n"), run.stdout + run.stderr)
 
     client = Client(directory)
     early = client.request("textDocument/hover", {"textDocument": {"uri": uri(main)},
@@ -289,6 +293,13 @@ def check_workspace(directory):
     length_line = MAIN.splitlines().index("    print(maybe.length())")
     length_hover = hover_text(client, main, length_line, position(MAIN, length_line, "length"))
     check("hover-builtin-method", "length(...) -> Int" in length_hover, length_hover)
+    # Sprig's Error is shown by its Sprig name, and its toString() is the builtin.
+    error_line = MAIN.splitlines().index("    print(problem.toString() + problem.message)")
+    to_string_hover = hover_text(client, main, error_line, position(MAIN, error_line, "toString"))
+    check("hover-error-tostring", "Built-in method of `Error`" in to_string_hover, to_string_hover)
+    message_hover = hover_text(client, main, error_line, position(MAIN, error_line, "message"))
+    check("hover-error-message", "message: String" in message_hover and "String?" not in message_hover,
+          message_hover)
     narrowed = hover_text(client, main, length_line, position(MAIN, length_line, "maybe"))
     check("hover-narrowed-type", "let maybe: String?" in narrowed and "Here: `String`" in narrowed, narrowed)
     emoji_line = MAIN.splitlines().index('print("😀😀" + word.toUpperCase())')

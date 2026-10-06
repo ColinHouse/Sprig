@@ -1,0 +1,2 @@
+# A static read of message has no receiver: it is not a member of the type.
+print(Error.message)

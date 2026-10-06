@@ -95,7 +95,7 @@ true
 - Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
-- Objects returned by Java methods are always treated as possibly `null`; see [JVM interop](/en/guide/jvm-interop).
+- Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).
 
 When all you want is a fallback value or an error, `@std/nulls` (new in v0.6.0-beta.1) saves the `if`:
 
@@ -119,8 +119,8 @@ port must be a number: eighty
 
 - A function lists the errors it can throw with `throws` in its signature.
 - The caller has two options: handle the error with `try` / `catch` (optionally with `finally`), or add `throws` to its own signature. Doing neither is rejected with `SPR-FLOW-THROWS`.
-- An `Error` has a `message` field.
-- Java checked exceptions are caught the same way: name the imported Java exception class after `catch`.
+- An `Error` has a `message` field. `print(problem)`, `"failed: " + problem` and `problem.toString()` show that same message.
+- Java checked exceptions are caught the same way: name the imported Java exception class after `catch`. Such an exception shows Java's text, class name first, and its `message` is a `String?`, because Java's `getMessage()` may return `null`.
 
 ## Generics
 
@@ -157,7 +157,7 @@ caught: not a number: x
 caught: not a number: three
 ```
 
-When you pass a function value to Java, the Java parameter has to be one of Sprig's own `sprig.runtime.Fn0` to `Fn3` types. Sprig doesn't convert functions to Java's `Function`, `Consumer`, `Runnable` or any other interface. If you're not sure, `sprig api <Class> --json` shows the actual signature.
+A function value can go where Java expects a functional interface with up to three parameters, such as `Comparator`, `Consumer` or `Runnable`, and where it expects one of Sprig's own `sprig.runtime.Fn0` to `Fn3` types; see [JVM interop](/en/guide/jvm-interop). If you're not sure, `sprig api <Class> --json` shows the actual signature.
 
 ## Looking up JSON fields
 

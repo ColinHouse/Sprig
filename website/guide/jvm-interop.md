@@ -65,6 +65,8 @@ example.com
 bad uri
 ```
 
+捕获到的 Java 异常，不管是打印、拼接还是调用 `toString()`，显示的都是 Java 的格式，类名在前。它的 `message` 是 `String?`，因为 Java 的 `getMessage()` 可能返回 `null`，拼接之前要先检查。Sprig 的 `Error` 只显示消息本身。
+
 ## Java 集合和 Sprig 集合
 
 Java 的 `List`、`Map` 不会自动变成 Sprig 的集合，Sprig 的集合也不会被悄悄当作 Java 集合传进去。需要转换时，用 `@std/jvm.spr` 里的函数：

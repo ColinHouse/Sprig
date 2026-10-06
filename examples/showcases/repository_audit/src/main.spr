@@ -21,7 +21,7 @@ func main() -> Unit throws IOException, Error:
 try:
     main()
 catch problem: IOException:
-    print("IO error: " + problem.message)
+    print("IO error: " + problem)
     throw problem
 catch problem: Error:
     print("Audit error: " + problem.message)

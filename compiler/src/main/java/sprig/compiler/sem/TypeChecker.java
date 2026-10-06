@@ -2879,6 +2879,14 @@ public final class TypeChecker {
             return variantPayload(caseType, access);
         }
         if (receiver instanceof JavaType javaType) {
+            // toString() is the text print shows, as for every value: an Error's
+            // message, also for the errors built on it and one caught as
+            // RuntimeException. SprigRuntime.str gives Java's own text for every
+            // other exception, while Java code keeps Throwable.toString, whose
+            // "class: message" header stack traces and `run --stacktrace` read.
+            if (access.name.equals("toString") && Throwable.class.isAssignableFrom(javaType.clazz)) {
+                return builtin(access, "toString", NativeType.STRING, javaType);
+            }
             return javaMember(javaType, access, false);
         }
         if (receiver instanceof EnumType enumType) {
@@ -3063,12 +3071,19 @@ public final class TypeChecker {
         return errorField(access);
     }
 
+    /** "Java class X" in a diagnostic, but Sprig's own Error under its Sprig name. */
+    private static String javaOwner(Class<?> clazz) {
+        return clazz == SprigError.class ? "Error" : "Java class " + clazz.getSimpleName();
+    }
+
     private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext) {
         Class<?> clazz = javaType.clazz;
-        if (Throwable.class.isAssignableFrom(clazz) && access.name.equals("message")) {
+        if (!staticContext && Throwable.class.isAssignableFrom(clazz) && access.name.equals("message")) {
+            // An Error always has a message; Java's getMessage() may return null.
             ResolvedField field = new ResolvedField();
             field.kind = ResolvedField.Kind.ERROR_MESSAGE;
-            field.type = NativeType.STRING;
+            field.type = SprigError.class.isAssignableFrom(clazz)
+                    ? NativeType.STRING : NullableType.of(NativeType.STRING);
             return field;
         }
         try {
@@ -3125,7 +3140,7 @@ public final class TypeChecker {
             return field;
         }
         diagnostics.add(Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
-                "Java class " + clazz.getSimpleName() + " has no "
+                javaOwner(clazz) + " has no "
                         + (staticContext ? "static " : "") + "member '" + access.name + "'",
                 module.uri, access.span));
         return errorField(access);
@@ -3819,7 +3834,7 @@ public final class TypeChecker {
                 return NativeType.ERROR;
             }
             Diagnostic diagnostic = Diagnostic.error(Codes.JVM_MEMBER, Phase.JVM,
-                    "Java class " + clazz.getSimpleName() + " has no method '" + field.jvm.name
+                    javaOwner(clazz) + " has no method '" + field.jvm.name
                             + "' matching " + argTypes.size() + " argument(s)",
                     module.uri, call.span);
             String resultHint = callableResultHint(candidates, argTypes);

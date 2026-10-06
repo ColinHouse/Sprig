@@ -116,6 +116,11 @@ def main():
     check("api-jdk", local_date["className"] == "java.time.LocalDate"
           and any(m["name"] == "of" for m in local_date["staticMethods"]))
     check("api-text", "Java API: java.time.LocalDate" in run("api", "java.time.LocalDate").stdout)
+    # api agrees with the checker: a toString() result is a non-null String.
+    to_string = [m for m in local_date["instanceMethods"] if m["name"] == "toString"]
+    month = [m for m in local_date["instanceMethods"] if m["name"] == "getMonth"]
+    check("api-tostring-non-null", to_string and to_string[0]["sprigReturnType"] == "String"
+          and to_string[0]["nullableResult"] is False and month and month[0]["nullableResult"] is True)
     files = obj(run("api", "java.nio.file.Files", "--json"))
     arrays = [m for m in files["staticMethods"] if m["name"] == "readAllBytes"]
     check("api-array-boundary", arrays and arrays[0]["usableFromSprig"]
