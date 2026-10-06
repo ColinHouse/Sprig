@@ -27,13 +27,13 @@ To upgrade later, run `sprig upgrade --check` to see whether there's a new versi
 
 ### Manual download
 
-You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.6.0-beta.1), verify it and unpack it yourself:
+You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.0-beta.1), verify it and unpack it yourself:
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.6.0-beta.1/sprig-v0.6.0-beta.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.6.0-beta.1/sprig-v0.6.0-beta.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.6.0-beta.1-jdk.zip.sha256
-unzip sprig-v0.6.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.0-beta.1/sprig-v0.7.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.0-beta.1/sprig-v0.7.0-beta.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.7.0-beta.1-jdk.zip.sha256
+unzip sprig-v0.7.0-beta.1-jdk.zip
 ```
 
 On Linux, `sha256sum -c` works too. If the checksum doesn't match, download the file again; don't skip the check. Then add the unpacked directory's `bin` to your `PATH`.
