@@ -997,6 +997,10 @@ public final class JavaGenerator {
     private void emitFor(JavaWriter w, Stmt.ForStmt forStmt) {
         w.map(forStmt.span);
         String var = localName(forStmt.symbol);
+        if (forStmt.forKind == sprig.compiler.sem.ForKind.RANGE) {
+            emitRangeFor(w, forStmt, var);
+            return;
+        }
         String iterable = "(" + emitExpr(forStmt.iterable) + ")";
         boolean erased = containsTypeParameter(forStmt.iterable.type);
         String values = forStmt.forKind == sprig.compiler.sem.ForKind.MAP_KEYS
@@ -1012,6 +1016,33 @@ public final class JavaGenerator {
                     + values + ")");
             default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + values + ")");
         }
+        for (Stmt child : forStmt.body) {
+            emitStmt(w, child);
+        }
+        w.close();
+    }
+
+    /**
+     * {@code for x in range(...)} counts instead of building the list: the bounds
+     * are evaluated once, in source order, the runtime computes how many values the
+     * list would hold (and rejects a zero step, as range does), and each iteration
+     * binds a fresh x, so lambdas still capture one value per iteration.
+     */
+    private void emitRangeFor(JavaWriter w, Stmt.ForStmt forStmt, String var) {
+        Expr.Call call = (Expr.Call) forStmt.iterable;
+        List<Expr.Arg> args = call.args;
+        String start = freshTemp("rangeStart");
+        String end = freshTemp("rangeEnd");
+        String step = freshTemp("rangeStep");
+        String index = freshTemp("rangeIndex");
+        String left = freshTemp("rangeLeft");
+        w.line("long " + start + " = " + (args.size() == 1 ? "0L" : emitExpr(args.get(0).value)) + ";");
+        w.line("long " + end + " = " + emitExpr(args.get(args.size() == 1 ? 0 : 1).value) + ";");
+        w.line("long " + step + " = " + (args.size() == 3 ? emitExpr(args.get(2).value) : "1L") + ";");
+        w.open("for (long " + index + " = " + start + ", " + left + " = sprig.runtime.SprigRuntime.rangeCount("
+                + start + ", " + end + ", " + step + "); " + left + " != 0L; " + left + "--, "
+                + index + " += " + step + ")");
+        w.line("long " + var + " = " + index + ";");
         for (Stmt child : forStmt.body) {
             emitStmt(w, child);
         }

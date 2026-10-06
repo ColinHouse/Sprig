@@ -617,6 +617,10 @@ public final class TypeChecker {
                     .withTypes("List, MutableList, Map, MutableMap or String", iterable.display()));
             element = NativeType.ERROR;
         }
+        if (kind == ForKind.LIST && forStmt.iterable instanceof Expr.Call call && call.resolved != null
+                && call.resolved.kind == ResolvedCall.Kind.BUILTIN && "range".equals(call.resolved.builtinId)) {
+            kind = ForKind.RANGE;
+        }
         forStmt.forKind = kind;
         if (forStmt.symbol != null) {
             forStmt.symbol.type = element == null ? NativeType.ERROR : element;
