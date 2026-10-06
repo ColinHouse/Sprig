@@ -115,6 +115,9 @@ public final class ParserFrontend {
             return "'" + (previous == SprigLexer.IDENT ? stream.get(index - 1).getText() : token.getText())
                     + "' is not Sprig syntax\n" + declaration;
         }
+        if (within(parser, SprigParser.CatchClauseContext.class)) {
+            return "This catch clause is not written the Sprig way\n" + Newcomer.CATCH;
+        }
         if (type == SprigLexer.STAR && previous == SprigLexer.DOT && lineHas(stream, index, SprigLexer.IMPORT)) {
             return "Java classes are imported one at a time\n"
                     + "Write 'import java.io.BufferedReader as BufferedReader', one line per class; "

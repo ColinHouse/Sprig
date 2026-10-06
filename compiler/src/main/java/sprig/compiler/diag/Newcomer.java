@@ -26,6 +26,10 @@ public final class Newcomer {
     private static final String LENGTH = "A String has value.length(); a list or map has items.size().";
     private static final String BOOLEAN = "Sprig writes true and false in lowercase.";
     private static final String NULL = "Sprig writes the absent value as null, and its type as T?.";
+    /** How a catch clause is written; used where a catch or except does not parse. */
+    public static final String CATCH = "A catch clause names the error and its type: 'catch problem: Error:' "
+            + "(or an imported Java exception type), with the handling code indented below it, "
+            + "and problem.message holds the text.";
     private static final String SELF = "A method uses the object's fields and methods by name; "
             + "there is no self or this.";
 
@@ -137,6 +141,7 @@ public final class Newcomer {
             case "def", "function", "fun", "fn", "sub", "proc" ->
                     "Functions are declared with func: 'func name(parameter: Type) -> ResultType:', "
                             + "with '-> Unit' when nothing is returned.";
+            case "except", "rescue" -> CATCH;
             case "const", "val", "auto", "mut" ->
                     "Declare with let (cannot be reassigned) or var (can be): 'let limit = 10', 'var count = 0'.";
             default -> null;
