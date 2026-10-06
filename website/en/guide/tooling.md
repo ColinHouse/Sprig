@@ -2,7 +2,7 @@
 
 Sprig comes as one command-line program, `sprig`, and everything it does is a subcommand. There's no background process: even the language server is a subcommand, `sprig lsp`, which your editor starts itself. For VS Code, see the [VS Code extension](/en/guide/editor).
 
-Every command on this page is in the published v0.6.0-beta.1. For exactly what your installed SDK supports, run `sprig capabilities --json`.
+Every command on this page is in the published v0.7.0-beta.1. For exactly what your installed SDK supports, run `sprig capabilities --json`.
 
 ## The commands
 
@@ -68,7 +68,7 @@ A small greeting program that runs successfully:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.6.0-beta.1",
+  "toolVersion": "sprig-compiler 0.7.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -94,7 +94,7 @@ And with `--json` (the real `uri` is a full `file:` path, shortened here):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.6.0-beta.1",
+  "toolVersion": "sprig-compiler 0.7.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},

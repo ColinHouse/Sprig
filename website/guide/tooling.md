@@ -2,7 +2,7 @@
 
 Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，连语言服务器也是一个子命令 `sprig lsp`，由编辑器自己启动。VS Code 里的支持见 [VS Code 插件](/guide/editor)。
 
-这页列出的命令，已发布的 v0.6.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
+这页列出的命令，已发布的 v0.7.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
 
 ## 命令一览
 
@@ -68,7 +68,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.6.0-beta.1",
+  "toolVersion": "sprig-compiler 0.7.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -94,7 +94,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.6.0-beta.1",
+  "toolVersion": "sprig-compiler 0.7.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},
