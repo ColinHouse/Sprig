@@ -85,6 +85,28 @@ The second check fails with `order line: expected "tea x2", got "tea x3"`. The
 third argument says which value was checked. See the
 [standard library](../projects/standard-library.md) for the exact text format.
 
+A thrown `Error` ends the program, so the checks above stop at the first
+failure. To run several named checks and see every failure, give each one a
+name and a lambda, and finish with the tally:
+
+```sprig
+import "@std/test.spr" as testing
+
+testing.check("adds", fn() => testing.equal_int(2 + 2, 4, "sum"))
+testing.check("joins", fn() => testing.equal_text("tea x" + 3, "tea x3", "order line"))
+testing.check_error[Int]("rejects text", fn() => parse("x"))
+testing.finish()
+```
+
+`check` prints `ok adds` or `FAIL adds: message` and goes on to the next
+check; `check_error[T]` passes when the body throws `Error` (the body may
+return a value, so the call names its type); `finish` prints
+`N passed, M failed` and ends the program with status 1 when a check failed,
+which `sprig test` reports as a failed program. A lambda may call any function
+that throws `Error`, so a check body can be the code under test itself.
+`testing.run_process` is `process.run` from `@std/process.spr` under its
+earlier name; both run an argv vector with no shell.
+
 ## Expected compiler failures
 
 Place negative fixtures under `tests/compile_fail/`. Each `.spr` file needs a

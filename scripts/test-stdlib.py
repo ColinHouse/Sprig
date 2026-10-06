@@ -189,6 +189,19 @@ def main():
         # time: sleep waits at least the given time on the monotonic clock
         'true', 'caught sleep millis must not be negative: -1',
     ], repr(batteries.stdout)
+    runner = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/runner.spr')],
+                            cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
+    # A failed check does not stop the program; finish() ends it with status 1.
+    assert runner.returncode == 1, (runner.returncode, runner.stdout, runner.stderr)
+    assert runner.stdout.splitlines() == [
+        'ok adds', 'ok parses', 'ok compares lists', 'ok compares text',
+        'FAIL fails on purpose: sum: expected 5, got 4',
+        'FAIL sees the parse error: not a number: x',
+        'ok rejects text', 'FAIL expected an error: no Error was thrown',
+        'ok runs a child', 'ok keeps the old name',
+        '7 passed, 3 failed',
+    ], repr(runner.stdout)
+    assert 'not reached' not in runner.stdout
     practical_outputs = []
     for timezone in ('UTC', 'Pacific/Honolulu'):
         with tempfile.TemporaryDirectory(prefix='sprig std practical ') as work:
@@ -208,7 +221,7 @@ def main():
             ], (timezone, repr(lines))
             practical_outputs.append(lines)
     assert practical_outputs[0] == practical_outputs[1], practical_outputs
-    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks, process input/output/exit, sets/random/regex/dates and recursive JSON contracts passed')
+    print('stdlib: UTF-8/path/file operations/temp file, UTC parse/format across timezones, text.join, list/null/text helpers, test checks and runner, process input/output/exit/run, sets/random/regex/dates and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()

@@ -1,3 +1,4 @@
+import sprig.runtime.host.HostProcess as HostProcess
 import sprig.runtime.host.HostSystem as HostSystem
 
 func arguments() -> List[String] throws Error:
@@ -52,3 +53,27 @@ func read_all() -> String throws Error:
     if text != null:
         return text
     throw Error("host read_all returned null")
+
+# A finished child process. A nonzero status is an ordinary value here; only
+# a host failure (no such executable, a timeout) is an Error.
+class ProcessResult:
+    let exit_code: Int32
+    let stdout: String
+    let stderr: String
+
+# Runs an argv vector directly, with no shell, and waits for it: the first
+# element is the executable. Standard input is closed; standard output and
+# standard error are captured as UTF-8 and must decode. A child that runs
+# longer than 30 seconds is stopped and reported as an Error.
+func run(command: List[String]) -> ProcessResult throws Error:
+    let host = HostProcess.command()
+    if host != null:
+        for argument in command:
+            host.add(argument)
+        let result = host.run()
+        if result != null:
+            let output = result.stdout
+            let errors = result.stderr
+            if output != null and errors != null:
+                return ProcessResult(exit_code=result.exitCode, stdout=output, stderr=errors)
+    throw Error("host returned no process result")
