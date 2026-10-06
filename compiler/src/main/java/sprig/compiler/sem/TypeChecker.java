@@ -540,7 +540,11 @@ public final class TypeChecker {
         }
         Type actual = checkExpr(ret.value, expected);
         if (expected == NativeType.UNIT) {
-            if (actual != NativeType.UNIT && actual != NativeType.ERROR) {
+            if (actual == NativeType.UNIT) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                        "Cannot return a Unit result; Unit is not a value", module.uri, ret.value.span)
+                        .withHint("Call the function as a statement of its own, then write a bare return."));
+            } else if (actual != NativeType.ERROR) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_RETURN, Phase.TYPE,
                         "Unit function cannot return a value", module.uri, ret.span)
                         .withTypes("Unit", actual.display()));
@@ -1633,6 +1637,11 @@ public final class TypeChecker {
     }
 
     private Type checkEquality(Expr.Binary binary, Type left, Type right) {
+        if (left == NativeType.UNIT || right == NativeType.UNIT) {
+            requireValue(left, binary.left, "an operand of '" + binary.op + "'");
+            requireValue(right, binary.right, "an operand of '" + binary.op + "'");
+            return NativeType.BOOL;
+        }
         if (left == NativeType.NULL || right == NativeType.NULL) {
             Type other = left == NativeType.NULL ? right : left;
             if (other == NativeType.NULL) {
@@ -1772,7 +1781,7 @@ public final class TypeChecker {
         }
         Type inferred = null;
         for (Expr item : lit.items) {
-            Type itemType = checkExpr(item, element);
+            Type itemType = requireValue(checkExpr(item, element), item, "a list element");
             if (element != null) {
                 requireAssignable(element, itemType, item.span, Codes.TYPE_MISMATCH, "list element");
             } else {
@@ -1821,8 +1830,8 @@ public final class TypeChecker {
         for (int i = 0; i < lit.keys.size(); i++) {
             Expr key = lit.keys.get(i);
             Expr value = lit.values.get(i);
-            Type keyActual = checkExpr(key, keyType);
-            Type valueActual = checkExpr(value, valueType);
+            Type keyActual = requireValue(checkExpr(key, keyType), key, "a map key");
+            Type valueActual = requireValue(checkExpr(value, valueType), value, "a map value");
             if (keyType != null) {
                 requireAssignable(keyType, keyActual, key.span, Codes.TYPE_MISMATCH, "map key");
             } else {
@@ -2190,6 +2199,11 @@ public final class TypeChecker {
                         return functionType.result;
                     }
                     if (rejectNullableCallable(type, call)) return NativeType.ERROR;
+                    if (type == NativeType.ERROR) {
+                        // The member already failed to resolve and was reported.
+                        checkArgsUnchecked(call);
+                        return NativeType.ERROR;
+                    }
                     diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                             "'" + access.name + "' is not callable", module.uri, call.span)
                             .withTypes("function value", type == null ? "?" : type.display()));
@@ -2612,6 +2626,13 @@ public final class TypeChecker {
         Type receiver = checkExpr(access.receiver, null);
         ResolvedField resolved;
         if (receiver == null || receiver == NativeType.ERROR) {
+            resolved = errorField(access);
+        } else if (receiver == NativeType.UNIT) {
+            // A Unit result is not a value, so it has no members, toString included.
+            diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                    "Cannot access '" + access.name + "' on a Unit result; Unit is not a value",
+                    module.uri, access.nameSpan != null ? access.nameSpan : access.span)
+                    .withHint("Call the function as a statement of its own; it returns nothing to use."));
             resolved = errorField(access);
         } else if (receiver.isNullable()) {
             // Point at the member: in a chain such as a.b().c() every access
@@ -3391,7 +3412,7 @@ public final class TypeChecker {
         }
         List<Type> argTypes = new ArrayList<>();
         for (Expr.Arg arg : call.args) {
-            argTypes.add(checkExpr(arg.value, null));
+            argTypes.add(requireValue(checkExpr(arg.value, null), arg.value, "a Java argument"));
         }
         Map<TypeVariable<?>, Type> receiverBindings = JavaTypes
                 .hierarchyBindings(javaType.clazz, javaType.args)
@@ -3484,7 +3505,7 @@ public final class TypeChecker {
         }
         List<Type> argTypes = new ArrayList<>();
         for (Expr.Arg arg : call.args) {
-            argTypes.add(checkExpr(arg.value, null));
+            argTypes.add(requireValue(checkExpr(arg.value, null), arg.value, "a Java argument"));
         }
         Map<Class<?>, Map<TypeVariable<?>, Type>> hierarchy =
                 JavaTypes.hierarchyBindings(receiver.clazz, receiver.args);
@@ -4063,6 +4084,17 @@ public final class TypeChecker {
                         module.uri, span).withHint("Sprig keeps recoverable errors explicit; there is no implicit propagation."));
             }
         }
+    }
+
+    /** Unit is a function's result, never a value: report it where a value is needed. */
+    private Type requireValue(Type type, Expr expr, String role) {
+        if (type != NativeType.UNIT) {
+            return type;
+        }
+        diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                "Cannot use a Unit result as " + role + "; Unit is not a value", module.uri, expr.span)
+                .withHint("Call the function as a statement of its own; it returns nothing to use."));
+        return NativeType.ERROR;
     }
 
     /**

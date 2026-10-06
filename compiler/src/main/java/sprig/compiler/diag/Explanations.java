@@ -334,8 +334,12 @@ public final class Explanations {
             case Codes.TYPE_UNIT -> {
                 out.put("whyMatters", "Unit marks a result-less call; it is not a value you can store or pass.");
                 out.put("commonCauses", List.of("Binding a Unit result: let x = print(\"hi\").",
-                        "Using Unit as a field, parameter, element, or value result type."));
+                        "Using Unit as a field, parameter, element, or value result type.",
+                        "Calling a method on a Unit result, such as save().toString().",
+                        "Putting a Unit result in a list or map, comparing it with == or !=, or passing it to a Java method.",
+                        "Writing return save() in a function that returns Unit."));
                 out.put("safeFixes", List.of("Call the function for its effect without binding the result.",
+                        "In a Unit function, call it as a statement and then write a bare return.",
                         "Return a real value from functions whose result is used."));
                 out.put("relatedCodes", List.of(Codes.TYPE_INFER, Codes.TYPE_MISMATCH));
             }
