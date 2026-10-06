@@ -85,9 +85,10 @@ public final class Compiler {
 
     private Module parseFile(Path file) throws IOException {
         String overlay = overlays.get(file);
-        var tree = overlay != null
-                ? ParserFrontend.parse(file, file.toUri().toString(), overlay, diagnostics)
-                : ParserFrontend.parseFile(file, diagnostics);
+        String text = overlay != null ? overlay
+                : java.nio.file.Files.readString(file, java.nio.charset.StandardCharsets.UTF_8);
+        String uri = overlay != null ? file.toUri().toString() : file.toAbsolutePath().toUri().toString();
+        var tree = ParserFrontend.parse(file, uri, text, diagnostics);
         if (diagnostics.hasErrors()) {
             // ANTLR error recovery can leave incomplete parse trees whose child
             // nodes are absent (e.g. `let x = ` has no expression). Never hand
@@ -96,7 +97,9 @@ public final class Compiler {
             return new Module(file, file.toUri().toString(), List.of());
         }
         AstBuilder builder = new AstBuilder(file.toUri().toString(), diagnostics);
-        return builder.build(file, tree);
+        Module module = builder.build(file, tree);
+        module.source = text;
+        return module;
     }
 
     private Module load(Path abs, Map<Path, Module> modules, List<Module> order, List<Path> stack)

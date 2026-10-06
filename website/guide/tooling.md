@@ -122,7 +122,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 }
 ```
 
-注意 JSON 里的行号和列号从 0 开始，所以 `"line": 5, "character": 11` 就是普通输出里的第 6 行第 12 列。`relatedHelp` 告诉你该看 `sprig help` 的哪个主题。
+注意 JSON 里的行号和列号从 0 开始，所以 `"line": 5, "character": 11` 就是普通输出里的第 6 行第 12 列。`relatedHelp` 告诉你该看 `sprig help` 的哪个主题。提示归结为一处机械改写时——比如缺一行 `import "@std/files.spr" as files`，或者函数头要加 `throws Error`——`suggestedEdits` 会直接给出范围和替换文本，照着应用即可。
 
 退出码的规则：
 

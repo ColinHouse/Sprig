@@ -37,7 +37,7 @@ public final class JsonWriter {
             related.add(value);
         }
         item.put("related", related);
-        item.put("suggestedEdits", List.of());
+        item.put("suggestedEdits", List.copyOf(diagnostic.suggestedEdits));
         return item;
     }
 
@@ -156,7 +156,8 @@ public final class JsonWriter {
             sb.append("\n").append(indent).append("  ");
         }
         sb.append("],\n");
-        sb.append(indent).append("  \"suggestedEdits\": []\n");
+        sb.append(indent).append("  \"suggestedEdits\": ")
+          .append(sprig.compiler.tooling.ToolJson.encode(d.suggestedEdits)).append('\n');
         sb.append(indent).append("}");
     }
 

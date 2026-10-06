@@ -22,6 +22,21 @@ public final class StdLibrary {
         return root;
     }
 
+    /**
+     * The bundled module names as a program refers to them after an import
+     * (text, files, process, ...), or an empty list outside the installed
+     * launcher, where no std is reachable anyway.
+     */
+    public static java.util.List<String> bundledModuleNames() {
+        try {
+            return available(root()).stream()
+                    .map(name -> name.substring("@std/".length(), name.length() - ".spr".length()))
+                    .toList();
+        } catch (DepError e) {
+            return java.util.List.of();
+        }
+    }
+
     /** The bundled module names, as they are imported: @std/text.spr and so on. */
     static java.util.List<String> available(Path base) {
         try (java.util.stream.Stream<Path> files = Files.list(base)) {

@@ -21,6 +21,13 @@ public final class Diagnostic {
     public String relatedHelp;
     public Map<String, Object> repair;
     public Map<String, Object> data;
+    /**
+     * Mechanical rewrites that carry out the hint: each replaces {@code range}
+     * (zero-length for an insertion) with {@code newText}. Applying one makes
+     * the program move past this diagnostic; it does not promise to preserve
+     * the program's intent, which only the author knows.
+     */
+    public final List<Map<String, Object>> suggestedEdits = new ArrayList<>();
 
     public Diagnostic(String code, Phase phase, Severity severity, String message, String uri, Span span) {
         this.code = code;
@@ -66,6 +73,25 @@ public final class Diagnostic {
 
     public Diagnostic withData(Map<String, Object> data) {
         this.data = data;
+        return this;
+    }
+
+    /** Adds one suggested edit; {@code description} says in a few words what it does. */
+    public Diagnostic withEdit(Span range, String newText, String description) {
+        java.util.LinkedHashMap<String, Object> edit = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<String, Object> start = new java.util.LinkedHashMap<>();
+        start.put("line", range.startLine);
+        start.put("character", range.startColumn);
+        java.util.LinkedHashMap<String, Object> end = new java.util.LinkedHashMap<>();
+        end.put("line", range.endLine);
+        end.put("character", range.endColumn);
+        java.util.LinkedHashMap<String, Object> span = new java.util.LinkedHashMap<>();
+        span.put("start", start);
+        span.put("end", end);
+        edit.put("range", span);
+        edit.put("newText", newText);
+        edit.put("description", description);
+        this.suggestedEdits.add(edit);
         return this;
     }
 

@@ -13,6 +13,8 @@ public final class Module {
     public final String name; // file base name without extension
     public final String uri;
     public final List<Decl.Import> imports;
+    /** The source text, for diagnostics that quote or rewrite what was written; null for a stub. */
+    public String source;
     public final List<Decl> decls = new ArrayList<>();
     public final List<Stmt> topStatements = new ArrayList<>();
     public static final class Export extends Node {

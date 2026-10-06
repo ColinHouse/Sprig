@@ -122,7 +122,7 @@ And with `--json` (the real `uri` is a full `file:` path, shortened here):
 }
 ```
 
-Lines and columns in JSON count from 0, so `"line": 5, "character": 11` is line 6, column 12 in the normal output. `relatedHelp` tells you which `sprig help` topic to read.
+Lines and columns in JSON count from 0, so `"line": 5, "character": 11` is line 6, column 12 in the normal output. `relatedHelp` tells you which `sprig help` topic to read. When the hint comes down to one mechanical rewrite, such as a missing `import "@std/files.spr" as files` line or `throws Error` on a function header, `suggestedEdits` holds it as a range plus replacement text, ready to apply.
 
 Exit codes work like this:
 

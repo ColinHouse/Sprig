@@ -39,11 +39,11 @@ Leave the type arguments out, and the compiler won't guess them for you:
 
 ```text
 SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:5:7: Function 'identity' is generic; a call requires explicit type arguments, e.g. identity[Type](...)
-SPR-TYPE-MISMATCH [TYPE] main.spr:5:16: Type mismatch in argument 1 of identity (expected T, actual Int)
-2 error(s); run 'sprig explain <code>' for details on a diagnostic code.
+  hint: Write identity[Int](...); the arguments you passed say which type. Sprig does not infer type arguments.
+1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-The second error follows from the first. Write `identity[Int](42)` and both go away.
+The hint names the type the argument implies, but it is still you who writes it: `identity[Int](42)`. With `--json`, the same rewrite is in the diagnostic's `suggestedEdits`.
 
 The wrong number of type arguments is rejected with `SPR-TYPE-GENERIC-ARITY`. That includes a bare `Box` in a type position and type arguments on a type that isn't generic.
 

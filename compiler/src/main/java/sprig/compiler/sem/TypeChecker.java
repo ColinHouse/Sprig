@@ -2087,7 +2087,7 @@ public final class TypeChecker {
                     }
                     Decl.Func func = (Decl.Func) symbol.decl;
                     if (!func.typeParams.isEmpty()) {
-                        requireExplicitTypeArguments(func, call);
+                        return rejectMissingTypeArguments(func, call);
                     }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.FUNCTION, func.returnType);
                     resolved.symbol = symbol;
@@ -2098,7 +2098,7 @@ public final class TypeChecker {
                 case METHOD -> {
                     Decl.Func func = (Decl.Func) symbol.decl;
                     if (!func.typeParams.isEmpty()) {
-                        requireExplicitTypeArguments(func, call);
+                        return rejectMissingTypeArguments(func, call);
                     }
                     checkComparableArguments(func, Map.of(), call.span);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
@@ -2211,7 +2211,7 @@ public final class TypeChecker {
                 case MODULE_FUNCTION -> {
                     Decl.Func func = field.methodDecl;
                     if (!func.typeParams.isEmpty()) {
-                        requireExplicitTypeArguments(func, call);
+                        return rejectMissingTypeArguments(func, call);
                     }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.MODULE_FUNCTION,
                             func.returnType);
@@ -2300,12 +2300,84 @@ public final class TypeChecker {
         return NativeType.ERROR;
     }
 
-    private void requireExplicitTypeArguments(Decl.Func func, Expr.Call call) {
-        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+    /**
+     * A generic call without type arguments is reported once, with the
+     * arguments the call itself implies when a parameter type names each type
+     * parameter directly (T, T?, List[T], MutableList[T]). The written
+     * arguments are checked without an expected type, so nothing follows from
+     * the unbound parameters, and the call's type is the error type.
+     */
+    private Type rejectMissingTypeArguments(Decl.Func func, Expr.Call call) {
+        List<Type> actuals = new ArrayList<>();
+        for (Expr.Arg arg : call.args) {
+            actuals.add(checkExpr(arg.value, null));
+        }
+        List<String> implied = new ArrayList<>();
+        for (String typeParam : func.typeParams) {
+            Type found = null;
+            for (int i = 0; i < func.params.size() && i < actuals.size() && found == null; i++) {
+                found = impliedTypeArgument(func.params.get(i).type, typeParam, actuals.get(i));
+            }
+            if (found == null) {
+                implied = null;
+                break;
+            }
+            implied.add(found.display());
+        }
+        String callee = calleeText(call.callee, func.name);
+        Diagnostic missing = Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
                 (func.isMethod() ? "Method '" : "Function '") + func.name
                         + "' is generic; a call requires explicit type arguments, e.g. "
                         + func.name + "[Type](...)",
-                module.uri, call.span));
+                module.uri, call.span);
+        // The type arguments go right after the function's name: a bare name's
+        // span, or the member name of 'module.function'.
+        Span anchor = call.callee instanceof Expr.Name ? call.callee.span
+                : call.callee instanceof Expr.FieldAccess access ? access.nameSpan : null;
+        if (implied != null) {
+            String arguments = "[" + String.join(", ", implied) + "]";
+            missing.withHint("Write " + callee + arguments + "(...); the arguments you passed say which type"
+                    + (implied.size() > 1 ? "s" : "") + ". Sprig does not infer type arguments.");
+            if (anchor != null) {
+                missing.withEdit(Span.point(anchor.endLine, anchor.endColumn), arguments, "add the type arguments");
+            }
+        } else {
+            missing.withHint("Write " + callee + "[Type](...) with the type argument"
+                    + (func.typeParams.size() > 1 ? "s" : "") + " spelled out ("
+                    + String.join(", ", func.typeParams) + "); Sprig does not infer them.");
+        }
+        diagnostics.add(missing);
+        return NativeType.ERROR;
+    }
+
+    /** The type argument an actual implies for one type parameter through a direct parameter shape, or null. */
+    private static Type impliedTypeArgument(Type declared, String typeParam, Type actual) {
+        if (actual == null || actual == NativeType.ERROR || actual == NativeType.NULL || actual == NativeType.UNIT) {
+            return null;
+        }
+        if (declared instanceof TypeParameterType parameter && parameter.name.equals(typeParam)) {
+            return actual;
+        }
+        if (declared instanceof NullableType nullable && nullable.inner instanceof TypeParameterType parameter
+                && parameter.name.equals(typeParam)) {
+            return actual.nonNull();
+        }
+        if (declared instanceof ListType declaredList && declaredList.element instanceof TypeParameterType parameter
+                && parameter.name.equals(typeParam) && actual instanceof ListType actualList) {
+            return actualList.element;
+        }
+        return null;
+    }
+
+    /** How the call names its function: 'sorted', 'lists.sorted' or 'box.get'. */
+    private static String calleeText(Expr callee, String fallback) {
+        if (callee instanceof Expr.Name name) {
+            return name.name;
+        }
+        if (callee instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Name receiver) {
+            return receiver.name + "." + access.name;
+        }
+        return fallback;
     }
 
     private ResolvedCall resolvedCall(Expr.Call call, ResolvedCall.Kind kind, Type returnType) {
@@ -2385,11 +2457,23 @@ public final class TypeChecker {
             call.resolved.substitution = map;
             call.resolved.instantiatedType = classType;
         }
-        if (call.hasPositionalArgs()) {
-            diagnostics.add(Diagnostic.error(Codes.CALL_NAMED_REQUIRED, Phase.TYPE,
+        boolean positional = call.hasPositionalArgs();
+        if (positional) {
+            Diagnostic named = Diagnostic.error(Codes.CALL_NAMED_REQUIRED, Phase.TYPE,
                     "Constructor of class " + decl.name + " requires named arguments, e.g. "
                             + decl.name + "(" + firstFieldSnippet(decl) + ")",
-                    module.uri, call.span));
+                    module.uri, call.span);
+            String rewrite = namedConstructorRewrite(decl, call);
+            if (rewrite != null) {
+                Span first = call.args.get(0).value.span;
+                Span last = call.args.get(call.args.size() - 1).value.span;
+                named.withHint("Write " + decl.name + "(" + rewrite + "); each argument names its field.")
+                        .withEdit(new Span(first.startLine, first.startColumn, last.endLine, last.endColumn,
+                                first.startOffset, last.endOffset), rewrite, "name each argument after its field");
+            } else {
+                named.withHint("Write " + decl.name + "(" + fieldSnippets(decl) + "); each argument names its field.");
+            }
+            diagnostics.add(named);
         }
         Set<String> provided = new HashSet<>();
         for (Expr.Arg arg : call.args) {
@@ -2415,7 +2499,9 @@ public final class TypeChecker {
         }
         Set<Type> omittedDefaultEffects = new LinkedHashSet<>();
         for (Decl.Field field : decl.fields) {
-            if (field.defaultExpr == null && !provided.contains(field.name)) {
+            // Positional arguments were reported once above; the fields they
+            // failed to name are not missing on top of that.
+            if (field.defaultExpr == null && !provided.contains(field.name) && !positional) {
                 diagnostics.add(Diagnostic.error(Codes.CALL_MISSING_FIELD, Phase.TYPE,
                         "Missing required field '" + field.name + ":"
                                 + Substitution.apply(field.type, map).display() + "'",
@@ -2437,6 +2523,45 @@ public final class TypeChecker {
         }
         Decl.Field first = decl.fields.get(0);
         return first.name + "=" + (first.type == null ? "?" : first.type.display());
+    }
+
+    private static String fieldSnippets(Decl.ClassDecl decl) {
+        List<String> parts = new ArrayList<>();
+        for (Decl.Field field : decl.fields) {
+            parts.add(field.name + "=" + (field.type == null ? "?" : field.type.display()));
+        }
+        return String.join(", ", parts);
+    }
+
+    /**
+     * The written call with each positional argument named after its field,
+     * when the arguments line up with the fields (all of them, or exactly
+     * the ones without a default) and the source is at hand; else null.
+     */
+    private String namedConstructorRewrite(Decl.ClassDecl decl, Expr.Call call) {
+        if (module.source == null || call.args.isEmpty()) {
+            return null;
+        }
+        List<Decl.Field> required = new ArrayList<>();
+        for (Decl.Field field : decl.fields) {
+            if (field.defaultExpr == null) required.add(field);
+        }
+        List<Decl.Field> targets = call.args.size() == decl.fields.size() ? decl.fields
+                : call.args.size() == required.size() ? required : null;
+        if (targets == null) {
+            return null;
+        }
+        List<String> parts = new ArrayList<>();
+        for (int i = 0; i < call.args.size(); i++) {
+            Expr.Arg arg = call.args.get(i);
+            Span span = arg.value.span;
+            if (arg.name != null || span == null || span.startOffset < 0 || span.endOffset > module.source.length()
+                    || span.endOffset <= span.startOffset) {
+                return null;
+            }
+            parts.add(targets.get(i).name + "=" + module.source.substring(span.startOffset, span.endOffset));
+        }
+        return String.join(", ", parts);
     }
 
     private static Decl.Field findField(Decl.ClassDecl decl, String name) {
@@ -4158,9 +4283,11 @@ public final class TypeChecker {
                 }
                 String name = type instanceof JavaType javaType && javaType.clazz == SprigError.class
                         ? "Error" : type.display();
-                diagnostics.add(Diagnostic.error(Codes.FLOW_THROWS, Phase.FLOW,
+                Diagnostic unhandled = Diagnostic.error(Codes.FLOW_THROWS, Phase.FLOW,
                         "Call may throw " + name + "; declare 'throws " + name + "' or handle it with try/catch",
-                        module.uri, span).withHint(throwsHint(name)));
+                        module.uri, span).withHint(throwsHint(name));
+                throwsEdit(unhandled, name);
+                diagnostics.add(unhandled);
             }
         }
     }
@@ -4185,6 +4312,29 @@ public final class TypeChecker {
         header.append(String.join(", ", declared)).append(':');
         return "Declare it on '" + currentFunction.name + "' by changing its header to '" + header + "', and its callers "
                 + "then handle or declare it too (top-level statements need neither), " + handle;
+    }
+
+    /**
+     * The edit behind the throws hint: 'throws name' after the enclosing
+     * header's result type, or ', name' after its last declared type. A
+     * rethrows header and a lambda have no such place.
+     */
+    private void throwsEdit(Diagnostic diagnostic, String name) {
+        if (lambdaDepth > 0 || currentFunction == null || currentFunction.returnTypeRef == null
+                || currentFunction.rethrows) {
+            return;
+        }
+        for (sprig.compiler.ast.TypeRef ref : currentFunction.throwsRefs) {
+            if (ref.display().equals(name)) return;
+        }
+        boolean first = currentFunction.throwsRefs.isEmpty();
+        Span anchor = first ? currentFunction.returnTypeRef.span
+                : currentFunction.throwsRefs.get(currentFunction.throwsRefs.size() - 1).span;
+        if (anchor == null) {
+            return;
+        }
+        diagnostic.withEdit(Span.point(anchor.endLine, anchor.endColumn), (first ? " throws " : ", ") + name,
+                "declare throws " + name + " on '" + currentFunction.name + "'");
     }
 
     /** Unit is a function's result, never a value: report it where a value is needed. */
