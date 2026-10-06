@@ -2,7 +2,6 @@ import "@std/files.spr" as files
 import "@std/process.spr" as process
 import "@std/text.spr" as text
 import "@std/time.spr" as time
-import java.io.IOException as IOException
 
 try:
     let root = process.argument(0)
@@ -21,7 +20,7 @@ try:
     var copy_rejected = false
     try:
         files.copy_file(source, copy)
-    catch problem: IOException:
+    catch problem: Error:
         copy_rejected = true
     print(copy_rejected)
 
@@ -32,7 +31,7 @@ try:
     var move_rejected = false
     try:
         files.move(source, moved)
-    catch problem: IOException:
+    catch problem: Error:
         move_rejected = true
     print(move_rejected)
 
@@ -43,7 +42,7 @@ try:
     var directory_remove_rejected = false
     try:
         files.remove_file(directory)
-    catch problem: IOException:
+    catch problem: Error:
         directory_remove_rejected = true
     print(directory_remove_rejected)
     print(files.read_utf8(child))
@@ -53,7 +52,7 @@ try:
     var atomic_rejected = false
     try:
         files.atomic_write_utf8(directory, "cannot replace a non-empty directory")
-    catch problem: IOException:
+    catch problem: Error:
         atomic_rejected = true
     print(atomic_rejected)
     print(files.read_utf8(child))
@@ -101,5 +100,5 @@ try:
     catch problem: Error:
         epoch_overflow_rejected = true
     print(epoch_overflow_rejected)
-catch problem: IOException:
-    print("unexpected IO failure: " + problem.message)
+catch problem: Error:
+    print("unexpected failure: " + problem.message)

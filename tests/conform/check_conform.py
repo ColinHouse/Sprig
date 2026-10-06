@@ -256,7 +256,7 @@ print("ok")
     "throws_within_declared": (IMPORTS + """
 class Example:
     func f() -> Unit throws IOException:
-        pass
+        throw IOException("declared and thrown within ThrowWide's Exception")
 
 conform Example to ThrowWide
 

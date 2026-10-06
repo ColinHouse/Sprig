@@ -1,0 +1,15 @@
+import java.io.IOException as IOException
+import java.nio.file.Files as Files
+import java.nio.file.Path as Path
+
+func read(path: Path) -> String throws Error:
+    try:
+        try:
+            let text = Files.readString(path)
+            if text != null:
+                return text
+        catch problem: IOException:
+            print("inner")
+    catch problem: IOException:
+        print("outer")
+    throw Error("no text")

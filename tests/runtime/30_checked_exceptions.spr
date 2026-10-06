@@ -1,0 +1,45 @@
+import java.io.IOException as IOException
+import java.io.FileNotFoundException as FileNotFoundException
+import java.lang.Exception as Exception
+import java.nio.file.Files as Files
+import java.nio.file.Path as Path
+
+# A function declares a checked Java exception its body can throw, and a catch
+# names it, a subclass of it or a superclass of it.
+func read(path: Path) -> String throws IOException, Error:
+    let text = Files.readString(path)
+    if text != null:
+        return text
+    throw Error("no text")
+
+func by_subclass(path: Path) -> String:
+    try:
+        return read(path)
+    catch problem: FileNotFoundException:
+        return "not found"
+    catch problem: IOException:
+        return "io"
+    catch problem: Error:
+        return problem.message
+
+func by_superclass(path: Path) -> String:
+    try:
+        return read(path)
+    catch problem: Exception:
+        return "any exception"
+
+# The inner try catches only Error, so the IOException reaches the outer catch.
+func nested(path: Path) -> String:
+    try:
+        try:
+            return read(path)
+        catch problem: Error:
+            return "inner error"
+    catch problem: IOException:
+        return "outer io"
+
+let missing = Path.of("definitely-missing.txt")
+if missing != null:
+    print(by_subclass(missing))
+    print(by_superclass(missing))
+    print(nested(missing))

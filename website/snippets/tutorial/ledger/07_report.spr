@@ -1,7 +1,6 @@
 # region imports
 import "@std/files.spr" as files
 import "@std/text.spr" as strings
-import java.io.IOException as IOException
 # endregion imports
 
 # region model
@@ -86,7 +85,7 @@ func report(expenses: List[Expense]) -> Unit:
 # endregion report
 
 # region main
-func main() -> Unit throws IOException, Error:
+func main() -> Unit throws Error:
     let path = files.temp_file()
     files.write_utf8(path, "Coffee, 12.50, food\nTaxi, 36.00, transport\nNoodles, 18.00, food\nMovie, 45.00, fun\n")
     let expenses: MutableList[Expense] = []
@@ -98,8 +97,6 @@ func main() -> Unit throws IOException, Error:
 
 try:
     main()
-catch problem: IOException:
-    print("could not read the file: " + problem.message)
 catch problem: Error:
-    print("bad data: " + problem.message)
+    print(problem.message)
 # endregion main

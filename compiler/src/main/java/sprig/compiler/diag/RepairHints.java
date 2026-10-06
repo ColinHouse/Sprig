@@ -22,6 +22,8 @@ final class RepairHints {
             Map.entry(Codes.GENERIC_CONSTRAINT, new Hint("generics", "remove-unsupported-capability")),
             Map.entry(Codes.FLOW_THROWS, new Hint("errors", "declare-throws-or-catch")),
             Map.entry(Codes.FLOW_RETHROWS, new Hint("errors", "give-a-callable-parameter-throws-Error-or-drop-rethrows")),
+            Map.entry(Codes.FLOW_CATCH_NEVER_THROWN, new Hint("errors", "remove-the-catch-clause-nothing-throws")),
+            Map.entry(Codes.FLOW_THROWS_UNUSED, new Hint("errors", "remove-the-exception-the-body-never-throws")),
             Map.entry(Codes.TYPE_CALLABLE_THROWS, new Hint("errors", "add-throws-Error-to-the-function-type-or-handle-inside")),
             Map.entry(Codes.JVM_MEMBER, new Hint("jvm", "inspect-api-and-make-arguments-explicit")),
             Map.entry(Codes.JVM_AMBIGUOUS, new Hint("jvm", "inspect-api-and-make-arguments-explicit")),

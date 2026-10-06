@@ -2,7 +2,6 @@ import "@std/files.spr" as files
 import "@std/json.spr" as json
 import "@std/json_codec.spr" as codec
 import "@std/process.spr" as process
-import java.io.IOException as IOException
 
 class Task:
     let id: Int
@@ -29,7 +28,7 @@ func encode_task(task: Task) -> json.Value:
         codec.member("done", codec.bool(task.done))
     ])
 
-func load_tasks() -> List[Task] throws Error, IOException:
+func load_tasks() -> List[Task] throws Error:
     let path = data_path()
     if not files.exists(path):
         return []
@@ -38,7 +37,7 @@ func load_tasks() -> List[Task] throws Error, IOException:
         tasks.append(decode_task(row))
     return tasks.toList()
 
-func save_tasks(tasks: List[Task]) -> Unit throws Error, IOException:
+func save_tasks(tasks: List[Task]) -> Unit throws Error:
     let rows = tasks.map(fn(task: Task) => encode_task(task))
     files.write_utf8(data_path(), json.stringify(codec.array(rows)) + "\n")
 
@@ -83,7 +82,5 @@ try:
     else:
         usage()
         throw Error("invalid command")
-catch problem: IOException:
-    throw Error("file operation failed: " + problem.message)
 catch problem: Error:
     throw problem

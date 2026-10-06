@@ -3,7 +3,6 @@ import "@std/files.spr" as files
 import "@std/json.spr" as json
 import "@std/process.spr" as process
 import "@cli/cli.spr" as cli
-import java.io.IOException as IOException
 import "./meta.spr" as meta
 
 func options() -> List[cli.OptionSpec]:
@@ -54,7 +53,7 @@ func compare(old: Map[String, String], new: Map[String, String]) -> String:
         output += "~ " + item + "\n"
     return output
 
-func run() -> Unit throws IOException, Error:
+func run() -> Unit throws Error:
     let specs = options()
     let arguments = cli.parse(process.arguments(), specs)
     if arguments.flag("help") or arguments.positionals.size() < 2:
@@ -71,9 +70,6 @@ func run() -> Unit throws IOException, Error:
 
 try:
     run()
-catch problem: IOException:
-    print("api-diff: " + problem.toString())
-    throw problem
 catch problem: Error:
     print("api-diff: " + problem.message)
     throw problem
