@@ -223,21 +223,7 @@ final class Describe {
                 || target.kind == Kind.MODULE) {
             return null;
         }
-        int line = target.span.startLine - 1;
-        if (line >= 0 && text.line(line).trim().startsWith("generic ")) {
-            line--;
-        }
-        List<String> lines = new ArrayList<>();
-        while (line >= 0) {
-            String content = text.line(line).trim();
-            if (!content.startsWith("#")) {
-                break;
-            }
-            String body = content.substring(1);
-            lines.add(0, body.startsWith(" ") ? body.substring(1) : body);
-            line--;
-        }
-        return lines.isEmpty() ? null : String.join("\n", lines).strip();
+        return sprig.compiler.tooling.DocComments.above(text::line, target.span.startLine);
     }
 
     static String block(String code) {

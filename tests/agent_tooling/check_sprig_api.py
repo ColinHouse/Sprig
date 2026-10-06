@@ -31,13 +31,16 @@ path = "{cli}"
 MAIN = '''import "@web/app.spr" as web
 import "@cli/cli.spr" as cli
 
+# A value with a label.
 generic T:
     class Box:
+        # What the box holds.
         let value: T
         let label: String = "box"
 
 generic T:
     variant Maybe:
+        # There is a value.
         Present:
             value: T
         Absent:
@@ -51,6 +54,8 @@ class Service:
     let endpoint: String? = null
     var calls: Int = 0
 
+    # Echoes the input.
+    # Empty input is an Error.
     func call(input: String) -> String throws Error:
         if input == "":
             throw Error("empty")
@@ -149,6 +154,31 @@ with tempfile.TemporaryDirectory(prefix="sprig-api-") as temp:
     same_key = declaration(module, "same_key")
     verify("generic function requires clause",
            same_key is not None and same_key.get("requires") == ["K: Equatable"], same_key)
+
+    # The comment written directly above a declaration, as editor hover shows it.
+    absent = None if maybe is None else maybe["cases"][1]
+    verify("doc comments",
+           box is not None and box.get("doc") == "A value with a label."
+           and value and value[0].get("doc") == "What the box holds." and "doc" not in label[0]
+           and call and call[0].get("doc") == "Echoes the input.\nEmpty input is an Error."
+           and maybe is not None and maybe["cases"][0].get("doc") == "There is a value."
+           and absent is not None and "doc" not in absent and "doc" not in (mode or {})
+           and "doc" not in (declaration(module, "identity") or {"doc": None}), module)
+    text = run("api", "src/main.spr", cwd=project).stdout
+    verify("doc comments in text output",
+           "  class Box\n    # A value with a label.\n" in text
+           and "    method call(input: String): String throws Error\n      # Echoes the input.\n"
+               "      # Empty input is an Error.\n" in text, text)
+
+    # A reexported declaration keeps the comment written where it is declared.
+    (project / "src/inner.spr").write_text("# Twice the input.\nfunc twice(x: Int) -> Int:\n    return x * 2\n",
+                                           encoding="utf-8")
+    (project / "src/facade.spr").write_text('import "./inner.spr" as inner\n\nexport inner.twice\n',
+                                            encoding="utf-8")
+    proc, facade = result(project, "api", "src/facade.spr", "--json")
+    twice = declaration(facade, "twice")
+    verify("reexported doc comment", proc.returncode == 0 and twice is not None
+           and twice.get("reexported") is True and twice.get("doc") == "Twice the input.", facade)
 
     variable = [v for v in module.get("variables", []) if v["name"] == "default_box"]
     verify("top-level variable type", variable and variable[0]["type"] == "Box[Int]", module.get("variables"))

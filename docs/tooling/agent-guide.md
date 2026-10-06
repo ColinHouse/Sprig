@@ -155,7 +155,8 @@ the selected source set, compiler, runtime, lock and generated output. See
 `libraries/sprig-gradle/README.md` and `libraries/sprig-fabric/README.md`.
 
 Declaration facades use `export alias.Symbol` after imports and before other
-code. Query `sprig api module.spr --json` for exported signatures and origins.
+code. Query `sprig api module.spr --json` for exported signatures, origins and
+`doc`, the `#` comment written directly above a declaration or member.
 No wildcard, renaming or implicit reexport exists. See docs/language/module-reexports.md.
 
 `sprig fmt file.spr` (or a project directory) writes canonical,
