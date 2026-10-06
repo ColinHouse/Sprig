@@ -202,7 +202,11 @@ public final class TypeChecker {
         narrowing.clear();
         caughtStack.clear();
         effectCollectors.clear();
+        // The base frame a function body also gets: early-exit narrowing
+        // (if x == null: throw ...) records into it for the statements after.
+        narrowing.push(new HashMap<>());
         checkSequence(module.topStatements);
+        narrowing.pop();
     }
 
     private Decl.Field collectingDefault;

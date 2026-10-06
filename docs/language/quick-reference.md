@@ -41,6 +41,10 @@ Use `T?` for expected absence and narrow with `if value != null` before use.
 The right side of a short-circuit `and`/`or` and the guarded block see the
 narrowing: `if box != null and box.value > 0:` narrows `box` for `box.value`,
 and `if text == null or text.length() == 0:` narrows `text` for `text.length()`.
+After an early exit (`if value == null:` followed by `return`, `throw`, `break`
+or `continue`), the statements below see `value` as non-null, in a function body
+and at the top level alike. Only `let` bindings narrow; copy a `var` into a `let`
+to check it.
 `List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
 `==`/`!=` compare values; nullable `Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?`
 comparisons are null-safe and widen to the common type (`Int32?` → `Int?`,
