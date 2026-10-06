@@ -93,8 +93,6 @@ CASES = [
      "check it first with 'if n != null:'"),
     ("nullable-index-join", "let m: Map[String, Int] = {\"k\": 1}\nprint(\"k=\" + m[\"k\"])\n", "SPR-TYPE-NULLABLE",
      "write 'let value = m[\"k\"]'"),
-    ("comparator-returns-int", "import java.util.ArrayList\n\nlet words = ArrayList[String]()\n"
-     "words.sort(fn(a: String, b: String) => a.length() - b.length())\n", "SPR-JVM-MEMBER", "value.toInt32Exact()"),
 ]
 
 # Ordinary syntax errors keep the parser's own message: the targeted hints do not misfire.
@@ -106,6 +104,9 @@ UNTARGETED = [
 # Programs that must keep compiling without any diagnostic: the hints never fire on valid code.
 VALID = [
     ("comparison", "let a = 1\nlet b = 2\nprint(a < b)\n"),
+    # An Int-returning comparator narrows to int with a run-time range check.
+    ("comparator-returns-int", "import java.util.ArrayList\n\nlet words = ArrayList[String]()\n"
+     "words.sort(fn(a: String, b: String) => a.length() - b.length())\n"),
     ("map-literal", "let m: Map[String, Int] = {\"a\": 1}\nprint(m[\"a\"])\n"),
     ("elif", "let n = 2\nif n == 1:\n    print(1)\nelif n == 2:\n    print(2)\nelse:\n    print(3)\n"),
     ("not-equal", "print(1 != 2)\n"),

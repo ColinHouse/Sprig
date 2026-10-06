@@ -132,7 +132,7 @@ false
 a/b/c
 ```
 
-- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32`, which `a.compareTo(b)` does. A lambda that returns an `Int` is reported with the conversion to write.
+- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32` (`a.compareTo(b)` does) or an `Int`, which is narrowed with a run-time range check like any other `Int` passed to an `int`.
 - Wildcards inside the interface's type arguments are fine: a lambda implementing `Consumer<String>` is a `Consumer<? super String>`.
 - Type variables are never inferred. `names.forEach` works because `ArrayList[String]` fixes `E`; `stream.map(fn(...) => ...)` needs `stream.map[String](...)` because `R` is the method's own.
 - A function value whose type says `throws Error` can't cross into Java, because Java can't see the clause (`SPR-TYPE-CALLABLE-THROWS`). Handle the error inside a named function and pass a lambda that calls it.

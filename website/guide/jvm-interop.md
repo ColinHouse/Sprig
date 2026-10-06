@@ -132,7 +132,7 @@ false
 a/b/c
 ```
 
-- 参数类型必须完全一致；方法返回 `void` 时，lambda 返回什么都可以。`Comparator.compare` 返回 `int`，所以 lambda 要返回 `Int32`，`a.compareTo(b)` 正好是。返回 `Int` 的 lambda 会报错，并告诉你该怎么转换。
+- 参数类型必须完全一致；方法返回 `void` 时，lambda 返回什么都可以。`Comparator.compare` 返回 `int`，所以 lambda 返回 `Int32`（`a.compareTo(b)` 正好是）或者 `Int` 都可以；返回 `Int` 时会像传给 `int` 参数一样做运行时范围检查。
 - 接口类型参数里的通配符没关系：实现了 `Consumer<String>` 的 lambda 就是一个 `Consumer<? super String>`。
 - 类型变量从不推断。`names.forEach` 能用是因为 `ArrayList[String]` 定下了 `E`；`stream.map(fn(...) => ...)` 得写成 `stream.map[String](...)`，因为 `R` 是方法自己的类型变量。
 - 类型里带 `throws Error` 的函数值不能传给 Java，因为 Java 看不到这个子句（`SPR-TYPE-CALLABLE-THROWS`）。把错误在具名函数里处理掉，再传一个调用它的 lambda。

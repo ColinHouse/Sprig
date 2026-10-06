@@ -89,7 +89,9 @@ A parameter whose type is a public functional interface (one abstract method,
 `Object`'s methods excluded, no method type parameters, at most three
 parameters) accepts a Sprig function value (`java-callable-adapter`). The
 expected `fn(...) -> R` is derived from the interface method with the ordinary
-mapping: parameters must match exactly, `void` accepts any result, a wildcard
+mapping: parameters must match exactly, `void` accepts any result, an
+`int`/`Integer` result also takes a lambda returning `Int` (narrowed with a
+run-time range check, as a parameter is), a wildcard
 inside the interface's type arguments reads as its bound (a lambda implementing
 `Consumer<String>` satisfies `Consumer<? super String>`), and type variables are
 bound only through the receiver or explicit `method[Type]` arguments. A value

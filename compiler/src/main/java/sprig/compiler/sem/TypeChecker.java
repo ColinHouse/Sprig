@@ -3855,10 +3855,6 @@ public final class TypeChecker {
                     javaOwner(clazz) + " has no method '" + field.jvm.name
                             + "' matching " + argTypes.size() + " argument(s)",
                     module.uri, call.span);
-            String resultHint = callableResultHint(candidates, argTypes);
-            if (resultHint != null) {
-                diagnostic.withHint(resultHint);
-            }
             Map<String, Object> data = jvmDiagnosticData(clazz, field.jvm.name, argTypes, call, candidates, hierarchy);
             if (explicitMethodArgs != null) {
                 data.put("explicitTypeArguments", explicitMethodArgs.stream().map(Type::display).toList());
@@ -4243,35 +4239,6 @@ public final class TypeChecker {
             }
         }
         return false;
-    }
-
-    /**
-     * A function value that would fit a Java functional interface except for an
-     * Int result where Java returns int, the usual comparator mistake: the hint
-     * names the Int32 the interface needs and how to produce it.
-     */
-    private static String callableResultHint(List<? extends Executable> candidates, List<Type> argTypes) {
-        for (int i = 0; i < argTypes.size(); i++) {
-            if (!(argTypes.get(i) instanceof FunctionType actual) || actual.result != NativeType.INT) {
-                continue;
-            }
-            for (Executable candidate : candidates) {
-                Class<?>[] params = candidate.getParameterTypes();
-                if (params.length != argTypes.size()) {
-                    continue;
-                }
-                Method functional = JavaTypes.functionalMethod(params[i]);
-                if (functional == null || functional.getReturnType() != int.class
-                        || functional.getParameterCount() != actual.params.size()) {
-                    continue;
-                }
-                return params[i].getSimpleName() + "." + functional.getName()
-                        + " returns int, which is Int32 in Sprig, but this function value returns Int. "
-                        + "Return an Int32: a.compareTo(b) compares two Strings, and an Int converts with "
-                        + "value.toInt32Exact().";
-            }
-        }
-        return null;
     }
 
     /**
