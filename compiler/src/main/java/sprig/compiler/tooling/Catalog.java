@@ -99,7 +99,7 @@ public final class Catalog {
         result.put("jvmInterop", get("jvmProfile"));
         for (String key : List.of("sourceArrays", "jvmArrayPassThrough", "jvmByteArrayHelpers",
                 "jvmConcreteGenerics", "jvmCollectionAdapters", "jvmGenericInference",
-                "jvmWildcards", "jvmVarargs")) {
+                "jvmWildcards", "jvmVarargs", "jvmFunctionalInterfaces")) {
             result.put(key, Boolean.parseBoolean(get(key)));
         }
         result.put("classpath", get("classpathPolicy"));
@@ -125,13 +125,21 @@ public final class Catalog {
         Map<String, Object> out = new LinkedHashMap<>();
         guidance(out, "inheritance", "classes", "composition", "narrow Java host adapter");
         guidance(out, "interfaces", "classes", "composition", "narrow Java adapter with fn(A) -> R or Fn0..Fn3");
-        guidance(out, "arbitraryJavaSam", "jvm", "narrow Java adapter", "Sprig-owned fn(A) -> R and Fn0..Fn3");
+        out.put("arbitraryJavaSam", Map.of("supported", true, "helpTopic", "jvm",
+                "rules", List.of("a Java functional-interface parameter accepts a Sprig fn(...) -> R value; the compiler emits the adapter",
+                        "parameters match exactly after the Java mapping; void accepts any result; wildcards inside the interface's type arguments read as their bound",
+                        "method type variables are never inferred; bind them through the receiver or explicit method[Type] arguments",
+                        "a function value with throws Error cannot cross into Java")));
         guidance(out, "genericTypeInference", "generics", "write every explicit Type[Arg] argument");
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
         guidance(out, "arrays", "jvm", "foreign JVM array pass-through with exact classes", "byte[] helpers via sprig.runtime.jvm.HostBytes", "List[T] and @std/jvm adapters");
-        guidance(out, "varargs", "jvm", "List[T]", "explicit repeated calls");
+        out.put("varargs", Map.of("supported", true, "helpTopic", "jvm",
+                "rules", List.of("trailing arguments are packed into the final array parameter; zero of them is allowed",
+                        "an opaque Java array of exactly the element class is passed through",
+                        "fixed-arity overloads are preferred; the expanded form is tried only when none applies",
+                        "a type-variable element (T...) stays unsupported")));
         guidance(out, "annotations", "language", "explicit typed metadata", "ordinary functions");
         guidance(out, "decorators", "language", "ordinary functions and modules");
         guidance(out, "macros", "language", "ordinary functions and modules");

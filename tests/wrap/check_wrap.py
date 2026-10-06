@@ -262,9 +262,15 @@ def main():
         if overload_report:
             skips = {m["javaSignature"]: m["reasonCodes"] for m in overload_report["skippedMembers"]}
             codes = {code for reasons in skips.values() for code in reasons}
+            # The shared classification admits varargs members now; the generator
+            # still skips them for their array parameter, never as "varargs".
+            varargs_skip = next((reasons for signature, reasons in skips.items() if ".varargs(" in signature), None)
+            verify("wrap-varargs-skipped-as-array",
+                   varargs_skip is not None and "array-source-syntax-unavailable" in varargs_skip
+                   and "varargs-unsupported" not in codes,
+                   json.dumps(skips, indent=1)[:600])
             verify("wrap-unsupported-reasons",
-                   "varargs-unsupported" in codes
-                   and "wildcard-unsupported" in codes
+                   "wildcard-unsupported" in codes
                    and "generic-array-unsupported" in codes
                    and "generic-bound-unsupported" in codes
                    and "value-adapter-unsupported" in codes

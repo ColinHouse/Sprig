@@ -30,11 +30,13 @@ generic signatures, and `usableFromSprig`/`unusableReason`. Use
 shared classification the checker uses: `direct` (no generic or array shape),
 `concrete-generic` (every argument is concrete and preserved), `opaque-array`
 (array values cross unchanged), `adaptable` (an explicit collection adapter is
-available), `sprig-callable` (concrete Fn0..Fn3 slots), `erased-generic`
+available), `sprig-callable` (concrete Fn0..Fn3 slots), `java-callable` (a
+functional-interface parameter accepts a Sprig `fn` value through a generated
+adapter), `erased-generic`
 (generic information exists but this raw context binds the erased boundary) and
 `unsupported`. Additive machine-readable fields are
-`interopReasonCodes` (stable ids such as `varargs-unsupported`,
-`wildcard-unsupported`, `raw-generic-boundary`,
+`interopReasonCodes` (stable ids such as `varargs-expansion`,
+`java-callable-adapter`, `wildcard-unsupported`, `raw-generic-boundary`,
 `explicit-type-arguments-required`, `generic-array-unsupported`,
 `generic-bound-unsupported`, `generic-wrapper-unsupported`,
 `array-source-syntax-unavailable`, `bridge-superseded`), `parameterTypeShapes`/`returnTypeShape` (recursive
@@ -70,9 +72,27 @@ member expecting a compatible array class, or return it through another call.
 Overload resolution distinguishes `byte[]`, `int[]`, `String[]` and `Object[]`,
 and array covariance follows the actual JVM class. Sprig has no array literal,
 annotation, indexing, assignment or iteration syntax; those attempts are
-rejected before `javac` (`SPR-SYNTAX-ERROR` or `SPR-TYPE-OPERAND`). Varargs stay
-a different invocation contract and remain unsupported
-(`varargs-unsupported`).
+rejected before `javac` (`SPR-SYNTAX-ERROR` or `SPR-TYPE-OPERAND`). A varargs
+parameter is applicable in two forms (`varargs-expansion`): the trailing
+arguments, zero or more, each checked against the element type and packed by
+the compiler into a new array; or exactly one opaque array of the element
+class, passed through. Fixed-arity candidates are tried first and the expanded
+form only when none applies, as in Java; ties are `SPR-JVM-AMBIGUOUS`. A
+type-variable element (`T...`) stays `generic-array-unsupported`.
+
+A parameter whose type is a public functional interface (one abstract method,
+`Object`'s methods excluded, no method type parameters, at most three
+parameters) accepts a Sprig function value (`java-callable-adapter`). The
+expected `fn(...) -> R` is derived from the interface method with the ordinary
+mapping: parameters must match exactly, `void` accepts any result, a wildcard
+inside the interface's type arguments reads as its bound (a lambda implementing
+`Consumer<String>` satisfies `Consumer<? super String>`), and type variables are
+bound only through the receiver or explicit `method[Type]` arguments. A value
+whose type declares `throws Error` is rejected with `SPR-TYPE-CALLABLE-THROWS`,
+because Java cannot see the clause. The generated code is a Java lambda with
+explicitly typed parameters that calls the Sprig `Fn` object; a `null` passed
+in from Java for a non-nullable parameter fails at the boundary like any other
+`Fn` argument.
 
 `byte[]` is the common binary boundary. `sprig.runtime.jvm.HostBytes` provides
 explicit helpers: `utf8(String) -> byte[]`, `utf8String(byte[]) -> String`
@@ -120,7 +140,9 @@ arguments are rejected. Concrete generic targets such as
 Shape inspection is recursive for members and fields: a wildcard or a generic
 array nested inside a parameterized type (`List<?>`, `List<T[]>`) is rejected
 with `wildcard-unsupported`/`generic-array-unsupported` in both `sprig api`
-and the checker. `Short`, `Byte` and `Character` need value adapters, so they
+and the checker, except for the wildcards inside a functional-interface
+parameter's own type arguments and the element of a varargs parameter, which
+the rules above cover. `Short`, `Byte` and `Character` need value adapters, so they
 are rejected in generic argument position with `generic-wrapper-unsupported`;
 direct Java calls keep their scalar adapters.
 

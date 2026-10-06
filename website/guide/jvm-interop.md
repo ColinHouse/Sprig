@@ -115,6 +115,28 @@ Java 数组在 Sprig 里是一个整体，不能拆开用。你可以接收它�
 
 转换都要你自己调用，Sprig 不会自动转换。
 
+## 回调和变长参数
+
+Java 方法要的是「函数式接口」（只有一个抽象方法的接口：`Runnable`、`Comparator<T>`、`Consumer<? super T>`、`Predicate<? super T>` 以及 `java.util.function` 里的其他接口）时，可以直接传 Sprig 的函数值。编译器按通常的类型对照从接口方法推出它要的 `fn(...) -> R`，并替你生成 Java 适配代码：
+
+<<< @/snippets/jvm_callables.spr
+
+```text
+ada
+grace
+true
+config.json
+false
+a/b/c
+```
+
+- 参数类型必须完全一致；方法返回 `void` 时，lambda 返回什么都可以。`Comparator.compare` 返回 `int`，所以 lambda 要返回 `Int32`（这里 `CharSequence.compare` 正好是）。
+- 接口类型参数里的通配符没关系：实现了 `Consumer<String>` 的 lambda 就是一个 `Consumer<? super String>`。
+- 类型变量从不推断。`names.forEach` 能用是因为 `ArrayList[String]` 定下了 `E`；`stream.map(fn(...) => ...)` 得写成 `stream.map[String](...)`，因为 `R` 是方法自己的类型变量。
+- 类型里带 `throws Error` 的函数值不能传给 Java，因为 Java 看不到这个子句（`SPR-TYPE-CALLABLE-THROWS`）。把错误在具名函数里处理掉，再传一个调用它的 lambda。
+
+变长参数（`String...`）接收末尾的零个或多个实参，编译器把它们打包成数组；如果传的正好是那个类的 Java 数组（不透明值），就原样传过去。固定参数个数的重载优先。`Path.of("etc", "sprig")`、`Files.exists(path)`、`String.format(...)`、`String.join(...)` 都是这样用的。只有元素是类型变量的变长参数（`T...`，比如 `Arrays.asList`）仍然不支持。
+
 ## 先查，再写
 
 写调用代码之前，先用 `sprig api` 看看 Sprig 是怎么理解这个类的。它会列出每个成员在 Sprig 里的签名，能不能用，不能用的原因是什么。加 `--json` 时，这些信息在 `interopLevel`、`interopReasonCodes` 和 `adaptation` 等字段里：
@@ -134,9 +156,9 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 
 ## 还不支持的
 
-- **变长参数**：调用方式不同，暂不支持。
 - **数组语法**：没有数组字面量、数组类型标注、下标和遍历，数组只能原样传递。
-- **通配符类型**：带通配符的成员会被拒绝，并给出原因。像 Brigadier 这样层层嵌套的 builder API，需要你写一个简单的 Java 适配层，见 [Fabric 模组](/guide/fabric)。
+- **通配符类型**：除了回调参数的类型参数里的通配符，带通配符的成员会被拒绝，并给出原因。像 Brigadier 这样层层嵌套的 builder API，需要你写一个简单的 Java 适配层，见 [Fabric 模组](/guide/fabric)。
+- **元素是类型变量的变长参数**（`T...`）：没有可以打包的元素类。
 - **泛型推断**：类型参数要自己写，也没有协变和逆变。
 - **可空性注解**：不读取 Java 的可空性注解。
 - **Java 内部的计算**：Java 方法里发生的 `int` 溢出，不会触发 Sprig 的数值错误。

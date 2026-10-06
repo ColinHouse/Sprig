@@ -413,5 +413,11 @@
     "expected_diagnostic": "SPR-FLOW-THROWS",
     "status": "implemented",
     "source": "callable throws and rethrows"
+  },
+  {
+    "file": "java_callable_throws.spr",
+    "expected_diagnostic": "SPR-TYPE-CALLABLE-THROWS",
+    "status": "implemented",
+    "source": "Java callables"
   }
 ]

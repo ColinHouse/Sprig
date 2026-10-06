@@ -3,7 +3,8 @@
 
 Independent Java fixtures are compiled locally; api metadata, check/build and
 JVM behavior are compared for the same shapes. Wildcards, generic inference,
-source arrays and varargs must stay honest negatives with structured reasons.
+source arrays and type-variable varargs must stay honest negatives with structured
+reasons; functional-interface parameters and class-element varargs are positives.
 """
 import base64
 import hashlib
@@ -92,6 +93,15 @@ public final class Interop {
     public static <T> T[] genericArray(T value) { throw new UnsupportedOperationException(); }
     public static List<? extends Number> wildcardResult() { return List.of(1, 2); }
     public static String join(String format, Object... args) { return String.format(format, args); }
+    public static int total(int... values) { int sum = 0; for (int v : values) sum += v; return sum; }
+    public static String first(String... values) { return values.length == 0 ? "none" : values[0]; }
+    public static String firstOf(String[] values) { return values.length == 0 ? "none" : values[0]; }
+    public static String supplied(java.util.function.Supplier<String> supplier) { return supplier.get(); }
+    public static long accepted(java.util.function.Consumer<? super String> consumer) { consumer.accept("x"); return 1; }
+    public static int compared(java.util.Comparator<String> comparator) { return comparator.compare("a", "b"); }
+    public static boolean tested(java.util.function.Predicate<? super Long> test) { return test.test(7L); }
+    public static <R> R applied(java.util.function.Function<String, R> f) { return f.apply("in"); }
+    public static void ran(Runnable task) { task.run(); }
 
     public static byte[] sha256(byte[] value) throws java.security.NoSuchAlgorithmException {
         return java.security.MessageDigest.getInstance("SHA-256").digest(value);
@@ -296,7 +306,7 @@ def main():
         expected = {"sourceArrays": False, "jvmArrayPassThrough": True,
                     "jvmByteArrayHelpers": True, "jvmConcreteGenerics": True,
                     "jvmCollectionAdapters": True, "jvmGenericInference": False,
-                    "jvmWildcards": False, "jvmVarargs": False}
+                    "jvmWildcards": False, "jvmVarargs": True, "jvmFunctionalInterfaces": True}
         verify("capabilities-interop-fields",
                catalog and all(catalog.get(key) == value for key, value in expected.items()),
                str({key: catalog.get(key) if catalog else None for key in expected}))
@@ -350,9 +360,26 @@ def main():
         unsupported = {
             "pick": "generic-bound-unsupported",
             "genericArray": "generic-array-unsupported",
-            "join": "varargs-unsupported",
             "wildcardResult": "wildcard-unsupported",
         }
+        join_api = members.get("join", {})
+        verify("api-varargs-expansion",
+               join_api.get("usableFromSprig") and "varargs-expansion" in join_api.get("interopReasonCodes", [])
+               and join_api.get("varargs") is True,
+               str(join_api))
+        for name, parameter in (("supplied", "fn() -> String"), ("accepted", "fn(String) -> Unit"),
+                                ("compared", "fn(String, String) -> Int32"), ("tested", "fn(Int) -> Bool"),
+                                ("ran", "fn() -> Unit")):
+            member = members.get(name, {})
+            verify(f"api-java-callable-{name}",
+                   member.get("usableFromSprig") and member.get("interopLevel") == "java-callable"
+                   and "java-callable-adapter" in member.get("interopReasonCodes", [])
+                   and member.get("sprigParameterTypes") == [parameter],
+                   str(member))
+        applied_api = members.get("applied", {})
+        verify("api-java-callable-explicit-arguments",
+               applied_api.get("usableFromSprig") and "explicit-type-arguments-required" in applied_api.get("interopReasonCodes", []),
+               str(applied_api))
         for name, code in unsupported.items():
             member = members.get(name, {})
             verify(f"api-unsupported-{name}",
@@ -430,16 +457,59 @@ if bytes != null:
                and "SPR-JVM-COMPILE" not in literal.stdout + literal.stderr,
                f"exit={literal.returncode} {literal.stdout}{literal.stderr}")
 
-        _, varargs = check_file("varargs.spr", '''import audit.Interop as Interop
-print(Interop.join("%s", "x"))
+        _, varargs_run = run_file("varargs.spr", '''import audit.Interop as Interop
+print(Interop.join("%s-%d", "x", 7))
+print(Interop.join("plain"))
+print(Interop.total(1, 2, 3))
+print(Interop.total())
+print(Interop.first())
+print(Interop.first("a", "b"))
+let words = Interop.words()
+if words != null:
+    print(Interop.firstOf(words))
+    print(Interop.first(words))
+''')
+        verify("run-varargs-expansion",
+               varargs_run.returncode == 0
+               and varargs_run.stdout.splitlines() == ["x-7", "plain", "6", "0", "none", "a", "a", "a"],
+               f"exit={varargs_run.returncode} {varargs_run.stdout}{varargs_run.stderr}")
+        _, callables_run = run_file("java-callables.spr", '''import audit.Interop as Interop
+print(Interop.supplied(fn() => "made"))
+print(Interop.accepted(fn(value: String) => print("got " + value)))
+print(Interop.compared(fn(a: String, b: String) => b.length().toInt32Exact() - a.length().toInt32Exact()))
+print(Interop.tested(fn(value: Int) => value > 5))
+print(Interop.applied[String](fn(value: String) => value + "!"))
+Interop.ran(fn() => print("ran"))
+let stored: fn() -> String = fn() => "stored"
+print(Interop.supplied(stored))
+''')
+        verify("run-java-callables",
+               callables_run.returncode == 0
+               and callables_run.stdout.splitlines() == ["made", "got x", "1", "0", "true", "in!", "ran", "stored"],
+               f"exit={callables_run.returncode} {callables_run.stdout}{callables_run.stderr}")
+        _, inferred = check_file("java-callable-inference.spr", '''import audit.Interop as Interop
+print(Interop.applied(fn(value: String) => value + "!"))
 ''', "--json")
-        varargs_json = diagnostic(varargs)
-        varargs_reasons = [c.get("rejectedBecause") for c in
-                           (varargs_json or {}).get("data", {}).get("candidates", [])]
-        verify("check-varargs-rejected",
-               varargs.returncode == 1 and varargs_json and varargs_json["code"] == "SPR-JVM-MEMBER"
-               and "Java varargs are not supported" in varargs_reasons,
-               f"exit={varargs.returncode} {varargs.stdout}{varargs.stderr}")
+        inferred_json = diagnostic(inferred)
+        verify("check-java-callable-needs-explicit-arguments",
+               inferred.returncode == 1 and inferred_json and inferred_json["code"] == "SPR-JVM-MEMBER",
+               f"exit={inferred.returncode} {inferred.stdout}{inferred.stderr}")
+        _, mismatched = check_file("java-callable-mismatch.spr", '''import audit.Interop as Interop
+print(Interop.tested(fn(value: String) => true))
+''', "--json")
+        mismatched_json = diagnostic(mismatched)
+        verify("check-java-callable-parameter-mismatch",
+               mismatched.returncode == 1 and mismatched_json and mismatched_json["code"] == "SPR-JVM-MEMBER",
+               f"exit={mismatched.returncode} {mismatched.stdout}{mismatched.stderr}")
+        _, throwing = check_file("java-callable-throws.spr", '''import audit.Interop as Interop
+func fail(value: String) -> Unit throws Error:
+    throw Error(value)
+print(Interop.accepted(fn(value: String) => fail(value)))
+''', "--json")
+        throwing_json = diagnostic(throwing)
+        verify("check-java-callable-throws-rejected",
+               throwing.returncode == 1 and throwing_json and throwing_json["code"] == "SPR-TYPE-CALLABLE-THROWS",
+               f"exit={throwing.returncode} {throwing.stdout}{throwing.stderr}")
 
         # ------------------------------------------------- generic behavior
         _, box_run = run_file("box.spr", '''import audit.Box as Box

@@ -69,6 +69,7 @@ public final class JvmMetadata {
                 Map.of("level", "opaque-array", "meaning", "array values cross the boundary unchanged; no source array syntax exists"),
                 Map.of("level", "adaptable", "meaning", "an explicit adapter is available (collections or byte arrays)"),
                 Map.of("level", "sprig-callable", "meaning", "concrete Fn0..Fn3 slots are checked invariantly"),
+                Map.of("level", "java-callable", "meaning", "a functional-interface parameter accepts a Sprig fn value through a generated adapter"),
                 Map.of("level", "erased-generic", "meaning", "generic information exists but this raw context binds the erased boundary"),
                 Map.of("level", "unsupported", "meaning", "the reflection shape is outside the supported profile")));
         out.put("classpath", JvmClasspath.entries().stream().map(java.nio.file.Path::toString).toList());
@@ -85,8 +86,8 @@ public final class JvmMetadata {
         out.put("javaParameterTypes", Arrays.stream(executable.getParameterTypes()).map(Class::getTypeName).toList());
         List<String> parameterTypes = new ArrayList<>();
         for (int i = 0; i < executable.getParameterCount(); i++)
-            parameterTypes.add(JavaTypes.mapFormal(executable.getGenericParameterTypes()[i],
-                    executable.getParameterTypes()[i]).display());
+            parameterTypes.add(formalDisplay(executable.getGenericParameterTypes()[i],
+                    executable.getParameterTypes()[i]));
         out.put("sprigParameterTypes", parameterTypes);
         out.put("genericParameterTypes", Arrays.stream(executable.getGenericParameterTypes())
                 .map(Type::getTypeName).toList());
@@ -129,8 +130,18 @@ public final class JvmMetadata {
         if (Arrays.stream(executable.getParameterTypes())
                 .anyMatch(c -> c == char.class || c == Character.class)) interopNotes.add(
                 "Java char/Character arguments accept only a one-UTF-16-unit Sprig String literal.");
+        if (support.reasonCodes().contains("java-callable-adapter")) interopNotes.add(
+                "A functional-interface parameter accepts a Sprig function value of the shown fn(...) -> R type without a throws clause; the compiler emits the Java adapter. void accepts any result.");
+        if (support.reasonCodes().contains("varargs-expansion")) interopNotes.add(
+                "Trailing arguments are packed into the final array parameter (zero of them is allowed); an opaque Java array of exactly that class is passed through. Fixed-arity overloads are preferred.");
         out.put("interopNotes", interopNotes);
         return out;
+    }
+
+    /** A formal as Sprig sees it: the fn(...) -> R type of a functional interface, else the mapped type. */
+    private static String formalDisplay(java.lang.reflect.Type generic, Class<?> raw) {
+        sprig.compiler.types.FunctionType callable = JavaTypes.javaCallable(generic, raw, JavaTypes.NO_BINDINGS);
+        return callable != null ? callable.display() : JavaTypes.mapFormal(generic, raw).display();
     }
 
     public static Map<String, Object> describe(Field field) {
@@ -174,7 +185,7 @@ public final class JvmMetadata {
         Class<?>[] params = executable.getParameterTypes();
         for (int i = 0; i < params.length; i++) {
             if (i > 0) out.append(", ");
-            out.append(JavaTypes.mapFormal(executable.getGenericParameterTypes()[i], params[i]).display());
+            out.append(formalDisplay(executable.getGenericParameterTypes()[i], params[i]));
         }
         out.append(')');
         if (executable instanceof Method method) out.append(" -> ").append(JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
@@ -195,11 +206,16 @@ public final class JvmMetadata {
         if (executable instanceof Method method && supersededBridge(method)) {
             return unsupported("bridge-superseded", "Java compiler bridge is superseded by its source method");
         }
-        if (executable.isVarArgs()) {
-            return unsupported("varargs-unsupported", "Java varargs are not supported");
-        }
         java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         Class<?>[] raw = executable.getParameterTypes();
+        // A varargs tail is bound by its element: trailing arguments are
+        // packed into the array, or an opaque array of that class passes
+        // through. A type-variable element (T...) has no class to pack into.
+        boolean varargs = executable.isVarArgs();
+        if (varargs && JavaTypes.varargsElement(executable) == null) {
+            return unsupported("generic-array-unsupported",
+                    "Java varargs of a type-variable element (T...) are not supported");
+        }
         for (int i = 0; i < raw.length; i++) {
             if (JavaTypes.isCallableClass(raw[i]) && JavaTypes.callable(generic[i]) == null) {
                 return unsupported("sprig-callable-boundary",
@@ -211,14 +227,27 @@ public final class JvmMetadata {
             return unsupported("sprig-callable-boundary",
                     "Sprig callable result requires concrete invariant Fn0..Fn3 type arguments");
         }
-        if (hasShape(executable, JavaTypes.Shape.GENERIC_ARRAY)) {
+        // The varargs element and functional-interface formals are judged by
+        // their own rules above and below; the shape scan covers the rest.
+        List<java.lang.reflect.Type> scanned = new ArrayList<>();
+        boolean javaCallable = false;
+        for (int i = 0; i < raw.length; i++) {
+            if (varargs && i == raw.length - 1) continue;
+            if (JavaTypes.functionalFormal(generic[i], raw[i])) {
+                javaCallable = true;
+                continue;
+            }
+            scanned.add(generic[i]);
+        }
+        if (executable instanceof Method method) scanned.add(method.getGenericReturnType());
+        if (hasShape(scanned, JavaTypes.Shape.GENERIC_ARRAY)) {
             return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
         }
         if (executable.getTypeParameters().length > 0 && recursiveBounds(executable)) {
             return unsupported("generic-bound-unsupported",
                     "Java method type parameters with recursive or intersection bounds are not supported");
         }
-        if (hasShape(executable, JavaTypes.Shape.WILDCARD)) {
+        if (hasShape(scanned, JavaTypes.Shape.WILDCARD)) {
             return unsupported("wildcard-unsupported", "Java wildcards are not supported");
         }
         if (genericWrapper(executable)) {
@@ -232,11 +261,15 @@ public final class JvmMetadata {
         boolean parameterized = hasShape(executable, JavaTypes.Shape.PARAMETERIZED);
         boolean callable = callableBoundary(executable);
         if (array) codes.add("array-source-syntax-unavailable");
+        if (varargs) codes.add("varargs-expansion");
+        if (javaCallable) codes.add("java-callable-adapter");
         if (typeVariable) codes.add("raw-generic-boundary");
         if (executable.getTypeParameters().length > 0) codes.add("explicit-type-arguments-required");
         String level;
         if (callable) {
             level = "sprig-callable";
+        } else if (javaCallable) {
+            level = "java-callable";
         } else if (array) {
             level = "opaque-array";
         } else if (collections) {
@@ -343,6 +376,13 @@ public final class JvmMetadata {
         }
         return executable instanceof Method method
                 && containsShape(method.getGenericReturnType(), target);
+    }
+
+    private static boolean hasShape(List<java.lang.reflect.Type> types, JavaTypes.Shape target) {
+        for (java.lang.reflect.Type type : types) {
+            if (containsShape(type, target)) return true;
+        }
+        return false;
     }
 
     private static boolean containsShape(java.lang.reflect.Type type, JavaTypes.Shape target) {

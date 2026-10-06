@@ -115,6 +115,28 @@ Binary data usually comes as `byte[]`, and `sprig.runtime.jvm.HostBytes` convert
 
 You always call these conversions yourself; Sprig never converts implicitly.
 
+## Callbacks and varargs
+
+Where a Java method wants a *functional interface* (an interface with one abstract method: `Runnable`, `Comparator<T>`, `Consumer<? super T>`, `Predicate<? super T>` and the rest of `java.util.function`), you can pass a Sprig function value. The compiler derives the `fn(...) -> R` it expects from the interface method with the usual type mapping and emits the Java adapter for you:
+
+<<< @/snippets/jvm_callables.spr
+
+```text
+ada
+grace
+true
+config.json
+false
+a/b/c
+```
+
+- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32` (`CharSequence.compare` does here).
+- Wildcards inside the interface's type arguments are fine: a lambda implementing `Consumer<String>` is a `Consumer<? super String>`.
+- Type variables are never inferred. `names.forEach` works because `ArrayList[String]` fixes `E`; `stream.map(fn(...) => ...)` needs `stream.map[String](...)` because `R` is the method's own.
+- A function value whose type says `throws Error` can't cross into Java, because Java can't see the clause (`SPR-TYPE-CALLABLE-THROWS`). Handle the error inside a named function and pass a lambda that calls it.
+
+A varargs parameter (`String...`) takes the trailing arguments, zero or more, which the compiler packs into the array; an opaque Java array of exactly that class is passed through as it is. Fixed-arity overloads are tried first. `Path.of("etc", "sprig")`, `Files.exists(path)`, `String.format(...)` and `String.join(...)` all work this way. Only a type-variable element (`T...`, as in `Arrays.asList`) is still rejected.
+
 ## Look it up before you write it
 
 Before writing code against a Java class, ask `sprig api` how Sprig sees it. It lists each member's Sprig signature, whether you can use it and, if not, why. With `--json`, that information is in fields such as `interopLevel`, `interopReasonCodes` and `adaptation`:
@@ -134,9 +156,9 @@ Before writing the file, `wrap` checks the generated code against the same class
 
 ## Not supported yet
 
-- **Varargs**: they use a different calling convention and aren't supported.
 - **Array syntax**: there are no array literals, array type annotations, indexing or loops over arrays; arrays can only be passed along.
-- **Wildcard types**: members that use wildcards are rejected with a reason. Deeply nested builder APIs such as Brigadier need a small Java adapter; see [Fabric mods](/en/guide/fabric).
+- **Wildcard types**: outside a callback parameter's type arguments, members that use wildcards are rejected with a reason. Deeply nested builder APIs such as Brigadier need a small Java adapter; see [Fabric mods](/en/guide/fabric).
+- **Varargs of a type variable** (`T...`): there is no element class to pack into.
 - **Generic inference**: write the type arguments yourself; there's no variance either.
 - **Nullability annotations**: Java's nullability annotations aren't read.
 - **Arithmetic inside Java**: an `int` overflow inside a Java method doesn't raise Sprig's numeric error.
