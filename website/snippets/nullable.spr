@@ -13,3 +13,15 @@ else:
 
 let missing = find(["alpha"], "gamma")
 print(missing == null)
+
+# elif and else see the earlier conditions false: no second check is needed.
+func describe(count: Int?, verbose: Bool) -> String:
+    if count == null:
+        return "none"
+    elif verbose:
+        return "count " + count
+    else:
+        return "quiet " + count
+
+print(describe(3, true))
+print(describe(null, true))

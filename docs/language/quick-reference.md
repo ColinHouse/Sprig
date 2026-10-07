@@ -41,9 +41,14 @@ Use `T?` for expected absence and narrow with `if value != null` before use.
 The right side of a short-circuit `and`/`or` and the guarded block see the
 narrowing: `if box != null and box.value > 0:` narrows `box` for `box.value`,
 and `if text == null or text.length() == 0:` narrows `text` for `text.length()`.
-After an early exit (`if value == null:` followed by `return`, `throw`, `break`
-or `continue`), the statements below see `value` as non-null, in a function body
-and at the top level alike. Only `let` bindings narrow; copy a `var` into a `let`
+Each `elif`, its condition included, and the `else` see every earlier condition
+false: after `if count == null:`, an `elif verbose:` branch and the `else` use
+`count` as `Int`. After an early exit (`if value == null:` followed by `return`,
+`throw`, `break` or `continue`), the statements below see `value` as non-null,
+in a function body and at the top level alike; with a chain, the conditions of
+every branch that exits before the first one that can complete count. A name
+declared `T?` may be compared with `null` again while it is narrowed; the check
+is redundant and accepted. Only `let` bindings narrow; copy a `var` into a `let`
 to check it.
 `List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
 `==`/`!=` compare numbers, `Bool`, `String`, enums, variants, lists and maps by

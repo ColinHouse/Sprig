@@ -92,7 +92,8 @@ true
 
 - A type that might have no value is written `T?`. Only `T?` accepts `null`.
 - Check before you use it. Inside `if x != null:`, `x` has a value. Since v0.6.0-beta.1, `if x != null and x.length() > 3:` works too.
-- Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present.
+- `elif` and `else` know the earlier conditions were false: after `if x == null:`, an `elif flag:` branch and the `else` both treat `x` as present, with no second check. Writing `x != null` again there is accepted; it is just redundant.
+- Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present. An `if/elif` chain whose earlier branches all return works the same way.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
 - Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).

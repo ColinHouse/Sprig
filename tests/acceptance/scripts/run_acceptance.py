@@ -105,9 +105,13 @@ CHECKS += [
      ["SPR-SYNTAX-ERROR"]),
     ("nullable-java-argument-rejected", "p1_nullable_into_java_formal.spr", 1,
      ["SPR-TYPE-NULLABLE"]),
+    ("elif-var-from-narrowed-name", "p3_elif_var_from_narrowed.spr", 1,
+     ["SPR-TYPE-NULLABLE"]),
 ]
 RUNS += [
     ("zero-argument-lambda-runs", "p2_lambda_zero_arg.spr", 0, "42\n"),
+    ("elif-chain-narrowing", "p3_elif_narrowing.spr", 0,
+     "count 3\nquiet 3\nnone\nbig\nsmall\n5\n-1\n"),
     ("int32-compound-literal-context", "p2_compound_literal.spr", 0, "6\n"),
     ("int32-compound-explicit-control", "p2_compound_literal_control.spr", 0, "6\n"),
 ]

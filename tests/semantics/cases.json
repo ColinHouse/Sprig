@@ -557,5 +557,29 @@
     "expected_diagnostic": "SPR-TYPE-NULLABLE",
     "status": "implemented",
     "source": "v0.7.1 Error text review: Java getMessage() may be null"
+  },
+  {
+    "file": "elif_var_from_narrowed.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "elif_lambda_narrowed.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "elif_var_binding_no_narrowing.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "nonnull_compare_null.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
   }
 ]

@@ -92,7 +92,8 @@ true
 
 - 可能没有值的类型写成 `T?`。`null` 只能赋给 `T?`。
 - 用之前先检查。在 `if x != null:` 的分支里，`x` 就当作有值。从 v0.6.0-beta.1 开始，`if x != null and x.length() > 3:` 这样写也可以。
-- 提前返回也行：写了 `if x == null: return ...` 之后，后面的代码都把 `x` 当作有值。
+- `elif` 和 `else` 知道前面的条件都不成立：`if x == null:` 之后的 `elif flag:` 分支和 `else` 分支里，`x` 都当作有值，不用再检查一遍。再写一次 `x != null` 也不报错，只是多余。
+- 提前返回也行：写了 `if x == null: return ...` 之后，后面的代码都把 `x` 当作有值。前面几个分支都提前返回的 `if/elif` 链也一样。
 - 把可能为 `null` 的值用在需要非空的地方，会报 `SPR-TYPE-NULLABLE`。
 - `var` 字段检查过之后，只要中间调用了函数，之前的检查就不算数了，因为函数可能改了它。
 - Java 方法返回的对象一律当作可能为 `null`（`toString()` 的结果除外），见 [JVM 互操作](/guide/jvm-interop)。

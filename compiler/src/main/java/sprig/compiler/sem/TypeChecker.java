@@ -619,27 +619,49 @@ public final class TypeChecker {
         requireAssignable(expected, actual, ret.value.span, Codes.TYPE_RETURN, "return");
     }
 
+    /**
+     * An if chain narrows by every condition that is known to be false on
+     * the way to a branch: each {@code elif}, its condition included, and the
+     * {@code else} see every earlier condition false, in addition to what
+     * their own condition establishes. Only immutable names narrow, so a
+     * condition's result does not change between the branches.
+     */
     private void checkIf(Stmt.IfStmt ifStmt) {
         checkCondition(ifStmt.cond);
         narrowing.push(narrowTrue(ifStmt.cond));
         checkSequence(ifStmt.thenBody);
         narrowing.pop();
+        Map<Symbol, Type> earlierFalse = narrowFalse(ifStmt.cond);
         for (Stmt.IfStmt.Elif elif : ifStmt.elifs) {
+            narrowing.push(earlierFalse);
             checkCondition(elif.cond);
-            narrowing.push(narrowTrue(elif.cond));
+            narrowing.pop();
+            Map<Symbol, Type> branch = new HashMap<>(earlierFalse);
+            branch.putAll(narrowTrue(elif.cond));
+            narrowing.push(branch);
             checkSequence(elif.body);
             narrowing.pop();
+            earlierFalse = new HashMap<>(earlierFalse);
+            earlierFalse.putAll(narrowFalse(elif.cond));
         }
         if (ifStmt.elseBody != null) {
-            narrowing.push(ifStmt.elifs.isEmpty() ? narrowFalse(ifStmt.cond) : new HashMap<>());
+            narrowing.push(earlierFalse);
             checkSequence(ifStmt.elseBody);
             narrowing.pop();
         }
-        // Early-exit narrowing: if (x == null) { ...exits... } -> x is non-null after.
-        if (ifStmt.elifs.isEmpty() && definitelyExitsSequence(ifStmt.thenBody)) {
-            for (Map.Entry<Symbol, Type> entry : narrowFalse(ifStmt.cond).entrySet()) {
-                if (!narrowing.isEmpty()) {
-                    narrowing.peek().put(entry.getKey(), entry.getValue());
+        // Early-exit narrowing: if (x == null) { ...exits... } -> x is non-null
+        // after the statement. With a chain, the code after it was reached
+        // through the first branch whose body can complete, or through no
+        // branch at all, so every condition before that branch was false.
+        if (!narrowing.isEmpty()) {
+            Map<Symbol, Type> after = narrowing.peek();
+            if (definitelyExitsSequence(ifStmt.thenBody)) {
+                after.putAll(narrowFalse(ifStmt.cond));
+                for (Stmt.IfStmt.Elif elif : ifStmt.elifs) {
+                    if (!definitelyExitsSequence(elif.body)) {
+                        break;
+                    }
+                    after.putAll(narrowFalse(elif.cond));
                 }
             }
         }
@@ -1729,6 +1751,13 @@ public final class TypeChecker {
                 return NativeType.BOOL;
             }
             if (other.isNullable() || Semantics.isReference(other)) {
+                return NativeType.BOOL;
+            }
+            // A name declared nullable keeps comparing with null while it is
+            // narrowed: the check is redundant there, not a type confusion,
+            // and a program written for the rule before elif chains narrowed
+            // (`elif x != null and x > 5:` after `if x == null:`) keeps compiling.
+            if (declaredNullable(left == NativeType.NULL ? binary.right : binary.left)) {
                 return NativeType.BOOL;
             }
             if (other != NativeType.ERROR) {
@@ -5101,6 +5130,15 @@ public final class TypeChecker {
                             + ", but nothing in its body can throw it", module.uri, span)
                     .withHint("Remove " + declared.display() + " from the throws clause, then remove the catch clauses this reports in callers."));
         }
+    }
+
+    /** Whether the expression is a name whose declared type, before any narrowing, is nullable. */
+    private boolean declaredNullable(Expr expr) {
+        if (!(expr instanceof Expr.Name name) || name.symbol == null) {
+            return false;
+        }
+        Type declared = name.symbol.type;
+        return declared != null && declared.isNullable();
     }
 
     private Type narrowedType(Symbol symbol) {

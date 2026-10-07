@@ -1,0 +1,6 @@
+# Only immutable names narrow in an elif chain, as in a then branch.
+var count: Int? = 3
+if count == null:
+    print("none")
+elif true:
+    print("count " + count)

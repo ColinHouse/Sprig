@@ -1,0 +1,4 @@
+# A name declared non-null still cannot be compared with null; only a name
+# declared nullable keeps its null checks while narrowed.
+func f(n: Int) -> Bool:
+    return n == null
