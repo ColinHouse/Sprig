@@ -2103,6 +2103,20 @@ public final class TypeChecker {
             }
             return NativeType.BIGINT;
         }
+        if (left.isNullable() || right.isNullable()) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
+                    "Operator '" + op + "' cannot use a value that may be null", module.uri, span)
+                    .withTypes("non-null operands", left.display() + " and " + right.display())
+                    .withHint(operandHint(left, right, leftExpr, rightExpr)));
+            return NativeType.ERROR;
+        }
+        if (!isNumeric(left) || !isNumeric(right)) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                    "Operator '" + op + "' is not defined for " + left.display() + " and " + right.display(),
+                    module.uri, span)
+                    .withTypes("numeric operands", left.display() + " and " + right.display()));
+            return NativeType.ERROR;
+        }
         diagnostics.add(Diagnostic.error(Codes.NUM_MIXED, Phase.TYPE,
                 "Operator '" + op + "' has no implicit conversion between " + left.display()
                         + " and " + right.display(), module.uri, span)
