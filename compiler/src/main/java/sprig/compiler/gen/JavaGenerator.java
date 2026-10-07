@@ -770,6 +770,10 @@ public final class JavaGenerator {
         if (expr instanceof Expr.ListLit list) {
             return list.items.stream().allMatch(JavaGenerator::inert);
         }
+        if (expr instanceof Expr.If ifExpr) {
+            return ifExpr.conditions.stream().allMatch(JavaGenerator::inert)
+                    && ifExpr.values.stream().allMatch(JavaGenerator::inert) && inert(ifExpr.elseValue);
+        }
         // Variant payloads and enum cases are plain data: constructing or naming
         // them runs no Sprig code (class constructors may run field defaults).
         if (expr instanceof Expr.Call call && call.resolved != null
@@ -1235,10 +1239,35 @@ public final class JavaGenerator {
             return emitMapLit(mapLit);
         }
         if (expr instanceof Expr.Match match) return emitMatchExpression(match);
+        if (expr instanceof Expr.If ifExpr) {
+            return emitIfExpression(ifExpr);
+        }
         if (expr instanceof Expr.Lambda lambda) {
             return emitLambda(lambda);
         }
         return "null";
+    }
+
+    /**
+     * A Java conditional, nested for each elif. Java evaluates the condition and
+     * then only the chosen operand, which is Sprig's order. Every branch is first
+     * converted to the Java type of the Sprig result, so both operands always
+     * have that one type: Java's rules for mixed operands, which promote numbers
+     * and unbox a Long or Integer (throwing on null), never apply.
+     */
+    private String emitIfExpression(Expr.If expr) {
+        String resultJava = javaType(expr.type);
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < expr.conditions.size(); i++) {
+            code.append("(").append(emitExpr(expr.conditions.get(i))).append(" ? ")
+                    .append(ifBranchValue(expr.values.get(i), expr.type, resultJava)).append(" : ");
+        }
+        code.append(ifBranchValue(expr.elseValue, expr.type, resultJava));
+        return code.append(")".repeat(expr.conditions.size())).toString();
+    }
+
+    private String ifBranchValue(Expr value, Type resultType, String resultJava) {
+        return "((" + resultJava + ") (" + convertedExpression(value, resultType) + "))";
     }
 
     private String emitMatchExpression(Expr.Match expr) {

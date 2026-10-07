@@ -526,6 +526,12 @@ public final class TypeRefResolver {
         else if (expr instanceof Expr.MapLit m) {
             for (Expr e : m.keys) collectExpr(e, refs);
             for (Expr e : m.values) collectExpr(e, refs);
+        } else if (expr instanceof Expr.If i) {
+            for (int k = 0; k < i.conditions.size(); k++) {
+                collectExpr(i.conditions.get(k), refs);
+                collectExpr(i.values.get(k), refs);
+            }
+            collectExpr(i.elseValue, refs);
         }
     }
 

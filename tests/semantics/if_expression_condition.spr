@@ -1,0 +1,7 @@
+# An if expression's condition is a Bool; a count is not true or false.
+let count = 3
+let label = if count:
+    "some"
+else:
+    "none"
+print(label)

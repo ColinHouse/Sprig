@@ -151,3 +151,22 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
 - Existing `SPR-MATCH-*`, null/numeric/capture/effect diagnostics also apply.
 - `SPR-SYNTAX-ERROR` rejects empty/multi-statement/declaration branches, with statement-match guidance where the parser retains branch context.
 - `SPR-TYPE-UNIT` rejects side-effect-only expression matches.
+
+## If expression results
+
+- `SPR-SYNTAX-ERROR` reports, each once and at the place to fix: a missing
+  `else` ("An if expression needs an else branch"), a branch value on the
+  header's line, a branch with several lines or a statement, an `if` expression
+  inside parentheses, brackets or braces, an `if` expression used as an
+  operand, and Python's `a if c else b` and C's `c ? a : b`, with the `if`
+  expression as the hint. `else if` keeps its mechanical rewrite to `elif`.
+  An `if` guard on a match case (`case X as c if cond:`) and an `if` filter on
+  a `for` loop get a hint to test the condition inside the body. A grammar
+  predicate's text is never a message: a statement that goes on past its end
+  reads "Expected the end of the line".
+- `SPR-TYPE-CONDITION`: a condition that is not `Bool`.
+- `SPR-TYPE-MISMATCH` ("Type mismatch in if branch result") and the numeric
+  conversion codes: a branch incompatible with the expected type or with the
+  first non-null branch.
+- `SPR-TYPE-INFER`: every branch is `null` and nothing gives the type.
+- `SPR-TYPE-UNIT`: a branch without a value; use an `if` statement.

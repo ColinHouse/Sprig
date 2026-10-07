@@ -87,8 +87,13 @@ plainFunctionType: FN LPAREN (typeRef (COMMA typeRef)*)? RPAREN ARROW returnType
 variableDeclaration: (VAR | LET) IDENT typeAnnotation? ASSIGN expression;
 typeAnnotation: COLON typeRef;
 
+// At the start of a statement, 'match' and 'if' always begin the statement
+// forms below: an expression statement is an orExpression, which never starts
+// with either keyword, so one token of lookahead decides. (A predicate would
+// let prediction read a whole if statement as a possible if expression, and an
+// error in a later branch would then be reported against the first line.)
 statement
-    : {_input.LA(1) != MATCH}? simpleStatement statementEnd
+    : simpleStatement statementEnd
     | ifStatement | whileStatement | forStatement | tryStatement | matchStatement
     ;
 // A block expression already ends in DEDENT, which closes its physical line.
@@ -96,7 +101,7 @@ statementEnd: NEWLINE | {_input.LT(-1).getType() == DEDENT}?;
 simpleStatement
     : variableDeclaration | assignment | requiresStatement
     | RETURN expression? | BREAK | CONTINUE | PASS | THROW expression
-    | expression
+    | orExpression
     ;
 // v0.8 capability clause, valid only at the start of a generic function suite.
 requiresStatement: REQUIRES IDENT COLON qualifiedName;
@@ -125,7 +130,18 @@ matchBranch: CASE qualifiedName (AS IDENT)? COLON suite;
 
 matchExpression: MATCH expression COLON NEWLINE INDENT (NEWLINE | matchExpressionBranch)+ DEDENT;
 matchExpressionBranch: CASE qualifiedName (AS IDENT)? COLON NEWLINE INDENT NEWLINE* expression statementEnd NEWLINE* DEDENT;
-expression: matchExpression | orExpression;
+
+// An if expression chooses one value. Like an expression-match branch, every
+// branch is exactly one expression on its own indented line, and 'elif' and
+// 'else' line up with the line that starts the expression. The else branch is
+// required: the parser front end reports a missing one with its fix.
+ifExpression
+    : IF expression COLON ifExpressionBranch
+      (ELIF expression COLON ifExpressionBranch)*
+      ELSE COLON ifExpressionBranch
+    ;
+ifExpressionBranch: NEWLINE INDENT NEWLINE* expression statementEnd NEWLINE* DEDENT;
+expression: ifExpression | matchExpression | orExpression;
 orExpression: andExpression (OR andExpression)*;
 andExpression: notExpression (AND notExpression)*;
 notExpression: NOT notExpression | comparisonExpression;

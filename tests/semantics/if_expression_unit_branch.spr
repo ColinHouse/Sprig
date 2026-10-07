@@ -1,0 +1,6 @@
+# A branch that only prints has no value to produce.
+let count = 3
+let label = if count > 1:
+    print("many")
+else:
+    "few"

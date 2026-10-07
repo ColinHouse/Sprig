@@ -1,0 +1,6 @@
+# No branch says which type the null stands for.
+let count = 3
+let missing = if count > 1:
+    null
+else:
+    null

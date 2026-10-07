@@ -52,7 +52,9 @@ def main():
           (not catalog["jvmVarargs"] or ("varargs" not in unsupported and "java varargs calls" in supported))
           and (not catalog["jvmFunctionalInterfaces"]
                or (not any("sam" in item.split() for item in unsupported) and "functional interfaces" in supported))
-          and all(name.lower() + " capability" in supported for name in catalog["genericCapabilities"]))
+          and all(name.lower() + " capability" in supported for name in catalog["genericCapabilities"])
+          and (not catalog["features"]["ifExpression"]
+               or ("if expressions" in supported and "conditional expressions" not in unsupported)))
     topics = obj(run("help", "--json"))["topics"]
     for topic in topics:
         result = run("help", topic, "--json")
