@@ -58,13 +58,21 @@ helpers are module functions: `web.text(body, status)` and
 | Routes | `get`, `post`, `put`, `patch`, `delete(path, handler)`, `route(Route(...))`; registration can throw `Error` |
 | Handler | `fn(Request) -> Response throws Error`; synchronous. One rule: an answer the client should see, a 404 or a 400 that names the bad field included, is a `Response` you return; an `Error` you do not handle escapes and the server answers it (see Errors). Do not catch an `Error` only to return a generic 400 or 500 |
 | Matching | Registration order wins, exact segments or one `{name}` per segment; decoded segment matching preserves encoded slashes inside a parameter; trailing slash is significant |
-| Request | Read-only `method`, decoded `path`, UTF-8 `body`; `path_param(name)`, `query(name)`, `header(name)` return `String?` |
-| Query | UTF-8 form decoding (`+` is space); first occurrence wins; absent is null, present empty is `""`; embedded `=` preserved |
+| Request | Read-only `method`, decoded `path`, UTF-8 `body`, `query_values` (each query name's first decoded value); `path_param(name)`, `query(name)`, `header(name)` return `String?` |
+| Query | UTF-8 form decoding (`+` is space); first occurrence wins; absent is null, present empty is `""`; embedded `=` preserved; decoded once, before routing, so `query(name)` cannot fail |
 | Header | Case-insensitive request lookup via JDK; response `Header(name=..., value=...)` list or `with_header(name,value)` |
 | JSON | `req.json() -> json.Value throws Error`; `web.json_response(value,status) -> Response throws Error` uses existing closed `@std/json` data and exact number lexemes; `@std/json_codec` reads fields with paths and kind checks, as in `codec.required_string(codec.root(req.json()), "name")` |
 | Errors | Malformed URI/UTF-8 becomes 400, and so does the `BadRequest` that `req.json()` throws for a malformed body when it escapes the handler; missing route 404; any other `Error` or unchecked exception that escapes a handler becomes a generic 500 without exception details |
 | CORS | Explicit `cors_origin` adds allow-origin, GET/POST/PUT/PATCH/DELETE/OPTIONS, Content-Type and Vary headers; OPTIONS 204; no credential mode |
 | Response | `Response(status=..., body=..., content_type="text/plain; charset=utf-8", headers=[])`; status 200..599; transport owns framing; 204/304 omit body |
+
+The server decodes the query once, before routing, so a malformed query is a 400
+even on a route whose handler never reads it. A handler test can build a `Request`
+itself and pass the decoded values, as in
+`web.Request(method="GET", path="/search", body="", raw=raw, query_values={"q": "sprig"})`;
+`query(name)` reads only `query_values`, never `raw`'s query. `raw` is the transport
+request, a `sprig.runtime.web.HostRequest(method, raw_path, raw_query, body, headers)`
+whose headers are a `com.sun.net.httpserver.Headers`.
 
 `json_response` turns a value that stringify rejects into an `Error` ("cannot write
 the response as JSON: ..."), which becomes a controlled 500 when it escapes the

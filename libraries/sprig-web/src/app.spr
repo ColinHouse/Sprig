@@ -74,14 +74,17 @@ func decode(value: String, plus: Bool) -> String:
     return request_helpers.decode(value, plus)
 
 # What a handler gets: the method, the percent-decoded path and the UTF-8
-# body. parameters holds the path parameters; raw is the server's transport
-# request.
+# body. parameters holds the path parameters, query_values each query name
+# with its first decoded value (the server decodes the query once, before
+# routing); raw is the server's transport request. A Request built by hand,
+# as in a handler test, has only the query_values it is given.
 class Request:
     let method: String
     let path: String
     let body: String
     let raw: HostRequest
     let parameters: List[Parameter] = []
+    let query_values: Map[String, String] = {}
 
     # The decoded segment that matched {name} (an encoded "/" stays inside it,
     # "+" stays "+"); null when the route has no such parameter.
@@ -91,9 +94,12 @@ class Request:
                 return parameter.value
         return null
 
-    # First occurrence wins; absent and empty are different values.
+    # The first decoded value of that query parameter ("+" is a space); "" when
+    # it is present but empty or has no "=", null when it is absent. A lookup in
+    # query_values that cannot fail: the server answers a malformed query with
+    # 400 before any handler runs.
     func query(name: String) -> String?:
-        return request_helpers.query(raw.rawQuery(), name)
+        return query_values[name]
 
     # The first value of that request header, whose name matches ignoring
     # case; null when the request does not have it.
@@ -353,9 +359,10 @@ class App:
     func respond(raw: HostRequest) -> Response throws Error:
         let method = required(raw.method())
         let path = required(raw.rawPath())
-        # Validate URI bytes before matching, including unmatched routes.
+        # Validate URI bytes before matching, including unmatched routes. The
+        # query is decoded here, once, for every handler's Request.query.
         decode(path, false)
-        decode(required(raw.rawQuery()), true)
+        let query_values = request_helpers.query_values(required(raw.rawQuery()))
         if method == "OPTIONS" and cors_origin != "":
             return text("", 204)
         if method == "GET" and path == "/openapi.json":
@@ -368,7 +375,7 @@ class App:
                     case MatchResult.Missing:
                         pass
                     case MatchResult.Matched as matched:
-                        let request = Request(method=method, path=decode(path, false), body=required(raw.body()), raw=raw, parameters=matched.parameters)
+                        let request = Request(method=method, path=decode(path, false), body=required(raw.body()), raw=raw, parameters=matched.parameters, query_values=query_values)
                         return route.handler(request)
         return text("Not found", 404)
 

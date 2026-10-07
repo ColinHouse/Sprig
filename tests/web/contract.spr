@@ -1,5 +1,7 @@
 import "@web/app.spr" as web
 import "@std/json.spr" as json
+import sprig.runtime.web.HostRequest as HostRequest
+import com.sun.net.httpserver.Headers as Headers
 
 let app = web.App(title="Lifecycle")
 let other = web.App(title="Other")
@@ -60,3 +62,13 @@ print(response_error)
 # server answers 400 for a malformed body and 500 for anything else.
 other.post("/json", fn(req: web.Request) => web.json_response(req.json(), 201))
 print(other.routes.size())
+# A Request built by hand, as a handler test builds one: query() reads the
+# query_values it is given, never raw's query, so it cannot fail even when that
+# query is malformed (the server answers such a request 400 before any handler).
+let raw = HostRequest("GET", "/search", "q=%ZZ&q=%E4", "", Headers())
+let bare = web.Request(method="GET", path="/search", body="", raw=raw)
+print(bare.query("q"))
+let filled = web.Request(method="GET", path="/search", body="", raw=raw, query_values={"q": "sprig 你好", "empty": ""})
+print(filled.query("q"))
+print(filled.query("empty") == "")
+print(filled.query("missing"))
