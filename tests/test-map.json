@@ -513,6 +513,47 @@
       "gates": [
         "self"
       ]
+    },
+    {
+      "paths": [
+        "tests/concurrent/**"
+      ],
+      "gates": [
+        "tests/concurrent/check_concurrent.py"
+      ]
+    },
+    {
+      "paths": [
+        "tests/sqlite/**"
+      ],
+      "gates": [
+        "tests/sqlite/check_sqlite.py",
+        "tests/sqlite/check_migrations.py"
+      ]
+    },
+    {
+      "paths": [
+        "tests/web/**"
+      ],
+      "gates": [
+        "tests/web/check_web.py"
+      ]
+    },
+    {
+      "paths": [
+        "tests/json_codec/**"
+      ],
+      "gates": [
+        "tests/json_codec/check_json_codec.py"
+      ]
+    },
+    {
+      "paths": [
+        "tests/numeric/**"
+      ],
+      "gates": [
+        "tests/numeric/check_numeric.py"
+      ]
     }
   ]
 }
