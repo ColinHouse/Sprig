@@ -1,4 +1,4 @@
-# Known limitations — v0.7.0-beta.1
+# Known limitations — v0.7.1-beta.1
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the historical design kit in `docs/history/design-kit/`.
@@ -130,7 +130,7 @@ by the historical design kit in `docs/history/design-kit/`.
   is UTF-8 as on Linux and macOS. `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig targets v0.7.0-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
+- Sprig targets v0.7.1-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.
 
 ## Callable boundary

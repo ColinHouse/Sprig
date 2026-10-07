@@ -12,7 +12,7 @@ behavioral authority.
 | Projects, dependencies, installation, standard library | [`projects/`](projects/) |
 | CLI tools, diagnostics, formatting, testing | [`tooling/`](tooling/) |
 | Contribution policy and project provenance | [`contributing/`](contributing/) |
-| Release notes and verified archive record | [`releases/`](releases/) |
+| Versioning policy, release notes and verified archive record | [`releases/release-policy.md`](releases/release-policy.md), [`releases/`](releases/) |
 | Historical audits and the retired v0.7 design kit | [`history/`](history/README.md) |
 
 `website/` contains onboarding and presentation material. Its generated English

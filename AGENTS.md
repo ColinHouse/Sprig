@@ -126,7 +126,9 @@ preview: its CI job runs the build, test, grammar, SDK archive, docs and editor
 gates and fails when one fails, but it is not a required check. `@std` is a
 reserved bundled package; never add a manifest dependency named std.
 `build --emit-java-only` performs the static pipeline and writes Java without
-javac. Do not claim a development catalog is a published SDK.
+javac. Do not claim a development catalog is a published SDK. The SDK and
+language version numbers and the release steps follow
+`docs/releases/release-policy.md`.
 
 ## VS Code adapter
 
