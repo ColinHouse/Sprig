@@ -138,7 +138,7 @@ class, and `C`'s own API is unchanged.
 - **The parent view.** `as NAME` declares a class-scope name, visible in every
   method of `C` (also inside lambdas there), that calls the inherited
   implementation: `NAME.m(args)` is Java's `super.m(args)`, generated as
-  `C.super.m(args)`. `NAME` is not a value, has no fields, never names a static
+  `C.super.m(args)`, for the public and protected methods of the chain. `NAME` is not a value, has no fields, never names a static
   method and cannot call an abstract method; each of those is
   `SPR-CONFORM-PARENT`, as is an alias on an interface conform or one that
   shares a name with a field or method of `C`. The result of a parent call is
@@ -157,10 +157,11 @@ class, and `C`'s own API is unchanged.
   constructor's `super(...)` first, `@Override` on witnesses and overrides, the
   entry guards of the foreign boundary, and no generated `toString`: the
   inherited one (or a Sprig override of it) is used.
-- **Not in v1.** Protected members of `J` can be overridden but not called or
-  read from Sprig code; generic superclasses, a second Java superclass, super
-  calls into other classes than `J`'s chain, and constructor expressions are
-  rejected. Loom's remapping covers the generated Java like any Java source of
+- **Not in v1.** Protected methods of `J` can be overridden and called through
+  the parent view, but not on values of the class (Java's own rule across
+  packages); protected fields are not reachable; generic superclasses, a second
+  Java superclass, super calls into other classes than `J`'s chain, and
+  constructor expressions are rejected. Loom's remapping covers the generated Java like any Java source of
   a mod, because it is compiled in the same source set.
 
 ## Foreign boundary
@@ -190,8 +191,9 @@ reflection order. The following remain deliberate v1 boundaries:
   (covariance inside the Java interface hierarchy still resolves correctly);
 - method renaming, adapters, SAM conversion, Sprig interfaces, inheritance
   between Sprig classes and variance;
-- for class targets: protected member access, generic superclasses,
-  constructor expressions and calling the parent view as a value.
+- for class targets: protected members on values of the class (the parent
+  view may call protected methods), generic superclasses, constructor
+  expressions and calling the parent view as a value.
 
 `conform` reserves the word `conform` (like `class` or `variant`); `to` stays a
 contextual word and identifiers named `to` keep working.

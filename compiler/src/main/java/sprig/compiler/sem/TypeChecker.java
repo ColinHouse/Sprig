@@ -3142,7 +3142,7 @@ public final class TypeChecker {
                             + ", or keep it in a Sprig field."));
             return errorField(access);
         }
-        ResolvedField field = javaMember(new JavaType(owner.superclass), access, false);
+        ResolvedField field = javaMember(new JavaType(owner.superclass), access, false, true);
         if (field.kind == ResolvedField.Kind.JVM_METHOD) {
             field.parentView = true;
         } else if (field.kind == ResolvedField.Kind.JAVA_FIELD || field.kind == ResolvedField.Kind.ERROR_MESSAGE) {
@@ -3157,6 +3157,16 @@ public final class TypeChecker {
     }
 
     private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext) {
+        return javaMember(javaType, access, staticContext, false);
+    }
+
+    /** The methods a receiver offers: public ones, plus protected ones through the parent view. */
+    private static List<Method> methodCandidates(Class<?> clazz, boolean parentView) {
+        return parentView ? JvmMetadata.inheritable(clazz) : List.of(clazz.getMethods());
+    }
+
+    private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext,
+            boolean parentView) {
         Class<?> clazz = javaType.clazz;
         if (!staticContext && Throwable.class.isAssignableFrom(clazz) && access.name.equals("message")) {
             // An Error always has a message; Java's getMessage() may return null.
@@ -3197,7 +3207,7 @@ public final class TypeChecker {
         } catch (NoSuchFieldException ignored) {
             // Fall through to method lookup.
         }
-        for (Method method : clazz.getMethods()) {
+        for (Method method : methodCandidates(clazz, parentView)) {
             if (!method.getName().equals(access.name)) {
                 continue;
             }
@@ -3857,7 +3867,7 @@ public final class TypeChecker {
         // Fixed-arity candidates first; the varargs expanded form only when none applies.
         for (int pass = 0; pass < 2 && best == null; pass++) {
             boolean expand = pass == 1;
-            for (Method method : clazz.getMethods()) {
+            for (Method method : methodCandidates(clazz, field.parentView)) {
                 if (!method.getName().equals(field.jvm.name)) {
                     continue;
                 }
@@ -3898,7 +3908,7 @@ public final class TypeChecker {
         }
         if (best == null) {
             List<Method> candidates = new ArrayList<>();
-            for (Method method : clazz.getMethods()) {
+            for (Method method : methodCandidates(clazz, field.parentView)) {
                 if (!method.getName().equals(field.jvm.name)
                         || java.lang.reflect.Modifier.isStatic(method.getModifiers()) != isStaticJvmReceiver(call)) {
                     continue;
@@ -3927,7 +3937,7 @@ public final class TypeChecker {
                     "Ambiguous overload for " + clazz.getSimpleName() + "." + best.getName(),
                     module.uri, call.span)
                     .withData(jvmDiagnosticData(clazz, best.getName(), argTypes, call,
-                            java.util.Arrays.stream(clazz.getMethods())
+                            methodCandidates(clazz, field.parentView).stream()
                                     .filter(m -> m.getName().equals(field.jvm.name)).toList())));
         }
         JvmMember member = new JvmMember();

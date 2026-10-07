@@ -274,6 +274,12 @@ class Item:
             return "none"
         return text
 
+    func viaParentHook() -> String:
+        let hooked = parent.hook("z")   # protected in ClassBase, overridden here
+        if hooked == null:
+            return "none"
+        return hooked
+
 conform Item to ClassBase(name) as parent
 
 let item = Item(name="wand")
@@ -291,6 +297,7 @@ let base: ClassBase = item
 print(base.describe())
 print(item.toString())
 print(item.shout())
+print(item.viaParentHook())
 """
 
 POSITIVE = {
@@ -298,7 +305,7 @@ POSITIVE = {
     # parent view (also from a lambda), inherited members, one identity.
     "extend_base": (EXTEND_BASE, "item wand 1\nitem wand 2\n[hello host from wand]\nsprig-hook:x\ntrue\n"
                     "id:wand\nsprig-hook:y\nint:3\ntext:t\nbase\nitem wand 3\nClassBase(wand)\n"
-                    "hello lambda from wand\n"),
+                    "hello lambda from wand\nbase-hook:z\n"),
     "extend_plain": (IMPORTS + """
 class Plain2:
     pass
@@ -557,6 +564,9 @@ NEGATIVE = {
     "parent_field_read": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
                           "        return parent.name\n\nconform X to ClassBase(name) as parent\n",
                           "SPR-CONFORM-PARENT"),
+    "protected_outside_class": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                                "        return \"x\"\n\nconform X to ClassBase(name)\n\n"
+                                "print(X(name=\"n\").hook(\"z\"))\n", "SPR-JVM-MEMBER"),
     "parent_outside_class": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
                              "        return \"x\"\n\nconform X to ClassBase(name) as parent\n\n"
                              "print(parent.greet(\"x\"))\n", "SPR-NAME-UNRESOLVED"),
@@ -843,7 +853,8 @@ Support.tickNull(Listener())
         record("emit/super-constructor", "super(name);" in extend_text
                and extend_text.index("super(name);") < extend_text.index("this.name = name;"), extend_text[:600])
         record("emit/override-annotation", extend_text.count("@Override") >= 3, extend_text[:600])
-        record("emit/parent-call", "$Item.super.greet(" in extend_text, extend_text[:600])
+        record("emit/parent-call", "$Item.super.greet(" in extend_text
+               and "$Item.super.hook(" in extend_text, extend_text[:600])
         record("emit/no-generated-tostring", "public java.lang.String toString()" not in extend_text,
                extend_text[:600])
 
