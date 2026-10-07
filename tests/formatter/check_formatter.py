@@ -41,6 +41,15 @@ def main():
         result=invoke('fmt',path)
         assert result.returncode==0 and path.read_text()==named_canonical, repr(path.read_text())+result.stdout+result.stderr
         assert invoke('fmt','--check',path).returncode==0
+        # A line continued inside delimiters that starts with + or - after an operand
+        # keeps the binary operator's spaces; after a comma or an opening bracket the
+        # sign is unary. A comment line in between does not change that.
+        continued = 'let a = "x"\nprint(a\n  +"y")\nlet total = (1\n  +2\n  # middle\n  -3)\nlet items = [1,\n  -2]\nprint(total)\n'
+        continued_canonical = 'let a = "x"\nprint(a\n    + "y")\nlet total = (1\n    + 2\n    # middle\n    - 3)\nlet items = [1,\n    -2]\nprint(total)\n'
+        path.write_text(continued)
+        result=invoke('fmt',path)
+        assert result.returncode==0 and path.read_text()==continued_canonical, repr(path.read_text())+result.stdout+result.stderr
+        assert invoke('fmt','--check',path).returncode==0
         for source in ['enum F:\n  A\n  B\nlet x = match F.A: # map\n  # branch\n  case F.A:\n    1 # one\n  case F.B:\n    2\n', '', '# only\n# second', 'let x = [1,\n  2] # list\n', 'let x = -1 + +2\n', 'let x = "# a  b" # trailing\n', 'class C:\n  # field\n  let x: Int = 1\n  # method\n  func f() -> Int:\n    # nested\n    return x\n# top EOF' ]:
             path.write_text(source)
             result=invoke('fmt',path)

@@ -133,12 +133,12 @@ assert(decode_error(
     == "$.projects[0].targets[0].amount: must be positive")
 assert(decode_error(
     "{\"schema\": 1, \"hud_enabled\": true, \"projects\": [{\"id\": \"a\", \"name\": \"x\", \"targets\": []},"
-    +" {\"id\": \"a\", \"name\": \"y\", \"targets\": []}]}")
+    + " {\"id\": \"a\", \"name\": \"y\", \"targets\": []}]}")
     == "$.projects[1].id: duplicate project id 'a'")
 assert(decode_error(
     "{\"schema\": 1, \"hud_enabled\": true, \"active_project\": \"ghost\", \"projects\": []}")
     == "$.active_project: unknown project id 'ghost'")
 assert(decode_error(
     "{\"schema\": 1, \"hud_enabled\": true, \"projects\": [{\"id\": \"a\", \"name\": \"x\","
-    +" \"targets\": [{\"item_id\": \"s\"}]}]}")
+    + " \"targets\": [{\"item_id\": \"s\"}]}]}")
     == "$.projects[0].targets[0].amount: required field is missing")

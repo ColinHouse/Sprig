@@ -29,6 +29,9 @@ public final class SourceFormatter {
         StringBuilder out = new StringBuilder();
         int brackets = 0;
         boolean blank = false;
+        // The last token written, so a line continued inside delimiters can tell
+        // a binary `+`/`-` at its start (after an operand) from a unary one.
+        Token carried = null;
         for (List<Token> line : lines) {
             if (line.isEmpty()) {
                 if (out.length() > 0 && !blank) { out.append('\n'); blank = true; }
@@ -51,6 +54,7 @@ public final class SourceFormatter {
                 if (column > columns.get(columns.size() - 1)) depth++;
             }
             out.append("    ".repeat(depth));
+            Token continued = brackets > 0 ? carried : null;
             Token previous = null;
             boolean previousUnary = false;
             boolean previousNamedArgument = false;
@@ -60,9 +64,10 @@ public final class SourceFormatter {
                     out.append(token.getText().stripTrailing());
                     break;
                 }
+                Token prior = previous != null ? previous : continued;
                 boolean unary = (token.getType() == SprigLexer.PLUS || token.getType() == SprigLexer.MINUS)
-                        && (previous == null || opening(previous) || operator(previous) || previous.getType() == SprigLexer.COMMA
-                            || previous.getType() == SprigLexer.COLON || keywordPrefix(previous));
+                        && (prior == null || opening(prior) || operator(prior) || prior.getType() == SprigLexer.COMMA
+                            || prior.getType() == SprigLexer.COLON || keywordPrefix(prior));
                 // Inside delimiters '=' can only separate a named argument from its
                 // value; it is written without spaces, like a Python keyword argument.
                 boolean namedArgument = brackets > 0 && token.getType() == SprigLexer.ASSIGN;
@@ -72,6 +77,7 @@ public final class SourceFormatter {
                 if (opening(token)) brackets++;
                 if (closing(token)) brackets--;
                 previous = token;
+                carried = token;
                 previousUnary = unary;
                 previousNamedArgument = namedArgument;
             }

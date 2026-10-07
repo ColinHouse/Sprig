@@ -118,7 +118,7 @@ func signatures(module: json.Value) -> List[Surface] throws Error:
         if kind == "function":
             output.append(Surface(key="function " + name,
                 value="function " + name + generics + parameter_list(declaration) + " -> "
-                +or_empty(text_field(declaration, "result")) + throws_suffix(declaration)))
+                + or_empty(text_field(declaration, "result")) + throws_suffix(declaration)))
         elif kind == "class":
             output.append(Surface(key="class " + name, value="class " + name + generics))
             for field in array_field(declaration, "fields"):
@@ -132,7 +132,7 @@ func signatures(module: json.Value) -> List[Surface] throws Error:
                 let method_name = or_empty(text_field(method, "name"))
                 output.append(Surface(key="class " + name + ".method " + method_name,
                     value="method " + method_name + parameter_list(method) + " -> "
-                    +or_empty(text_field(method, "result")) + throws_suffix(method)))
+                    + or_empty(text_field(method, "result")) + throws_suffix(method)))
         elif kind == "enum":
             let cases: MutableList[String] = []
             for item in array_field(declaration, "cases"):
@@ -146,7 +146,7 @@ func signatures(module: json.Value) -> List[Surface] throws Error:
                 let fields: MutableList[String] = []
                 for field in array_field(item, "fields"):
                     fields.append(or_empty(text_field(field, "name")) + ": "
-                        +or_empty(text_field(field, "type")))
+                        + or_empty(text_field(field, "type")))
                 output.append(Surface(key="variant " + name + "." + case_name,
                     value="case " + case_name + "(" + String.join(fields.toList(), ", ") + ")"))
     return output.toList()
