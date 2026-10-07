@@ -453,9 +453,12 @@ func encode_task(task: Task) -> json.Value:
 - No kind is converted: `"12"` is not an integer, and `12.5` or `1e3` is not an
   integer either. `required_int` also rejects integers outside the `Int` range.
   `required_number_text` keeps the exact JSON number text, and
-  `required_decimal` parses it as `Decimal`.
+  `required_decimal` parses it as `Decimal`. A number whose exponent is out
+  of `Decimal`'s range, such as `1e9999999999`, is an `Error` with the path:
+  `$.amount: expected decimal in range, found number 1e9999999999`.
 - `reject_unknown_fields(reader, allowed)` throws for a field that is not in
-  the list, and for a duplicate field in a manually built object.
+  the list, and for a duplicate field in a manually built object. Reading any
+  field of such an object throws too: `$: duplicate object key: a`.
 - `object`, `member`, `array`, `string_array`, `text`, `int`, `bool` and
   `number` build values for `json.stringify`. They add no policy.
 

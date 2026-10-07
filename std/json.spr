@@ -1,4 +1,9 @@
 # Closed recursive JSON. Numbers retain exact validated lexemes, never Float.
+# Reading fields with paths and kind checks is the job of @std/json_codec.spr,
+# so a program does not match every Value case itself:
+#     codec.required_int(codec.root(json.parse(text)), "id")
+# returns the Int or throws an Error that starts with the path, such as
+# "$.id: expected integer, found string".
 import sprig.runtime.host.HostText as HostText
 
 # A JSON value. Number holds the number's exact text, such as 12.50 or -2e3,
@@ -25,6 +30,7 @@ class Member:
     let value: Value
 
 # Validate the complete object before returning, including duplicates after a match.
+# To read typed fields with paths and kind checks, use "@std/json_codec.spr".
 func find_member(value: Value, key: String) -> Lookup throws Error:
     match value:
         case Value.Null:
@@ -90,7 +96,7 @@ class Reader:
     # Internal: consumes the token at the offset, or fails with
     # "expected <token>".
     func expect(token: String) -> Unit throws Error:
-        if source.substring(offset, source.length()).length() < token.length():
+        if offset + token.length() > source.length():
             fail("expected " + token)
         if source.substring(offset, offset + token.length()) != token:
             fail("expected " + token)

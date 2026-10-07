@@ -4,6 +4,7 @@
 # it validates JSON kinds, carries a deterministic path for diagnostics and
 # never coerces values. Missing and present-null are distinct in `Field`.
 import "@std/json.spr" as json
+import java.lang.ArithmeticException as ArithmeticException
 
 # A value together with the JSON path it was reached through, e.g. "$",
 # "$.projects[1]", "$.projects[1].amount".
@@ -157,10 +158,14 @@ func as_int(reader: Reader) -> Int throws Error:
         case json.Value.Object:
             throw Error(reader.path + ": expected integer, found object")
 
-# Exact JSON number lexeme, for Decimal/BigInt handling by the application.
+# Exact JSON number lexeme, for Decimal/BigInt handling by the application;
+# null, another kind or a hand-built number whose text is not a JSON number
+# throws Error naming the path.
 func as_number_text(reader: Reader) -> String throws Error:
     match reader.value:
         case json.Value.Number as node:
+            if not number_lexeme(node.text):
+                throw Error(reader.path + ": expected number, found invalid number lexeme " + node.text)
             return node.text
         case json.Value.Null:
             throw Error(reader.path + ": expected number, found null")
@@ -209,13 +214,17 @@ func number_lexeme(text: String) -> Bool:
             return false
     return index == text.length()
 
-# The reader's number as an exact Decimal; null or another kind throws Error naming the path.
+# The reader's number as an exact Decimal; null, another kind or a number whose
+# exponent is out of Decimal's range, such as 1e9999999999, throws Error naming the path.
 func as_decimal(reader: Reader) -> Decimal throws Error:
     match reader.value:
         case json.Value.Number as node:
             if not number_lexeme(node.text):
                 throw Error(reader.path + ": expected decimal, found number " + node.text)
-            return Decimal.parse(node.text)
+            try:
+                return Decimal.parse(node.text)
+            catch problem: ArithmeticException:
+                throw Error(reader.path + ": expected decimal in range, found number " + node.text)
         case json.Value.Null:
             throw Error(reader.path + ": expected decimal, found null")
         case json.Value.Boolean:
@@ -231,9 +240,16 @@ func as_decimal(reader: Reader) -> Decimal throws Error:
 func as_value(reader: Reader) -> json.Value:
     return reader.value
 
-# Explicit lookup: missing, present null and present value stay distinct.
+# Explicit lookup: missing, present null and present value stay distinct. A
+# duplicate key anywhere in a hand-built object throws Error naming the
+# object's path, such as "$: duplicate object key: a".
 func field(reader: Reader, name: String) -> Field throws Error:
-    match json.find_member(reader.value, name):
+    var lookup: json.Lookup = json.Lookup.Missing
+    try:
+        lookup = json.find_member(reader.value, name)
+    catch problem: Error:
+        throw Error(reader.path + ": " + problem.message)
+    match lookup:
         case json.Lookup.Found as found:
             match found.value:
                 case json.Value.Null:
@@ -287,7 +303,8 @@ func required_bool(reader: Reader, name: String) -> Bool throws Error:
 func required_int(reader: Reader, name: String) -> Int throws Error:
     return as_int(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
-# The field's exact Decimal; missing, null or another kind throws Error naming the path.
+# The field's exact Decimal; missing, null, another kind or a number whose exponent is
+# out of Decimal's range throws Error naming the path.
 func required_decimal(reader: Reader, name: String) -> Decimal throws Error:
     return as_decimal(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
@@ -331,7 +348,8 @@ func optional_int(reader: Reader, name: String) -> Int? throws Error:
         return null
     return as_int(Reader(path=child_path(reader.path, name), value=value))
 
-# The field's exact Decimal; null if missing or null; another kind throws Error naming the path.
+# The field's exact Decimal; null if missing or null; another kind or a number whose
+# exponent is out of Decimal's range throws Error naming the path.
 func optional_decimal(reader: Reader, name: String) -> Decimal? throws Error:
     let value = optional_value(reader, name)
     if value == null:

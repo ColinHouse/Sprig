@@ -80,3 +80,15 @@ catch problem: Error:
 if not object_rejected:
     throw Error("serializer accepted duplicate keys")
 print("serializer rejected duplicate keys")
+
+# A token cut short by the end of the text, or a different token, is an Error
+# at the token's code point offset; a token that ends exactly at the end of the
+# text is read. The source with 東 needs UTF-16, so offsets count code points.
+func token_error(source: String) -> String:
+    try:
+        return "parsed " + json.stringify(json.parse(source))
+    catch problem: Error:
+        return problem.message
+
+for source in ["tru", "[nul", "{\"a\":fals", "[true", "{\"a\"", "{\"a\":1", "[\"東\",tru", "trux", "[1}", "true", "[null]", "{\"東\":false}"]:
+    print(token_error(source))

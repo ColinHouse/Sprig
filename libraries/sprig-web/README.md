@@ -56,7 +56,7 @@ helpers are module functions: `web.text(body, status)` and
 | Request | Read-only `method`, decoded `path`, UTF-8 `body`; `path_param(name)`, `query(name)`, `header(name)` return `String?` |
 | Query | UTF-8 form decoding (`+` is space); first occurrence wins; absent is null, present empty is `""`; embedded `=` preserved |
 | Header | Case-insensitive request lookup via JDK; response `Header(name=..., value=...)` list or `with_header(name,value)` |
-| JSON | `req.json() -> json.Value`; `web.json_response(value,status)` uses existing closed `@std/json` data and exact number lexemes |
+| JSON | `req.json() -> json.Value`; `web.json_response(value,status)` uses existing closed `@std/json` data and exact number lexemes; `@std/json_codec` reads fields with paths and kind checks, as in `codec.required_string(codec.root(req.json()), "name")` |
 | Errors | Malformed JSON/URI/UTF-8 becomes 400; missing route 404; handled application `Error` and unchecked handler errors become a generic 500 without exception details |
 | CORS | Explicit `cors_origin` adds allow-origin, GET/POST/PUT/PATCH/DELETE/OPTIONS, Content-Type and Vary headers; OPTIONS 204; no credential mode |
 | Response | `Response(status=..., body=..., content_type="text/plain; charset=utf-8", headers=[])`; status 200..599; transport owns framing; 204/304 omit body |

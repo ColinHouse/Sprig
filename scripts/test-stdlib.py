@@ -134,7 +134,23 @@ def main():
         'escaped duplicate rejected=true',
     ]
     assert lines[11] == 'large exponent=1e9999'
-    assert lines[12:] == ['serializer rejected invalid number', 'serializer rejected duplicate keys']
+    assert lines[12:14] == ['serializer rejected invalid number', 'serializer rejected duplicate keys']
+    # A token cut short by the end of the text fails at its own offset; one that
+    # ends exactly at the end is read. 東 makes the offsets code points.
+    assert lines[14:] == [
+        'JSON at code point offset 0: expected true',
+        'JSON at code point offset 1: expected null',
+        'JSON at code point offset 5: expected false',
+        'JSON at code point offset 5: expected ]',
+        'JSON at code point offset 4: expected :',
+        'JSON at code point offset 6: expected }',
+        'JSON at code point offset 5: expected true',
+        'JSON at code point offset 0: expected true',
+        'JSON at code point offset 2: expected ]',
+        'parsed true',
+        'parsed [null]',
+        'parsed {"東":false}',
+    ], repr(lines[14:])
     lookup = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json_lookup.spr')], cwd=ROOT,
                             text=True, encoding='utf-8', capture_output=True)
     assert lookup.returncode == 0, (lookup.stdout, lookup.stderr)
