@@ -88,7 +88,11 @@ binary float require explicit conversion. No operand is silently narrowed.
 | `Decimal`, `Decimal` | `Decimal`, exact | compile error | compile error | exact | numeric decimal comparison |
 
 An unsuffixed literal is not an `Int` or `Float` operand: it adopts the width
-of the other operand (the contextual literal rule above). `a32 + 1` with
+of the other operand (the contextual literal rule above), on either side and
+whether or not it is negated, so swapping the operands never changes a result:
+`0.1 == f32` is `f32 == 0.1`, `1.0 + f32` is `f32 + 1.0`, and `3000000000 + a32`
+is out of range like `a32 + 3000000000`. On the left of `in`, a literal takes
+the element (or key) type, as the argument of `contains` does. `a32 + 1` with
 `a32: Int32` is `Int32` arithmetic and overflows where `a32 + one` with
 `one: Int` widens to `Int`; `f32 + 1.0` with `f32: Float32` is `Float32`
 arithmetic, so it prints `1.1` where Java's `(double) 0.1f + 1.0` prints
