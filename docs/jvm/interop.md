@@ -66,7 +66,9 @@ be empty or longer. Direct writes to Java fields needing these adapters are
 unsupported; use an explicit Java setter. An `Int` passed to an
 `int`/`Integer` parameter, constructor argument, varargs element, plain field
 write or callback result is narrowed with a run-time range check, and an exact
-`long` overload is still preferred; every other narrowing or potentially lossy
+`long` overload is still preferred; an integer literal matches an `int`, `short`
+or `byte` formal only when it fits, so `toBinaryString(4294967296)` is rejected
+at check time (`SPR-JVM-MEMBER`, the candidate's reason names the literal); every other narrowing or potentially lossy
 numeric conversion (`Float` to `float`, `Int` to `short`) requires an explicit
 Sprig operation. See `docs/language/numeric-semantics.md`.
 
