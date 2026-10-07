@@ -145,6 +145,20 @@ print(empty.try_send(1))
 print(empty.try_send(2))
 print(empty.size())
 
+# 7b. closing a full channel does not wait for a receiver; the values are
+# still drained, then null (#164)
+let full = concurrent.channel[Int](2)
+full.send(1)
+full.send(2)
+print(full.try_send(3))
+full.close()
+print("closed full")
+print(full.receive())
+print(full.receive())
+print(full.receive())
+print(full.size())
+print(full.try_send(4))
+
 # 8. a latch releases its waiter when every task counted down
 let gate = concurrent.latch(3)
 func arrive(n: Int) -> Int:
@@ -292,3 +306,50 @@ func echo(s: concurrent.Scope) -> String throws Error:
     catch problem: IOException:
         return "io failed: " + problem
 print(concurrent.scope(echo))
+
+# 16. work that only has an effect: run() starts a Job and scope_run() is
+# scope() for a body that returns nothing, with the same waiting, failure,
+# cancellation and ended-scope rules
+let touched = concurrent.counter(0)
+func touch() -> Unit:
+    touched.increment()
+func touch_all(s: concurrent.Scope) -> Unit throws Error:
+    let first = concurrent.run(s, fn() => touch())
+    first.await()
+    print("after await " + touched.get())
+    for i in range(4):
+        concurrent.run(s, fn() => touch())
+concurrent.scope_run(touch_all)
+print("after scope_run " + touched.get())
+func explode() -> Unit:
+    print(divide(1, 0))
+func failing_job(s: concurrent.Scope) -> Unit throws Error:
+    let job = concurrent.run(s, fn() => explode())
+    try:
+        job.await()
+    catch problem: Error:
+        print("job failed: " + (problem.message.length() > 0))
+try:
+    concurrent.scope_run(failing_job)
+catch problem: Error:
+    print("scope_run failed too: " + problem.message.contains("zero"))
+let job_started = concurrent.latch(1)
+func sleepy() -> Unit:
+    job_started.count_down()
+    concurrent.sleep(60000)
+func cancelled_job(s: concurrent.Scope) -> Unit throws Error:
+    let job = concurrent.run(s, fn() => sleepy())
+    print(job_started.await_within(5000))
+    print(job.cancel())
+    print(job.is_cancelled())
+concurrent.scope_run(cancelled_job)
+var escaped_run: concurrent.Scope? = null
+func keep_run(s: concurrent.Scope) -> Unit throws Error:
+    escaped_run = s
+concurrent.scope_run(keep_run)
+let kept_run = escaped_run
+if kept_run != null:
+    try:
+        concurrent.run(kept_run, fn() => touch())
+    catch problem: Error:
+        print(problem.message)

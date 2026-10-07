@@ -503,6 +503,10 @@ public final class TypeChecker {
                             module.uri, target.span));
                 }
             } else if (field.kind == ResolvedField.Kind.MODULE_VAR) {
+                if (field.symbol == null) {
+                    // An unresolved member (errorField): the lookup already reported it.
+                    return;
+                }
                 if (!field.symbol.mutable) {
                     diagnostics.add(Diagnostic.error(Codes.NAME_LET_ASSIGN, Phase.TYPE,
                             "Cannot assign to immutable top-level binding '" + access.name + "'",
@@ -2099,6 +2103,20 @@ public final class TypeChecker {
             }
             return NativeType.BIGINT;
         }
+        if (left.isNullable() || right.isNullable()) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
+                    "Operator '" + op + "' cannot use a value that may be null", module.uri, span)
+                    .withTypes("non-null operands", left.display() + " and " + right.display())
+                    .withHint(operandHint(left, right, leftExpr, rightExpr)));
+            return NativeType.ERROR;
+        }
+        if (!isNumeric(left) || !isNumeric(right)) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                    "Operator '" + op + "' is not defined for " + left.display() + " and " + right.display(),
+                    module.uri, span)
+                    .withTypes("numeric operands", left.display() + " and " + right.display()));
+            return NativeType.ERROR;
+        }
         diagnostics.add(Diagnostic.error(Codes.NUM_MIXED, Phase.TYPE,
                 "Operator '" + op + "' has no implicit conversion between " + left.display()
                         + " and " + right.display(), module.uri, span)
@@ -2879,6 +2897,8 @@ public final class TypeChecker {
         final Map<Expr, String> units = new java.util.IdentityHashMap<>();
         /** For each argument, where the inferred types its parameter mentions came from. */
         final Map<Expr, String> notes = new java.util.IdentityHashMap<>();
+        /** For each argument, why a nullable type it gave a type parameter was refused. */
+        final Map<Expr, String> nullableNotes = new java.util.IdentityHashMap<>();
         TypeArgumentInference.Solution solution;
         List<Type> arguments;
         boolean valid;
@@ -2946,6 +2966,10 @@ public final class TypeChecker {
             if (note != null) {
                 inference.notes.put(slot.value(), note);
             }
+            String refused = refusedNullable(decl, slot, solution);
+            if (refused != null) {
+                inference.nullableNotes.put(slot.value(), refused);
+            }
         }
         if (solution.complete()) {
             List<Type> checked = typeResolver.checkInferredArguments(module, decl, solution.arguments, span);
@@ -2984,6 +3008,28 @@ public final class TypeChecker {
             parts.add(parameter + " is " + spell(solution.arguments.get(i)) + ", from " + source);
         }
         return parts.isEmpty() ? null : String.join("; ", parts) + ".";
+    }
+
+    /**
+     * Why an argument's nullable type did not become the type argument: the
+     * declaration does not accept a nullable type for that parameter (a
+     * written [X?] is rejected too, for example because the parameter reaches
+     * a Java type argument), so the parameter is the non-null type and the
+     * argument then mismatches. The note says so and how to keep the value
+     * non-null, instead of leaving only "expected fn() -> Int".
+     */
+    private String refusedNullable(Decl decl, GenericSlot slot, TypeArgumentInference.Solution solution) {
+        List<String> parts = new ArrayList<>();
+        for (var entry : solution.refusedNullable.entrySet()) {
+            if (!mentions(slot.declared(), decl, entry.getKey())) {
+                continue;
+            }
+            String written = spell(entry.getValue());
+            parts.add(entry.getKey() + " cannot be " + written + " here: a written [" + written
+                    + "] is rejected as well.");
+        }
+        return parts.isEmpty() ? null : String.join(" ", parts)
+                + " Return a non-null value instead, for example a variant such as Found/Missing, or a List.";
     }
 
     /** Whether a declared parameter or field type names the declaration's type parameter. */
@@ -3296,6 +3342,7 @@ public final class TypeChecker {
             }
             return value.type;
         }
+        int start = diagnostics.all().size();
         Type actual = known != null ? known : checkExpr(value, expected);
         int before = diagnostics.all().size();
         requireAssignable(expected, actual, value.span, Codes.TYPE_MISMATCH, what);
@@ -3305,6 +3352,18 @@ public final class TypeChecker {
             for (int i = before; i < all.size(); i++) {
                 Diagnostic mismatch = all.get(i);
                 mismatch.withHint(mismatch.hint == null ? note : mismatch.hint + " " + note);
+            }
+        }
+        // A refused nullable type explains the lambda's own mismatch too, which
+        // checking the argument reports before the argument mismatch.
+        String refused = inference == null ? null : inference.nullableNotes.get(value);
+        if (refused != null) {
+            List<Diagnostic> all = diagnostics.all();
+            for (int i = start; i < all.size(); i++) {
+                Diagnostic mismatch = all.get(i);
+                if (Codes.TYPE_MISMATCH.equals(mismatch.code) || Codes.TYPE_NULLABLE.equals(mismatch.code)) {
+                    mismatch.withHint(mismatch.hint == null ? refused : mismatch.hint + " " + refused);
+                }
             }
         }
         return actual;
@@ -4473,7 +4532,7 @@ public final class TypeChecker {
                 ListType list = (ListType) receiver;
                 Type actual = checkExpr(call.args.get(0).value, list.element);
                 requireAssignable(list.element, actual, call.args.get(0).value.span,
-                        Codes.TYPE_MISMATCH, "element");
+                        Codes.TYPE_MISMATCH, "element", call.args.get(0).value);
                 return NativeType.UNIT;
             }
             case "MutableList.set" -> {
@@ -5372,6 +5431,20 @@ public final class TypeChecker {
      * {@code long} is the only primitive integer target for Int, and
      * {@code double} the only primitive floating target for Float.
      */
+    /** The largest integer literal an int, short or byte formal accepts, or null for other formals. */
+    private static BigInteger narrowFormalMax(Class<?> param) {
+        if (param == int.class || param == Integer.class) return BigInteger.valueOf(Integer.MAX_VALUE);
+        if (param == short.class || param == Short.class) return BigInteger.valueOf(Short.MAX_VALUE);
+        if (param == byte.class || param == Byte.class) return BigInteger.valueOf(Byte.MAX_VALUE);
+        return null;
+    }
+
+    private static boolean literalOutsideFormal(Class<?> param, Expr expr) {
+        if (!(expr instanceof Expr.IntLit literal)) return false;
+        BigInteger max = narrowFormalMax(param);
+        return max != null && literal.value.compareTo(max) > 0;
+    }
+
     private static int scoreArgument(Class<?> param, Type arg, Expr expr) {
         // Java formals carry no nullability contract, including Object.
         if (arg.isNullable()) {
@@ -5380,13 +5453,13 @@ public final class TypeChecker {
         Type base = arg.nonNull();
         if (base == NativeType.INT) {
             if (expr instanceof Expr.IntLit literal) {
-                BigInteger max = param == int.class || param == Integer.class
-                        ? BigInteger.valueOf(Integer.MAX_VALUE)
-                        : param == short.class || param == Short.class
-                        ? BigInteger.valueOf(Short.MAX_VALUE)
-                        : param == byte.class || param == Byte.class
-                        ? BigInteger.valueOf(Byte.MAX_VALUE) : null;
-                if (max != null && literal.value.compareTo(max) <= 0) return 2;
+                BigInteger max = narrowFormalMax(param);
+                if (max != null) {
+                    // A literal matches a narrower formal only when it fits;
+                    // one that does not never reaches the checked narrowing
+                    // below, which would let the generator truncate it.
+                    return literal.value.compareTo(max) <= 0 ? 2 : -1;
+                }
             }
             if (param == long.class) {
                 return 3;
@@ -5559,6 +5632,11 @@ public final class TypeChecker {
                             }
                             if (JavaTypes.capturedWrite(candidate.getGenericParameterTypes()[i], bindings)) {
                                 reason = "argument " + (i + 1) + " would write through a '? extends' wildcard of the receiver; no type can be passed in";
+                                break;
+                            }
+                            if (literalOutsideFormal(params[i], call.args.get(i).value)) {
+                                reason = "integer literal " + ((Expr.IntLit) call.args.get(i).value).sourceText
+                                        + " is outside the " + params[i].getSimpleName() + " range of argument " + (i + 1);
                                 break;
                             }
                             if (scoreJvmArgument(candidate, i, argumentTypes.get(i), call.args.get(i).value) < 0) {
@@ -5855,12 +5933,27 @@ public final class TypeChecker {
     }
 
     private void requireAssignable(Type target, Type actual, Span span, String code, String what) {
-        requireAssignable(target, actual, span, code, what, null);
+        requireAssignable(target, actual, span, code, what, (String) null);
+    }
+
+    private void requireAssignable(Type target, Type actual, Span span, String code, String what, Expr actualExpr) {
+        String nullableHint = null;
+        if (actual != null && actual.isNullable() && actualExpr instanceof Expr.Name name
+                && name.symbol != null && name.symbol.mutable) {
+            nullableHint = name.name + " is a var, which never narrows; copy it into a let (`let word = "
+                    + name.name + "`) and check `word`.";
+        }
+        requireAssignable(target, actual, span, code, what, null, nullableHint);
     }
 
     /** As above; {@code mismatchHint} is the hint of a plain type mismatch that no more specific rule explains. */
     private void requireAssignable(Type target, Type actual, Span span, String code, String what,
                                    String mismatchHint) {
+        requireAssignable(target, actual, span, code, what, mismatchHint, null);
+    }
+
+    private void requireAssignable(Type target, Type actual, Span span, String code, String what,
+                                   String mismatchHint, String nullableHint) {
         if (Semantics.isAssignable(target, actual)) {
             return;
         }
@@ -5873,10 +5966,14 @@ public final class TypeChecker {
             return;
         }
         if (actual != null && actual.isNullable()) {
-            diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
+            Diagnostic diagnostic = Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
                     "Nullable value is not assignable to " + expected + " (" + what
                             + "); check for null first",
-                    module.uri, span).withTypes(expected, got));
+                    module.uri, span).withTypes(expected, got);
+            if (nullableHint != null) {
+                diagnostic = diagnostic.withHint(nullableHint);
+            }
+            diagnostics.add(diagnostic);
             return;
         }
         if (target != null && actual != null && target.nonNull() instanceof ClassType contract && contract.decl.contract

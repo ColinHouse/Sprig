@@ -47,6 +47,14 @@ field means only that binding/emission is possible, not that a generic contract
 is safe. Reflected public fields are ordered by field name and then full Java
 signature; inherited fields hidden by a same-named declaration remain visible
 as distinct rows in that deterministic order.
+Instance methods carry `access` (`public` or `protected`) and `final`.
+`protectedMethods` lists the protected instance methods of a non-final class
+and its superclasses, such as `java.util.Random.next(int)`. A Sprig program
+cannot call them on a value, but a class declared with
+`conform C to J(...) as NAME` overrides them by signature and calls the
+inherited version as `NAME.m(...)` (see [the parent view](conformance.md)).
+The list is empty for interfaces and final classes, and `--member` filters it
+like the other categories.
 Java reference and
 boxed return values are conservatively nullable, except `toString()`, whose
 `String` result is non-null by `Object`'s contract. Java reference parameters,
@@ -66,7 +74,9 @@ be empty or longer. Direct writes to Java fields needing these adapters are
 unsupported; use an explicit Java setter. An `Int` passed to an
 `int`/`Integer` parameter, constructor argument, varargs element, plain field
 write or callback result is narrowed with a run-time range check, and an exact
-`long` overload is still preferred; every other narrowing or potentially lossy
+`long` overload is still preferred; an integer literal matches an `int`, `short`
+or `byte` formal only when it fits, so `toBinaryString(4294967296)` is rejected
+at check time (`SPR-JVM-MEMBER`, the candidate's reason names the literal); every other narrowing or potentially lossy
 numeric conversion (`Float` to `float`, `Int` to `short`) requires an explicit
 Sprig operation. See `docs/language/numeric-semantics.md`.
 
@@ -179,7 +189,7 @@ Raw evidence never becomes concrete evidence. A raw generic value cannot be
 assigned to, or passed where, a concrete parameterized type is expected;
 concrete arguments are checked invariantly and subtype conversions project
 arguments through the hierarchy (`ArrayList[String]` is accepted as
-`List[String]`, `ArrayList[Int32]` is not). Concrete-to-raw stays an erased
+`List[String]`; a raw `ArrayList()` is not). Concrete-to-raw stays an erased
 boundary: a raw receiver such as `ArrayList()` keeps its previous erased
 behavior and `api` labels it `erased-generic`. The same rule covers the Sprig
 collection images: a raw `SprigList`/`SprigMap` result never becomes
@@ -277,7 +287,7 @@ the user program executes that class. See [dependencies](../projects/dependencie
 function, checked Java exceptions must be caught or covered by that function's
 `throws` declaration. Top-level module statements currently may leave a
 checked Java exception uncaught; it then aborts the program at runtime. This
-top-level rule is provisional, as described in `KNOWN_LIMITATIONS.md`. Java
+top-level rule is provisional, as described in [known limitations](../language/known-limitations.md). Java
 library arithmetic and nullability are not magically upgraded to Sprig's
 checked numeric or non-null contracts. A caught Java exception's `message` is
 `getMessage()`, a `String?`; Sprig's `Error` (and the first-party errors built on

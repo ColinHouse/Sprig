@@ -6,7 +6,7 @@ The current release is [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/relea
 |---|---|
 | Compiler | `0.7.1-beta.1` |
 | Language version | `0.8-dev` |
-| Requires | JDK 21 or newer (the SDK doesn't include a JDK); the published v0.7.1-beta.1 still accepts JDK 17 |
+| Requires | the published v0.7.1-beta.1 accepts JDK 17 or newer (the SDK doesn't include a JDK); the source on `main` and the next release require JDK 21 |
 | License | Apache-2.0 |
 | Platforms | Linux and macOS are supported; Windows is an experimental preview |
 
@@ -42,7 +42,7 @@ Coming from v0.6? Read the upgrade section of the [v0.7.0-beta.1 release notes](
 
 ## Changes since the release
 
-This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.7.1-beta.1, it says so. So far that's quick fixes in the language server, and generic calls that work out their type arguments from the arguments you pass.
+This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.7.1-beta.1, it says so. So far that's quick fixes in the language server; generic calls that work out their type arguments from the arguments you pass; `if` expressions; `elif` and `else` knowing the earlier conditions are false; error classes (`conform E to Error(message)`); a `MutableList` accepted where a `List` is expected; contract classes (`conform C to Contract`); one-line classes `class Pair(first: Int, second: Int)`; named functions, module functions and methods used as values without parentheses; structured scopes over virtual threads in `@std/concurrent`; packages published to `registry/` by pull request; and a JDK 21 minimum. The draft notes for the next release are in [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md).
 
 ## How it was verified
 

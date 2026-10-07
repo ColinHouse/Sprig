@@ -65,7 +65,7 @@ public final class MavenResolver {
         return a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getExtension() + ":"
                 + a.getClassifier() + ":" + a.getVersion();
     }
-    private static Path contentPath(Lockfile.JvmEntry entry) {
+    public static Path contentPath(Lockfile.JvmEntry entry) {
         return cacheRoot().resolve("artifacts").resolve(entry.sha256 + "." + entry.extension);
     }
     public static List<Path> load(Lockfile lock) {

@@ -26,9 +26,9 @@ import sprig.compiler.tooling.Catalog;
  * are executed.
  *
  * <p>The key is a SHA-256 over everything javac sees: the compiler version,
- * every generated Java file by name and text, the runtime sources (path, size
- * and modification time), the classpath entries (path, size and modification
- * time) and the Java version. An entry is written next to the key under
+ * every generated Java file by name and text, the digest of the runtime
+ * sources (see {@link RuntimeClasses}), the classpath entries (path, size and
+ * modification time) and the Java version. An entry is written next to the key under
  * {@code ~/.sprig/cache/javac} by moving a finished directory into place, so a
  * reader never sees half an entry; the newest {@value #KEEP} entries are kept.
  * {@code SPRIG_JAVAC_CACHE} names another directory, or {@code off} turns the
@@ -58,7 +58,7 @@ public final class JavacCache {
     }
 
     /** The key of this program's classes, or null when something javac depends on cannot be read. */
-    public static String key(JavaGenerator.Output output, List<Path> runtimeSources) {
+    public static String key(JavaGenerator.Output output, String runtimeDigest) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             feed(digest, "compiler " + Catalog.COMPILER_VERSION);
@@ -68,10 +68,7 @@ public final class JavacCache {
                 feed(digest, "source " + entry.getKey());
                 feed(digest, entry.getValue());
             }
-            for (Path source : runtimeSources) {
-                feed(digest, "runtime " + source.toAbsolutePath() + " " + Files.size(source) + " "
-                        + Files.getLastModifiedTime(source).toMillis());
-            }
+            feed(digest, "runtime " + runtimeDigest);
             for (Path entry : JvmClasspath.entries()) {
                 if (Files.exists(entry)) {
                     feed(digest, "classpath " + entry.toAbsolutePath() + " " + Files.size(entry) + " "
@@ -136,7 +133,7 @@ public final class JavacCache {
             } catch (IOException raced) {
                 Main.deleteRecursively(staging);
             }
-            prune(root);
+            prune(root, KEEP);
         } catch (IOException | RuntimeException e) {
             if (staging != null) {
                 try {
@@ -162,8 +159,8 @@ public final class JavacCache {
         }
     }
 
-    /** Keeps the most recently used entries; staging directories older than an hour are leftovers. */
-    private static void prune(Path root) throws IOException {
+    /** Keeps the {@code keep} most recently used entries; staging directories older than an hour are leftovers. */
+    static void prune(Path root, int keep) throws IOException {
         List<Path> entries = new ArrayList<>();
         try (Stream<Path> stream = Files.list(root)) {
             for (Path path : stream.toList()) {
@@ -177,7 +174,7 @@ public final class JavacCache {
                 entries.add(path);
             }
         }
-        if (entries.size() <= KEEP) {
+        if (entries.size() <= keep) {
             return;
         }
         entries.sort(Comparator.comparingLong(path -> {
@@ -187,7 +184,7 @@ public final class JavacCache {
                 return 0L;
             }
         }));
-        for (Path stale : entries.subList(0, entries.size() - KEEP)) {
+        for (Path stale : entries.subList(0, entries.size() - keep)) {
             Main.deleteRecursively(stale);
         }
     }

@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if sys.platform == "win32" else "sprig")
@@ -148,6 +149,27 @@ def main():
     check("unknown-code-honest", unknown["known"] is False
           and "Unknown" in unknown["meaning"] and unknown["documentationTopic"] in topic_ok,
           unknown)
+
+    # An unclosed grouping delimiter is reported at its opener, with EOF coordinates
+    # kept inside the source and parser recovery bounded to one follow-on diagnostic.
+    unclosed_sources = (
+        ("paren", "let a = (1 + 2\nprint(a)\n", 0, 8),
+        ("brace", "let a = 1 {\nlet b = 2\nlet c = 3\nlet d = 4\nlet e = 5\nlet f = 6\nprint(a)\n", 0, 10),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        for name, source, line, column in unclosed_sources:
+            path = Path(tmp) / (name + ".spr")
+            path.write_text(source, encoding="utf-8")
+            result = sprig("check", path, "--json")
+            diagnostics = json.loads(result.stdout)["diagnostics"]
+            first = diagnostics[0] if diagnostics else {}
+            start = first.get("range", {}).get("start", {})
+            end = first.get("range", {}).get("end", {})
+            ok = (result.returncode == 1 and first.get("code") == "SPR-LEX-UNCLOSED"
+                  and start == {"line": line, "character": column}
+                  and end == {"line": line, "character": column + 1}
+                  and len(diagnostics) <= 2)
+            check("unclosed-delimiter-at-opener-" + name, ok, json.dumps(diagnostics))
 
     print(f"diagnostics: {len(codes)} stable codes, {known_count} explain payloads, "
           f"{len(HIGH_VALUE)} high-value checks")

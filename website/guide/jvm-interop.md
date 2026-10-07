@@ -92,7 +92,7 @@ Java 的 `List`、`Map` 不会自动变成 Sprig 的集合，Sprig 的集合也�
 - 类型参数会完整保留，`List[Map[String, Int32]]`、`Host.method[String](value)` 这样的写法都可以，经由父类或接口传下来的类型参数也能识别。
 - 返回值照样被当作可能为 `null`，所以 `ArrayList[String]` 的 `get` 返回 `String?`。
 - 泛型方法自己的类型参数，只要实参能把每一个都唯一确定，就会自动推断（`Collections.sort(names)`、`List.of(1, 2, 3)`）；只出现在返回值里的，或者只能靠 lambda 确定的，要自己写出来（`Collectors.toList[Int]()`）。
-- 没有类型参数的原始类型（raw type）不能当作带参数的类型使用。`ArrayList[String]` 可以当 `List[String]` 用，`ArrayList[Int32]` 不行。
+- 没有类型参数的原始类型（raw type）不能当作带参数的类型使用。`ArrayList[String]()` 可以当 `List[String]` 用，没写类型参数的 `ArrayList()` 不行。
 - 通配符会保留边界：`List<? extends Number>` 的结果读出来是 `Number?`，`List<? extends Number>` 形参可以接收 `ArrayList[Int]`，而任何会穿过 `? extends` 写入的成员（比如 `add`）都会被拒绝。泛型数组（`T[]`）不支持，用 `sprig api` 查询时会看到对应的原因代码。
 
 ## 数组和字节
@@ -147,6 +147,8 @@ a/b/c
 sprig api java.time.LocalDate --member parse
 sprig api com.example.Client --classpath lib/client.jar --json
 ```
+
+想继承一个 Java 类、覆盖它的 protected 方法，比如 `java.util.Random` 的 `next`？它不在公开成员的列表里，`sprig api java.util.Random --member next` 会把它列在 `protectedMethods` 下面。在用 `conform C to Random(seed) as parent` 声明的类里写一个签名相同的方法就能覆盖它，原来的实现用 `parent.next(bits)` 调用。
 
 如果要频繁使用某个 Java 类，可以用 `sprig wrap` 生成一个 Sprig 包装文件。生成的是普通源码，你可以随意修改：
 

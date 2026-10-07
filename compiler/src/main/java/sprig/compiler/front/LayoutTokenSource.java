@@ -30,6 +30,8 @@ public final class LayoutTokenSource implements TokenSource {
     private final String uri;
     private final List<Token> output = new ArrayList<>();
     private int cursor = 0;
+    private boolean unclosedGrouping;
+    private boolean unterminatedString;
 
     public LayoutTokenSource(TokenSource lexer, Diagnostics diagnostics, String uri) {
         this.lexer = lexer;
@@ -44,6 +46,14 @@ public final class LayoutTokenSource implements TokenSource {
             }
         }
         normalize(raw);
+    }
+
+    public boolean hasUnclosedGrouping() {
+        return unclosedGrouping;
+    }
+
+    public boolean hasUnterminatedString() {
+        return unterminatedString;
     }
 
     private static Span spanOf(Token token) {
@@ -99,7 +109,7 @@ public final class LayoutTokenSource implements TokenSource {
     private void normalize(List<Token> raw) {
         Deque<Integer> indents = new ArrayDeque<>();
         indents.push(0);
-        int brackets = 0;
+        Deque<Token> bracketOpeners = new ArrayDeque<>();
         for (int i = 0; i < raw.size(); i++) {
             Token token = raw.get(i);
             int type = token.getType();
@@ -109,12 +119,30 @@ public final class LayoutTokenSource implements TokenSource {
                 continue;
             }
             if (type == SprigLexer.ERROR_CHAR) {
+                if ("\"".equals(token.getText())) {
+                    int lineEndIndex = i + 1;
+                    while (lineEndIndex < raw.size() && raw.get(lineEndIndex).getType() != SprigLexer.NEWLINE
+                            && raw.get(lineEndIndex).getType() != Token.EOF) {
+                        lineEndIndex++;
+                    }
+                    Token lineEnd = raw.get(lineEndIndex);
+                    int line = Math.max(0, token.getLine() - 1);
+                    int startColumn = Math.max(0, token.getCharPositionInLine());
+                    int endColumn = Math.max(startColumn + 1, lineEnd.getCharPositionInLine());
+                    Span span = new Span(line, startColumn, line, endColumn,
+                            token.getStartIndex(), lineEnd.getStartIndex());
+                    diagnostics.add(Diagnostic.error(Codes.LEX_STRING, Phase.LEX,
+                            "Unterminated string literal", uri, span).withRelatedHelp("language"));
+                    unterminatedString = true;
+                    i = lineEndIndex - 1;
+                    continue;
+                }
                 error(Codes.LEX_CHAR, "Invalid character '" + token.getText() + "'", token,
                         foreignCharacterHint(token.getText()));
                 continue;
             }
             if (type == SprigLexer.NEWLINE) {
-                if (brackets > 0) {
+                if (!bracketOpeners.isEmpty()) {
                     continue;
                 }
                 int j = i + 1;
@@ -130,9 +158,11 @@ public final class LayoutTokenSource implements TokenSource {
                 continue;
             }
             if (type == Token.EOF) {
-                if (brackets != 0) {
-                    error(Codes.LEX_UNCLOSED, "Unclosed grouping delimiter at end of file", token, null);
-                    brackets = 0;
+                if (!bracketOpeners.isEmpty()) {
+                    error(Codes.LEX_UNCLOSED, "Unclosed grouping delimiter at end of file",
+                            bracketOpeners.peek(), null);
+                    unclosedGrouping = true;
+                    bracketOpeners.clear();
                 }
                 newline(token);
                 while (indents.size() > 1) {
@@ -148,12 +178,12 @@ public final class LayoutTokenSource implements TokenSource {
             }
             output.add(token);
             if (type == SprigLexer.LPAREN || type == SprigLexer.LBRACK || type == SprigLexer.LBRACE) {
-                brackets++;
+                bracketOpeners.push(token);
             } else if (type == SprigLexer.RPAREN || type == SprigLexer.RBRACK || type == SprigLexer.RBRACE) {
-                brackets--;
-                if (brackets < 0) {
+                if (bracketOpeners.isEmpty()) {
                     error(Codes.LEX_UNMATCHED, "Unmatched closing delimiter", token, null);
-                    brackets = 0;
+                } else {
+                    bracketOpeners.pop();
                 }
             }
         }

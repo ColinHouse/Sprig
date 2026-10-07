@@ -288,17 +288,19 @@ public final class TestCommand {
                 lineMaps.put(javaPath, generated.lineMaps.get(name));
                 uris.put(javaPath, generated.uris.get(name));
             }
-            List<Path> runtime = Main.runtimeSources(diagnostics);
-            Path cacheRoot = JavacCache.root();
-            String cacheKey = cacheRoot == null ? null : JavacCache.key(generated, runtime);
+            RuntimeClasses runtime = RuntimeClasses.locate();
+            if (runtime == null) RuntimeClasses.reportMissing(diagnostics);
+            Path cacheRoot = runtime == null ? null : JavacCache.root();
+            String cacheKey = cacheRoot == null ? null : JavacCache.key(generated, runtime.digest());
             Path cached = JavacCache.lookup(cacheRoot, cacheKey);
             if (cached != null) {
                 classesDir = cached;
             } else {
                 Main.writeSources(generated, javaDir);
-                List<Path> javaSources = new ArrayList<>(Main.listJavaFiles(javaDir));
-                javaSources.addAll(runtime);
-                boolean compiled = JavacRunner.compile(classesDir, javaSources, diagnostics, lineMaps, uris);
+                List<Path> javaSources = Main.listJavaFiles(javaDir);
+                boolean compiled = runtime == null
+                        ? JavacRunner.compile(classesDir, javaSources, diagnostics, lineMaps, uris)
+                        : runtime.compileProgram(classesDir, javaSources, diagnostics, lineMaps, uris);
                 if (!compiled || diagnostics.hasErrors())
                     return new Outcome("failed", diagnostics.all(), "", "", "javac failed");
                 JavacCache.store(cacheRoot, cacheKey, classesDir);

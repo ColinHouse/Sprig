@@ -37,6 +37,21 @@ public final class HostScope {
         return start(null, work);
     }
 
+    /**
+     * Starts work that only has an effect. Sprig's Unit is not a value, so the
+     * task completes with true once work has run.
+     */
+    @NonNull
+    public HostTask<Boolean> run(Runnable work) {
+        if (work == null) throw new SprigError("task work must not be null");
+        Fn0<Boolean> effect = () -> {
+            work.run();
+            return Boolean.TRUE;
+        };
+        requireOpen(effect);
+        return start(null, effect);
+    }
+
     /** Starts work on the pool's platform threads; the task still belongs to this scope. */
     @NonNull
     public <T> HostTask<T> spawnOn(HostPool pool, Fn0<T> work) {

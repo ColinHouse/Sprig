@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## 现在能用吗？
 
-Sprig 还在早期。当前发布的版本是实验性的 v0.7.1-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它还没有接口，泛型推断要等下一个版本，也不建议用在生产环境。完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
+Sprig 还在早期。当前发布的版本是实验性的 v0.7.1-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它没有继承，泛型没有协变和逆变，也不建议用在生产环境。契约类（方法没有函数体的类）和按实参推断类型参数比 v0.7.1-beta.1 新，见[发布状态](/project/release-status)。完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
 
 ## 五分钟跑起来
 

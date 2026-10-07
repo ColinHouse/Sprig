@@ -1,0 +1,24 @@
+import "@std/concurrent.spr" as concurrent
+
+# 四个任务各加一千次：counter 是原子的，共享的 MutableList 用锁保护。
+let hits = concurrent.counter(0)
+let seen: MutableList[Int] = []
+let guard = concurrent.lock()
+
+func work(id: Int) -> Int:
+    var i = 0
+    while i < 1000:
+        hits.increment()
+        i += 1
+    guard.run(fn() => seen.append(id))
+    return id
+
+func run_all(s: concurrent.Scope) -> List[Int] throws Error:
+    let tasks: MutableList[concurrent.Task[Int]] = []
+    for id in [1, 2, 3, 4]:
+        tasks.append(concurrent.spawn(s, fn() => work(id)))
+    return concurrent.await_all(tasks)
+
+print(concurrent.scope(run_all))
+print(hits.get())
+print(seen.size())

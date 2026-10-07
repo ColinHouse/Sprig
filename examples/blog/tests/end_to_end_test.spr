@@ -1,0 +1,18 @@
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "../src/site.spr" as site
+
+func builds_a_site() -> Unit throws Error:
+    let root = test.temp_dir()
+    let posts = files.join(root, "posts")
+    files.make_directory(posts)
+    files.write_utf8(files.join(posts, "one.md"), "title: One\ndate: 2024-01-01\n\nhello\n")
+    files.write_utf8(files.join(posts, "notes.bak"), "ignored")
+    let out = files.join(root, "site")
+    let count = site.build_site(posts, out, "T")
+    test.equal_int(count, 1, "post count")
+    assert(files.is_file(files.join(out, "one.html")), "post page written")
+    assert(files.read_utf8(files.join(out, "index.html")).contains("one.html"), "index links the post")
+
+test.check("builds a site from a posts directory", builds_a_site)
+test.finish()

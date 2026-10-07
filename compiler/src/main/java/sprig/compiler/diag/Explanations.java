@@ -738,6 +738,33 @@ public final class Explanations {
                         "Use --json consistently when scripting."));
                 out.put("relatedCodes", List.of(Codes.API_TARGET));
             }
+            case Codes.BUNDLE_TOOLS -> {
+                out.put("whyMatters", "A bundle carries its own Java runtime, built by the JDK's jlink from modules jdeps finds; without those tools nothing self-contained can be produced.");
+                out.put("commonCauses", List.of("sprig runs on a JRE, or on a JDK image that was itself jlinked without the jdk.jlink module.",
+                        "JAVA_HOME or PATH points at a different Java than the one meant."));
+                out.put("safeFixes", List.of("Install a full JDK 21 or newer and run sprig with it (sprig doctor shows the installation in use).",
+                        "Use sprig build without --bundle to get classes for a machine that has Java."));
+                out.put("relatedCodes", List.of(Codes.BUNDLE_LAYOUT, Codes.BUNDLE_JDEPS));
+            }
+            case Codes.BUNDLE_JDEPS -> {
+                out.put("whyMatters", "The runtime image holds only the modules the program's JARs use; when jdeps cannot read a JAR the module list is unknown and the image would be incomplete.");
+                out.put("commonCauses", List.of("A locked dependency JAR is corrupt or not a ZIP file.",
+                        "A multi-release JAR targets a newer Java than the running JDK."));
+                out.put("safeFixes", List.of("Run the jdeps command from the diagnostic's data by hand and read its report.",
+                        "Run sprig resolve again to re-download the JAR, or pin a version the JDK can read."));
+                out.put("relatedCodes", List.of(Codes.BUNDLE_TOOLS, Codes.BUNDLE_LAYOUT));
+            }
+            case Codes.BUNDLE_LAYOUT -> {
+                out.put("whyMatters", "jlink builds the runtime image from the JDK's jmods; a bundle must be complete and carry the JDK's legal notices, so an installation that cannot provide them is refused instead of producing a broken bundle.");
+                out.put("commonCauses", List.of("The Java installation has no packaged modules (jmods/) and is not a linkable runtime (JDK 24+), so jlink cannot image it: a JRE, or an image jlinked without --generate-linkable-runtime.",
+                        "A previous bundle in the output directory could not be removed.",
+                        "jlink failed, for example for a module jdeps named that the installation does not ship.",
+                        "A --classpath entry is a file that is not a JAR, or does not exist."));
+                out.put("safeFixes", List.of("Run sprig with a full JDK distribution (OpenJDK, Temurin, Zulu, Corretto): one that ships jmods/, or a JDK 24+ linkable runtime.",
+                        "Run the jlink command from the diagnostic's data by hand for the full report.",
+                        "Pass JARs or class directories on the classpath, and run sprig resolve for locked dependencies."));
+                out.put("relatedCodes", List.of(Codes.BUNDLE_TOOLS, Codes.BUNDLE_JDEPS));
+            }
             default -> { }
         }
         return out;
@@ -755,6 +782,7 @@ public final class Explanations {
         if (code.startsWith("SPR-PROJECT-")) return "projects";
         if (code.startsWith("SPR-MODULE-") || code.equals(Codes.NAME_IMPORT)
                 || code.equals(Codes.NAME_IMPORT_CYCLE) || code.equals(Codes.NAME_MODULE)) return "modules";
+        if (code.startsWith("SPR-BUNDLE-")) return "build";
         if (code.startsWith("SPR-API-") || code.startsWith("SPR-CLI-") || code.startsWith("SPR-WRAP-")) return "agents";
         if (code.startsWith("SPR-LEX-") || code.startsWith("SPR-SYNTAX-")) return "language";
         if (code.startsWith("SPR-FLOW-") || code.startsWith("SPR-RUNTIME-")) return "errors";

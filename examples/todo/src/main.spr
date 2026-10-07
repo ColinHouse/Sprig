@@ -1,0 +1,22 @@
+# Todo HTTP API over SQLite: `sprig run -- [todos.sqlite] [port]`.
+import "@std/process.spr" as process
+import "./store.spr" as store
+import "./api.spr" as api
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var path = "todos.sqlite"
+    var port = 8080
+    if args.size() > 0:
+        path = args[0]
+    if args.size() > 1:
+        let parsed = args[1].toIntOrNull()
+        if parsed == null:
+            throw Error("port must be an integer, got " + args[1])
+        port = parsed
+    let app = api.build_app(store.open_store(path))
+    app.run(port)
+    print("todo api listening on http://127.0.0.1:" + app.port() + " (database " + path + ")")
+    print("try: curl -s -X POST localhost:" + app.port() + "/todos -d '{\"title\":\"milk\"}'")
+
+main()

@@ -131,8 +131,9 @@ pointed at when it was published, a `branch`, or a bare `rev`. The newest
 release is chosen by SemVer order, not by list position. A release may carry
 `yanked = "true"` and a `reason`: it is never chosen for a new dependency, and a
 lock that already pins it still resolves. A project declares the registries it uses with
-`[[registry]]` tables, each a local `path` or a Git `url` (with an optional
-`branch`, default `main`, and `subdir`):
+`[[registry]]` tables, each with a `name` (what `--registry NAME` refers to)
+and a local `path` or a Git `url` (with an optional `branch`, default `main`,
+and `subdir`):
 
 ```toml
 [[registry]]
@@ -161,7 +162,7 @@ every pull request to `registry/`:
 2. **Releases are immutable.** `sprig publish --tag T` records the commit the
    tag points at. A published version never changes its ref or `rev` and is
    never deleted; a broken release gets `yanked = "true"` with a reason
-   (`sprig publish --yank V --reason TEXT`). Publishing a version that is
+   (`sprig publish --registry DIR --yank V --reason TEXT`). Publishing a version that is
    already listed is an error.
 3. **Tags only.** A `branch` is mutable, so the default registry rejects it.
    Path and private registries still accept it.

@@ -1,0 +1,143 @@
+# A concurrent crawler over a directory of HTML pages: every page found in one
+# round is fetched in its own task; links collected in the round seed the next.
+import "@std/concurrent.spr" as concurrent
+import "@std/files.spr" as files
+import "@std/regex.spr" as regex
+import "@std/lists.spr" as lists
+import "@std/text.spr" as text
+
+class Page:
+    let name: String
+    let words: Int
+    let links: List[String]
+
+variant Fetched:
+    Ok(page: Page)
+    Failed(name: String, problem: String)
+
+# Local hrefs of the page, in document order, without duplicates; external and
+# fragment links are skipped.
+func links_of(html: String) -> List[String] throws Error:
+    let out: MutableList[String] = []
+    for found in regex.find_all("href=\"[^\"]*\"", html):
+        let target = found.substring(6, found.length() - 1)
+        if target.startsWith("http://") or target.startsWith("https://") or target.startsWith("#") or target == "":
+            continue
+        let hash = target.indexOf("#")
+        let path = if hash >= 0:
+            target.substring(0, hash)
+        else:
+            target
+        if path != "" and not out.contains(path):
+            out.append(path)
+    return out.toList()
+
+func word_count(html: String) -> Int throws Error:
+    let plain = regex.replace_all("<[^>]*>", html, " ")
+    var count = 0
+    for piece in regex.split("\\s+", plain):
+        if piece != "":
+            count += 1
+    return count
+
+# Runs inside a task, so it reports failure as a value instead of throwing.
+# The result is wrapped in a one-element list because a Task[T] cannot carry a
+# user-defined class, variant or enum (SPR-TYPE-MISMATCH "no JVM representation
+# as a Java type argument"); a Sprig collection can.
+func fetch(root: String, name: String) -> List[Fetched]:
+    try:
+        let html = files.read_utf8(files.join(root, name))
+        return [Fetched.Ok(page=Page(name=name, words=word_count(html), links=links_of(html)))]
+    catch problem: Error:
+        return [Fetched.Failed(name=name, problem=problem.message)]
+
+class Report:
+    let pages: List[Page]
+    let failures: List[String]
+    let total_words: Int
+    let rounds: Int
+    let events: List[String]
+
+class Crawler:
+    let root: String
+    let start: String
+    let visited: MutableMap[String, Bool] = {}
+    let pages: MutableList[Page] = []
+    let failures: MutableList[String] = []
+    let total: concurrent.Counter = concurrent.counter(0)
+    let progress: concurrent.Channel[String] = concurrent.channel[String](1024)
+    let guard: concurrent.Lock = concurrent.lock()
+    var rounds: Int = 0
+
+    # Marks the name visited; false when it already was. Called from the
+    # coordinating thread only, but kept under the lock for symmetry with record.
+    func claim(name: String) -> Bool:
+        return concurrent.locked(guard, fn() => claim_locked(name))
+
+    func claim_locked(name: String) -> Bool:
+        if visited.containsKey(name):
+            return false
+        visited.set(name, true)
+        return true
+
+    func record(result: Fetched) -> List[String]:
+        match result:
+            case Fetched.Ok as ok:
+                total.add(ok.page.words)
+                guard.run(fn() => pages.append(ok.page))
+                progress.try_send("fetched " + ok.page.name + " (" + ok.page.words + " words)")
+                return ok.page.links
+            case Fetched.Failed as failed:
+                guard.run(fn() => failures.append(failed.name + ": " + failed.problem))
+                progress.try_send("failed " + failed.name)
+                return []
+
+    # Returns the number of rounds: a scope body must produce a value, since
+    # scope(body) rejects a fn(Scope) -> Unit (SPR-TYPE-UNIT).
+    func crawl_in(s: concurrent.Scope) -> Int throws Error:
+        var frontier: List[String] = [start]
+        while frontier.size() > 0:
+            rounds += 1
+            let tasks: MutableList[concurrent.Task[List[Fetched]]] = []
+            for name in frontier:
+                if claim(name):
+                    let target = name
+                    tasks.append(concurrent.spawn(s, fn() => fetch(root, target)))
+            let next: MutableList[String] = []
+            for result in concurrent.await_all(tasks):
+                for link in record(result[0]):
+                    if not visited.containsKey(link) and not next.contains(link):
+                        next.append(link)
+            frontier = next.toList()
+        return rounds
+
+    func run() -> Report throws Error:
+        concurrent.scope(crawl_in)
+        progress.close()
+        let events: MutableList[String] = []
+        var event = progress.receive()
+        while event != null:
+            # A var is not narrowed by the loop condition; copy it to a let.
+            let value = event
+            if value != null:
+                events.append(value)
+            event = progress.receive()
+        return Report(
+            pages=lists.sort_by(pages, fn(page: Page) => page.name),
+            failures=lists.sorted(failures),
+            total_words=total.get(),
+            rounds=rounds,
+            events=events.toList()
+        )
+
+func crawl(root: String, start: String) -> Report throws Error:
+    return Crawler(root=root, start=start).run()
+
+func render(report: Report) -> String:
+    var out = ""
+    for page in report.pages:
+        out += text.pad_right(page.name, 24, " ") + text.pad_left("" + page.words, 6, " ") + "  links: " + page.links.size() + "\n"
+    for failure in report.failures:
+        out += "FAILED " + failure + "\n"
+    out += "pages " + report.pages.size() + ", words " + report.total_words + ", rounds " + report.rounds + ", events " + report.events.size() + "\n"
+    return out

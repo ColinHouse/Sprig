@@ -1,0 +1,6 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.add("ada")
+for name in names:
+    print(name)

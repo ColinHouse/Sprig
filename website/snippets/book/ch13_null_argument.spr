@@ -1,0 +1,5 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+let maybe: String? = null
+names.add(maybe)

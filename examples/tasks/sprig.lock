@@ -1,0 +1,15 @@
+lock-version = 5
+language = "0.8"
+compiler = "0.7.1-beta.1"
+manifest-sha256 = "87b841522f7697fba85a3f64ff75cd371b87c7a0b1a310935194e25f15946040"
+
+[[sprig]]
+id = "root/@cli"
+owner = "root"
+name = "cli"
+kind = "local"
+path = "../../libraries/sprig-cli"
+portable = true
+project-name = "sprig-cli"
+source = "src"
+manifest-sha256 = "8d7e6b3a4d0aa52a7ecd0ef56dea66e67a8b3a32845634fdf0e8876e34378fdc"

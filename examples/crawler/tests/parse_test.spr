@@ -1,0 +1,14 @@
+import "@std/test.spr" as test
+import "../src/crawl.spr" as crawl
+
+func links() -> Unit throws Error:
+    let html = "<a href=\"a.html\">x</a> <a href=\"https://x.org/\">y</a> <a href=\"b.html#frag\">z</a> <a href=\"a.html\">dup</a> <a href=\"#top\">t</a>"
+    test.equal(crawl.links_of(html), ["a.html", "b.html"], "local links in order, no duplicates")
+
+func words() -> Unit throws Error:
+    test.equal_int(crawl.word_count("<p>one two</p>\n<b>three</b>"), 3, "tags are not words")
+    test.equal_int(crawl.word_count(""), 0, "empty page")
+
+test.check("extracts local links", links)
+test.check("counts words without markup", words)
+test.finish()
