@@ -134,6 +134,16 @@ patch: for example a nullable value needs an explicit narrow/handle decision,
 which is business logic the compiler must not invent. `sprig explain <CODE>
 --json` returns the same `repair` object plus causes, safe fixes and examples.
 
+## Syntax errors
+
+- `SPR-SYNTAX-ERROR` reports layout problems in source-level terms, such as an
+  unexpected indentation or a missing indented block after a header
+  (`else:`, `if ...:`, `func ...:`). Parser recovery does not expose
+  synthetic `INDENT`, `DEDENT` or end-of-file tokens as user-facing wording
+  (source text quoted in a message, such as an identifier `MAX_INDENT`, is
+  never rewritten), and redundant end-of-file errors after a missing block are
+  suppressed.
+
 ## Declaration facade errors
 
 - `SPR-MODULE-EXPORT`: unknown/illegal target or duplicate/colliding visible name; includes origin names.

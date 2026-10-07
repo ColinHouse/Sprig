@@ -10,6 +10,7 @@ Blocks are defined by indentation, as in Python:
 
 - Indent with spaces only; a tab is rejected with `SPR-LEX-TAB`. Keep the indentation within a block consistent; how many spaces you use is up to you.
 - The first line of code in a file starts in column 1.
+- A line indented where no block starts, or a header such as `else:` or `if count > 0:` with nothing indented under it, gets an error that names the problem.
 - Inside parentheses, brackets and braces you can break lines freely, so long calls and literals can span several lines.
 - `#` starts a comment.
 
