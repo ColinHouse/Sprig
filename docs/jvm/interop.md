@@ -277,7 +277,7 @@ the user program executes that class. See [dependencies](../projects/dependencie
 function, checked Java exceptions must be caught or covered by that function's
 `throws` declaration. Top-level module statements currently may leave a
 checked Java exception uncaught; it then aborts the program at runtime. This
-top-level rule is provisional, as described in `KNOWN_LIMITATIONS.md`. Java
+top-level rule is provisional, as described in [known limitations](../language/known-limitations.md). Java
 library arithmetic and nullability are not magically upgraded to Sprig's
 checked numeric or non-null contracts. A caught Java exception's `message` is
 `getMessage()`, a `String?`; Sprig's `Error` (and the first-party errors built on

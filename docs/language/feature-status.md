@@ -1,7 +1,7 @@
 # Sprig stage-0 — implemented feature status
 
 This table reflects what the compiler in this directory **actually does**, as
-verified by `scripts/test.sh`. The release validation record is
+verified by `python3 scripts/test.py` (`scripts/test.sh` on Linux/macOS). The release validation record is
 [on GitHub](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md).
 The historical design kit in `docs/history/design-kit/` describes target semantics rather than current capabilities.
 
@@ -11,12 +11,10 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | Expression `if`: `if`/`elif`/mandatory `else`, one expression per branch | wherever an expression `match` is accepted; `if` at the start of a statement stays the statement; a missing `else`, one-line branches, multi-line branches, grouping and operand positions, `a if c else b` and `c ? a : b` get targeted `SPR-SYNTAX-ERROR` messages | `Bool` conditions; expression-match result typing; the `if` statement's narrowing | nested Java `?:` with every branch converted to the result's Java type, so no numeric promotion or unboxing; conditions in order, only the chosen branch evaluated | runtime 39, `tests/if_expression`, semantics `if_expression_*`, syntax 14/20–24 |
 | Explicit `export alias.Symbol` | yes | original symbols, collisions, cycles and package boundaries | no wrapper/copy | reexport runtime/API/package suite |
 | Canonical `sprig fmt` | trivia-preserving lexer | parse structure invariant | atomic file replacement, check/JSON modes | formatter fixtures + valid corpus |
-| `sprig lsp` language server (stdio) | unsaved buffers parsed in place of files | diagnostics, hover, definition, references, symbols, completion and verified local rename from the same resolver and checker | none; formatting reuses `sprig fmt` | `tests/lsp` JSON-RPC suite; VS Code client in `editors/vscode` unit and Extension Host tests |
+| `sprig lsp` language server (stdio) | unsaved buffers parsed in place of files | diagnostics, quick fixes from their suggested edits, hover, definition, references, symbols, completion and verified local rename from the same resolver and checker | none; formatting reuses `sprig fmt` | `tests/lsp` JSON-RPC suite; VS Code client in `editors/vscode` unit and Extension Host tests |
 | Function references: a named function, a module function or a method used as a value (`items.map(shout)`, `lists.sum`, `counter.bump`), `print` where a `fn(T) -> Unit` is expected, generic functions with written type arguments (`identity[Int]`) | a name, `alias.name`, `receiver.method` or `name[Type]` in value position | the forwarding lambda's type, throws clause included; receiver of a method reference evaluated once; `print` only with an expected `fn(T) -> Unit` (`SPR-TYPE-NOT-CALLABLE`); generic needs written arguments (`SPR-TYPE-GENERIC-ARGS-REQUIRED`); at most three parameters; Java and built-in methods stay calls; `==`/`!=` on function values rejected (`SPR-TYPE-OPERAND`) | the same `FnN` object a lambda produces; a bound receiver through `SprigRuntime.bind` | runtime 45, semantics `fnref_*`, `function_values_not_comparable` |
 | Contract classes: a class whose methods have no body is a contract; `conform C to Contract` (or `alias.Contract`) with every method matched exactly; a conforming object goes where the contract type is expected | bodiless method header inside a class; a bodiless function elsewhere is `SPR-SYNTAX-ERROR` | no fields, no mixed bodies, not constructible (`SPR-CLASS-ABSTRACT`); exact parameter/result types (`SPR-CONFORM-MEMBER`), throws no more than the contract (`SPR-CONFORM-EFFECTS`); no conversion back; non-generic in v1 | `public interface` with one abstract method per Sprig method; the class `implements` it | runtime 44, syntax 16/24, semantics `contract_*`, `conform_to_plain_class` |
 | Foreign JVM conformance `conform C to J`, and `conform C to J(field, ...) as NAME` to extend a Java class | declaration form, one per relation; parentheses name the superclass constructor fields, `as` the parent view | exact JVM witness matching, overrides matched by shape, final/static/abstract rules, `NAME.m(...)` as the inherited call, v1 restrictions, foreign conformance conversion | emitted `implements`/`extends`, `super(...)`, `@Override`, `C.super.m(...)`; non-null entry guards (`SPR-CONFORM-*`) | `tests/conform` runtime and negative suite |
-| `sprig lsp` language server (stdio) | unsaved buffers parsed in place of files | diagnostics, quick fixes from their suggested edits, hover, definition, references, symbols, completion and verified local rename from the same resolver and checker | none; formatting reuses `sprig fmt` | `tests/lsp` JSON-RPC suite; VS Code client in `editors/vscode` unit and Extension Host tests |
-| Foreign JVM conformance `conform C to J` | declaration form, one per relation | exact JVM witness matching, v1 restrictions, foreign conformance conversion | emitted `implements`; non-null entry guards (`SPR-CONFORM-*`) | `tests/conform` runtime and negative suite |
 | Functions, typed parameters/returns, recursion | yes | yes | Java static methods | runtime 01/02, visitor |
 | Indentation, blocks, `if`/`elif`/`else`, `while`, `for`, `break`/`continue` | yes | yes | Java control flow; `for x in range(...)` is a counted loop that builds no list, with bounds evaluated once and a fresh binding per iteration | runtime 03/13/32 |
 | `let`/`var`, local inference, assignment rules | yes | yes (`SPR-NAME-LET-ASSIGN`) | locals/static fields | runtime 16 |
@@ -80,9 +78,12 @@ The historical design kit in `docs/history/design-kit/` describes target semanti
 | Agent task pack | deterministic fixtures and runner under `tests/agent_eval` | acceptance is mechanical; no model run claimed | initial states fail, known solutions pass | task-pack gate |
 
 Not implemented (honest status): inference of type arguments from the expected type, variance,
-user-defined capabilities, inheritance or interfaces,
-nested/positional patterns, `%=`,
-tuples/destructuring, source array syntax/annotations in interop,
-wildcard syntax in Sprig declarations, Java generic inference, publishing/registry,
-incremental checking, self-hosting.
-See [`KNOWN_LIMITATIONS.md`](../language/known-limitations.md) for boundaries.
+user-defined capabilities, inheritance between Sprig classes, an `interface`
+keyword (a contract class is the one form of open polymorphism; see below),
+nested/positional patterns, `%=`, tuples/destructuring (a one-line class
+replaces a tuple), source array syntax/annotations in interop, wildcard syntax
+in Sprig declarations, inference of Java method type parameters through a
+lambda, `null`, a Sprig collection or the result, a hosted package registry
+with authentication (the repository registry takes publications by pull
+request), incremental checking, self-hosting.
+See [known limitations](known-limitations.md) for boundaries.

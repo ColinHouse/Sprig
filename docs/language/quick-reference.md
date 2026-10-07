@@ -103,7 +103,7 @@ all or none. Nothing is inferred from the expected type, so `lists.first([])`,
 [generics](../language/generics.md).
 
 The v0.7 design kit in `docs/history/design-kit/` includes unimplemented targets. Check
-`FEATURE_STATUS_IMPLEMENTED.md` and `KNOWN_LIMITATIONS.md` before relying on
+[feature status](feature-status.md) and [known limitations](known-limitations.md) before relying on
 an advanced feature.
 
 ## Observe generated Java

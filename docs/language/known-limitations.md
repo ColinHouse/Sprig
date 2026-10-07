@@ -44,14 +44,16 @@ by the historical design kit in `docs/history/design-kit/`.
   no JVM-level type information at runtime.
 - Local/Git Sprig and Maven JVM dependencies are resolved by `sprig resolve`,
   `sprig add` and `sprig remove`.
-  Schema-4 locks verify graph identity, manifests, owner-relative locators and
+  Schema-5 locks verify graph identity, manifests, owner-relative locators and
   JAR/POM SHA-256. Shared
   project classpaths work for check/build/run/api/doctor; only explicit
   dependency-resolution commands use Maven networking. Apache Resolver handles effective POMs and mediation.
   Missing/invalid POMs fail. Package registries are Git or local directory
-  indexes (`sprig search`, `sprig add NAME`, `sprig publish`); a hosted central
-  registry, authentication, Maven plugins
-  and non-JAR runtime artifacts remain unsupported. See `DEPENDENCIES.md`.
+  indexes (`sprig search`, `sprig add NAME`); the repository's `registry/`
+  takes publications by pull request, validated by CI (`sprig publish` writes
+  the entry). A hosted central registry, authentication, upload, Maven plugins
+  and non-JAR runtime artifacts remain unsupported. See
+  [dependencies](../projects/dependencies.md).
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
   text/time and a typed JSON model. The first-party libraries add a small
   synchronous JDK HTTP client (`sprig-http`), a synchronous HTTP server with
@@ -125,7 +127,7 @@ by the historical design kit in `docs/history/design-kit/`.
 - Floating-point operations follow Java `float`/`double` behavior. The compiler
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
-- Compiler classes use `javac --release 17`. Supported release platforms are Linux/macOS
+- Compiler classes use `javac --release 21`. Supported release platforms are Linux/macOS
   with JDK 21 and 26; Windows is an experimental, non-blocking preview; definitions are not execution evidence. The current
   release validation report records which exact source/archive gates ran.
   No production or architecture-wide portability guarantee is made.
