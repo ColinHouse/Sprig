@@ -31,6 +31,7 @@ def check(name, ok, detail=""):
     COUNT += 1
     print(("pass " if ok else "FAIL ") + name)
     if not ok:
+        print("     " + str(detail)[:1500])
         FAILURES.append(f"{name}: {detail}")
 
 
@@ -65,18 +66,51 @@ def bare_environment(work, home):
     return env
 
 
+def jdk_tool(name):
+    """jlink or jdeps: on PATH, or in the bin/ of the JDK that runs `java`."""
+    found = shutil.which(name)
+    if found:
+        return found
+    java = shutil.which("java")
+    if java:
+        home = subprocess.run([java, "-XshowSettings:properties", "-version"], capture_output=True, text=True)
+        for line in (home.stderr + home.stdout).splitlines():
+            if line.strip().startswith("java.home ="):
+                candidate = Path(line.split("=", 1)[1].strip()) / "bin" / (name + (".exe" if WINDOWS else ""))
+                if candidate.is_file():
+                    return str(candidate)
+    return None
+
+
 def launcher_of(bundle_dir, name):
     return bundle_dir / "bin" / (name + ".cmd" if WINDOWS else name)
 
 
 def run_launcher(launcher, args, env, cwd, timeout=120):
     assert not shutil.which("java", path=env["PATH"]), "java must not be reachable from the test PATH"
-    command = [env["ComSpec"], "/c", str(launcher), *args] if WINDOWS else [str(launcher), *args]
-    return subprocess.run(command, cwd=cwd, env=env, capture_output=True, timeout=timeout)
+    # The launcher path and the arguments go straight to CreateProcess, as a user or a
+    # calling program passes them; on Windows the system runs the .cmd through ComSpec.
+    # Wrapping them in an explicit `cmd /c` with each argument quoted would trigger
+    # cmd.exe's rule that strips the first and the last quote of the command line.
+    return subprocess.run([str(launcher), *args], cwd=cwd, env=env, capture_output=True, timeout=timeout)
 
 
 def decoded(result):
-    return result.stdout.decode("utf-8", "replace"), result.stderr.decode("utf-8", "replace")
+    """The streams as text; Windows line separators are normalized to LF."""
+    return (text_of(result.stdout), text_of(result.stderr))
+
+
+def text_of(data):
+    text = data.decode("utf-8", "replace")
+    return text.replace("\r\n", "\n") if WINDOWS else text
+
+
+def stop(process):
+    """Ends a launched program: on Windows the .cmd launcher's child java.exe too."""
+    if WINDOWS:
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True)
+    process.kill()
+    process.wait(timeout=20)
 
 
 def bundle(cwd, *args):
@@ -99,7 +133,7 @@ def bundle(cwd, *args):
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="sprig bundle ") as temporary:
+    with tempfile.TemporaryDirectory(prefix="sprig bundle ", ignore_cleanup_errors=WINDOWS) as temporary:
         work = Path(temporary)
         home = work / "home with spaces"
         home.mkdir()
@@ -121,7 +155,7 @@ def main():
         out, err = decoded(result)
         check("hello-runs-without-java", result.returncode == 0 and out == "hello, 世界\n" and err == "",
               f"exit={result.returncode} out={out!r} err={err!r}")
-        archive_cache = home / ".cache" / "sprig" / "bundles"
+        archive_cache = home / ("sprig" if WINDOWS else ".cache/sprig") / "bundles"
         # -XX:+AutoCreateSharedArchive exists since JDK 19; the report says whether the
         # launchers use it, and the archive appears only then.
         feature = int(hello_data["javaVersion"].split(".")[0].split("-")[0])
@@ -129,7 +163,7 @@ def main():
         launcher_text = launcher_of(hello_bundle, "hello").read_text(encoding="utf-8")
         check("launcher-flags-match-jdk", ("AutoCreateSharedArchive" in launcher_text) == hello_data["launcherCdsArchive"],
               launcher_text)
-        if not WINDOWS and hello_data["launcherCdsArchive"]:
+        if hello_data["launcherCdsArchive"]:
             check("cds-archive-created", any(archive_cache.rglob("app.jsa")), list(home.rglob("*")))
         again = run_launcher(launcher_of(hello_bundle, "hello"), [], env, elsewhere)
         check("hello-second-run", again.returncode == 0 and decoded(again)[0] == "hello, 世界\n", decoded(again))
@@ -230,8 +264,7 @@ if args.size() > 2:
                     body = response.read().decode("utf-8")
                     check("web-server-answers", response.status == 200 and body == "Hello, 你好!", body)
         finally:
-            server.kill()
-            server.wait(timeout=20)
+            stop(server)
             server.stdout.close()
 
         # --archive: a ZIP next to the bundle with Unix modes, runnable after unpacking
@@ -244,8 +277,9 @@ if args.size() > 2:
             names = zipped.namelist()
             executables = {info.filename for info in zipped.infolist()
                            if not info.filename.endswith("/") and (info.external_attr >> 16) & 0o111}
+            java_binary = "hello/runtime/bin/java" + (".exe" if WINDOWS else "")
             check("archive-records-unix-modes", "hello/bin/hello" in executables
-                  and "hello/runtime/bin/java" in executables
+                  and java_binary in executables
                   and all(info.create_system == 3 for info in zipped.infolist())
                   and "hello/runtime/legal/java.base/LICENSE" in names,
                   sorted(executables)[:5])
@@ -278,9 +312,9 @@ if args.size() > 2:
 
         # A JRE (no jdeps, no jlink) is refused with the tools code: the compiler runs on a
         # jlink image of its own modules, built here from the running JDK.
-        jlink = shutil.which("jlink")
-        jdeps = shutil.which("jdeps")
-        if jlink and jdeps and not WINDOWS:
+        jlink = jdk_tool("jlink")
+        jdeps = jdk_tool("jdeps")
+        if jlink and jdeps:
             compiler_jars = [str(ROOT / "build/sprig-compiler.jar"), *map(str, (ROOT / "build/deps").glob("*.jar")),
                              *map(str, (ROOT / "build/deps/resolver").glob("*.jar"))]
             tool_env = {k: v for k, v in os.environ.items() if k != "JAVA_TOOL_OPTIONS"}
@@ -309,7 +343,7 @@ if args.size() > 2:
                       and not (hello / out_dir / "hello" / "runtime").exists(),
                       f"exit={probe.returncode} codes={codes} {probe.stdout[:300]} {probe.stderr[:300]}")
         else:
-            print("skip jre-refused-with-tools-code: jlink/jdeps not on PATH")
+            print("skip jre-refused-with-tools-code: jlink/jdeps not found next to java")
 
     print(f"bundle: {COUNT - len(FAILURES)} passed, {len(FAILURES)} failed")
     for failure in FAILURES:

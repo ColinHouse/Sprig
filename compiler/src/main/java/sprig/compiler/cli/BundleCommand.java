@@ -318,10 +318,21 @@ final class BundleCommand {
                 + plain;
     }
 
+    /**
+     * A bundled program's standard streams are UTF-8 on every platform, as the
+     * POSIX launcher makes them and as {@code sprig run} makes captured output.
+     * Without the stream properties a Windows JVM encodes them in the console
+     * code page (GBK, Cp1252), so non-ASCII output through a pipe or a redirect
+     * was mojibake; a legacy console needs {@code chcp 65001} to display UTF-8.
+     */
+    private static final String WINDOWS_JAVA_OPTIONS =
+            "-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8";
+
     private static String windowsLauncher(String name, String mainClass, String stamp, boolean cdsArchive) {
         // CRLF, delayed expansion off: an inherited delayed-expansion state would
         // strip '!' from forwarded arguments and the bundle path.
-        String plain = "\"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n";
+        String plain = "\"%HERE%\\runtime\\bin\\java.exe\" " + WINDOWS_JAVA_OPTIONS
+                + " -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n";
         String head = "@echo off\r\n"
                 + "setlocal DisableDelayedExpansion\r\n"
                 + "for %%I in (\"%~dp0..\") do set \"HERE=%%~fI\"\r\n";
@@ -332,7 +343,7 @@ final class BundleCommand {
                 + "set \"CACHE=%LOCALAPPDATA%\\sprig\\bundles\\" + name + "-" + stamp + "\\%KEY%\"\r\n"
                 + "if not \"%LOCALAPPDATA%\"==\"\" if not exist \"%CACHE%\" mkdir \"%CACHE%\" >nul 2>&1\r\n"
                 + "if exist \"%CACHE%\" (\r\n"
-                + "  \"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%CACHE%\\app.jsa\" -Xshare:auto -Xlog:disable \"-Xlog:all=error,cds*=off:stderr\" -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n"
+                + "  \"%HERE%\\runtime\\bin\\java.exe\" " + WINDOWS_JAVA_OPTIONS + " -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%CACHE%\\app.jsa\" -Xshare:auto -Xlog:disable \"-Xlog:all=error,cds*=off:stderr\" -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n"
                 + ") else (\r\n"
                 + "  " + plain
                 + ")\r\n"
@@ -342,7 +353,10 @@ final class BundleCommand {
     private static String readme(String name, String mainClass, Result result) {
         return name + ": a self-contained Sprig program.\n\n"
                 + "Run bin/" + name + " (Linux, macOS) or bin\\" + name + ".cmd (Windows). No Java installation is needed.\n"
-                + "This bundle " + platformNote() + ".\n\n"
+                + "This bundle " + platformNote() + ".\n"
+                + "Standard output and error are UTF-8; a Windows console that shows other text garbled needs 'chcp 65001'.\n"
+                + "Another program starting bin\\" + name + ".cmd passes the launcher path and the arguments directly;\n"
+                + "wrapping them in 'cmd /c' with quoted arguments makes cmd.exe strip the quotes (its documented rule).\n\n"
                 + "lib/      the program (" + name + ".jar, main class " + mainClass + "), the Sprig runtime and the program's JARs\n"
                 + "runtime/  a Java runtime image (jlink) with the modules " + String.join(", ", result.modules) + ";\n"
                 + "          runtime/legal/ holds the JDK's license notices (GPLv2 with the Classpath Exception) and must stay with it\n"
