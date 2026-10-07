@@ -38,5 +38,5 @@ processResources {
 }
 
 sprig {
-    targetSourceSet = 'client'
+    targetSourceSet = 'main'
 }

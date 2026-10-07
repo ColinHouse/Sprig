@@ -24,25 +24,28 @@ cd my-mod
 ```
 
 The template is the complete, version-pinned project. Its `build.gradle`
-applies `dev.sprig` and selects `client`; Fabric dependencies, Java release and
-source-set membership stay visible as normal Loom configuration. There are no
-consumer-defined Sprig tasks or manually assembled classpaths.
+applies `dev.sprig` and selects `main`, the common source set, so the Sprig
+code is visible to the server-side item registration and to the client entry
+point alike; Fabric dependencies, Java release and source-set membership stay
+visible as normal Loom configuration. There are no consumer-defined Sprig
+tasks or manually assembled classpaths.
 
 ## Template layout
 
 | Path | Role |
 |---|---|
-| `src/main.spr` | Sprig counter state and implementation of `CounterActions`. |
+| `src/main.spr` | Sprig counter state implementing `CounterActions`, and the `Wand` item class that extends `Item` (`conform Wand to Item(properties) as parent`). |
 | `tests/counter.spr` | Sprig unit test run by Gradle `check`. |
 | `src/sprigBridge/java/` | Small Java interface consumed by Sprig. |
+| `src/main/java/` | Fabric main initializer registering the Sprig wand (`Registry.register` stays in Java). |
 | `src/client/java/` | Fabric client initializer and tick callback. |
-| `src/main/resources/fabric.mod.json` | Client-only mod metadata. |
+| `src/main/resources/` | Mod metadata and the wand's model and name. |
 | `sprig.toml`, `sprig.lock` | Explicit project and dependency state. |
 
 `./gradlew check` statically checks the Sprig source and runs its tests. `build`
 generates and compiles Java plus runtime and bridge sources before Loom packages
 the mod. `runClient` uses the same generated source set. Generated Java stays
-under `build/generated/sprig/client/java/` for inspection.
+under `build/generated/sprig/main/java/` for inspection.
 
 ## Verified version combination
 

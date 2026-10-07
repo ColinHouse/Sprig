@@ -80,16 +80,47 @@ public abstract class SprigTask extends DefaultTask {
     /** The ordered, platform-separated classpath is an input as order affects JVM lookup. */
     @Input
     public String getSprigClasspathArgument() {
-        if (sprigClasspath == null) {
-            return "";
+        return String.join(File.pathSeparator, classpathEntries());
+    }
+
+    /**
+     * The existing classpath entries, in order. Java source sets include
+     * their output directories on their own classpath. A clean NO-SOURCE
+     * output may not exist yet; javac treats it as empty, but Sprig correctly
+     * rejects nonexistent entries. Keep host dependencies and any output
+     * directory already built by Gradle.
+     */
+    private List<String> classpathEntries() {
+        List<String> entries = new ArrayList<>();
+        if (sprigClasspath != null) {
+            for (File file : sprigClasspath.getFiles()) {
+                if (file.exists()) {
+                    entries.add(file.getAbsolutePath());
+                }
+            }
         }
-        // Java source sets include their output directories on their own
-        // classpath. A clean NO-SOURCE output may not exist yet; javac treats
-        // it as empty, but Sprig correctly rejects nonexistent entries. Keep
-        // host dependencies and any output directory already built by Gradle.
-        return sprigClasspath.getFiles().stream().filter(File::exists)
-                .map(File::getAbsolutePath)
-                .reduce((left, right) -> left + File.pathSeparator + right).orElse("");
+        return entries;
+    }
+
+    /**
+     * Hands the classpath to the compiler through a file, one entry per line:
+     * a Loom classpath of several hundred JARs exceeds the Windows
+     * command-line limit when passed as one --classpath argument.
+     */
+    protected void addClasspathArguments(List<String> arguments) {
+        List<String> entries = classpathEntries();
+        if (entries.isEmpty()) {
+            return;
+        }
+        File listing = new File(getTemporaryDir(), "classpath.txt");
+        try {
+            java.nio.file.Files.writeString(listing.toPath(),
+                    String.join(System.lineSeparator(), entries) + System.lineSeparator(), StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new GradleException("Could not write the Sprig classpath file " + listing + ": " + e.getMessage(), e);
+        }
+        arguments.add("--classpath-file");
+        arguments.add(listing.getAbsolutePath());
     }
 
     @Classpath

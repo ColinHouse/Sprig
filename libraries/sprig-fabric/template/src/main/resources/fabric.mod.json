@@ -3,9 +3,10 @@
   "id": "sprig_counter",
   "version": "${version}",
   "name": "Sprig Fabric Counter",
-  "description": "A small Fabric client mod with Sprig-owned counter state.",
-  "environment": "client",
+  "description": "A small Fabric mod with Sprig-owned state: a client tick counter and a wand item whose behaviour is written in Sprig.",
+  "environment": "*",
   "entrypoints": {
+    "main": ["dev.sprig.fabric.SprigItems"],
     "client": ["dev.sprig.fabric.SprigCounterClient"]
   },
   "depends": {

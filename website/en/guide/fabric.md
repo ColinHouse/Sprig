@@ -33,7 +33,7 @@ plugins {
 }
 
 sprig {
-    targetSourceSet = 'client'
+    targetSourceSet = 'main'
 }
 ```
 
@@ -43,11 +43,12 @@ Fabric dependencies, split source sets, the mod entry point and the Java version
 
 | Path | What goes there |
 |---|---|
-| `src/main.spr` | State and logic written in Sprig |
+| `src/main.spr` | State and logic written in Sprig: the tick counter and a `Wand` item class that extends `Item` |
 | `tests/*.spr` | Project tests, run by `sprigTest` |
 | `src/sprigBridge/java/` | A thin Java interface for Sprig to call; a Sprig class can also implement a Java interface or extend a Java class directly with `conform` (see the [conformance reference](/en/reference/jvm/conformance)) |
+| `src/main/java/` | The Fabric main entry point, which registers the Sprig wand item |
 | `src/client/java/` | The Fabric client entry point and callback registration |
-| `build/generated/sprig/client/java/` | The generated Java, which you can read |
+| `build/generated/sprig/main/java/` | The generated Java, which you can read |
 
 Gradle and Loom handle dependencies, source sets, javac and the jar. Sprig handles type checking, code generation, lock validation and the Sprig tests. The plugin connects the two. Dependencies never update by themselves: `check` and `build` only read the current `sprig.lock`, and only an explicit `./gradlew sprigResolve` updates it.
 
