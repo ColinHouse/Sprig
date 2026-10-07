@@ -99,7 +99,41 @@ Rules:
 
 [VS Code 插件](/guide/editor)提供高亮、保存时检查和一键运行，背后是 `sprig lsp` 语言服务器。诊断、悬停、跳转到定义都来自同一个编译器，和命令行看到的完全一致。
 
-## 15.7 和 AI 助手一起写
+## 15.7 打包成不依赖 Java 的程序：build --bundle
+
+`sprig run` 每次都会启动编译器、检查程序再运行。交付给别人的程序用 `sprig build --bundle`：它把程序、Sprig 运行时、锁定的全部依赖和一个裁剪过的 Java 运行时放进一个目录，拿到没装 Java 的机器上也能跑。
+
+```text
+sprig build --bundle                   # 项目的入口，输出到 sprig-build/<项目名>/
+sprig build app.spr --bundle -d dist   # 单个文件，输出到 dist/app/
+sprig build --bin server --bundle      # 项目里的某一个 bin
+sprig build --bundle --archive         # 再打一个 sprig-build/<名字>.zip
+sprig build --bundle --json            # 以 JSON 列出路径、模块和大小
+```
+
+输出目录的结构：
+
+```text
+sprig-build/<名字>/
+  bin/<名字>            Linux、macOS 的启动脚本
+  bin/<名字>.cmd        Windows 的启动脚本
+  lib/<名字>.jar        程序自己的类
+  lib/sprig-runtime.jar
+  lib/*.jar             锁定的 classpath 里的每个 JAR，Maven 依赖也在内
+  runtime/              jlink 生成的 Java 运行时，只含用到的模块
+  runtime/legal/        JDK 的许可声明，原样保留
+  README.txt
+```
+
+- 程序先被检查、编译；有错误就什么都不写，打包过程也不会运行程序。
+- 启动脚本在调用者的当前目录运行程序，原样转发所有参数（含空格和 UTF-8），退出码就是程序的退出码；标准输出是 UTF-8。
+- `runtime/` 由 `jdeps` 分析 `lib/` 里的 JAR 用到哪些 Java 模块，再由 `jlink` 生成。一个只 `print("hello")` 的程序，`lib/` 不到 100 KB，`runtime/` 约 68 MB，`--archive` 的 zip 约 32 MB；预热后启动只要几十毫秒，`sprig run` 则要几百毫秒。
+- 运行时镜像只能在生成它的操作系统和 CPU 架构上运行：Linux x86-64 上打的包不能拿到 macOS 或 ARM Linux 上用。要给每个平台各打一次；`README.txt` 里写着它是哪个平台的。
+- 打包需要运行 `sprig` 的 JDK 是完整的 JDK（有 `jdeps`、`jlink` 和 `jmods/` 目录），而不是 JRE。缺少时报 `SPR-BUNDLE-TOOLS`，`sprig doctor` 能看到当前用的是哪个安装；`jdeps` 分析失败是 `SPR-BUNDLE-JDEPS`，`jlink` 失败或 classpath 条目不存在是 `SPR-BUNDLE-LAYOUT`，每条都带修法。
+
+不做的事：跨平台打包、GraalVM 原生镜像、安装包（`jpackage`）。详见 [`docs/projects/bundle.md`](https://github.com/ColinHouse/Sprig/blob/main/docs/projects/bundle.md)。
+
+## 15.8 和 AI 助手一起写
 
 Sprig 从设计之初就考虑了 AI 编程助手作为主要用户之一。几条经验：
 
@@ -115,5 +149,6 @@ Sprig 从设计之初就考虑了 AI 编程助手作为主要用户之一。几�
 - `check` 看错误，`explain` 看错误码，`help` 看语法，`api` 看签名。
 - 全部支持 `--json`，结构里有错误码、位置、类型、修法。
 - `capabilities` 告诉你语言有什么和没有什么。
+- `build --bundle` 把程序和它自己的 Java 运行时打成一个目录，交付时不用对方装 Java。
 
 最后一章把全书的内容合成一个程序：[项目：记账小工具](/tutorial/ch16-project-ledger)。

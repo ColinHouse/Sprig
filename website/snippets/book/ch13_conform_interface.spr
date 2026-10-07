@@ -1,0 +1,16 @@
+import java.lang.Runnable as Runnable
+import java.lang.Thread as Thread
+
+class Greeter:
+    let name: String
+
+    func run() -> Unit:
+        print("hi " + name)
+
+conform Greeter to Runnable
+
+let task: Runnable = Greeter(name="ada")
+task.run()
+let thread = Thread(task)
+thread.start()
+thread.join()

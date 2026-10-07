@@ -1,0 +1,8 @@
+let n = 300
+print(n.toInt32Exact())
+print(n.toFloat())
+let f = 2.75
+print(f.toIntTrunc())
+let a = 3
+print(a.compareTo(5))
+print("pear".compareTo("apple") > 0)

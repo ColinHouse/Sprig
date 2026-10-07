@@ -1,0 +1,23 @@
+import "@std/concurrent.spr" as concurrent
+
+func parse_count(text: String) -> Int throws Error:
+    let n = text.toIntOrNull()
+    if n == null:
+        throw Error("not a number: " + text)
+    return n
+
+# 任务体不能有 throws，所以在它调用的具名函数里把错误处理掉。
+func count_or_zero(text: String) -> Int:
+    try:
+        return parse_count(text)
+    catch problem: Error:
+        print("skipped: " + problem.message)
+        return 0
+
+func count_all(s: concurrent.Scope) -> List[Int] throws Error:
+    let tasks: MutableList[concurrent.Task[Int]] = []
+    for text in ["3", "x", "5"]:
+        tasks.append(concurrent.spawn(s, fn() => count_or_zero(text)))
+    return concurrent.await_all(tasks)
+
+print(concurrent.scope(count_all))

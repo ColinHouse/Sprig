@@ -1,0 +1,9 @@
+import java.util.Random as Random
+
+class Counting:
+    let seed: Int
+
+    func next(bits: Int) -> Int:
+        return 4
+
+conform Counting to Random(seed) as parent

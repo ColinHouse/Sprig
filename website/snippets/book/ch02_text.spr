@@ -1,0 +1,6 @@
+import "@std/text.spr" as text
+
+print(text.fixed(2.0 / 3.0, 2))
+print(text.pad_left("7", 3, "0"))
+print(text.pad_right("ab", 4, ".") + "|")
+print(text.join(["a", "b", "c"], "-"))

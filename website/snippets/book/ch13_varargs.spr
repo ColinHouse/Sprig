@@ -1,0 +1,8 @@
+import java.lang.String as JString
+import java.nio.file.Paths as Paths
+
+print(JString.format("%s-%d", "order", 7))
+print(JString.format("no arguments"))
+let path = Paths.get("home", "ada", "notes.txt")
+if path != null:
+    print(path.getFileName())
