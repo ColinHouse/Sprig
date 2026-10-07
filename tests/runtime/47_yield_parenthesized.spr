@@ -1,0 +1,166 @@
+# A branch value that starts with '(' and holds a generic witness with a comma
+# compiles: yield goes through a local (#154).
+enum C:
+    A
+    B
+func m(c: C) -> Int:
+    return match c:
+        case C.A:
+            ({"k": 4}).size()
+        case C.B:
+            7
+print(m(C.A))
+print(m(C.B))
+let v = match C.B:
+    case C.A:
+        ({"k": 1, "j": 2}).size()
+    case C.B:
+        {"only": 1}.size()
+print(v)
+func long(n: Int) -> Int:
+    return if n == 0:
+        ({"k": 0}).size()
+    elif n == 1:
+        ({"k": 1, "j": 1}).size() + 1
+    elif n == 2:
+        ({"k": 2, "j": 2}).size() + 2
+    elif n == 3:
+        ({"k": 3, "j": 3}).size() + 3
+    elif n == 4:
+        ({"k": 4, "j": 4}).size() + 4
+    elif n == 5:
+        ({"k": 5, "j": 5}).size() + 5
+    elif n == 6:
+        ({"k": 6, "j": 6}).size() + 6
+    elif n == 7:
+        ({"k": 7, "j": 7}).size() + 7
+    elif n == 8:
+        ({"k": 8, "j": 8}).size() + 8
+    elif n == 9:
+        ({"k": 9, "j": 9}).size() + 9
+    elif n == 10:
+        ({"k": 10, "j": 10}).size() + 10
+    elif n == 11:
+        ({"k": 11, "j": 11}).size() + 11
+    elif n == 12:
+        ({"k": 12, "j": 12}).size() + 12
+    elif n == 13:
+        ({"k": 13, "j": 13}).size() + 13
+    elif n == 14:
+        ({"k": 14, "j": 14}).size() + 14
+    elif n == 15:
+        ({"k": 15, "j": 15}).size() + 15
+    elif n == 16:
+        ({"k": 16, "j": 16}).size() + 16
+    elif n == 17:
+        ({"k": 17, "j": 17}).size() + 17
+    elif n == 18:
+        ({"k": 18, "j": 18}).size() + 18
+    elif n == 19:
+        ({"k": 19, "j": 19}).size() + 19
+    elif n == 20:
+        ({"k": 20, "j": 20}).size() + 20
+    elif n == 21:
+        ({"k": 21, "j": 21}).size() + 21
+    elif n == 22:
+        ({"k": 22, "j": 22}).size() + 22
+    elif n == 23:
+        ({"k": 23, "j": 23}).size() + 23
+    elif n == 24:
+        ({"k": 24, "j": 24}).size() + 24
+    elif n == 25:
+        ({"k": 25, "j": 25}).size() + 25
+    elif n == 26:
+        ({"k": 26, "j": 26}).size() + 26
+    elif n == 27:
+        ({"k": 27, "j": 27}).size() + 27
+    elif n == 28:
+        ({"k": 28, "j": 28}).size() + 28
+    elif n == 29:
+        ({"k": 29, "j": 29}).size() + 29
+    elif n == 30:
+        ({"k": 30, "j": 30}).size() + 30
+    elif n == 31:
+        ({"k": 31, "j": 31}).size() + 31
+    elif n == 32:
+        ({"k": 32, "j": 32}).size() + 32
+    elif n == 33:
+        ({"k": 33, "j": 33}).size() + 33
+    elif n == 34:
+        ({"k": 34, "j": 34}).size() + 34
+    elif n == 35:
+        ({"k": 35, "j": 35}).size() + 35
+    elif n == 36:
+        ({"k": 36, "j": 36}).size() + 36
+    elif n == 37:
+        ({"k": 37, "j": 37}).size() + 37
+    elif n == 38:
+        ({"k": 38, "j": 38}).size() + 38
+    elif n == 39:
+        ({"k": 39, "j": 39}).size() + 39
+    elif n == 40:
+        ({"k": 40, "j": 40}).size() + 40
+    elif n == 41:
+        ({"k": 41, "j": 41}).size() + 41
+    elif n == 42:
+        ({"k": 42, "j": 42}).size() + 42
+    elif n == 43:
+        ({"k": 43, "j": 43}).size() + 43
+    elif n == 44:
+        ({"k": 44, "j": 44}).size() + 44
+    elif n == 45:
+        ({"k": 45, "j": 45}).size() + 45
+    elif n == 46:
+        ({"k": 46, "j": 46}).size() + 46
+    elif n == 47:
+        ({"k": 47, "j": 47}).size() + 47
+    elif n == 48:
+        ({"k": 48, "j": 48}).size() + 48
+    elif n == 49:
+        ({"k": 49, "j": 49}).size() + 49
+    elif n == 50:
+        ({"k": 50, "j": 50}).size() + 50
+    elif n == 51:
+        ({"k": 51, "j": 51}).size() + 51
+    elif n == 52:
+        ({"k": 52, "j": 52}).size() + 52
+    elif n == 53:
+        ({"k": 53, "j": 53}).size() + 53
+    elif n == 54:
+        ({"k": 54, "j": 54}).size() + 54
+    elif n == 55:
+        ({"k": 55, "j": 55}).size() + 55
+    elif n == 56:
+        ({"k": 56, "j": 56}).size() + 56
+    elif n == 57:
+        ({"k": 57, "j": 57}).size() + 57
+    elif n == 58:
+        ({"k": 58, "j": 58}).size() + 58
+    elif n == 59:
+        ({"k": 59, "j": 59}).size() + 59
+    elif n == 60:
+        ({"k": 60, "j": 60}).size() + 60
+    elif n == 61:
+        ({"k": 61, "j": 61}).size() + 61
+    elif n == 62:
+        ({"k": 62, "j": 62}).size() + 62
+    elif n == 63:
+        ({"k": 63, "j": 63}).size() + 63
+    elif n == 64:
+        ({"k": 64, "j": 64}).size() + 64
+    elif n == 65:
+        ({"k": 65, "j": 65}).size() + 65
+    elif n == 66:
+        ({"k": 66, "j": 66}).size() + 66
+    elif n == 67:
+        ({"k": 67, "j": 67}).size() + 67
+    elif n == 68:
+        ({"k": 68, "j": 68}).size() + 68
+    elif n == 69:
+        ({"k": 69, "j": 69}).size() + 69
+    else:
+        (-1)
+print(long(0))
+print(long(5))
+print(long(69))
+print(long(100))

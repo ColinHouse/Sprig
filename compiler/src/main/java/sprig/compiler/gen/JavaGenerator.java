@@ -1334,11 +1334,22 @@ public final class JavaGenerator {
     private String emitLongIfExpression(Expr.If expr, String resultJava) {
         StringBuilder code = new StringBuilder("((").append(resultJava).append(") (switch (0) { default -> { ");
         for (int i = 0; i < expr.conditions.size(); i++) {
-            code.append("if (").append(emitExpr(expr.conditions.get(i))).append(") { yield ")
-                    .append(ifBranchValue(expr.values.get(i), expr.type, resultJava)).append("; } ");
+            code.append("if (").append(emitExpr(expr.conditions.get(i))).append(") { ")
+                    .append(yieldStatement(resultJava, ifBranchValue(expr.values.get(i), expr.type, resultJava))).append("} ");
         }
-        code.append("yield ").append(ifBranchValue(expr.elseValue, expr.type, resultJava)).append("; } }))");
+        code.append(yieldStatement(resultJava, ifBranchValue(expr.elseValue, expr.type, resultJava))).append("} }))");
         return code.toString();
+    }
+
+    /**
+     * A yield whose value never starts with '(': javac reads {@code yield (…)}
+     * as a call of a method named yield when the parentheses can be an argument
+     * list, as with {@code (Map.<K, V>of(…)).size()}, and rejects the restricted
+     * identifier. The value goes through a local first.
+     */
+    private String yieldStatement(String resultJava, String value) {
+        String temp = freshTemp("yieldValue");
+        return resultJava + " " + temp + " = " + value + "; yield " + temp + "; ";
     }
 
     private String ifBranchValue(Expr value, Type resultType, String resultJava) {
@@ -1362,7 +1373,7 @@ public final class JavaGenerator {
             }
             if (concrete && branch.binderSymbol != null) code.append(javaType(branch.binderType)).append(" ").append(localName(branch.binderSymbol)).append(" = ").append(temp).append("; ");
             Expr value = ((Stmt.ExprStmt)branch.body.get(0)).expr;
-            code.append("yield ").append(convertedExpression(value,expr.type)).append("; } ");
+            code.append(yieldStatement(javaType(expr.type), convertedExpression(value, expr.type))).append("} ");
         }
         if (!concrete) code.append("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\"); ");
         return code.append("} }))").toString();
