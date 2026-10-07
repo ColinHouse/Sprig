@@ -140,6 +140,26 @@ def main():
           and arrays[0]["interopLevel"] == "opaque-array"
           and arrays[0]["adaptation"]["kind"] == "byte-array"
           and "array-source-syntax-unavailable" in arrays[0]["interopReasonCodes"])
+    # Protected methods a subclass overrides (Random.next) are listed apart
+    # from the calls a value offers; interfaces and final classes have none.
+    random_api = obj(run("api", "java.util.Random", "--json"))
+    protected = {m["name"]: m for m in random_api["protectedMethods"]}
+    check("api-protected-methods", "next" in protected and protected["next"]["access"] == "protected"
+          and protected["next"]["final"] is False
+          and protected["next"]["sprigSignature"] == "next(Int32) -> Int32"
+          and "as NAME" in protected["next"]["reachedThrough"]
+          and not any(m["name"] == "next" for m in random_api["instanceMethods"]))
+    check("api-instance-access", all(m["access"] == "public" for m in random_api["instanceMethods"])
+          and any(m["name"] == "getClass" and m["final"] for m in random_api["instanceMethods"])
+          and any(m["name"] == "nextInt" and not m["final"] for m in random_api["instanceMethods"]))
+    check("api-protected-none-for-final-or-interface",
+          obj(run("api", "java.lang.String", "--json"))["protectedMethods"] == []
+          and obj(run("api", "java.lang.Runnable", "--json"))["protectedMethods"] == [])
+    next_only = obj(run("api", "java.util.Random", "--member", "next", "--json"))
+    check("api-member-protected", [m["name"] for m in next_only["protectedMethods"]] == ["next"]
+          and next_only["instanceMethods"] == [] and next_only["memberCount"] == 1)
+    check("api-text-protected", "protectedMethods (in a class declared with 'conform C to Random(...) as NAME'"
+          in run("api", "java.util.Random").stdout)
 
     with tempfile.TemporaryDirectory(prefix="sprig-field-order-") as tmp:
         directory = Path(tmp)

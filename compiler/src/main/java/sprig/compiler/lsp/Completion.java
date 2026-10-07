@@ -164,6 +164,12 @@ final class Completion {
                 case CLASS -> {
                     return;
                 }
+                case PARENT_VIEW -> {
+                    if (symbol.owner != null && symbol.owner.superclass != null) {
+                        parentMembers(symbol.owner.superclass);
+                    }
+                    return;
+                }
                 default -> {
                     Type type = receiver.type != null ? receiver.type : symbol.type;
                     if (type != null && !type.isError()) {
@@ -277,6 +283,33 @@ final class Completion {
                 }
                 sorted.putIfAbsent(method.getName(), item(method.getName(), METHOD,
                         clazz.getSimpleName() + "." + method.getName() + "(...)", "1"));
+            }
+        } catch (LinkageError | SecurityException e) {
+            return;
+        }
+        items.putAll(sorted);
+    }
+
+    /**
+     * The parent view of {@code conform C to J(...) as NAME} calls the
+     * inherited public and protected methods of J's chain, never an abstract
+     * or a static one.
+     */
+    private void parentMembers(Class<?> superclass) {
+        Map<String, Map<String, Object>> sorted = new TreeMap<>();
+        try {
+            for (Method method : JvmMetadata.inheritable(superclass)) {
+                int modifiers = method.getModifiers();
+                if (Modifier.isStatic(modifiers) || Modifier.isAbstract(modifiers) || method.isSynthetic()
+                        || method.isBridge()
+                        || (method.getDeclaringClass() == Object.class
+                            && !Set.of("toString", "equals", "hashCode").contains(method.getName()))
+                        || !JvmMetadata.support(method).usable()) {
+                    continue;
+                }
+                sorted.putIfAbsent(method.getName(), item(method.getName(), METHOD,
+                        (Modifier.isProtected(modifiers) ? "protected " : "") + superclass.getSimpleName() + "."
+                                + method.getName() + "(...)", "1"));
             }
         } catch (LinkageError | SecurityException e) {
             return;

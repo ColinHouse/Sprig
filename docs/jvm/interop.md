@@ -47,6 +47,14 @@ field means only that binding/emission is possible, not that a generic contract
 is safe. Reflected public fields are ordered by field name and then full Java
 signature; inherited fields hidden by a same-named declaration remain visible
 as distinct rows in that deterministic order.
+Instance methods carry `access` (`public` or `protected`) and `final`.
+`protectedMethods` lists the protected instance methods of a non-final class
+and its superclasses, such as `java.util.Random.next(int)`. A Sprig program
+cannot call them on a value, but a class declared with
+`conform C to J(...) as NAME` overrides them by signature and calls the
+inherited version as `NAME.m(...)` (see [the parent view](conformance.md)).
+The list is empty for interfaces and final classes, and `--member` filters it
+like the other categories.
 Java reference and
 boxed return values are conservatively nullable, except `toString()`, whose
 `String` result is non-null by `Object`'s contract. Java reference parameters,

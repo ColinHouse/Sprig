@@ -148,6 +148,8 @@ sprig api java.time.LocalDate --member parse
 sprig api com.example.Client --classpath lib/client.jar --json
 ```
 
+Want to extend a Java class and override a protected method, like `next` of `java.util.Random`? It isn't in the public lists; `sprig api java.util.Random --member next` shows it under `protectedMethods`. Override it with the same signature in a class declared with `conform C to Random(seed) as parent`, and call the inherited version as `parent.next(bits)`.
+
 If you use a Java class a lot, `sprig wrap` can generate a Sprig wrapper file for it. The result is ordinary source code that you're free to edit:
 
 ```bash
