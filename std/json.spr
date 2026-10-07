@@ -90,7 +90,7 @@ class Reader:
     # Internal: consumes the token at the offset, or fails with
     # "expected <token>".
     func expect(token: String) -> Unit throws Error:
-        if source.substring(offset, source.length()).length() < token.length():
+        if offset + token.length() > source.length():
             fail("expected " + token)
         if source.substring(offset, offset + token.length()) != token:
             fail("expected " + token)
