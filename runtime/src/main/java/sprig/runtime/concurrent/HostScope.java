@@ -70,8 +70,8 @@ public final class HostScope {
      * Exactly one party marks a task as ended: its body, which claims the task
      * when it starts and counts the latch down in its finally, or, when the
      * task completed without running its body (cancelled while queued, or
-     * dropped by a pool's shutdownNow), the task's completion. A task cancelled
-     * while its body runs is still waited for until the body returns.
+     * by a pool's shutdownNow before it ran), the task's completion. A task
+     * cancelled while its body runs is still waited for until the body returns.
      */
     private <T> HostTask<T> start(HostPool pool, Fn0<T> work) {
         CountDownLatch done = new CountDownLatch(1);
@@ -83,9 +83,15 @@ public final class HostScope {
                 done.countDown();
             }
         };
-        HostTask<T> task = pool == null ? HostTask.startOn(virtual, guarded, endedUnstarted)
-                : pool.submit(guarded, endedUnstarted);
+        HostTask<T> task = HostTask.prepare(guarded, endedUnstarted);
+        // Known to its body before it can run: a pool's shutdownNow() may cancel
+        // the task as soon as it is queued, and the body must see that request.
         self[0] = task;
+        if (pool == null) {
+            task.startOn(virtual);
+        } else {
+            pool.start(task);
+        }
         tasks.add(new Owned(task, done));
         taskCount.incrementAndGet();
         return task;

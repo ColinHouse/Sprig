@@ -47,8 +47,8 @@ generic T:
             return inner.cancel()
 
         # True when the task was cancelled before it finished: by cancel(), by
-        # its scope (cancel_all() or a failure elsewhere in it), or while queued
-        # by its pool's shutdown_now(). False for a task that failed by itself.
+        # its scope (cancel_all() or a failure elsewhere in it), or by its
+        # pool's shutdown_now(). False for a task that failed by itself.
         func is_cancelled() -> Bool:
             return inner.isCancelled()
 
@@ -157,8 +157,9 @@ class Pool:
     func shutdown() -> Unit:
         inner.shutdown()
 
-    # Stops accepting tasks and interrupts the running ones; tasks still queued
-    # are cancelled and never run.
+    # Stops accepting tasks and cancels the ones the pool still has, as
+    # cancel() does: running tasks are interrupted and queued ones never run.
+    # Like any requested cancellation, that is not a failure of their scope.
     func shutdown_now() -> Unit:
         inner.shutdownNow()
 
