@@ -2,9 +2,9 @@ package sprig.runtime.concurrent;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -27,9 +27,9 @@ public final class HostTask<T> {
         return thread;
     };
 
-    private final Future<T> future;
+    private final FutureTask<T> future;
 
-    HostTask(Future<T> future) {
+    private HostTask(FutureTask<T> future) {
         this.future = future;
     }
 
@@ -37,18 +37,14 @@ public final class HostTask<T> {
         return FACTORY;
     }
 
-    static <T> HostTask<T> startOn(ExecutorService executor, Fn0<T> work) {
-        return startOn(executor, work, null);
-    }
-
     /**
-     * Starts work; {@code whenComplete} runs once the task is complete in any
-     * way, including a cancellation before its body ever ran (a cancelled
-     * FutureTask never calls its body, so a body's own finally cannot report
-     * that). Executors.newVirtualThreadPerTaskExecutor and the pool's fixed
-     * executor both run the FutureTask given to execute().
+     * A task that has not started: {@link #startOn} or a pool starts it, so
+     * its owner can keep the task before its body can run. {@code whenComplete}
+     * runs once the task is complete in any way, including a cancellation
+     * before its body ever ran (a cancelled FutureTask never calls its body, so
+     * a body's own finally cannot report that).
      */
-    static <T> HostTask<T> startOn(ExecutorService executor, Fn0<T> work, Runnable whenComplete) {
+    static <T> HostTask<T> prepare(Fn0<T> work, Runnable whenComplete) {
         if (work == null) throw new SprigError("task work must not be null");
         FutureTask<T> future = new FutureTask<>(work::apply) {
             @Override
@@ -56,12 +52,25 @@ public final class HostTask<T> {
                 if (whenComplete != null) whenComplete.run();
             }
         };
+        return new HostTask<>(future);
+    }
+
+    /**
+     * Starts a prepared task. Executors.newVirtualThreadPerTaskExecutor runs
+     * the FutureTask given to execute(), so completion and cancellation are
+     * this task's own.
+     */
+    void startOn(Executor executor) {
         try {
             executor.execute(future);
-        } catch (java.util.concurrent.RejectedExecutionException e) {
+        } catch (RejectedExecutionException e) {
             throw new SprigError("pool is shut down; it accepts no more tasks", e);
         }
-        return new HostTask<>(future);
+    }
+
+    /** Runs a prepared task on the calling thread; a pool's worker calls this. */
+    void run() {
+        future.run();
     }
 
     /** Waits for the result. A failure inside the task is rethrown here as an Error. */
@@ -107,6 +116,11 @@ public final class HostTask<T> {
         return new SprigError("task failed: " + cause, cause);
     }
 
+    /**
+     * True once the task completed or was cancelled. As with any
+     * java.util.concurrent Future, a cancelled task is done at once, even while
+     * its body still runs; its scope waits for the body all the same.
+     */
     public boolean isDone() {
         return future.isDone();
     }

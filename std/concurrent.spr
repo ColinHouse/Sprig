@@ -37,7 +37,9 @@ generic T:
             return inner.joinOr(fallback)
 
         # True once the task returned, failed or was cancelled; never waits. A
-        # cancelled task counts as done at once, even before its body stops.
+        # cancelled task is done at once, even while its body is still running
+        # (until its next blocking point, or to its end): is_done() does not
+        # mean the body has stopped, and the scope still waits for the body.
         func is_done() -> Bool:
             return inner.isDone()
 
@@ -47,8 +49,8 @@ generic T:
             return inner.cancel()
 
         # True when the task was cancelled before it finished: by cancel(), by
-        # its scope (cancel_all() or a failure elsewhere in it), or while queued
-        # by its pool's shutdown_now(). False for a task that failed by itself.
+        # its scope (cancel_all() or a failure elsewhere in it), or by its
+        # pool's shutdown_now(). False for a task that failed by itself.
         func is_cancelled() -> Bool:
             return inner.isCancelled()
 
@@ -67,7 +69,9 @@ class Job:
         inner.joinWithin(millis)
 
     # True once the job returned, failed or was cancelled; never waits. A
-    # cancelled job counts as done at once, even before its body stops.
+    # cancelled job is done at once, even while its body is still running
+    # (until its next blocking point, or to its end): is_done() does not mean
+    # the body has stopped, and the scope still waits for the body.
     func is_done() -> Bool:
         return inner.isDone()
 
@@ -157,8 +161,9 @@ class Pool:
     func shutdown() -> Unit:
         inner.shutdown()
 
-    # Stops accepting tasks and interrupts the running ones; tasks still queued
-    # are cancelled and never run.
+    # Stops accepting tasks and cancels the ones the pool still has, as
+    # cancel() does: running tasks are interrupted and queued ones never run.
+    # Like any requested cancellation, that is not a failure of their scope.
     func shutdown_now() -> Unit:
         inner.shutdownNow()
 
@@ -271,7 +276,8 @@ generic T:
             throw Error("channel capacity must be at least 1, got " + capacity)
         return Channel[T](inner=HostChannel[T](capacity))
 
-# An Int that several threads change atomically.
+# An Int that several threads change atomically. add, increment and decrement
+# are checked like Int arithmetic: a result past the Int range fails.
 class Counter:
     let inner: AtomicLong
 
@@ -284,24 +290,34 @@ class Counter:
     func set(value: Int) -> Unit:
         inner.set(value)
 
-    # Adds delta and returns the new value.
+    # Adds delta and returns the new value. A sum past the Int range fails the
+    # way Int addition does, and the value stays as it was.
     func add(delta: Int) -> Int:
-        return inner.addAndGet(delta)
+        while true:
+            let current = inner.get()
+            let updated = current + delta
+            if inner.compareAndSet(current, updated):
+                return updated
 
-    # Adds one and returns the new value.
+    # Adds one and returns the new value; at the largest Int it fails like add.
     func increment() -> Int:
-        return inner.incrementAndGet()
+        return add(1)
 
-    # Subtracts one and returns the new value.
+    # Subtracts one and returns the new value. At the smallest Int it fails the
+    # way Int subtraction does, and the value stays as it was.
     func decrement() -> Int:
-        return inner.decrementAndGet()
+        while true:
+            let current = inner.get()
+            let updated = current - 1
+            if inner.compareAndSet(current, updated):
+                return updated
 
     # Sets updated only when the value is still expected; true when it did.
     func compare_and_set(expected: Int, updated: Int) -> Bool:
         return inner.compareAndSet(expected, updated)
 
-# A new Counter holding start. Unlike Int arithmetic, add, increment and
-# decrement wrap around past the Int range instead of failing.
+# A new Counter holding start. Its add, increment and decrement fail past the
+# Int range, as Int arithmetic does.
 func counter(start: Int) -> Counter:
     return Counter(inner=AtomicLong(start))
 

@@ -14,7 +14,11 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import java.util.Set;
 
 /** Explicit platform services for a future Sprig-written compiler frontend.
  * No lexer, parser, symbol, type or code-generation semantics live here. */
@@ -118,19 +122,45 @@ public final class HostFiles {
 
     /**
      * Write a UTF-8 sibling temporary file, close it, then replace the target.
+     * A symbolic link at the path is followed, as {@link #writeUtf8} follows
+     * it: the file it leads to is the target, and the link stays. A replaced
+     * file keeps its POSIX permissions where the file system has them; a new
+     * one gets what writeUtf8 would create it with (rw-rw-rw- less the
+     * process umask).
      * Atomic replacement is preferred; if the filesystem does not support it,
      * the fallback is a same-filesystem replacement move without crash-atomicity.
      * This method does not promise fsync/crash durability.
      */
     public static void atomicWriteUtf8(String path, String text) throws IOException {
-        requireWritable(Path.of(path));
-        Path target = Path.of(path).toAbsolutePath().normalize();
+        Path target = linkTarget(Path.of(path).toAbsolutePath());
+        requireWritable(target);
         Path parent = target.getParent();
         String name = target.getFileName() == null ? "sprig" : target.getFileName().toString();
-        Path temporary = Files.createTempFile(parent, "." + name + ".", ".tmp");
+        boolean posix = target.getFileSystem().supportedFileAttributeViews().contains("posix");
+        Set<PosixFilePermission> kept = null;
+        if (posix) {
+            try {
+                kept = Files.getPosixFilePermissions(target);
+            } catch (NoSuchFileException absent) {
+                // a new file
+            }
+        }
+        // A replaced file's new text stays owner-only (createTempFile's default) until its
+        // permissions are copied; a new file starts with the ones it will keep.
+        Path temporary = posix && kept == null
+                ? Files.createTempFile(parent, "." + name + ".", ".tmp", NEW_FILE)
+                : Files.createTempFile(parent, "." + name + ".", ".tmp");
         try {
             Files.writeString(temporary, text, StandardCharsets.UTF_8,
                     StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+            if (kept != null) {
+                try {
+                    Files.setPosixFilePermissions(temporary, kept);
+                } catch (IOException refused) {
+                    // As with Files.copy and COPY_ATTRIBUTES: a file system that refuses
+                    // permissions (FAT, some network mounts) does not fail the write.
+                }
+            }
             try {
                 Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE,
                         StandardCopyOption.REPLACE_EXISTING);
@@ -145,6 +175,27 @@ public final class HostFiles {
     /** Return a newly-created OS temporary file for ordinary application use. */
     public static String tempFile() throws IOException {
         return Files.createTempFile("sprig-", ".tmp").toAbsolutePath().normalize().toString();
+    }
+
+    /** What Files.writeString creates a new file with, before the process umask applies. */
+    private static final FileAttribute<Set<PosixFilePermission>> NEW_FILE =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-rw-rw-"));
+
+    /** Links in a row that linkTarget follows; Linux gives up after as many (ELOOP). */
+    private static final int MAX_LINKS = 40;
+
+    /**
+     * The file that writing to an absolute path reaches: a symbolic link at the
+     * path is followed, link after link, to the file it names, which need not
+     * exist yet. Links among the parent directories are left to the system.
+     */
+    private static Path linkTarget(Path file) throws IOException {
+        Path current = file;
+        for (int links = 0; Files.isSymbolicLink(current); links++) {
+            if (links == MAX_LINKS) throw new Failure("too many levels of symbolic links");
+            current = current.resolveSibling(Files.readSymbolicLink(current));
+        }
+        return current;
     }
 
     /** Only an existing regular file that is not a symbolic link; role is "the source", or null for the path itself. */
