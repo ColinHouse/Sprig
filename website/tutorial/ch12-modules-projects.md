@@ -90,6 +90,39 @@ PASS sum.spr
 - `@std/test.spr` 提供 `equal_int`、`equal_text`、`equal_bool`（失败时报出两边的值）、`temp_dir()`（测试专用临时目录）和 `run_process`（运行子进程）。
 - `sprig test --filter 文本` 只跑名字包含该文本的测试。
 
+测试要用项目里的代码，就像别的模块一样用相对路径导入，比如 `import "../src/app.spr" as app`。但别导入 `../src/main.spr`：12.1 讲过，顶层语句在模块第一次被导入时执行，而 `main.spr` 的顶层语句就是整个程序。测试一导入它，程序就会带着空的参数列表先跑一遍：该打印的打印，该写的文件照写。要是程序调用了 `process.exit`，测试就在那里结束，后面的检查一条都不执行；退出码是 0 的话，它还会显示通过。
+
+所以让 `main.spr` 只处理参数，真正的工作放进另一个模块，`main.spr` 和测试都导入它：
+
+```text
+src/main.spr        读参数，交给 app.run
+src/app.spr         真正的工作，只有函数
+tests/app_test.spr  导入 ../src/app.spr，直接调用它的函数
+```
+
+`src/main.spr` 只有一条语句：
+
+<<< @/snippets/book/ch12_testing/src/main.spr
+
+`src/app.spr`：
+
+<<< @/snippets/book/ch12_testing/src/app.spr
+
+`tests/app_test.spr`：
+
+<<< @/snippets/book/ch12_testing/tests/app_test.spr
+
+`run` 接收参数列表、返回退出码，测试不用启动新进程就能试任意一组参数。`sprig test` 只报告这个文件通过与否；想看每项检查，就直接 `sprig run tests/app_test.spr`：
+
+```text
+ok greets
+usage: greet NAME
+ok needs a name
+2 passed, 0 failed
+```
+
+中间那行 `usage: greet NAME` 是 `app.run([])` 自己打印的。
+
 更多细节见[项目测试（英文）](/en/reference/tooling/testing)。
 
 ## 12.4 依赖
@@ -152,7 +185,7 @@ path = "../registry"
 
 - 一个文件一个模块，`import "./x.spr" as x`；`@std/` 是标准库，`@包名/` 是依赖。
 - 项目 = `sprig.toml` + `src/` + `tests/`；锁文件要提交，只有 `resolve`/`add`/`remove` 改它。
-- 测试是普通程序；`compile_fail/` 测编译器该拒绝什么。
+- 测试是普通程序；`compile_fail/` 测编译器该拒绝什么；测试导入做事的模块，不导入 `main.spr`。
 - 注册表是索引，`search` 查、`add` 写成 Git 依赖。
 
 下一章：[调用 Java](/tutorial/ch13-java)。

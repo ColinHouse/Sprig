@@ -1,0 +1,6 @@
+import "@std/test.spr" as testing
+import "../src/app.spr" as app
+
+testing.check("greets", fn() => testing.equal_text(app.greeting("Ada"), "Hello, Ada!", "greeting"))
+testing.check("needs a name", fn() => testing.equal_int(app.run([]), 2, "status"))
+testing.finish()
