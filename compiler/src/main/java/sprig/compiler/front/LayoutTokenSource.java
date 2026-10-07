@@ -30,6 +30,7 @@ public final class LayoutTokenSource implements TokenSource {
     private final String uri;
     private final List<Token> output = new ArrayList<>();
     private int cursor = 0;
+    private boolean unclosedGrouping;
 
     public LayoutTokenSource(TokenSource lexer, Diagnostics diagnostics, String uri) {
         this.lexer = lexer;
@@ -44,6 +45,10 @@ public final class LayoutTokenSource implements TokenSource {
             }
         }
         normalize(raw);
+    }
+
+    public boolean hasUnclosedGrouping() {
+        return unclosedGrouping;
     }
 
     private static Span spanOf(Token token) {
@@ -99,7 +104,7 @@ public final class LayoutTokenSource implements TokenSource {
     private void normalize(List<Token> raw) {
         Deque<Integer> indents = new ArrayDeque<>();
         indents.push(0);
-        int brackets = 0;
+        Deque<Token> bracketOpeners = new ArrayDeque<>();
         for (int i = 0; i < raw.size(); i++) {
             Token token = raw.get(i);
             int type = token.getType();
@@ -114,7 +119,7 @@ public final class LayoutTokenSource implements TokenSource {
                 continue;
             }
             if (type == SprigLexer.NEWLINE) {
-                if (brackets > 0) {
+                if (!bracketOpeners.isEmpty()) {
                     continue;
                 }
                 int j = i + 1;
@@ -130,9 +135,11 @@ public final class LayoutTokenSource implements TokenSource {
                 continue;
             }
             if (type == Token.EOF) {
-                if (brackets != 0) {
-                    error(Codes.LEX_UNCLOSED, "Unclosed grouping delimiter at end of file", token, null);
-                    brackets = 0;
+                if (!bracketOpeners.isEmpty()) {
+                    error(Codes.LEX_UNCLOSED, "Unclosed grouping delimiter at end of file",
+                            bracketOpeners.peek(), null);
+                    unclosedGrouping = true;
+                    bracketOpeners.clear();
                 }
                 newline(token);
                 while (indents.size() > 1) {
@@ -148,12 +155,12 @@ public final class LayoutTokenSource implements TokenSource {
             }
             output.add(token);
             if (type == SprigLexer.LPAREN || type == SprigLexer.LBRACK || type == SprigLexer.LBRACE) {
-                brackets++;
+                bracketOpeners.push(token);
             } else if (type == SprigLexer.RPAREN || type == SprigLexer.RBRACK || type == SprigLexer.RBRACE) {
-                brackets--;
-                if (brackets < 0) {
+                if (bracketOpeners.isEmpty()) {
                     error(Codes.LEX_UNMATCHED, "Unmatched closing delimiter", token, null);
-                    brackets = 0;
+                } else {
+                    bracketOpeners.pop();
                 }
             }
         }
