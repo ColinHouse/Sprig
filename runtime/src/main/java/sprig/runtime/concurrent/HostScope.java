@@ -1,12 +1,12 @@
 package sprig.runtime.concurrent;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import sprig.runtime.Fn0;
 import sprig.runtime.NonNull;
@@ -26,7 +26,8 @@ public final class HostScope {
     }
 
     private final ExecutorService virtual = Executors.newVirtualThreadPerTaskExecutor();
-    private final List<Owned> tasks = new CopyOnWriteArrayList<>();
+    private final ConcurrentLinkedQueue<Owned> tasks = new ConcurrentLinkedQueue<>();
+    private final AtomicLong taskCount = new AtomicLong();
     private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private volatile boolean closed;
 
@@ -86,6 +87,7 @@ public final class HostScope {
                 : pool.submit(guarded, endedUnstarted);
         self[0] = task;
         tasks.add(new Owned(task, done));
+        taskCount.incrementAndGet();
         return task;
     }
 
@@ -160,7 +162,7 @@ public final class HostScope {
     }
 
     public long taskCount() {
-        return tasks.size();
+        return taskCount.get();
     }
 
     private void waitAll() {

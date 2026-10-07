@@ -1,8 +1,5 @@
 package sprig.runtime;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-
 /** Numeric operations whose Sprig semantics differ from Java's defaults. */
 public final class NumericOps {
     private NumericOps() {}
@@ -56,8 +53,11 @@ public final class NumericOps {
         catch (ArithmeticException e) { throw new SprigNumericError("Int value outside Int32 range"); }
     }
     public static double toFloatExact(long a) {
+        // Every integer through 2^53 is exactly representable as a double.
+        if (-0x20000000000000L <= a && a <= 0x20000000000000L) return (double) a;
         double value = (double) a;
-        if (new BigDecimal(value).toBigInteger().compareTo(BigInteger.valueOf(a)) != 0) {
+        // Reject 2^63 before casting: Java saturates that out-of-range double to Long.MAX_VALUE.
+        if (value >= 0x1.0p63 || (long) value != a) {
             throw new SprigNumericError("Int to Float loses precision; use toFloatLossy() explicitly");
         }
         return value;

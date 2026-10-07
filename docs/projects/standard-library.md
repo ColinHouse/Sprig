@@ -85,14 +85,16 @@ They are ordinary functions that declare `throws Error`.
 
 File text always uses UTF-8. `write_utf8` replaces existing file content,
 creates a file, and requires an existing parent; `make_directory` creates missing
-parents. Directory listing produces a sorted snapshot of absolute normalized
-paths in `List[String]`. `is_file`, `is_directory` and `exists` do not follow
-symbolic links. Joining/normalizing paths is lexical and does not constrain paths
-to a sandbox. `file_name` requires a path with a filename component. `parent`
-first normalizes lexically, preserves relative paths, and returns `null` for a
-leaf with no parent or a filesystem root. `absolute` returns an absolute
-normalized path without checking existence or resolving symbolic links, so its
-value is based on the process working directory.
+parents. `list(path)` produces a sorted snapshot of the directory entries as
+absolute normalized paths, not names relative to `path`. `is_file`, `is_directory`
+and `exists` do not follow symbolic links. `join(base, child)` uses lexical path
+resolution: an absolute `child` replaces `base`, so joining a directory with a
+listed entry does not make that entry relative. Joining and normalizing do not
+constrain paths to a sandbox. `file_name` requires a path with a filename
+component. `parent` first normalizes lexically, preserves relative paths, and
+returns `null` for a leaf with no parent or a filesystem root. `absolute`
+returns an absolute normalized path without checking existence or resolving
+symbolic links, so its value is based on the process working directory.
 
 `copy_file` and `move` require an existing regular-file source and reject
 symbolic links, directories and existing destinations; neither silently

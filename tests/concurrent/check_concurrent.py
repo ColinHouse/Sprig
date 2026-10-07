@@ -70,6 +70,20 @@ def user_types(root):
         and "written.spr:5:" in output, output
 
 
+def task_registration_count(root):
+    source = root / "many_tasks.spr"
+    source.write_text(
+        'import "@std/concurrent.spr" as concurrent\n'
+        "func submit_all(s: concurrent.Scope) -> Int throws Error:\n"
+        "    var index = 0\n"
+        "    while index < 10000:\n"
+        "        concurrent.spawn(s, fn() => 1)\n"
+        "        index += 1\n"
+        "    return s.size()\n"
+        "print(concurrent.scope(submit_all))\n", encoding="utf-8")
+    assert command(root, "run", source).strip() == "10000"
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="sprig-concurrent-") as directory:
         root = Path(directory)
@@ -82,6 +96,7 @@ def main():
         lines = command(ROOT, "run", ROOT / "tests/concurrent/contract.spr").splitlines()
         expected = (ROOT / "tests/concurrent/contract.out").read_text(encoding="utf-8").splitlines()
         assert lines == expected, "\n".join(lines)
+        task_registration_count(root)
         # Tasks cancelled or dropped before their body ran once kept the scope waiting forever,
         # so a hang is a failure here rather than a stuck suite.
         try:
@@ -105,7 +120,7 @@ def main():
             rejected.stdout + rejected.stderr
         user_types(root)
     print("concurrent: example, contract (scopes, virtual threads, cancellation, I/O), cancellation accounting, "
-          "user result types and API passed")
+          "user result types, 10,000-task registration and API passed")
     return 0
 
 

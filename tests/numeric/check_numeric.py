@@ -112,6 +112,7 @@ RUNTIME_ERRORS = {
     "int32_div_min": ("let x: Int32 = -2147483648\nprint(x.divTrunc(-1))\n", "Int32 division overflow"),
     "compound_overflow": ("var x: Int = 9223372036854775807\nx += 1\n", "Int addition overflow"),
     "inexact_int_to_float": ("print((9007199254740993).toFloatExact())\n", "loses precision"),
+    "inexact_int_to_float_long_max": ("print((9223372036854775807).toFloatExact())\n", "loses precision"),
     "inexact_bigint_to_float": ("print(BigInt.parse(\"9007199254740993\").toFloatExact())\n", "loses precision"),
     "inexact_decimal_to_float": ("print(Decimal.parse(\"0.1\").toFloatExact())\n", "loses precision"),
     "inexact_float_to_float32": ("print((0.1).toFloat32Exact())\n", "loses precision"),
@@ -128,6 +129,14 @@ POSITIVE = {
     "int_literal_float_context": ("let a: Float = 1\nprint(a)\n", "1.0"),
     "float32_widen": ("let a: Float32 = 0.5\nlet b: Float = a\nprint(b)\n", "0.5"),
     "explicit_lossy": ("print((9007199254740993).toFloatLossy())\n", "9.007199254740992E15"),
+    "exact_int_to_float_boundaries": (
+        "print((9007199254740991).toFloatExact())\n"
+        "print((9007199254740992).toFloatExact())\n"
+        "print((9007199254740994).toFloatExact())\n"
+        "print((-9007199254740992).toFloatExact())\n"
+        "print((-9223372036854775808).toFloatExact())\n",
+        "9.007199254740991E15\n9.007199254740992E15\n9.007199254740994E15\n"
+        "-9.007199254740992E15\n-9.223372036854776E18"),
     "decimal_round": ("print(Decimal.parse(\"1\").divide(Decimal.parse(\"3\"), 4, \"HALF_EVEN\"))\n", "0.3333"),
     "mixed_integer_width": ("let a: Int32 = 2147483647\nlet b: Int = 1\nprint(a + b)\n", "2147483648"),
     "mixed_float_width": ("let a: Float32 = 0.5\nlet b: Float = 0.25\nprint(a + b)\n", "0.75"),
