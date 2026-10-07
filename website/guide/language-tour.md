@@ -65,7 +65,7 @@
 - `else` 分支必须写，漏了会报 "An if expression needs an else branch"；在你补上之前，文件的其余部分照常检查，编辑器功能也不受影响。不需要产生值的时候，就写普通的 `if` 语句：写在语句开头的 `if` 总是 `if` 语句。
 - 所有分支是同一个类型：这个位置要求的类型，比如 `let ratio: Float = if ...`；没有要求的话，就是第一个不是 `null` 的分支的类型。有 `null` 分支，结果就是可空类型。
 - 没有 Python 的 `a if c else b`，也没有 C 的 `c ? a : b`，编译器会提示你改用 `if` 表达式。
-- 圆括号里的换行会被忽略，所以 `if` 表达式不能直接写进调用里。先用 `let` 绑定，再把名字传进去。细节见 [if 表达式（英文）](/en/reference/language/if-expressions)。
+- 圆括号里的换行会被忽略，所以 `if` 表达式不能直接写进调用里，写在调用里的 lambda 体中也不行。先把它，或者装着它的 lambda，用 `let` 绑定，再把名字传进去；也可以直接传一个具名函数。细节见 [if 表达式（英文）](/en/reference/language/if-expressions)。
 
 ## 集合
 
