@@ -249,7 +249,7 @@ print(step(6) + step(3))
             ('SPR-TYPE-UNIT', 'let x = if true:\n    print(1)\nelse:\n    2\n'),
             ('SPR-TYPE-INFER', 'let x = if true:\n    null\nelse:\n    null\n'),
             ('SPR-TYPE-RETURN', 'func f() -> Unit:\n    return if true:\n        1\n    else:\n        2\n'),
-            ('SPR-NUM-MIXED', 'var v: Int? = 3\nlet x = if v != null:\n    v + 1\nelse:\n    0\n'),
+            ('SPR-TYPE-NULLABLE', 'var v: Int? = 3\nlet x = if v != null:\n    v + 1\nelse:\n    0\n'),
             ('SPR-TYPE-CAPTURE', 'func f(c: Bool) -> Int:\n    var n = 1\n    let g = fn() => if c:\n        n\n    else:\n        0\n    return g()\n'),
             ('SPR-NAME-FORWARD-REFERENCE', 'let x = if true:\n    later\nelse:\n    0\nlet later = 1\n'),
             ('SPR-NAME-UNRESOLVED', 'let x = if true:\n    missing_name\nelse:\n    0\n'),

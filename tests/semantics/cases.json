@@ -156,6 +156,26 @@
     "status": "checked by output/scripts/test.sh"
   },
   {
+    "file": "nullable_arith.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented"
+  },
+  {
+    "file": "string_minus.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented"
+  },
+  {
+    "file": "bool_plus.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented"
+  },
+  {
+    "file": "list_times.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented"
+  },
+  {
     "file": "match_nullable.spr",
     "expected_diagnostic": "SPR-MATCH-SCRUTINEE",
     "status": "checked by output/scripts/test.sh"

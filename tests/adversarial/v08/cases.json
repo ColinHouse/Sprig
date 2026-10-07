@@ -77,7 +77,7 @@
   },
   {
     "name": "infer_nested_lambdas_error",
-    "code": "SPR-NUM-MIXED"
+    "code": "SPR-TYPE-OPERAND"
   },
   {
     "name": "infer_nested_literals",
