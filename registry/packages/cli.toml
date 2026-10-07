@@ -2,8 +2,11 @@
 name = "cli"
 description = "Explicit command-line option parsing and usage text"
 git = "https://github.com/ColinHouse/Sprig.git"
+license = "Apache-2.0"
+owners = ["ColinHouse"]
 subdir = "libraries/sprig-cli"
 
 [[release]]
 version = "0.7.1-beta.1"
 tag = "v0.7.1-beta.1"
+rev = "b7fe68eb1cc98cb018f1d07e472d69d73acf4328"

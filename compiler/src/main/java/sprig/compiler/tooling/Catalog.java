@@ -212,8 +212,9 @@ public final class Catalog {
                         "a whole value: after an assignment, return, throw or '=>', or as a branch of another if or match expression; never inside parentheses, brackets or braces, and never an operand",
                         "an if at the start of a statement is the if statement")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
-        guidance(out, "asyncAwait", "concurrency", "the sprig-concurrent library: spawn[T](fn() -> T) -> Task[T] and task.await()",
-                "parallel_map, await_all, pool(threads) and spawn_on for bounded parallelism",
+        guidance(out, "asyncAwait", "concurrency", "by design: @std/concurrent.spr runs plain blocking functions as tasks on JDK 21 virtual threads, so no function is colored",
+                "scope(body) owns the tasks started with spawn(scope, work); leaving the scope waits for them and the first failure cancels the rest and is rethrown",
+                "parallel_map, await_all, pool(threads) and spawn_on(scope, pool, work) for bounded CPU-bound work",
                 "channel[T](capacity) for values between threads; counter, lock and latch for shared state");
         out.put("errorClasses", Map.of("supported", true, "helpTopic", "errors",
                 "rules", List.of("a class with a let message: String field becomes an error type through conform C to Error(message)",
@@ -251,11 +252,12 @@ public final class Catalog {
         guidance(out, "tuples", "language", "a one-line class with named fields: class Pair(first: Int, second: Int), built as Pair(first=1, second=2)", "variants with named fields");
         guidance(out, "destructuring", "language", "explicit field access");
         out.put("packageRegistry", Map.of("supported", true, "helpTopic", "dependencies",
-                "rules", List.of("a registry is an index of where packages live: packages/NAME.toml with the Git repository, subdir and releases",
-                        "sprig add NAME [--version V] writes the Git dependency the index names; the lock pins the commit as for any Git dependency",
-                        "sprig search [TEXT] lists packages; sprig publish writes this package's entry into a local registry directory",
-                        "[[registry]] tables name registries by path or Git url; without any, the Sprig repository's registry directory is the default",
-                        "there is no central hosted registry, no authentication and no upload: publishing is a commit to an index repository")));
+                "rules", List.of("a registry is an index of where packages live: packages/NAME.toml with the Git repository, subdir, license, owners and releases",
+                        "a release is a SemVer version with a tag (and the commit rev it pointed at when published), a branch, or a rev; the newest is chosen by SemVer order; a yanked release is never chosen for a new dependency and still resolves from a lock",
+                        "sprig add NAME [--version V] writes the Git dependency the index names and refuses a tag that moved away from the recorded commit; the lock pins the commit as for any Git dependency",
+                        "sprig search [TEXT] lists packages; sprig publish --tag T records the entry with the commit, a published version never changes (publish a new one or --yank V --reason TEXT)",
+                        "[[registry]] tables name registries by path or Git url; without any, the Sprig repository's registry directory is the default, which is strict: tags pinned to commits, license and owners required, validated by the Registry workflow on pull requests to registry/",
+                        "there is no central hosted registry, no authentication and no upload: publishing is a pull request that changes only registry/packages/NAME.toml")));
         guidance(out, "centralSprigRegistry", "dependencies", "local path dependencies", "Git dependencies");
         return out;
     }

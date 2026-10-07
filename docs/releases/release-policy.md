@@ -92,7 +92,7 @@ A published tag is never moved; a broken release is replaced by a new version.
    --archive` passes.
 4. **Tag.** `git tag -a vX -m "Sprig vX"` on that commit, then push the tag.
    `.github/workflows/release.yml` builds and tests the tagged source, packages
-   it, smoke-tests the downloaded archive on Linux and macOS with JDK 17 and 26,
+   it, smoke-tests the downloaded archive on Linux and macOS with JDK 21 and 26,
    and publishes the prerelease.
 5. **Check the published release.** The downloaded archive's SHA-256 matches
    the `.sha256` file and GitHub's digest, and `sprig upgrade` from the previous

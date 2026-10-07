@@ -4,3 +4,7 @@
 [registry]
 name = "sprig"
 description = "First-party Sprig libraries from the Sprig repository"
+# The default registry is strict: every release is a tag pinned to its commit,
+# every entry names its license and owners, and a published release never
+# changes (CI enforces it on pull requests to this directory).
+strict = "true"

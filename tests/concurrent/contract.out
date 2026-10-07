@@ -1,0 +1,43 @@
+true
+42
+failed: true
+scope failed too: true
+tolerated still fails the scope: true
+scope failed: true
+[1, 4, 9, 16]
+true
+[3, 1, 2]
+[3, 1, 2]
+pool is shut down; it accepts no more tasks
+10000
+10000
+true
+0
+1500
+3000
+[a, b, c]
+3
+true
+-1
+late send failed the scope: true
+null
+true
+false
+1
+true
+0
+task did not finish within 50 ms
+true
+true
+true
+siblings cancelled: true
+true
+1
+0
+3
+inner failed 5
+false
+the scope has ended; spawn inside the scope body
+10000
+true
+served 42

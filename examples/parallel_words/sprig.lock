@@ -1,15 +1,4 @@
 lock-version = 5
 language = "0.8"
 compiler = "0.7.1-beta.1"
-manifest-sha256 = "6c0e837cb98e4bbaaff1c8584382c0e8c413dcb96550c4297ae8229851622778"
-
-[[sprig]]
-id = "root/@concurrent"
-owner = "root"
-name = "concurrent"
-kind = "local"
-path = "../../libraries/sprig-concurrent"
-portable = true
-project-name = "sprig-concurrent"
-source = "src"
-manifest-sha256 = "816381f658e83cca385b6b63847daaf9c947526e2945be87704e0e3bbdaedcd6"
+manifest-sha256 = "f295dc6aeff7d5f2c3cc3123a844dbfa20525acc6670dd61174e79e99320a19f"

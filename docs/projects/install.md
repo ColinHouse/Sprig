@@ -1,6 +1,6 @@
 # Sprig SDK install and upgrade
 
-The managed SDK installer supports Linux and macOS with JDK 17+ (`java` and
+The managed SDK installer supports Linux and macOS with JDK 21+ (`java` and
 `javac`), `curl`, `unzip`, and `shasum` or `sha256sum`. Windows remains an
 experimental preview. The installer does not require Maven.
 
