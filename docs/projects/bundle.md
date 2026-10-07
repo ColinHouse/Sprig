@@ -79,14 +79,16 @@ bundle directory as its top-level entry and Unix file modes recorded, so
 
 ## Requirements and failures
 
-Bundling needs the JDK that runs `sprig` to be a full JDK: `jdeps`, `jlink` and
-the `jmods/` directory. Each failure has a stable code with a fix hint:
+Bundling needs the JDK that runs `sprig` to be a full JDK: `jdeps`, `jlink`,
+and either the `jmods/` directory or a JDK 24+ runtime built as linkable
+(Temurin's JDK 26 builds ship without `jmods/` and link from the runtime
+image). Each failure has a stable code with a fix hint:
 
 | Code | When | Fix |
 |---|---|---|
 | `SPR-BUNDLE-TOOLS` | `jdeps` or `jlink` is missing: `sprig` runs on a JRE or a jlinked image | Run `sprig` with a full JDK 21+ (`sprig doctor` shows the installation) |
 | `SPR-BUNDLE-JDEPS` | `jdeps` could not analyze a JAR | Run the command from the diagnostic's `data` by hand; re-resolve a corrupt JAR |
-| `SPR-BUNDLE-LAYOUT` | No `jmods/` directory, a `jlink` failure, or a classpath entry that does not exist | Use a JDK distribution that ships `jmods/`; run the printed `jlink` command for the full report |
+| `SPR-BUNDLE-LAYOUT` | `jlink` cannot image the installation (no `jmods/` and not a JDK 24+ linkable runtime, as in a JRE), a `jlink` failure, a previous bundle that cannot be removed, or a classpath entry that does not exist | Use a full JDK distribution (one with `jmods/`, or a linkable runtime); run the printed `jlink` command for the full report |
 
 `sprig explain SPR-BUNDLE-TOOLS` and `sprig help build` describe the command;
 `sprig capabilities --json` reports `features.bundle`.
@@ -114,6 +116,6 @@ hello program, a CLI with spaced and UTF-8 arguments, a project with a Maven
 dependency, a SQLite program whose driver carries a native library, and a
 `sprig-web` server) and runs every launcher with `JAVA_HOME` unset and no `java`
 on `PATH`, checking exit codes, output and the working directory; it unpacks
-the archive form and runs it, and it refuses a JRE-shaped and a jmods-less
-installation with the stable codes. Windows runs the `.cmd` launcher in the
+the archive form and runs it, and it refuses a JRE-shaped installation and one
+whose `jlink` cannot link from it with the stable codes. Windows runs the `.cmd` launcher in the
 experimental lane only.

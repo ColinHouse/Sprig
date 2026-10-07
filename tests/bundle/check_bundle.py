@@ -53,9 +53,13 @@ def bare_environment(work, home):
                 os.symlink(found, tools / name)
     env = {"PATH": str(tools), "HOME": str(home), "LC_ALL": "C.UTF-8", "LANG": "C.UTF-8"}
     if WINDOWS:
-        # cmd.exe and the launcher need the system directory, which holds no java.exe.
-        env["PATH"] = os.environ.get("SystemRoot", r"C:\Windows") + r"\System32"
-        env["SystemRoot"] = os.environ.get("SystemRoot", r"C:\Windows")
+        # cmd.exe runs the .cmd launcher: CreateProcess finds it through ComSpec, and
+        # the system directory (which holds no java.exe) supplies the shell's helpers.
+        system_root = os.environ.get("SystemRoot", r"C:\Windows")
+        env["PATH"] = system_root + r"\System32"
+        env["SystemRoot"] = env["windir"] = system_root
+        env["ComSpec"] = os.environ.get("ComSpec", system_root + r"\System32\cmd.exe")
+        env["PATHEXT"] = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD")
         env["LOCALAPPDATA"] = str(home)
         env["TEMP"] = env["TMP"] = str(work)
     return env
@@ -67,8 +71,8 @@ def launcher_of(bundle_dir, name):
 
 def run_launcher(launcher, args, env, cwd, timeout=120):
     assert not shutil.which("java", path=env["PATH"]), "java must not be reachable from the test PATH"
-    return subprocess.run([str(launcher), *args], cwd=cwd, env=env, capture_output=True,
-                          timeout=timeout)
+    command = [env["ComSpec"], "/c", str(launcher), *args] if WINDOWS else [str(launcher), *args]
+    return subprocess.run(command, cwd=cwd, env=env, capture_output=True, timeout=timeout)
 
 
 def decoded(result):
@@ -108,9 +112,11 @@ def main():
         hello.mkdir()
         (hello / "hello.spr").write_text('print("hello, 世界")\n', encoding="utf-8")
         hello_bundle, hello_data = bundle(hello, "hello.spr", "-d", "dist")
-        text = sprig("build", "hello.spr", "--bundle", "-d", "dist", cwd=hello)
+        text = sprig("build", "hello.spr", "--bundle", "-d", "dist-text", cwd=hello)
         check("text-report-names-platform", text.returncode == 0 and "runs only on" in text.stdout
-              and "Bundle:" in text.stdout, text.stdout + text.stderr)
+              and "Bundle:" in text.stdout, f"exit={text.returncode} out={text.stdout!r} err={text.stderr!r}")
+        rebuilt = sprig("build", "hello.spr", "--bundle", "-d", "dist", "--json", cwd=hello)
+        check("rebuild-replaces-previous-bundle", rebuilt.returncode == 0, rebuilt.stdout[-400:] + rebuilt.stderr[-300:])
         result = run_launcher(launcher_of(hello_bundle, "hello"), [], env, elsewhere)
         out, err = decoded(result)
         check("hello-runs-without-java", result.returncode == 0 and out == "hello, 世界\n" and err == "",
@@ -139,7 +145,9 @@ if args.size() > 2:
     process.exit(3)
 ''', encoding="utf-8")
         cli_bundle, _ = bundle(cli, "args.spr", "-d", "out")
-        arguments = ["two words", "你好 世界", "--flag=ü", ""]
+        # java.exe reads its command line in the ANSI code page (a documented limit), so
+        # the Windows lane keeps the arguments ASCII; Linux and macOS carry UTF-8.
+        arguments = ["two words", "hello world", "--flag=x", ""] if WINDOWS else ["two words", "你好 世界", "--flag=ü", ""]
         result = run_launcher(launcher_of(cli_bundle, "args"), arguments, env, elsewhere)
         out, err = decoded(result)
         expected = "count 4\n" + "".join(f"[{a}]\n" for a in arguments) + f"cwd {elsewhere.resolve()}\n"
@@ -177,7 +185,7 @@ if args.size() > 2:
         check("sqlite-modules", "java.sql" in sqlite_data["modules"]
               and any(p.name.startswith("sqlite-jdbc-3.") for p in (sqlite_bundle / "lib").iterdir()),
               sqlite_data["modules"])
-        database = elsewhere / "notes 世界.sqlite"
+        database = elsewhere / ("notes.sqlite" if WINDOWS else "notes 世界.sqlite")
         first = run_launcher(launcher_of(sqlite_bundle, "sqlite-demo"), [str(database)], env, elsewhere)
         second = run_launcher(launcher_of(sqlite_bundle, "sqlite-demo"), [str(database)], env, elsewhere)
         # The JDBC driver's SLF4J binding warning goes to stderr; stdout is the program's alone.
@@ -273,7 +281,8 @@ if args.size() > 2:
                                       *compiler_jars], env=tool_env, text=True, capture_output=True, timeout=600)
             module_list = modules.stdout.strip().splitlines()[-1] if modules.returncode == 0 and modules.stdout.strip() else "java.base"
             # Two images: a JRE without the tools (SPR-BUNDLE-TOOLS), and one that carries
-            # jdeps and jlink but, like every jlink image, no jmods/ (SPR-BUNDLE-LAYOUT).
+            # jdeps and jlink but no packaged modules and no linkable runtime, so its jlink
+            # cannot build another image (SPR-BUNDLE-LAYOUT).
             for label, extra, expected in (("jre-refused-with-tools-code", "", "SPR-BUNDLE-TOOLS"),
                                            ("no-jmods-refused-with-layout-code", ",jdk.jlink,jdk.jdeps", "SPR-BUNDLE-LAYOUT")):
                 image = work / ("image " + expected)

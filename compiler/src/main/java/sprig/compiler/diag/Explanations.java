@@ -750,10 +750,11 @@ public final class Explanations {
             }
             case Codes.BUNDLE_LAYOUT -> {
                 out.put("whyMatters", "jlink builds the runtime image from the JDK's jmods; a bundle must be complete and carry the JDK's legal notices, so an installation that cannot provide them is refused instead of producing a broken bundle.");
-                out.put("commonCauses", List.of("The Java installation has no jmods directory (a jlinked runtime or a JRE layout).",
+                out.put("commonCauses", List.of("The Java installation has no packaged modules (jmods/) and is not a linkable runtime (JDK 24+), so jlink cannot image it: a JRE, or an image jlinked without --generate-linkable-runtime.",
+                        "A previous bundle in the output directory could not be removed.",
                         "jlink failed, for example for a module jdeps named that the installation does not ship.",
                         "A --classpath entry is a file that is not a JAR, or does not exist."));
-                out.put("safeFixes", List.of("Run sprig with a full JDK distribution that ships jmods/ (OpenJDK, Temurin, Zulu, Corretto).",
+                out.put("safeFixes", List.of("Run sprig with a full JDK distribution (OpenJDK, Temurin, Zulu, Corretto): one that ships jmods/, or a JDK 24+ linkable runtime.",
                         "Run the jlink command from the diagnostic's data by hand for the full report.",
                         "Pass JARs or class directories on the classpath, and run sprig resolve for locked dependencies."));
                 out.put("relatedCodes", List.of(Codes.BUNDLE_TOOLS, Codes.BUNDLE_JDEPS));

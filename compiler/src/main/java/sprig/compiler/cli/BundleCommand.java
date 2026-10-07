@@ -118,21 +118,21 @@ final class BundleCommand {
                     .withRelatedHelp("build"));
             return null;
         }
-        if (!Files.isDirectory(javaHome.resolve("jmods"))) {
-            diagnostics.add(Diagnostic.error(Codes.BUNDLE_LAYOUT, Phase.CLI,
-                    "The Java installation at " + javaHome + " has no jmods directory, so jlink cannot build a "
-                            + "runtime image from it (a jlinked runtime or a JRE layout)",
-                    null, null)
-                    .withHint("Run sprig with a full JDK distribution that ships jmods/ (any OpenJDK build, "
-                            + "Temurin, Zulu, Corretto); sprig doctor shows the installation in use.")
-                    .withRelatedHelp("build"));
-            return null;
-        }
+        // No jmods/ precheck: since JDK 24 a JDK built as a linkable runtime
+        // ships without jmods and jlink still images it; jlink itself reports
+        // an installation it cannot link from.
 
         Result result = new Result();
         // The JDK tools run with their own working directory, so every path they see is absolute.
         Path bundleDir = outDir.toAbsolutePath().normalize().resolve(name);
-        Main.deleteRecursively(bundleDir);
+        deleteBundle(bundleDir);
+        if (Files.exists(bundleDir)) {
+            diagnostics.add(Diagnostic.error(Codes.BUNDLE_LAYOUT, Phase.CLI,
+                    "The previous bundle at " + bundleDir + " could not be removed", null, null)
+                    .withHint("Close programs running from it, or delete the directory by hand, then build again.")
+                    .withRelatedHelp("build"));
+            return null;
+        }
         Path lib = bundleDir.resolve("lib");
         Path bin = bundleDir.resolve("bin");
         Files.createDirectories(lib);
@@ -232,7 +232,7 @@ final class BundleCommand {
         if (image.exitCode != 0 && cds && mentionsCds(image.stderr + image.stdout)) {
             // The JDK's class-data-sharing archive cannot be generated on this
             // platform; the image is still complete without it.
-            Main.deleteRecursively(runtime);
+            deleteBundle(runtime);
             cds = false;
             jlinkCommand = new ArrayList<>(jlinkBase);
             jlinkCommand.add("--output");
@@ -245,7 +245,9 @@ final class BundleCommand {
                             + firstLine(image.stderr.isBlank() ? image.stdout : image.stderr),
                     null, null)
                     .withHint("The JDK at " + javaHome + " must ship jmods/ for every module jdeps found ("
-                            + String.join(", ", modules) + "); run the printed jlink command by hand for the full report.")
+                            + String.join(", ", modules) + "), or be a linkable runtime (JDK 24+); a JRE or an image "
+                            + "jlinked without --generate-linkable-runtime cannot build images. Run the printed jlink "
+                            + "command by hand for the full report.")
                     .withData(Map.of("command", String.join(" ", jlinkCommand), "stderr", image.stderr))
                     .withRelatedHelp("build"));
             return null;
@@ -487,6 +489,18 @@ final class BundleCommand {
                 }
             }
             return copy;
+        }
+    }
+
+    /** Removes a previous bundle; jlink marks its files read-only on Windows, so the attribute is cleared first. */
+    private static void deleteBundle(Path directory) throws IOException {
+        if (!Files.exists(directory)) return;
+        try (Stream<Path> stream = Files.walk(directory)) {
+            for (Path path : stream.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                java.io.File file = path.toFile();
+                if (!file.canWrite()) file.setWritable(true);
+                Files.deleteIfExists(path);
+            }
         }
     }
 

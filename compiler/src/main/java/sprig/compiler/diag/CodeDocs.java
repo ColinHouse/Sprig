@@ -107,7 +107,7 @@ public final class CodeDocs {
                     "Uncaught JVM exception at runtime, wrapped with a Sprig source range; run --stacktrace for the JVM stack."),
             Map.entry(Codes.BUNDLE_TOOLS, "sprig build --bundle needs jdeps and jlink from a full JDK; the Java installation in use has none (a JRE)."),
             Map.entry(Codes.BUNDLE_JDEPS, "jdeps could not analyze the bundle's JARs to find the Java modules the program needs."),
-            Map.entry(Codes.BUNDLE_LAYOUT, "The Java installation or the classpath has a layout the bundle cannot use: no jmods directory, a jlink failure, or a classpath entry that is not a JAR or a class directory."),
+            Map.entry(Codes.BUNDLE_LAYOUT, "The Java installation or the classpath has a layout the bundle cannot use: no packaged modules and no linkable runtime for jlink, a jlink failure, a previous bundle that cannot be removed, or a classpath entry that does not exist."),
             Map.entry(Codes.PROGRAM_EXIT, "The Sprig program exited with a non-zero process status."));
 
     private CodeDocs() {
