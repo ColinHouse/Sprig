@@ -1,0 +1,9 @@
+[package]
+name = "sqlite"
+description = "Typed SQLite access with explicit SQL and transactions"
+git = "https://github.com/ColinHouse/Sprig.git"
+subdir = "libraries/sprig-sqlite"
+
+[[release]]
+version = "0.7.1-beta.1"
+tag = "v0.7.1-beta.1"

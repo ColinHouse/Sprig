@@ -57,6 +57,7 @@ public final class CodeDocs {
             Map.entry(Codes.DEP_NOT_FOUND, "A declared Sprig dependency or module cannot be found."),
             Map.entry(Codes.DEP_GIT, "A Git dependency operation failed (missing git, remote, ref, or revision)."),
             Map.entry(Codes.DEP_OFFLINE, "A required dependency resource is missing from the cache in offline mode."),
+            Map.entry(Codes.DEP_REGISTRY, "A package registry could not be read, or does not list the requested package or version."),
             Map.entry(Codes.DEP_CHECKSUM, "A locked dependency's bytes differ from its SHA-256; do not use the corrupted cache entry."),
             Map.entry(Codes.DEP_MAVEN, "A JVM (Maven) dependency operation failed."),
             Map.entry(Codes.NUM_RANGE, "A numeric literal is outside the target range or underflows to zero."),

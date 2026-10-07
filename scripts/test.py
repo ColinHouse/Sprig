@@ -66,7 +66,7 @@ def main():
               "tests/agent_eval/check_task_pack.py", "tests/examples/check_task_tracker.py",
               "tests/cli_contract/check_cli_contract.py", "tests/launcher/check_windows_arguments.py", "tests/test_runner/check_test_runner.py", "tests/http/check_http.py", "tests/bootstrap/check_probe.py",
               "tests/project/check_project.py", "tests/project_deps/check_deps.py", "tests/project_deps/check_git_monorepo.py", "tests/project_deps/check_git_lock.py", "tests/project_deps/check_add_remove.py",
-              "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
+              "tests/project_deps/check_cleanup.py", "tests/registry/check_registry.py", "tests/adversarial/v08/check_generics.py",
               "tests/capabilities/check_comparable.py",
               "tests/adversarial/v08/check_projects.py"]
     suites += ["tests/adversarial/regressions/check_semantics.py",

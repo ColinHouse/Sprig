@@ -1,0 +1,9 @@
+[package]
+name = "web"
+description = "Synchronous localhost HTTP server with explicit OpenAPI metadata"
+git = "https://github.com/ColinHouse/Sprig.git"
+subdir = "libraries/sprig-web"
+
+[[release]]
+version = "0.7.1-beta.1"
+tag = "v0.7.1-beta.1"

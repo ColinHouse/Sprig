@@ -120,6 +120,20 @@ print(vector.length_squared(3, 4))
 
 Only modules listed in `exports` can be imported. Paths are normalized first, so `..` can't take you outside the dependency's source directory.
 
+### Adding from a registry
+
+Without `--path`, `--git` or `--jvm`, `sprig add` looks the name up in a package registry:
+
+```bash
+sprig search json            # what the registries list, with the latest version
+sprig add json-codec         # written as an ordinary Git dependency (git, tag, subdir); the lock pins the commit as usual
+sprig add json-codec --version 0.7.1-beta.1
+```
+
+A registry is only an index: a directory with one `packages/NAME.toml` per package naming its Git repository, subdirectory and the tag of each release. It is not a new way to fetch code; after `add` the manifest holds the full Git dependency and `check`/`run` never consult the registry again. A project declares its registries with `[[registry]]` tables (a local `path` or a Git `url`); without any, the default is the `registry/` directory of the Sprig repository, which lists the first-party libraries.
+
+To publish your own package, run `sprig publish --registry ../registry --tag v1.0.0` inside it: that writes `packages/NAME.toml` into the local registry directory, and committing and pushing the index repository is the release. An unlisted package or version is `SPR-DEP-REGISTRY`; `sprig search` shows what is there. The [dependency contract](/en/reference/projects/dependencies) has the details.
+
 ## The lock file
 
 `sprig resolve` (and `add` and `remove`) writes `sprig.lock`, which records the exact version and checksum each dependency resolved to.

@@ -237,6 +237,12 @@ public final class Catalog {
         guidance(out, "charType", "strings", "one-code-point String elements via indexing and iteration");
         guidance(out, "tuples", "language", "classes or variants with named fields");
         guidance(out, "destructuring", "language", "explicit field access");
+        out.put("packageRegistry", Map.of("supported", true, "helpTopic", "dependencies",
+                "rules", List.of("a registry is an index of where packages live: packages/NAME.toml with the Git repository, subdir and releases",
+                        "sprig add NAME [--version V] writes the Git dependency the index names; the lock pins the commit as for any Git dependency",
+                        "sprig search [TEXT] lists packages; sprig publish writes this package's entry into a local registry directory",
+                        "[[registry]] tables name registries by path or Git url; without any, the Sprig repository's registry directory is the default",
+                        "there is no central hosted registry, no authentication and no upload: publishing is a commit to an index repository")));
         guidance(out, "centralSprigRegistry", "dependencies", "local path dependencies", "Git dependencies");
         return out;
     }

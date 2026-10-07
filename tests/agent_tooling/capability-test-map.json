@@ -114,5 +114,8 @@
   "stringSemantics": [
     "tests/runtime/20_string_codepoints.spr",
     "tests/runtime/check_strings.py"
+  ],
+  "feature.packageRegistry": [
+    "tests/registry/check_registry.py"
   ]
 }

@@ -421,6 +421,16 @@ public final class Explanations {
                         "Check that the expected cache directory exists under the user home."));
                 out.put("relatedCodes", List.of(Codes.DEP_CHECKSUM, Codes.PROJECT_LOCK_STALE));
             }
+            case Codes.DEP_REGISTRY -> {
+                out.put("whyMatters", "A registry is only an index of where packages live; add still writes an ordinary Git dependency and the lock pins the commit.");
+                out.put("commonCauses", List.of("The package name is not listed in any configured registry, or the requested version is not one of its releases.",
+                        "The [[registry]] path does not exist, or the index has no packages/NAME.toml files.",
+                        "Two registries list the same name and no --registry was given."));
+                out.put("safeFixes", List.of("Run sprig search to see the listed packages and versions.",
+                        "Pass --registry NAME when several registries are declared, or --version to pick a release.",
+                        "Add the package with --git URL --tag TAG directly when it is not in a registry."));
+                out.put("relatedCodes", List.of(Codes.DEP_GIT, Codes.DEP_OFFLINE));
+            }
             case Codes.DEP_CHECKSUM -> {
                 out.put("whyMatters", "Locked artifacts are content-addressed; a mismatch means the cache entry is not the locked bytes.");
                 out.put("commonCauses", List.of("A corrupted or truncated cache entry.",

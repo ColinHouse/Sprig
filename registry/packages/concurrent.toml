@@ -1,0 +1,9 @@
+[package]
+name = "concurrent"
+description = "Tasks, pools, channels, counters, locks and latches over java.util.concurrent"
+git = "https://github.com/ColinHouse/Sprig.git"
+subdir = "libraries/sprig-concurrent"
+
+[[release]]
+version = "0.1.0-dev"
+branch = "main"

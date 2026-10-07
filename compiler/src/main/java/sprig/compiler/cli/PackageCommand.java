@@ -24,6 +24,7 @@ import sprig.compiler.project.GitCache;
 import sprig.compiler.project.Lockfile;
 import sprig.compiler.project.MavenResolver;
 import sprig.compiler.project.Project;
+import sprig.compiler.project.Registry;
 import sprig.compiler.project.Toml;
 
 /** Comment-preserving, transactional manifest dependency edits. */
@@ -40,6 +41,9 @@ final class PackageCommand {
                     "No sprig.toml found in this directory or above", null);
             byte[] original = Files.readAllBytes(manifest);
             Project current = Project.load(manifest);
+            if (request.kind.equals("sprig-registry")) {
+                lookup(request, current);
+            }
             String source = new String(original, StandardCharsets.UTF_8);
             String candidateText = edit(source, current, request);
             byte[] candidateBytes = candidateText.getBytes(StandardCharsets.UTF_8);
@@ -112,6 +116,54 @@ final class PackageCommand {
         }
     }
 
+    /**
+     * {@code sprig add NAME} without --path, --git or --jvm: the registries the
+     * project declares (or the default one) say where the package lives, and the
+     * request becomes the ordinary Git dependency the index names, which the
+     * manifest then records in full. Nothing in the lock refers to the registry.
+     */
+    private static void lookup(Request request, Project project) throws DepError {
+        List<Registry.Source> sources = Registry.sources(project);
+        if (request.registry != null) {
+            sources = sources.stream().filter(source -> source.name().equals(request.registry)).toList();
+            if (sources.isEmpty()) {
+                throw new DepError(Codes.DEP_REGISTRY, "No registry named '" + request.registry
+                        + "' is declared in sprig.toml", "Declare it with a [[registry]] table, or omit --registry.");
+            }
+        }
+        List<Registry.Entry> found = new ArrayList<>();
+        for (Registry.Source source : sources) {
+            Path root = Registry.locate(source, project.root, request.offline);
+            for (Registry.Entry entry : Registry.load(source, root)) {
+                if (entry.name.equals(request.alias)) found.add(entry);
+            }
+        }
+        if (found.isEmpty()) {
+            throw new DepError(Codes.DEP_REGISTRY, "No registry lists a package named '" + request.alias + "'",
+                    "Run sprig search " + request.alias + " to see what the registries list, or add it with --git URL.");
+        }
+        if (found.size() > 1) {
+            throw new DepError(Codes.DEP_REGISTRY, "Package '" + request.alias + "' is listed by several registries: "
+                    + found.stream().map(entry -> entry.registry).toList(), "Pass --registry NAME to choose one.");
+        }
+        Registry.Entry entry = found.get(0);
+        Registry.Release release = request.version == null ? entry.latest() : entry.release(request.version);
+        if (release == null) {
+            throw new DepError(Codes.DEP_REGISTRY, request.version == null
+                    ? "Package '" + request.alias + "' has no releases in registry '" + entry.registry + "'"
+                    : "Package '" + request.alias + "' has no version " + request.version + " in registry '"
+                            + entry.registry + "'; it lists " + entry.releases.stream().map(Registry.Release::version).toList(),
+                    "Run sprig search " + request.alias + " for the listed versions.");
+        }
+        request.kind = "sprig-git";
+        request.url = entry.git;
+        request.refKind = release.refKind();
+        request.ref = release.ref();
+        request.subdir = entry.subdir;
+        request.registry = entry.registry;
+        request.version = release.version();
+    }
+
     private static Lockfile readPreviousLock(Path path, boolean offline) throws IOException {
         if (!offline || !Files.isRegularFile(path)) return null;
         try {
@@ -132,6 +184,10 @@ final class PackageCommand {
             dependency.put("intentKind", request.refKind == null ? "branch" : request.refKind);
             dependency.put("intentValue", request.ref == null ? "main" : request.ref);
             dependency.put("subdir", request.subdir == null ? "." : request.subdir);
+            if (request.registry != null) {
+                dependency.put("registry", request.registry);
+                dependency.put("version", request.version);
+            }
             Lockfile.SprigEntry entry = result.lock.sprig.stream()
                     .filter(item -> item.id.equals(Lockfile.edgeId("root", request.alias)))
                     .findFirst().orElse(null);
@@ -172,6 +228,7 @@ final class PackageCommand {
         } else {
             System.out.println((request.action.equals("add") ? "Added " : "Removed ")
                     + request.kind + " dependency " + request.declaredIdentity()
+                    + (request.registry != null ? " (version " + request.version + " from registry " + request.registry + ")" : "")
                     + " and updated " + originalProject.lockPath());
         }
         return 0;
@@ -210,7 +267,7 @@ final class PackageCommand {
                 else request.offline = true;
                 continue;
             }
-            if (Set.of("--path", "--git", "--branch", "--tag", "--rev", "--subdir", "--jvm")
+            if (Set.of("--path", "--git", "--branch", "--tag", "--rev", "--subdir", "--jvm", "--version", "--registry")
                     .contains(arg)) {
                 if (!seen.add(arg)) throw new UsageException("Duplicate option " + arg);
                 if (i + 1 >= args.length || args[i + 1].startsWith("--"))
@@ -224,6 +281,8 @@ final class PackageCommand {
                     case "--rev" -> { request.refKind = "rev"; request.ref = value; }
                     case "--subdir" -> request.subdir = value;
                     case "--jvm" -> request.jvmValue = value;
+                    case "--version" -> request.version = value;
+                    case "--registry" -> request.registry = value;
                     default -> throw new AssertionError(arg);
                 }
             } else if (arg.startsWith("-")) {
@@ -234,7 +293,8 @@ final class PackageCommand {
         if (refOptions > 1) throw new UsageException("Choose only one of --branch, --tag or --rev");
         if (request.jvmValue != null) {
             if (!positional.isEmpty() || request.path != null || request.url != null
-                    || request.refKind != null || request.subdir != null)
+                    || request.refKind != null || request.subdir != null || request.version != null
+                    || request.registry != null)
                 throw new UsageException("--jvm cannot be combined with a Sprig dependency");
             request.kind = "jvm";
             String[] parts = request.jvmValue.split(":", -1);
@@ -260,7 +320,19 @@ final class PackageCommand {
             request.alias = positional.get(0);
             if (request.alias.isBlank() || request.alias.equals("std"))
                 throw new UsageException("Dependency name must be non-empty and cannot be 'std'");
-            if ((request.path == null) == (request.url == null))
+            if (request.path == null && request.url == null) {
+                // A registry lookup: the index names the Git source and the ref.
+                if (request.refKind != null || request.subdir != null)
+                    throw new UsageException("--branch, --tag, --rev and --subdir require --git; "
+                            + "a registry entry supplies them");
+                if (!request.alias.matches("[A-Za-z][A-Za-z0-9_-]*"))
+                    throw new UsageException("A registry package name uses letters, digits, '-' and '_'");
+                request.kind = "sprig-registry";
+                return request;
+            }
+            if (request.version != null || request.registry != null)
+                throw new UsageException("--version and --registry are for a registry lookup: sprig add NAME [--version V] [--registry R]");
+            if (request.path != null && request.url != null)
                 throw new UsageException("Choose exactly one of --path PATH or --git URL");
             if (request.path != null && (request.refKind != null || request.subdir != null))
                 throw new UsageException("--branch, --tag, --rev and --subdir require --git");
@@ -274,7 +346,8 @@ final class PackageCommand {
             }
         } else {
             if (positional.size() != 1 || request.path != null || request.url != null
-                    || request.refKind != null || request.subdir != null)
+                    || request.refKind != null || request.subdir != null || request.version != null
+                    || request.registry != null)
                 throw new UsageException("sprig remove requires a dependency name or --jvm GROUP:ARTIFACT");
             request.alias = positional.get(0);
             request.kind = "sprig";
@@ -438,6 +511,7 @@ final class PackageCommand {
         String group;
         String artifact;
         String version;
+        String registry;
         String coordinate;
         boolean json;
         boolean offline;
@@ -455,6 +529,8 @@ final class PackageCommand {
             if (ref != null) map.put("intentValue", ref);
             if (subdir != null) map.put("subdir", subdir);
             if (coordinate != null) map.put("coordinate", coordinate);
+            if (registry != null) map.put("registry", registry);
+            if (version != null && coordinate == null) map.put("version", version);
             return map;
         }
     }

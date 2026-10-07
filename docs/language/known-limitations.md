@@ -46,7 +46,9 @@ by the historical design kit in `docs/history/design-kit/`.
   JAR/POM SHA-256. Shared
   project classpaths work for check/build/run/api/doctor; only explicit
   dependency-resolution commands use Maven networking. Apache Resolver handles effective POMs and mediation.
-  Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
+  Missing/invalid POMs fail. Package registries are Git or local directory
+  indexes (`sprig search`, `sprig add NAME`, `sprig publish`); a hosted central
+  registry, authentication, Maven plugins
   and non-JAR runtime artifacts remain unsupported. See `DEPENDENCIES.md`.
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
   text/time and a typed JSON model. The first-party libraries add a small
@@ -54,8 +56,8 @@ by the historical design kit in `docs/history/design-kit/`.
   explicit OpenAPI metadata (`sprig-web`), SQLite access (`sprig-sqlite`) and
   tasks, pools, channels, counters, locks and latches over
   `java.util.concurrent` (`sprig-concurrent`). There is no async/await syntax,
-  no structured concurrency scope, no streaming HTTP and no stable package
-  registry. The ecosystem remains intentionally small and experimental.
+  no structured concurrency scope, no streaming HTTP and no hosted central
+  package registry. The ecosystem remains intentionally small and experimental.
   Debugger integration and incremental compilation are absent. `sprig lsp`
   serves diagnostics, hover, navigation, completion, formatting, local
   rename and quick fixes over the Language Server Protocol; it re-checks the

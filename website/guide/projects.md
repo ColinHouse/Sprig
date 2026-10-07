@@ -97,6 +97,20 @@ version = "1.12.0"
 
 `name` 是你在自己代码里导入这个包时用的名字，和依赖包自己 `[project]` 里的 `name` 无关。不同的包可以给依赖起同样的名字，同一个包里不能重名。
 
+### 从注册表添加
+
+不写 `--path`、`--git`、`--jvm`，`sprig add` 就去包注册表里查这个名字：
+
+```bash
+sprig search json            # 注册表里有哪些包，最新版本是什么
+sprig add json-codec         # 查到后写成普通的 Git 依赖（git、tag、subdir），锁文件照常锁定提交
+sprig add json-codec --version 0.7.1-beta.1
+```
+
+注册表只是一份索引：一个目录，里面每个包一个 `packages/名字.toml`，写着它的 Git 仓库、子目录和各个发布版本对应的 tag。它不是新的下载方式，`add` 之后清单里就是完整的 Git 依赖，`check`、`run` 不再碰注册表。项目用 `[[registry]]` 声明自己用哪些注册表（本地 `path` 或 Git `url`）；一个都不写时，默认用 Sprig 仓库里的 `registry/` 目录，里面列着第一方库。
+
+自己发布一个包：在包目录里运行 `sprig publish --registry ../registry --tag v1.0.0`，它会在那个本地注册表目录里写好 `packages/名字.toml`，提交并推送索引仓库就算发布了。查不到的包或版本会报 `SPR-DEP-REGISTRY`，`sprig search` 能看到到底有什么。细节见[依赖契约（英文）](/en/reference/projects/dependencies)。
+
 ## 使用依赖里的模块
 
 依赖包要在自己的 `sprig.toml` 里写明，哪些模块允许别人导入：

@@ -100,8 +100,67 @@ that group and artifact, including every manually declared version;
 versions are exact declarations, not ranges. Repeating an existing add is an
 error so dependency changes remain explicit.
 
-These commands install dependencies from path, Git and Maven sources. They do
-not provide a package registry, package search, publishing or authentication.
+These commands install dependencies from path, Git and Maven sources, and
+`sprig add NAME` without a source looks the name up in a package registry
+(below). There is no authentication.
+
+## Package registries
+
+A registry is an index of where packages live, not a new way to fetch code. It
+is a directory with an optional `registry.toml` and one `packages/NAME.toml` per
+package:
+
+```toml
+[package]
+name = "json-codec"
+description = "Path-aware JSON decoding and encoding over @std/json"
+git = "https://github.com/ColinHouse/Sprig.git"
+subdir = "libraries/sprig-json-codec"
+
+[[release]]
+version = "0.7.1-beta.1"
+tag = "v0.7.1-beta.1"
+```
+
+Each release names one Git ref (`tag`, `branch` or a full `rev`); the last
+release listed is the newest. A project declares the registries it uses with
+`[[registry]]` tables, each a local `path` or a Git `url` (with an optional
+`branch`, default `main`, and `subdir`):
+
+```toml
+[[registry]]
+name = "team"
+path = "../registry"
+
+[[registry]]
+name = "sprig"
+url = "https://github.com/ColinHouse/Sprig.git"
+subdir = "registry"
+```
+
+Without any `[[registry]]`, the default registry is the `registry/` directory
+of the Sprig repository, which lists the first-party libraries.
+
+- `sprig search [TEXT] [--registry R] [--offline] [--json]` lists the packages
+  the registries know (name, latest version, source, description), filtered by
+  a text found in the name or description.
+- `sprig add NAME [--version V] [--registry R]` looks the name up and writes
+  the ordinary Git dependency the index names: `git`, the release's `tag`,
+  `branch` or `rev`, and `subdir`. The manifest then carries the full source,
+  the lock pins the commit, and `check`/`build`/`run` never consult the
+  registry again. `--version` picks a listed release; `--registry` chooses when
+  several registries list the name.
+- `sprig publish --registry DIR (--tag T | --branch B | --rev SHA) [--git URL]
+  [--subdir DIR] [--version V] [--description TEXT]` writes or updates the
+  current package's `packages/NAME.toml` in a local registry directory (a
+  declared `path` registry by name, or any directory). Committing and pushing
+  the index is the publisher's step; a Git registry is published through a
+  local clone of it. Publishing the same version again replaces that release.
+
+A Git registry is read at `add`/`search` time (its branch tip is pinned under
+`~/.sprig/registry` so `--offline` reuses it); an unlisted package or version,
+an unreadable index or an ambiguous name is `SPR-DEP-REGISTRY`. There is no
+central hosted registry, no authentication and no upload.
 
 ## Maven / JVM
 
@@ -155,8 +214,9 @@ numeric, nullability and exception contracts.
 
 ## Limits
 
-Publishing/registry, Maven plugins, dependency authentication, non-JAR runtime
-artifacts and full Java generic/array/varargs adapters are not implemented.
+A hosted central registry, Maven plugins, dependency authentication, non-JAR
+runtime artifacts and full Java generic/array/varargs adapters are not
+implemented; package registries are Git or local directory indexes (above).
 Git cache materialization waits up to five seconds for its cooperative process
 lock, then reports `SPR-DEP-GIT` with retry guidance; it never steals the lock.
 The Maven cache lock still uses a blocking cooperative wait. Hostile concurrent

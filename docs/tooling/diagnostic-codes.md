@@ -100,6 +100,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-DEP-NOT-FOUND | A declared Sprig dependency or module cannot be found. |
 | SPR-DEP-GIT | A Git dependency operation failed. Cache-lock contention waits up to five seconds, then asks the user to retry; it never steals a lock. |
 | SPR-DEP-OFFLINE | A required dependency resource is missing from the cache in offline mode. |
+| SPR-DEP-REGISTRY | A package registry could not be read, or does not list the requested package or version. `sprig search` shows what a registry lists. |
 | SPR-DEP-CHECKSUM | Locked dependency bytes do not match SHA-256; corrupted cache is rejected. |
 | SPR-DEP-MAVEN | A JVM (Maven) dependency operation failed. |
 
