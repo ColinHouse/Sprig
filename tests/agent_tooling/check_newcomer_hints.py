@@ -124,6 +124,8 @@ CASES = [
      "SPR-SYNTAX-ERROR", "Expected an indented block after 'else:'"),
     ("unterminated-string", 'let s = "abc\nprint(s)\n', "SPR-LEX-STRING", "Unterminated string literal"),
     ("unterminated-triple-string", 'let s = """abc\nprint(s)\n', "SPR-LEX-STRING", "Unterminated string literal"),
+    ("field-without-type", "class Box:\n    let count = 0\nprint(Box().count)\n",
+     "SPR-SYNTAX-ERROR", "Fields have explicit types"),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
      "sum.toFloat() / count.toFloat()"),
