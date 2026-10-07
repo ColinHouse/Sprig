@@ -53,7 +53,7 @@ func hello(req: web.Request) -> web.Response:
 app.get("/", fn(req: web.Request) => root(req))
 ```
 
-- 用 `app.get`、`app.post`、`app.delete` 注册处理函数。如果还想生成接口文档，就用 `app.route` 传一个 `web.Route`，在里面写明摘要，以及参数、请求和响应的结构。没有装饰器，也没有 Java 注解。
+- 用 `app.get`、`app.post`、`app.put`、`app.patch`、`app.delete` 注册处理函数。`app.run(port)` 只监听本机 127.0.0.1；要让别的机器或容器外部访问，用 `app.run_on("0.0.0.0", port)`（没有 TLS，需要的话前面放一个反向代理）。如果还想生成接口文档，就用 `app.route` 传一个 `web.Route`，在里面写明摘要，以及参数、请求和响应的结构。没有装饰器，也没有 Java 注解。
 - 响应用模块函数来构造：`web.text(内容, 状态码)` 和 `web.json_response(值, 状态码)`。没有 `Response.text` 这种静态方法的写法。
 - `req.path_param`、`req.query`、`req.header` 都返回 `String?`，所以「没有这个参数」和「参数是空字符串」能区分开。
 - `req.body` 是 UTF-8 文本，`req.json()` 把请求体解析成 JSON 值。要在 JSON 里找字段，用 `json.find_member`，它能区分键不存在、值是 JSON 的 `null`，以及要查的不是对象这几种情况，见[语言速查](/guide/language-tour)。

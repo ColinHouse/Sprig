@@ -53,7 +53,7 @@ func hello(req: web.Request) -> web.Response:
 app.get("/", fn(req: web.Request) => root(req))
 ```
 
-- Register handlers with `app.get`, `app.post` and `app.delete`. To document the route as well, pass a `web.Route` to `app.route`, with a summary and the shapes of the parameters, request and response. There are no decorators and no Java annotations.
+- Register handlers with `app.get`, `app.post`, `app.put`, `app.patch` and `app.delete`. `app.run(port)` listens on 127.0.0.1 only; to be reachable from other machines or outside a container, use `app.run_on("0.0.0.0", port)` (no TLS: put a reverse proxy in front). To document the route as well, pass a `web.Route` to `app.route`, with a summary and the shapes of the parameters, request and response. There are no decorators and no Java annotations.
 - Build responses with module functions: `web.text(body, status)` and `web.json_response(value, status)`. There's no static `Response.text` form.
 - `req.path_param`, `req.query` and `req.header` return `String?`, so "no such parameter" and "an empty parameter" stay distinct.
 - `req.body` is UTF-8 text, and `req.json()` parses the body into a JSON value. To find a field in it, use `json.find_member`, which tells apart a missing key, a JSON `null` value and a value that isn't an object; see the [language quick reference](/en/guide/language-tour).

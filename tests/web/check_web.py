@@ -17,9 +17,10 @@ def main():
         command(project, "resolve")
         shutil.copy(ROOT / "tests/web/contract.spr", project / "src/contract.spr")
         evidence = command(project, "run", "src/contract.spr").splitlines()
-        assert evidence[:8] == ["1", "0", "true", "true", "true", "true", "true", "true"], evidence
-        assert json.loads(evidence[8]) == {"type":"array", "items":{"type":"integer", "format":"int64"}}
-        assert json.loads(evidence[9]) == {"type":"object", "properties":{"enabled":{"type":"boolean"}}}
+        assert evidence[:9] == ["1", "0", "true", "true", "true", "true", "true", "true", "true"], evidence
+        assert evidence[9:11] == ["PUT patch", "3"], evidence
+        assert json.loads(evidence[11]) == {"type":"array", "items":{"type":"integer", "format":"int64"}}
+        assert json.loads(evidence[12]) == {"type":"object", "properties":{"enabled":{"type":"boolean"}}}
         shutil.copy(ROOT / "tests/web/registration.spr", project / "src/registration.spr")
         registration = command(project, "run", "src/registration.spr").splitlines()
         assert registration[:5] == ["true", "true", "true", "true", "3"], registration

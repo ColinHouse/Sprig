@@ -14,6 +14,8 @@ import java.lang.RuntimeException as RuntimeException
 enum Method:
     GET
     POST
+    PUT
+    PATCH
     DELETE
 
 enum SchemaType:
@@ -113,6 +115,10 @@ func method_name(method: Method) -> String:
             "GET"
         case Method.POST:
             "POST"
+        case Method.PUT:
+            "PUT"
+        case Method.PATCH:
+            "PATCH"
         case Method.DELETE:
             "DELETE"
 
@@ -122,6 +128,10 @@ func operation_name(method: Method) -> String:
             "get"
         case Method.POST:
             "post"
+        case Method.PUT:
+            "put"
+        case Method.PATCH:
+            "patch"
         case Method.DELETE:
             "delete"
 
@@ -240,6 +250,12 @@ class App:
     func post(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.POST, path=path, handler=handler))
 
+    func put(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+        route(Route(method=Method.PUT, path=path, handler=handler))
+
+    func patch(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+        route(Route(method=Method.PATCH, path=path, handler=handler))
+
     func delete(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.DELETE, path=path, handler=handler))
 
@@ -290,7 +306,7 @@ class App:
             response = text("Internal server error", 500)
         if cors_origin != "":
             response = response.with_header("Access-Control-Allow-Origin", cors_origin)
-            response = response.with_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+            response = response.with_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
             response = response.with_header("Access-Control-Allow-Headers", "Content-Type")
             response = response.with_header("Vary", "Origin")
         let host = HostResponse(response.status, response.body, response.content_type)
@@ -298,10 +314,21 @@ class App:
             host.header(header.name, header.value)
         return host
 
+    # Binds 127.0.0.1; port 0 asks the OS for a free one (see port()).
     func run(port: Int) -> Unit throws Error:
+        run_on("127.0.0.1", port)
+
+    # Binds a host name or address: "0.0.0.0" listens on every interface, for a
+    # container or a machine that other hosts reach. There is no TLS; put a
+    # reverse proxy in front for that.
+    func run_on(host: String, port: Int) -> Unit throws Error:
         if server != null:
             throw Error("server already started")
-        server = HostServer(port, fn(raw: HostRequest) => dispatch(raw))
+        if host.trim().length() == 0:
+            throw Error("host must not be blank")
+        if port < 0 or port > 65535:
+            throw Error("port must be 0..65535, got " + port)
+        server = HostServer(host, port, fn(raw: HostRequest) => dispatch(raw))
 
     func port() -> Int throws Error:
         let active = server
