@@ -97,7 +97,7 @@ Sprig doesn't let you divide two integers with `/`:
 
 ```text
 SPR-NUM-DIVISION [TYPE] main.spr:2:7: Integer / would truncate; use a.divTrunc(b), or convert both operands explicitly (expected explicit division, actual Int / Int)
-  hint: Use divTrunc for deliberate truncation; use checked toFloat() for exact Float conversion.
+  hint: Write cents.divTrunc(b) to drop the remainder on purpose, or cents.toFloat() / b.toFloat() for a Float result. text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals.
 ```
 
 Is `7 / 2` equal to 3 or 3.5? Languages disagree. In Sprig you write which one you mean: `divTrunc` for 3, or convert to `Float` first for 3.5.
@@ -204,7 +204,7 @@ The compiler asks you to pick one of the two:
 
 ```text
 SPR-FLOW-THROWS [FLOW] main.spr:14:11: Call may throw Error; declare 'throws Error' or handle it with try/catch
-  hint: Sprig keeps recoverable errors explicit; there is no implicit propagation.
+  hint: Declare it on 'show' by changing its header to 'func show(text: String) -> Unit throws Error:', and its callers then handle or declare it too (top-level statements need neither), or handle it where it happens: 'try:' around the call, then 'catch problem: Error:' with what to do instead. Sprig keeps recoverable errors explicit; there is no implicit propagation.
 ```
 :::
 

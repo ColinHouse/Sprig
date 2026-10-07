@@ -92,7 +92,7 @@ Imported Java classes and generic methods can take concrete type arguments, like
 - Type arguments are kept intact. You can write `List[Map[String, Int32]]` or `Host.method[String](value)`, and type arguments inherited from a superclass or interface are recognized too.
 - Results are still treated as possibly `null`, so `get` on an `ArrayList[String]` returns `String?`.
 - Type arguments of generic methods aren't inferred, so write them out.
-- A raw type (one with no type arguments) can't stand in for a parameterized one. `ArrayList[String]` works as a `List[String]`; `ArrayList[Int32]` doesn't.
+- A raw type (one with no type arguments) can't stand in for a parameterized one. `ArrayList[String]()` works as a `List[String]`; a raw `ArrayList()` doesn't.
 - Wildcards keep their bounds: a `List<? extends Number>` result gives you `Number?` elements, a `List<? extends Number>` parameter takes an `ArrayList[Int]`, and anything that would write through `? extends` (like `add`) is rejected. Generic arrays (`T[]`) aren't supported; `sprig api` shows the reason code.
 
 ## Arrays and bytes

@@ -52,7 +52,7 @@ sprig run hello.spr
 sprig check hello.spr
 ```
 
-它只做检查，一次列出所有错误，不生成任何东西，比 `run` 快得多。把 `hello.spr` 的第二行改成 `print(1 + "a" - 2)` 再检查，就能看到 Sprig 报错的样子：
+它只做检查，一次列出所有错误，不生成任何东西，比 `run` 快得多。把 `hello.spr` 里的 `print(1 + 2)`（第 3 行）改成 `print(1 + "a" - 2)` 再检查，就能看到 Sprig 报错的样子：
 
 ```text
 SPR-NUM-MIXED [TYPE] hello.spr:3:7: Operator '-' has no implicit conversion between String and Int (expected matching numeric families, actual String and Int)

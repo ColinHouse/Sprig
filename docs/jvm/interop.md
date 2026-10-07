@@ -179,7 +179,7 @@ Raw evidence never becomes concrete evidence. A raw generic value cannot be
 assigned to, or passed where, a concrete parameterized type is expected;
 concrete arguments are checked invariantly and subtype conversions project
 arguments through the hierarchy (`ArrayList[String]` is accepted as
-`List[String]`, `ArrayList[Int32]` is not). Concrete-to-raw stays an erased
+`List[String]`; a raw `ArrayList()` is not). Concrete-to-raw stays an erased
 boundary: a raw receiver such as `ArrayList()` keeps its previous erased
 behavior and `api` labels it `erased-generic`. The same rule covers the Sprig
 collection images: a raw `SprigList`/`SprigMap` result never becomes

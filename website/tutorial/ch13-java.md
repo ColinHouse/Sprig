@@ -80,7 +80,7 @@ class Greeter:
 conform Greeter to Runnable
 ```
 
-方法名和签名要和接口一致，编译器会检查。这是 Sprig 在没有继承和接口的前提下，和面向接口的 Java 库合作的方式。详见 [JVM 互操作指南](/guide/jvm-interop)。
+方法名和签名要和接口一致，编译器会检查。这是 Sprig 在没有继承的前提下，和面向接口的 Java 库合作的方式；Sprig 自己这边的开放多态是第 6 章的契约类。详见 [JVM 互操作指南](/guide/jvm-interop)。
 
 ## 13.7 用 Maven 上的库
 

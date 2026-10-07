@@ -75,7 +75,7 @@ print(concurrent.scope(consume))
 ```
 
 - `channel[T](capacity)` 是有界队列。`send` 在队列满时阻塞；`receive()` 在队列空时阻塞，通道关闭且取空后返回 `null`。通道里不放 `null`，所以 `null` 只有"结束"这一个意思。
-- `try_send` 和 `receive_within(millis)` 不阻塞。
+- `try_send` 不阻塞，满了或关闭了返回 `false`；`receive_within(millis)` 最多等 `millis` 毫秒，超时返回 `null`（用 `is_closed()` 区分超时和关闭）。
 - 往关闭的通道 `send` 会在运行时以 `Error` 失败。`send` 没有 `throws` 子句，这样任务体里才能调用它；失败由那个任务的 `await()` 和作用域报出来。
 
 ## 计数器、锁和门闩

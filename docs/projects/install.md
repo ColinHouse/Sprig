@@ -86,7 +86,7 @@ command-line code page.
 
 `bin/sprig` and `bin\sprig.cmd` start the compiler JVM with
 `-XX:TieredStopAtLevel=1`. A Sprig command ends before the C2 JIT pays off, so
-the C1 JIT alone finishes it sooner: in local measurements on JDK 17 and 25,
+the C1 JIT alone finishes it sooner: in local measurements on JDK 17 and 25 (before the JDK 21 minimum),
 `sprig build` and `sprig test` took 30–40% less time. `sprig lsp` runs for a
 whole editor session and keeps tiered compilation. Programs started by
 `sprig run` and `sprig test` run in their own JVM with the JDK's defaults.

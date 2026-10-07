@@ -109,7 +109,7 @@ true
 - `elif` and `else` know the earlier conditions were false: after `if x == null:`, an `elif flag:` branch and the `else` both treat `x` as present, with no second check. Writing `x != null` again there is accepted; it is just redundant.
 - Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present. An `if/elif` chain whose earlier branches all return works the same way.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
-- A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
+- A `var` local or a class field never narrows, whether or not a function is called in between: copy it into a `let` (`let current = name`) and check that.
 - Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).
 
 When all you want is a fallback value or an error, `@std/nulls` (new in v0.6.0-beta.1) saves the `if`:

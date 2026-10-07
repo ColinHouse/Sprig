@@ -75,7 +75,7 @@ print(concurrent.scope(consume))
 ```
 
 - `channel[T](capacity)` is a bounded queue. `send` blocks while it is full; `receive()` blocks while it is empty and returns `null` once the channel is closed and drained. A channel never carries `null`, so `null` means one thing: the end.
-- `try_send` and `receive_within(millis)` do not block.
+- `try_send` never blocks and returns `false` when the channel is full or closed; `receive_within(millis)` waits at most `millis` and returns `null` on timeout (check `is_closed()` to tell timeout from closed).
 - Sending on a closed channel fails at run time with an `Error`. `send` has no throws clause, so a task body can call it; the task's `await()` and the scope report the failure.
 
 ## Counters, locks and latches

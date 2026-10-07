@@ -25,6 +25,8 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 | `sprig add`、`sprig remove` | 添加、删除依赖，见[项目](/guide/projects) |
 | `sprig project` | 查看项目信息 |
 | `sprig deps` | 列出声明的依赖 |
+| `sprig search [文本]` | 列出注册表里的包 |
+| `sprig publish --registry 目录 ...` | 在本地注册表目录里写入发布条目，见[项目](/guide/projects) |
 
 查资料：
 
@@ -147,7 +149,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 `sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是 v0.6.0-beta.1 新加的。
 
-它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。快速修复比 v0.7.1-beta.1 新，要等下一个版本。
+它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。快速修复比 v0.7.1-beta.1 新。
 
 编辑器怎么配置、每项功能的细节，见[语言服务器参考（英文）](/en/reference/tooling/lsp)。
 
@@ -155,7 +157,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 下面这些都还在计划中，目前没有实现：
 
-- 包的发布和模块仓库
+- 中心托管的包仓库（带账号和上传）：现在的注册表是 Git 或本地目录里的索引，发布靠向 `registry/` 开 pull request，见[项目](/guide/projects)
 - 增量检查
 
 早期的设计提案见 [Agent 工具协议（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md)。它只是历史提案，不代表现状。`sprig api` 能查到什么、查不到什么，见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。
