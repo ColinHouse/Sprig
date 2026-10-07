@@ -2,12 +2,13 @@
 # that does not compile is an Error carrying Java's message. Replacements use
 # Java's rules too: $1 refers to a group and a backslash escapes.
 import "@std/jvm.spr" as jvm
+import java.util.regex.Matcher as Matcher
 import java.util.regex.Pattern as Pattern
 import java.util.regex.PatternSyntaxException as PatternSyntaxException
 
 # Internal: the java.util.regex.Pattern behind the functions below, with a bad
 # pattern turned into an Error; callers use matches, find, find_all,
-# replace_all and split.
+# find_groups, find_all_groups, replace_all and split.
 func compiled(pattern: String) -> Pattern throws Error:
     try:
         let value = Pattern.compile(pattern)
@@ -19,6 +20,16 @@ func compiled(pattern: String) -> Pattern throws Error:
             throw Error("invalid pattern: " + message)
         throw Error("invalid pattern: " + pattern)
     throw Error("host returned no pattern")
+
+# Internal: groups 1..n of the matcher's current match, null for a group that
+# took no part; callers use find_groups and find_all_groups.
+func groups_of(matcher: Matcher) -> List[String?]:
+    let groups: MutableList[String?] = []
+    var index = 1
+    while index <= matcher.groupCount():
+        groups.append(matcher.group(index))
+        index += 1
+    return groups.toList()
 
 # Whether the whole text matches the pattern.
 func matches(pattern: String, text: String) -> Bool throws Error:
@@ -43,6 +54,26 @@ func find_all(pattern: String, text: String) -> List[String] throws Error:
             let group = matcher.group()
             if group != null:
                 found.append(group)
+    return found.toList()
+
+# The capture groups 1..n of the first match, numbered by their opening
+# parentheses as in Java, or null when nothing matches. A group that took no
+# part in the match, such as the unused side of (a)|(b), is null; a pattern
+# without groups gives [].
+func find_groups(pattern: String, text: String) -> List[String?]? throws Error:
+    let matcher = compiled(pattern).matcher(text)
+    if matcher != null and matcher.find():
+        return groups_of(matcher)
+    return null
+
+# The capture groups of every non-overlapping match, in order, each list as
+# find_groups gives it; [] when nothing matches.
+func find_all_groups(pattern: String, text: String) -> List[List[String?]] throws Error:
+    let matcher = compiled(pattern).matcher(text)
+    let found: MutableList[List[String?]] = []
+    if matcher != null:
+        while matcher.find():
+            found.append(groups_of(matcher))
     return found.toList()
 
 # The text with every match replaced.

@@ -5,7 +5,7 @@
   "import": "@web/app.spr",
   "resolvedSignatures": "sprig api @web/app.spr --json",
   "behavior": {
-    "handler": "fn(Request) -> Response; synchronous; callable types have no throws clause",
+    "handler": "fn(Request) -> Response throws Error; synchronous; an escaping BadRequest (Request.json) answers 400, any other escaping Error 500",
     "matching": "registration order wins; exact segments or one {name} per segment; encoded slashes stay inside a parameter; trailing slash is significant",
     "query": "first value wins; null absent; empty distinct; plus-as-space",
     "request": "read-only method, decoded path and UTF-8 body; path_param/query/header return String?",

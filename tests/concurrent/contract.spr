@@ -7,6 +7,7 @@ import java.net.ServerSocket as ServerSocket
 import java.net.Socket as Socket
 import java.net.InetAddress as InetAddress
 import java.io.IOException as IOException
+import java.lang.ArithmeticException as ArithmeticException
 
 # 1. a task returns its value; await on a finished task returns at once
 func answer(s: concurrent.Scope) -> Int throws Error:
@@ -353,3 +354,20 @@ if kept_run != null:
         concurrent.run(kept_run, fn() => touch())
     catch problem: Error:
         print(problem.message)
+
+# 17. a counter fails past the Int range the way Int arithmetic does, and a
+# change that failed leaves the value as it was
+let top = concurrent.counter(9223372036854775807)
+let bottom = concurrent.counter(-9223372036854775808)
+func overflow(work: fn() -> Int) -> String:
+    try:
+        return "no failure: " + work()
+    catch problem: ArithmeticException:
+        return "" + problem
+print(overflow(fn() => top.increment()))
+print(overflow(fn() => top.add(1)))
+print(overflow(fn() => bottom.decrement()))
+print(overflow(fn() => bottom.add(-1)))
+print(overflow(fn() => top.get() + 1))
+print(top.get())
+print(bottom.get())

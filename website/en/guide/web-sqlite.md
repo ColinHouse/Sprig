@@ -31,7 +31,7 @@ Amounts are integers in the smallest currency unit (cents, for example) and can 
 
 ## Handlers are ordinary Sprig functions
 
-A route handler has the type `fn(web.Request) -> web.Response`. These excerpts are from `examples/mini_web/src/main.spr`:
+A route handler has the type `fn(web.Request) -> web.Response throws Error`, with one rule: an answer the client should see, whether it's a 404 or a 400 that says which field is wrong, is a `Response` you return, and an error you don't handle escapes for the server to answer. These excerpts are from `examples/mini_web/src/main.spr`:
 
 ```sprig
 import "@web/web.spr" as web
@@ -50,6 +50,9 @@ func hello(req: web.Request) -> web.Response:
         return web.text("Hello, " + name + "!", 200)
     return web.text("Missing name", 400)
 
+func echo(req: web.Request) -> web.Response throws Error:
+    return web.json_response(req.json(), 200)
+
 app.get("/", fn(req: web.Request) => root(req))
 ```
 
@@ -57,7 +60,8 @@ app.get("/", fn(req: web.Request) => root(req))
 - Build responses with module functions: `web.text(body, status)` and `web.json_response(value, status)`. There's no static `Response.text` form.
 - `req.path_param`, `req.query` and `req.header` return `String?`, so "no such parameter" and "an empty parameter" stay distinct.
 - `req.body` is UTF-8 text, and `req.json()` parses the body into a JSON value. To find a field in it, use `json.find_member`, which tells apart a missing key, a JSON `null` value and a value that isn't an object; see the [language quick reference](/en/guide/language-tour).
-- Malformed requests get a 400, unknown routes a 404, and an unhandled error in a handler a controlled 500.
+- If the body isn't valid JSON, `req.json()` throws an `Error`, and `web.json_response` throws one for a value it can't write as JSON. When the client needs no more than "bad request", declare `throws Error` like `echo` above and let it escape; when you want to say what's wrong, return a 400 `Response` yourself. Don't catch an error only to return a generic 400 or 500: the server does that.
+- Malformed requests get a 400 (so does a body `req.json()` can't parse, when the handler lets that error escape), unknown routes a 404, and any other error that escapes a handler a controlled 500.
 
 ## API documentation
 
@@ -70,6 +74,7 @@ The [`libraries/sprig-web` README](https://github.com/ColinHouse/Sprig/blob/main
 The SQLite library gets a pinned `org.xerial:sqlite-jdbc:3.46.1.0` from Maven, recorded in the lock file.
 
 - SQL statements are ordinary strings that you write, and they count as trusted application code. Values from users always go in through prepared-statement parameters, which come in four kinds: `Integer`, `Text`, `Boolean` and `Null`. This is not a SQL sandbox.
+- Each SQL string holds one statement. A trailing semicolon or comment is fine; a second statement is an error instead of being silently skipped, so a multi-statement script belongs in a migration file.
 - A query returns a typed snapshot of the results, already disconnected from the database. Connections, statements and result sets are closed when they're done. A single query can return at most 10,000 rows (more is an error), and the whole result is held in memory.
 - `Database.batch` runs a list of statements in one transaction; if any of them fails, all of them are rolled back. When a query (including `INSERT ... RETURNING`) fails, anything it wrote is rolled back too.
 - You can't write transaction statements such as `BEGIN` or `COMMIT` yourself; `batch` manages transactions.
@@ -80,7 +85,7 @@ The SQLite library gets a pinned `org.xerial:sqlite-jdbc:3.46.1.0` from Maven, r
 Import `@sqlite/migrations.spr` and call `Migrations(database=database, directory="migrations").apply()`:
 
 - Migration files are named `NNN_description.sql`, and the three-digit numbers must be unique.
-- Files run in filename order, and the names of applied files are recorded in the `sprig_schema_migrations` table. If an applied file sorts after one that hasn't been applied, the run stops instead of applying migrations out of order.
+- Files run in filename order, and the names of applied files are recorded in the `sprig_schema_migrations` table. Before running anything, `apply()` checks the whole directory against that table: if a name doesn't fit the pattern, two files share a number, or an applied file sorts after one that hasn't been applied, it stops and nothing runs.
 - Each file's SQL and its record are committed in the same transaction. If something fails, both are rolled back, and you can run again after fixing the file.
 - Don't edit a file that has already been applied: file contents aren't checksummed yet, so the change would go unnoticed. The migrations directory counts as trusted project code.
 

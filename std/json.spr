@@ -1,4 +1,10 @@
 # Closed recursive JSON. Numbers retain exact validated lexemes, never Float.
+# Reading fields with paths and kind checks is the job of @std/json_codec.spr,
+# so a program does not match every Value case itself:
+#     codec.required_int(codec.root(json.parse(text)), "id")
+# returns the Int or throws an Error that starts with the path, such as
+# "$.id: expected integer, found string".
+import java.lang.StringBuilder as StringBuilder
 import sprig.runtime.host.HostText as HostText
 
 # A JSON value. Number holds the number's exact text, such as 12.50 or -2e3,
@@ -25,6 +31,7 @@ class Member:
     let value: Value
 
 # Validate the complete object before returning, including duplicates after a match.
+# To read typed fields with paths and kind checks, use "@std/json_codec.spr".
 func find_member(value: Value, key: String) -> Lookup throws Error:
     match value:
         case Value.Null:
@@ -90,7 +97,7 @@ class Reader:
     # Internal: consumes the token at the offset, or fails with
     # "expected <token>".
     func expect(token: String) -> Unit throws Error:
-        if source.substring(offset, source.length()).length() < token.length():
+        if offset + token.length() > source.length():
             fail("expected " + token)
         if source.substring(offset, offset + token.length()) != token:
             fail("expected " + token)
@@ -101,7 +108,7 @@ class Reader:
     # escape is an Error.
     func string_value() -> String throws Error:
         expect("\"")
-        var value = ""
+        let value = StringBuilder()
         while current() != "\"":
             let ch = current()
             if ch == "":
@@ -113,17 +120,17 @@ class Reader:
                 let escape = current()
                 offset += 1
                 if escape == "\"" or escape == "\\" or escape == "/":
-                    value += escape
+                    value.append(escape)
                 elif escape == "b":
-                    value += unicode_unit("0008")
+                    value.append(unicode_unit("0008"))
                 elif escape == "f":
-                    value += unicode_unit("000c")
+                    value.append(unicode_unit("000c"))
                 elif escape == "n":
-                    value += "\n"
+                    value.append("\n")
                 elif escape == "r":
-                    value += "\r"
+                    value.append("\r")
                 elif escape == "t":
-                    value += "\t"
+                    value.append("\t")
                 elif escape == "u":
                     var hex = ""
                     var count: Int = 0
@@ -135,15 +142,15 @@ class Reader:
                         count += 1
                     let unit = HostText.unicodeUnit(hex)
                     if unit != null:
-                        value += unit
+                        value.append(unit)
                     else:
                         fail("host unicode conversion returned null")
                 else:
                     fail("invalid escape")
             else:
-                value += ch
+                value.append(ch)
         offset += 1
-        return value
+        return value.toString()
 
     # Internal: reads the JSON number at the offset and returns its exact text,
     # failing on a leading zero or missing digits; what follows is not checked.
@@ -259,67 +266,84 @@ func parse(source: String) -> Value throws Error:
 # feed, carriage return and tab become \n, \r and \t, and other control
 # characters \u00xx; everything else, non-ASCII included, is kept as it is.
 func quote(value: String) -> String throws Error:
-    var result = "\""
+    let result = StringBuilder()
+    result.append("\"")
     var index: Int = 0
     while index < value.length():
         let ch = value.charAt(index)
         if ch == "\"" or ch == "\\":
-            result += "\\" + ch
+            result.append("\\")
+            result.append(ch)
         elif ch == "\n":
-            result += "\\n"
+            result.append("\\n")
         elif ch == "\r":
-            result += "\\r"
+            result.append("\\r")
         elif ch == "\t":
-            result += "\\t"
+            result.append("\\t")
         elif HostText.isControl(ch):
             let escaped = HostText.controlEscape(ch)
             if escaped != null:
-                result += escaped
+                result.append(escaped)
             else:
                 throw Error("host control escape returned null")
         else:
-            result += ch
+            result.append(ch)
         index += 1
-    return result + "\""
+    result.append("\"")
+    return result.toString()
 
 # Internal: stringify's recursive step, where depth counts the enclosing arrays
 # and objects; callers use stringify.
 func render(value: Value, depth: Int) -> String throws Error:
+    let out = StringBuilder()
+    render_into(out, value, depth)
+    return out.toString()
+
+# Internal: appends render's text for the value to out, so a whole document is
+# built in one buffer; callers use stringify.
+func render_into(out: StringBuilder, value: Value, depth: Int) -> Unit throws Error:
     if depth > 128:
         throw Error("JSON nesting exceeds 128")
     match value:
         case Value.Null:
-            return "null"
+            out.append("null")
         case Value.Boolean as node:
             if node.value:
-                return "true"
-            return "false"
+                out.append("true")
+            else:
+                out.append("false")
         case Value.Number as node:
             let reader = Reader(source=node.text)
             reader.number_value()
             if reader.offset != node.text.length():
                 reader.fail("invalid number lexeme")
-            return node.text
+            out.append(node.text)
         case Value.Text as node:
-            return quote(node.value)
+            out.append(quote(node.value))
         case Value.Array as node:
-            var result = "["
-            var separator = ""
+            out.append("[")
+            var first = true
             for child in node.values:
-                result += separator + render(child, depth + 1)
-                separator = ","
-            return result + "]"
+                if not first:
+                    out.append(",")
+                first = false
+                render_into(out, child, depth + 1)
+            out.append("]")
         case Value.Object as node:
-            var result = "{"
-            var separator = ""
-            let keys: MutableList[String] = []
+            out.append("{")
+            let keys: MutableMap[String, Bool] = {}
+            var first = true
             for member in node.members:
-                if keys.contains(member.key):
+                if keys.containsKey(member.key):
                     throw Error("duplicate object key: " + member.key)
-                keys.append(member.key)
-                result += separator + quote(member.key) + ":" + render(member.value, depth + 1)
-                separator = ","
-            return result + "}"
+                keys.set(member.key, true)
+                if not first:
+                    out.append(",")
+                first = false
+                out.append(quote(member.key))
+                out.append(":")
+                render_into(out, member.value, depth + 1)
+            out.append("}")
 
 # Compact JSON text for the value, with no spaces and members in their stored
 # order. An Error for a Number whose text is not a valid JSON number, a

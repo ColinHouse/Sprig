@@ -72,16 +72,21 @@ variant Field:
   (`-?(0|[1-9][0-9]*)`) that fits Sprig `Int`. `12.5`, `1e3`, `"12"`, `+12`,
   `007` and out-of-range values are errors with the field path.
 - `required_decimal` accepts any valid JSON number lexeme and parses it exactly
-  with `Decimal.parse`; it never rounds.
+  with `Decimal.parse`; it never rounds. A number whose exponent is out of
+  `Decimal`'s range, such as `1e9999999999`, is an error with the field path.
 - `required_number_text` returns the exact source lexeme so the application can
-  feed `Decimal`, `BigInt` or its own numeric model without a lossy hop.
+  feed `Decimal`, `BigInt` or its own numeric model without a lossy hop. A
+  manually constructed number whose text is not a JSON number lexeme is an
+  error with the field path.
 
 ## Unknown fields
 
 Unknown fields are allowed unless the application asks otherwise:
 `codec.reject_unknown_fields(reader, allowed)` rejects any key outside the
 explicit list and also detects duplicate keys in manually constructed values.
-(`json.parse` already rejects duplicate keys while parsing.)
+(`json.parse` already rejects duplicate keys while parsing.) Reading any field
+of such an object fails as well, with the object's path:
+`$: duplicate object key: a`.
 
 ## Error path format
 
@@ -95,8 +100,10 @@ $.projects[1].targets[0].amount: expected integer, found string
 $.projects[0].targets[0].amount: required field is missing
 $.meta: expected array, found object
 $.items[0]: expected object to read field 'name', found number
+$.amount: expected decimal in range, found number 1e9999999999
 $: unknown field 'extra'
 $: duplicate field 'a'
+$: duplicate object key: a
 ```
 
 Paths grow as `$.field`, `$.field[index]`, `$.a.b[0].c`; array element readers

@@ -32,6 +32,7 @@
     "book/ch11_lambdas.spr",
     "book/ch11_throws.spr",
     "book/ch11_if_lambda.spr",
+    "book/ch12_testing/tests/app_test.spr",
     "book/ch13_bytes.spr",
     "book/ch13_callback.spr",
     "book/ch13_collections.spr",
@@ -91,6 +92,8 @@
     "variants.spr"
   ],
   "import-only": [
+    "book/ch12_testing/src/app.spr",
+    "book/ch12_testing/src/main.spr",
     "modules/math_module.spr"
   ],
   "compile-fail": [

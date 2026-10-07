@@ -4,6 +4,12 @@ queued task cancelled: true
 10
 queued siblings never ran: true 0
 dropped task cancelled: true
-10
+running task cancelled: true
+0
 the first failure, not the cancellation: true
 the body's own error is kept: true
+running task cancelled: true
+-1
+cancelled: true
+done at once: true, body ended: 0
+the scope waited for the body: 1

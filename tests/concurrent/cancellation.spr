@@ -59,8 +59,8 @@ try:
 catch problem: Error:
     print("queued siblings never ran: " + problem.message.contains("zero") + " " + ran.get())
 
-# 4. a pool's shutdown_now drops its queued tasks; the scope does not wait
-# for tasks that will never run
+# 4. a pool's shutdown_now drops its queued tasks, and the scope does not
+# wait for tasks that will never run; the running task is cancelled too
 let held = concurrent.counter(0)
 let stop = concurrent.counter(0)
 let three = concurrent.pool(1)
@@ -77,7 +77,8 @@ func shutdown_drops_queue(s: concurrent.Scope) -> Int throws Error:
     three.shutdown_now()
     stop.set(1)
     print("dropped task cancelled: " + dropped.is_cancelled())
-    return holding.await() * 10 + ran.get()
+    print("running task cancelled: " + holding.is_cancelled())
+    return ran.get()
 print(concurrent.scope(shutdown_drops_queue))
 
 # 5. a body that fails only because it awaited a task the first failure
@@ -110,3 +111,43 @@ try:
     print(concurrent.scope(own_error))
 catch problem: Error:
     print("the body's own error is kept: " + (problem.message == "the body gave up"))
+
+# 7. shutdown_now cancels the pool's running tasks too: a task asleep when its
+# pool shuts down ends as cancelled, which is not a failure of its scope
+let asleep = concurrent.latch(1)
+let four = concurrent.pool(1)
+func sleep_on_pool() -> Int:
+    asleep.count_down()
+    concurrent.sleep(60000)
+    return 1
+func shutdown_cancels_running(s: concurrent.Scope) -> Int throws Error:
+    let running = concurrent.spawn_on(s, four, fn() => sleep_on_pool())
+    asleep.await()
+    four.shutdown_now()
+    print("running task cancelled: " + running.is_cancelled())
+    return running.await_or(-1)
+try:
+    print(concurrent.scope(shutdown_cancels_running))
+catch problem: Error:
+    print("the scope failed: " + problem.message)
+
+# 8. a cancelled task is done at once, even while its body still runs, and
+# its scope still waits for the body to end
+let entered = concurrent.latch(1)
+let let_go = concurrent.latch(1)
+let body_ended = concurrent.counter(0)
+func ignore_interrupts() -> Int:
+    entered.count_down()
+    while let_go.remaining() > 0:
+        pass
+    body_ended.set(1)
+    return 1
+func done_before_body_ends(s: concurrent.Scope) -> Int throws Error:
+    let task = concurrent.spawn(s, fn() => ignore_interrupts())
+    entered.await()
+    print("cancelled: " + task.cancel())
+    print("done at once: " + task.is_done() + ", body ended: " + body_ended.get())
+    let_go.count_down()
+    return 0
+concurrent.scope(done_before_body_ends)
+print("the scope waited for the body: " + body_ended.get())

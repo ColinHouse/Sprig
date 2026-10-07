@@ -1,0 +1,80 @@
+# in, contains, indexOf and remove find an element with ==, the equality the
+# operator uses: a Float or Float32 NaN equals nothing, so it is never found,
+# and -0.0 equals 0.0, so each finds the other. Lists and variants that hold
+# floats compare their elements and fields the same way, and a list is equal
+# to itself, as with ==.
+import "@std/lists.spr" as lists
+
+variant Reading:
+    Value(amount: Float)
+    Missing
+
+generic T:
+    func holds(items: List[T], value: T) -> Bool:
+        return items.contains(value)
+
+# The program of issue #165: == and membership agree.
+let nan: Float = 0.0 / 0.0
+print(nan == nan)
+print([nan] == [nan])
+print(nan in [nan])
+print([nan].contains(nan))
+print([nan].indexOf(nan))
+print(-0.0 == 0.0)
+print([-0.0] == [0.0])
+print(-0.0 in [0.0])
+print([0.0].contains(-0.0))
+print([0.0].indexOf(-0.0))
+let ms: MutableList[Float] = [0.0]
+print(ms.remove(-0.0))
+print(ms)
+
+# indexOf gives the first position whose element == the value.
+let floats: List[Float] = [1.5, nan, -0.0, 0.0, 2.5]
+print(floats.indexOf(0.0))
+print(floats.indexOf(nan))
+print(0.0 in floats)
+print(floats.contains(2.5))
+
+# remove takes out the first element == the value; a NaN stays where it is.
+let values: MutableList[Float] = [nan, -0.0, 1.0, 0.0]
+print(values.remove(nan))
+print(values.remove(0.0))
+print(values)
+print(values.remove(0.0))
+print(values)
+print(values.remove(0.0))
+print(values.size())
+
+# Float32 elements follow the same rule.
+let zero32: Float32 = 0.0
+let negative32: Float32 = -0.0
+let nan32 = zero32 / zero32
+let narrow: MutableList[Float32] = [nan32, zero32]
+print(nan32 in narrow)
+print(negative32 in narrow)
+print(narrow.contains(nan32))
+print(narrow.indexOf(-0.0))
+print(narrow.remove(negative32))
+print(narrow)
+
+# Nullable elements: null finds null, and the floats compare as above.
+let maybe: List[Float?] = [null, nan, 0.0]
+print(maybe.contains(null))
+print(maybe.indexOf(-0.0))
+print(nan in maybe)
+
+# Lists and variants inside a list compare as == compares them.
+print([[nan]].contains([nan]))
+print([[0.0]].indexOf([-0.0]))
+print(Reading.Value(amount=nan) in [Reading.Value(amount=nan)])
+print([Reading.Missing, Reading.Value(amount=0.0)].indexOf(Reading.Value(amount=-0.0)))
+let row = [nan]
+print(row == row)
+print([row].contains(row))
+
+# A type parameter and @std/lists find elements with == too.
+print(holds([nan], nan))
+print(holds([0.0], -0.0))
+print(lists.index_of([nan, -0.0], 0.0))
+print(lists.index_of([nan], nan))

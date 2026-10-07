@@ -119,6 +119,13 @@ func strip_suffix(value: String, suffix: String) -> String:
         return value.substring(0, value.length() - suffix.length())
     return value
 
+# The value with the five characters HTML treats specially replaced: & by
+# &amp;, < by &lt;, > by &gt;, " by &quot; and ' by &#39;; everything else is
+# unchanged. Use it for text between tags and for quoted attribute values; it
+# does not make a URL, a script or a style safe.
+func escape_html(value: String) -> String:
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;")
+
 # A finite Float as plain fixed-point text with that many decimals, rounded
 # half away from zero: fixed(2.5, 0) is "3" and fixed(1.005, 2) is "1.01".
 func fixed(value: Float, decimals: Int) -> String throws Error:

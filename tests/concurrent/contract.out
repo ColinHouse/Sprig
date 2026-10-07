@@ -56,3 +56,10 @@ true
 true
 true
 the scope has ended; run inside the scope body
+sprig.runtime.SprigNumericError: Int addition overflow
+sprig.runtime.SprigNumericError: Int addition overflow
+sprig.runtime.SprigNumericError: Int subtraction overflow
+sprig.runtime.SprigNumericError: Int addition overflow
+sprig.runtime.SprigNumericError: Int addition overflow
+9223372036854775807
+-9223372036854775808

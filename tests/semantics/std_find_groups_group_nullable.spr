@@ -1,0 +1,9 @@
+import "@std/regex.spr" as regex
+
+func user_length(address: String) -> Int throws Error:
+    let groups = regex.find_groups("(\\w+)@(\\w+)", address)
+    if groups == null:
+        return 0
+    return groups[0].length()
+
+print(user_length("ada@host"))

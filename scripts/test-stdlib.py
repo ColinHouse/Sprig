@@ -3,6 +3,7 @@
 import argparse
 import os
 from pathlib import Path
+import stat
 import subprocess
 import tempfile
 
@@ -67,6 +68,60 @@ def check_process_io(launcher):
     assert code == 0 and envelope['programOutput'].replace('\r\n', '\n') == '0\n0\n', (code, out, err)
     assert 'programErrorOutput' not in envelope, envelope
 
+def check_atomic_write(launcher):
+    """atomic_write_utf8 keeps the permissions of the file it replaces, gives a new file the
+    permissions write_utf8 gives it (the umask's), and writes through a symbolic link: the
+    link stays and its target is replaced atomically (#209). Windows has no POSIX permissions
+    and needs privileges for links, so there only the written text is checked."""
+    posix = os.name != 'nt'
+    with tempfile.TemporaryDirectory(prefix='sprig std atomic ') as work:
+        root = Path(work)
+        real = root / 'real'
+        real.mkdir()
+        plain, fresh = root / 'plain.txt', root / 'fresh.txt'
+        kept = {}   # a file the write replaces -> the permissions it must keep
+        links = {}  # a link the write goes through -> the file it must reach
+        if posix:
+            for path, mode in ((root / 'shared.txt', 0o664), (root / 'private.txt', 0o600),
+                               (root / 'script.sh', 0o755), (real / 'target.txt', 0o644),
+                               (real / 'chained.txt', 0o604)):
+                path.write_text('old', encoding='utf-8')
+                path.chmod(mode)
+                kept[path] = mode
+            (root / 'link.txt').symlink_to(Path('real') / 'target.txt')
+            links[root / 'link.txt'] = real / 'target.txt'
+            (real / 'middle.txt').symlink_to('chained.txt')
+            (root / 'chain.txt').symlink_to(Path('real') / 'middle.txt')
+            links[root / 'chain.txt'] = real / 'chained.txt'
+            (root / 'dangling.txt').symlink_to(Path('real') / 'missing.txt')
+            links[root / 'dangling.txt'] = real / 'missing.txt'
+        paths = [plain, fresh] + [path for path in kept if path.parent == root] + list(links)
+        # A umask that no default shares: a new file gets rw-r----- (0640), so it can be told
+        # apart from both rw------- and rw-r--r--, and a kept 0664 or 0604 cannot come from it.
+        result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/atomic_write.spr'), '--', *map(str, paths)],
+                                cwd=ROOT, text=True, encoding='utf-8', capture_output=True,
+                                preexec_fn=(lambda: os.umask(0o027)) if posix else None)
+        assert result.returncode == 0 and result.stdout == '', (result.stdout, result.stderr)
+        for path in [plain, fresh, *kept, *links.values()]:
+            assert path.read_text(encoding='utf-8') == 'written ✓', path
+        leftovers = [path.name for path in root.rglob('*') if path.name.endswith('.tmp')]
+        assert leftovers == [], leftovers
+        if not posix:
+            return
+
+        def mode(path):
+            return stat.S_IMODE(os.lstat(path).st_mode)
+        assert mode(plain) == 0o640, oct(mode(plain))
+        assert mode(fresh) == mode(plain), oct(mode(fresh))
+        for path, expected in kept.items():
+            assert not path.is_symlink() and mode(path) == expected, (path, oct(mode(path)))
+        for link, reached in links.items():
+            assert link.is_symlink() and reached.is_file() and not reached.is_symlink(), (link, reached)
+        assert os.readlink(root / 'link.txt') == str(Path('real') / 'target.txt')
+        assert (real / 'middle.txt').is_symlink()
+        # A dangling link's target is created as a new file, as write_utf8 creates it.
+        assert mode(real / 'missing.txt') == 0o640, oct(mode(real / 'missing.txt'))
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--launcher', type=Path, default=ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig'))
@@ -111,6 +166,7 @@ def main():
             'file name of root: cannot take the file name of /: a root has none',
             '2',
         ], repr(errors.stdout)
+    check_atomic_write(launcher)
     result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json.spr')], cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
     expected = '{"ok":true,"nested":[null,12.50,"a\\nb",{"x":-2e3}]}\n"你好"\nrejected trailing comma\nrejected duplicate key\nrejected leading zero\nrejected trailing text\n'
     assert result.returncode == 0, result.stderr
@@ -134,7 +190,23 @@ def main():
         'escaped duplicate rejected=true',
     ]
     assert lines[11] == 'large exponent=1e9999'
-    assert lines[12:] == ['serializer rejected invalid number', 'serializer rejected duplicate keys']
+    assert lines[12:14] == ['serializer rejected invalid number', 'serializer rejected duplicate keys']
+    # A token cut short by the end of the text fails at its own offset; one that
+    # ends exactly at the end is read. 東 makes the offsets code points.
+    assert lines[14:] == [
+        'JSON at code point offset 0: expected true',
+        'JSON at code point offset 1: expected null',
+        'JSON at code point offset 5: expected false',
+        'JSON at code point offset 5: expected ]',
+        'JSON at code point offset 4: expected :',
+        'JSON at code point offset 6: expected }',
+        'JSON at code point offset 5: expected true',
+        'JSON at code point offset 0: expected true',
+        'JSON at code point offset 2: expected ]',
+        'parsed true',
+        'parsed [null]',
+        'parsed {"東":false}',
+    ], repr(lines[14:])
     lookup = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json_lookup.spr')], cwd=ROOT,
                             text=True, encoding='utf-8', capture_output=True)
     assert lookup.returncode == 0, (lookup.stdout, lookup.stderr)
@@ -172,6 +244,12 @@ def main():
         # rethrows: a throwing lambda makes the helper call throw; the first
         # bad value ends the try block
         '850', '2', '[100, 300, 450]', '850', '100', 'true', 'caught not a number: x',
+        # max, min: null for an empty list, the order of sorted, the first of equal
+        # items (Decimal 2.50 and 2.5 compare equal, as do 1 and 1.0)
+        '9', '2', 'pear', 'apple', 'true', 'NaN', '-0.0', '0.0', '-0.0', '2.50', '1',
+        # max_by, min_by: largest and smallest key, the first of equal keys, one
+        # key call per item, null for an empty list, rethrows
+        'cake water', 'cake tea', 'true', '12', '3', '-0.0', '450', 'caught not a number: x',
     ], repr(lists_result.stdout)
     helpers_result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/helpers.spr')],
                                     cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
@@ -186,6 +264,9 @@ def main():
         # text.is_ascii_digit, then text.is_ascii_letter
         'true', 'true', 'false', 'false', 'false', 'false', 'false',
         'true', 'true', 'false', 'false', 'false', 'false',
+        # text.escape_html: the five special characters, & first so nothing is
+        # escaped twice in one call; an entity in the input is escaped again
+        '&lt;a href=&quot;/q?a=1&amp;b=2&quot;&gt;Tom&#39;s&lt;/a&gt;', '&amp;amp;', '[] [東😀 é\t/=;]',
         # test.equal_int, equal_bool and equal_text report both values
         'sum: expected 4, got 5',
         'flag: expected true, got false',
@@ -205,6 +286,11 @@ def main():
         'caught next_int bound must be positive: 0', 'caught choice needs a non-empty list', '36', 'true',
         # regex
         'true', 'false', '66', 'true', '[66, 99]', 'a-b-c', 'host:ada', '[a, b, c]', 'caught invalid pattern',
+        # regex groups: the first match's groups (null for one that took no part,
+        # [] without groups, null for no match), every match's groups, the crawler's hrefs
+        '[ada, host, null]', '[null, b]', '[]', 'true', '[你好, 😀東]', '[[a, 1], [b, 2]]', '0',
+        'caught invalid pattern', 'caught invalid pattern',
+        'link [guide.html]', 'link [https://sprig.dev]', 'link []',
         # dates
         '2026-10-06', 'false', '2026-11-05', '2025-12-31', '87', '-87', '2', '2026 10 6', '10',
         'caught not a date: yesterday',

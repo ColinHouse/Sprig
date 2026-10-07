@@ -107,6 +107,64 @@ that throws `Error`, so a check body can be the code under test itself.
 `testing.run_process` is `process.run` from `@std/process.spr` under its
 earlier name; both run an argv vector with no shell.
 
+## Testing a program: keep `main.spr` thin
+
+A test imports the module it checks with a relative path, such as
+`import "../src/app.spr" as app`. Importing a module runs its top-level
+statements once, so a test that imports `../src/main.spr` first runs the whole
+program with the test's empty argument list: it prints, writes files and fails
+as it would on the command line. If the program calls `process.exit`, the test
+ends there; with status 0 it passes without running a single check.
+
+Keep `src/main.spr` to argument handling, and put the work in another module
+that `main.spr` and the tests both import:
+
+```text
+src/main.spr        reads the arguments and passes them to app.run
+src/app.spr         the work, as functions; no top-level statement acts
+tests/app_test.spr  imports ../src/app.spr and calls its functions
+```
+
+`src/main.spr` is one statement:
+
+```sprig
+import "@std/process.spr" as process
+import "./app.spr" as app
+
+process.exit(app.run(process.arguments()))
+```
+
+`src/app.spr` takes the arguments as a parameter and returns the exit status,
+so a test can try any command line without starting a process:
+
+```sprig
+func greeting(name: String) -> String:
+    return "Hello, " + name + "!"
+
+# Runs one command line and returns the exit status.
+func run(arguments: List[String]) -> Int:
+    if arguments.size() != 1:
+        print("usage: greet NAME")
+        return 2
+    print(greeting(arguments[0]))
+    return 0
+```
+
+`tests/app_test.spr`:
+
+```sprig
+import "@std/test.spr" as testing
+import "../src/app.spr" as app
+
+testing.check("greets", fn() => testing.equal_text(app.greeting("Ada"), "Hello, Ada!", "greeting"))
+testing.check("needs a name", fn() => testing.equal_int(app.run([]), 2, "status"))
+testing.finish()
+```
+
+`examples/tasks` is a complete program with this layout; `examples/blog`,
+`examples/crawler` and `examples/todo` keep their work out of `main.spr` the
+same way.
+
 ## Expected compiler failures
 
 Place negative fixtures under `tests/compile_fail/`. Each `.spr` file needs a

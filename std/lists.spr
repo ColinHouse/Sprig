@@ -150,6 +150,74 @@ generic T:
         copy.sort()
         return copy.toList()
 
+# The largest item, or null for an empty list; of equal items, the first wins.
+# Items use the order of sorted, so for Float NaN is the largest value and -0.0
+# is below 0.0.
+generic T:
+    func max(items: List[T]) -> T?:
+        requires T: Comparable
+        if items.size() == 0:
+            return null
+        var best = items.get(0)
+        for item in items:
+            if HostOrder.compare(item, best) > 0:
+                best = item
+        return best
+
+# The smallest item, or null for an empty list; of equal items, the first
+# wins. Items use the order of sorted, so for Float NaN is the largest value and
+# -0.0 is below 0.0.
+generic T:
+    func min(items: List[T]) -> T?:
+        requires T: Comparable
+        if items.size() == 0:
+            return null
+        var best = items.get(0)
+        for item in items:
+            if HostOrder.compare(item, best) < 0:
+                best = item
+        return best
+
+# The item with the largest key, or null for an empty list; of items with
+# equal keys, the first wins. Keys use the order of sort_by, and key runs once
+# per item.
+generic T, K:
+    func max_by(items: List[T], key: fn(T) -> K throws Error) -> T? rethrows:
+        requires K: Comparable
+        if items.size() == 0:
+            return null
+        var best = items.get(0)
+        var best_key = key(best)
+        var index = 1
+        while index < items.size():
+            let item = items.get(index)
+            let item_key = key(item)
+            if HostOrder.compare(item_key, best_key) > 0:
+                best = item
+                best_key = item_key
+            index += 1
+        return best
+
+# The item with the smallest key, or null for an empty list; of items with
+# equal keys, the first wins. Keys use the order of sort_by, and key runs once
+# per item.
+generic T, K:
+    func min_by(items: List[T], key: fn(T) -> K throws Error) -> T? rethrows:
+        requires K: Comparable
+        if items.size() == 0:
+            return null
+        var best = items.get(0)
+        var best_key = key(best)
+        var index = 1
+        while index < items.size():
+            let item = items.get(index)
+            let item_key = key(item)
+            if HostOrder.compare(item_key, best_key) < 0:
+                best = item
+                best_key = item_key
+            index += 1
+        return best
+
 # An item with its position, from enumerate.
 generic T:
     class Indexed:

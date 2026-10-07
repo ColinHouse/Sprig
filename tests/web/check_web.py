@@ -21,6 +21,20 @@ def main():
         assert evidence[9:11] == ["PUT patch", "3"], evidence
         assert json.loads(evidence[11]) == {"type":"array", "items":{"type":"integer", "format":"int64"}}
         assert json.loads(evidence[12]) == {"type":"object", "properties":{"enabled":{"type":"boolean"}}}
+        assert evidence[13:] == ["cannot write the response as JSON: JSON at code point offset 0: expected number", "1"], evidence
+        # Signatures say what can fail: Request.json and json_response throw Error,
+        # and a handler may let such an Error escape to the server.
+        api = json.loads(command(project, "api", "@web/web.spr", "--json"))
+        declarations = {d["name"]: d for d in api["declarations"]}
+        request_methods = {m["name"]: m for m in declarations["Request"]["methods"]}
+        assert request_methods["json"].get("throws") == ["Error"], request_methods["json"]
+        assert declarations["json_response"].get("throws") == ["Error"], declarations["json_response"]
+        assert declarations["text"].get("throws") is None, declarations["text"]
+        handler = "fn(Request) -> Response throws Error"
+        assert {f["name"]: f["type"] for f in declarations["Route"]["fields"]}["handler"] == handler
+        for method in declarations["App"]["methods"]:
+            if method["name"] in ("get", "post", "put", "patch", "delete"):
+                assert method["parameters"][1]["type"] == handler, method
         shutil.copy(ROOT / "tests/web/registration.spr", project / "src/registration.spr")
         registration = command(project, "run", "src/registration.spr").splitlines()
         assert registration[:5] == ["true", "true", "true", "true", "3"], registration

@@ -8,7 +8,6 @@ import sprig.runtime.web.HostRequest as HostRequest
 import sprig.runtime.web.HostResponse as HostResponse
 import sprig.runtime.web.HostServer as HostServer
 import sprig.runtime.web.BadRequest as BadRequest
-import java.lang.IllegalStateException as ResponseFailure
 import java.lang.RuntimeException as RuntimeException
 
 # GET, POST, PUT, PATCH or DELETE. Requests with other methods, HEAD included,
@@ -102,8 +101,9 @@ class Request:
         return raw.header(name)
 
     # The body parsed with @std/json. Malformed JSON, duplicate keys included,
-    # throws BadRequest (an Error); left uncaught, the client gets 400.
-    func json() -> jsonlib.Value:
+    # throws BadRequest, an Error: catch it to answer yourself, or let it
+    # escape the handler and the client gets 400.
+    func json() -> jsonlib.Value throws Error:
         return request_helpers.parse_json(body)
 
 # What a handler returns; the body is sent as UTF-8. A status outside 200..599
@@ -131,20 +131,21 @@ func text(body: String, status: Int) -> Response:
 
 # The value as an application/json; charset=utf-8 response. A value stringify
 # rejects (a bad number lexeme, a duplicate key, nesting over 128) throws
-# IllegalStateException, which the server answers with 500.
-func json_response(value: jsonlib.Value, status: Int) -> Response:
+# Error; escaping a handler, it becomes a 500 answer.
+func json_response(value: jsonlib.Value, status: Int) -> Response throws Error:
     try:
         return Response(status=status, body=jsonlib.stringify(value), content_type="application/json; charset=utf-8")
     catch problem: Error:
-        throw ResponseFailure("Invalid JSON response")
+        throw Error("cannot write the response as JSON: " + problem.message)
 
 # One route: a method, a path such as /items/{id} (one {name} per segment), a
 # handler and OpenAPI metadata (summary, schemas, response_status, query
-# parameters) that only documents it: nothing is validated or enforced.
+# parameters) that only documents it: nothing is validated or enforced. An
+# Error that escapes the handler becomes 400 for BadRequest, else 500.
 class Route:
     let method: Method
     let path: String
-    let handler: fn(Request) -> Response
+    let handler: fn(Request) -> Response throws Error
     let summary: String = ""
     let request_schema: Schema? = null
     let response_schema: Schema? = null
@@ -310,24 +311,24 @@ class App:
         routes.append(route)
 
     # Adds a GET route without OpenAPI metadata; throws Error as route() does.
-    func get(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+    func get(path: String, handler: fn(Request) -> Response throws Error) -> Unit throws Error:
         route(Route(method=Method.GET, path=path, handler=handler))
 
     # Adds a POST route without OpenAPI metadata; throws Error as route() does.
-    func post(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+    func post(path: String, handler: fn(Request) -> Response throws Error) -> Unit throws Error:
         route(Route(method=Method.POST, path=path, handler=handler))
 
     # Adds a PUT route without OpenAPI metadata; throws Error as route() does.
-    func put(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+    func put(path: String, handler: fn(Request) -> Response throws Error) -> Unit throws Error:
         route(Route(method=Method.PUT, path=path, handler=handler))
 
     # Adds a PATCH route without OpenAPI metadata; throws Error as route() does.
-    func patch(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+    func patch(path: String, handler: fn(Request) -> Response throws Error) -> Unit throws Error:
         route(Route(method=Method.PATCH, path=path, handler=handler))
 
     # Adds a DELETE route without OpenAPI metadata; throws Error as route()
     # does.
-    func delete(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
+    func delete(path: String, handler: fn(Request) -> Response throws Error) -> Unit throws Error:
         route(Route(method=Method.DELETE, path=path, handler=handler))
 
     # The OpenAPI 3.0.3 document GET /openapi.json serves, built from the routes

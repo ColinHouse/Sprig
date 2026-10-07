@@ -1,0 +1,7 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+print(Option[Int].Some(value=1) == Option[String].None)

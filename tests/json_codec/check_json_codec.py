@@ -91,6 +91,126 @@ for row in codec.root_array(json.parse("[{\\"id\\": 1}, {\\"id\\": \\"two\\"}]")
                and standalone.stdout == "1\n$[1].id: expected integer, found string\n",
                f"exit={standalone.returncode} stdout={standalone.stdout!r} stderr={standalone.stderr!r}")
 
+    # Every reader failure is an Error whose message starts with the path (#206),
+    # also for a duplicate key in a hand-built object, a valid number whose
+    # exponent no Decimal can hold and a hand-built number with invalid text.
+    # A failure that is not an Error would end the program before its last line.
+    with tempfile.TemporaryDirectory(prefix="sprig-json-codec-errors-") as temp:
+        source = Path(temp) / "reader_errors.spr"
+        source.write_text('''import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+func int_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_int(reader, name).toString()
+    catch problem: Error:
+        return problem.message
+
+func optional_string_error(reader: codec.Reader, name: String) -> String:
+    try:
+        let value = codec.optional_string(reader, name)
+        if value == null:
+            return "null"
+        return "decoded: " + value
+    catch problem: Error:
+        return problem.message
+
+func field_error(reader: codec.Reader, name: String) -> String:
+    try:
+        match codec.field(reader, name):
+            case codec.Field.Missing:
+                return "missing"
+            case codec.Field.Null:
+                return "null"
+            case codec.Field.Value as found:
+                return "value"
+    catch problem: Error:
+        return problem.message
+
+func decimal_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_decimal(reader, name).toString()
+    catch problem: Error:
+        return problem.message
+
+func optional_decimal_error(reader: codec.Reader, name: String) -> String:
+    try:
+        let value = codec.optional_decimal(reader, name)
+        if value == null:
+            return "null"
+        return "decoded: " + value.toString()
+    catch problem: Error:
+        return problem.message
+
+func as_decimal_error(reader: codec.Reader) -> String:
+    try:
+        return "decoded: " + codec.as_decimal(reader).toString()
+    catch problem: Error:
+        return problem.message
+
+func number_text_error(reader: codec.Reader, name: String) -> String:
+    try:
+        return "decoded: " + codec.required_number_text(reader, name)
+    catch problem: Error:
+        return problem.message
+
+func optional_number_text_error(reader: codec.Reader, name: String) -> String:
+    try:
+        let value = codec.optional_number_text(reader, name)
+        if value == null:
+            return "null"
+        return "decoded: " + value
+    catch problem: Error:
+        return problem.message
+
+# json.parse rejects a duplicate key, so only a hand-built object has one. The
+# lookup checks the whole object, so the path is the object's, whatever the key.
+let duplicate = codec.object([codec.member("a", codec.int(1)), codec.member("a", codec.int(2))])
+let flat = codec.Reader(path="$", value=duplicate)
+print(int_error(flat, "a"))
+print(int_error(flat, "b"))
+print(optional_string_error(flat, "a"))
+print(field_error(flat, "a"))
+let nested = codec.root(codec.object([codec.member("meta", duplicate)]))
+print(int_error(codec.required_object(nested, "meta"), "a"))
+
+# Valid JSON numbers whose exponent no Decimal can hold.
+let big = codec.root(json.parse("{\\"n\\": 1e9999999999, \\"m\\": -2.5E-9999999999, \\"ok\\": 1e3}"))
+print(decimal_error(big, "n"))
+print(optional_decimal_error(big, "m"))
+print(as_decimal_error(codec.root_array(json.parse("[1e9999999999]"))[0]))
+print(decimal_error(big, "ok"))
+print(int_error(big, "n"))
+print(number_text_error(big, "n"))
+
+# A hand-built number whose text is not a JSON number fails every number reader.
+let manual = codec.root(codec.object([codec.member("n", codec.number("1e")), codec.member("m", codec.number("+12"))]))
+print(number_text_error(manual, "n"))
+print(optional_number_text_error(manual, "m"))
+print(decimal_error(manual, "n"))
+print(int_error(manual, "m"))
+print("done")
+''', encoding="utf-8")
+        errors = call("run", source, cwd=temp)
+        expected = ("$: duplicate object key: a\n"
+                    "$: duplicate object key: a\n"
+                    "$: duplicate object key: a\n"
+                    "$: duplicate object key: a\n"
+                    "$.meta: duplicate object key: a\n"
+                    "$.n: expected decimal in range, found number 1e9999999999\n"
+                    "$.m: expected decimal in range, found number -2.5E-9999999999\n"
+                    "$[0]: expected decimal in range, found number 1e9999999999\n"
+                    "decoded: 1000\n"
+                    "$.n: expected integer, found number 1e9999999999\n"
+                    "decoded: 1e9999999999\n"
+                    "$.n: expected number, found invalid number lexeme 1e\n"
+                    "$.m: expected number, found invalid number lexeme +12\n"
+                    "$.n: expected decimal, found number 1e\n"
+                    "$.m: expected integer, found number +12\n"
+                    "done\n")
+        verify("std-module-reader-errors-name-the-path", errors.returncode == 0 and errors.stdout == expected,
+               f"exit={errors.returncode} stdout={errors.stdout!r} stderr={errors.stderr!r}")
+
     # A consumer project uses the library through normal dependency/import rules.
     with tempfile.TemporaryDirectory(prefix="sprig-json-codec-consumer-") as temp:
         project = Path(temp)

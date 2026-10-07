@@ -453,6 +453,24 @@
     "source": "standard library helpers"
   },
   {
+    "file": "std_max_needs_comparable.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "standard library helpers: lists.max requires Comparable items (#150)"
+  },
+  {
+    "file": "std_max_by_key_needs_comparable.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "standard library helpers: lists.max_by requires a Comparable key (#150)"
+  },
+  {
+    "file": "std_find_groups_group_nullable.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "standard library helpers: a regex group may be null (#150)"
+  },
+  {
     "file": "callable_throws_to_plain_param.spr",
     "expected_diagnostic": "SPR-TYPE-CALLABLE-THROWS",
     "status": "implemented",
@@ -601,6 +619,30 @@
     "expected_diagnostic": "SPR-TYPE-MISMATCH",
     "status": "implemented",
     "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "equality_literal_element_mismatch.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "#166: a literal operand of == takes the other operand's type, and an element that does not fit it is still a mismatch"
+  },
+  {
+    "file": "equality_literal_other_collection.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "#166: a list literal still cannot be compared with a Map"
+  },
+  {
+    "file": "equality_cases_of_two_variants.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "#166: cases of one variant compare at the variant's type; cases of two variants still cannot be compared"
+  },
+  {
+    "file": "equality_cases_type_arguments.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "#166: cases of two instantiations of a generic variant still cannot be compared"
   },
   {
     "file": "if_expression_condition.spr",

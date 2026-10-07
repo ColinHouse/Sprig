@@ -35,6 +35,47 @@ public final class JavaRunner {
         }
     }
 
+    /**
+     * The program's process as the CLI's shutdown hook sees it. The hook is
+     * registered before the program starts and meets it under one lock: a
+     * termination that comes first keeps the program from starting, and one that
+     * comes while it starts waits for start() and then stops it. Registered after
+     * start(), the hook missed a termination that came in between, and the
+     * program went on running without the CLI.
+     */
+    private static final class Child {
+        private Process process;
+        private boolean terminated;
+
+        synchronized Process start(ProcessBuilder builder) throws IOException, InterruptedException {
+            if (terminated) throw new InterruptedException("sprig was terminated");
+            process = builder.start();
+            return process;
+        }
+
+        void terminate() {
+            Process started;
+            synchronized (this) {
+                terminated = true;
+                started = process;
+            }
+            if (started != null) stop(started);
+        }
+    }
+
+    /**
+     * Removes the hook once the program has ended. While the CLI is being
+     * terminated, the JVM runs the hook instead, and that hook stops the program:
+     * not an error to report.
+     */
+    private static void removeHook(Thread hook) {
+        try {
+            Runtime.getRuntime().removeShutdownHook(hook);
+        } catch (IllegalStateException terminating) {
+            // Shutdown in progress; the hook is already stopping the program.
+        }
+    }
+
     private JavaRunner() {
     }
 
@@ -87,7 +128,22 @@ public final class JavaRunner {
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT);
         } else builder.redirectOutput(outFile.toFile());
         builder.redirectError(errFile.toFile());
-        Process process = builder.start();
+        // Terminating the CLI terminates the program and waits for it, so a port or
+        // file the program holds is released by the time the CLI has exited.
+        Child program = new Child();
+        Thread cleanup = new Thread(program::terminate, "sprig-child-cleanup");
+        try {
+            Runtime.getRuntime().addShutdownHook(cleanup);
+        } catch (IllegalStateException terminating) {
+            throw new InterruptedException("sprig was terminated");
+        }
+        Process process;
+        try {
+            process = program.start(builder);
+        } catch (IOException | InterruptedException | RuntimeException failure) {
+            removeHook(cleanup);
+            throw failure;
+        }
         AtomicBoolean outputWritten = new AtomicBoolean();
         AtomicReference<IOException> outputFailure = new AtomicReference<>();
         Thread outputForwarder = null;
@@ -111,10 +167,7 @@ public final class JavaRunner {
         }
         if (!streamOutput) process.getOutputStream().close();
         Result result = new Result();
-        // Terminating the CLI terminates the program and waits for it, so a port or
-        // file the program holds is released by the time the CLI has exited.
-        Thread cleanup = new Thread(() -> stop(process), "sprig-child-cleanup");
-        Runtime.getRuntime().addShutdownHook(cleanup);
+        boolean forwarded = true;
         try {
             if (timeoutMillis <= 0) result.exitCode = process.waitFor();
             else if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
@@ -126,12 +179,23 @@ public final class JavaRunner {
             } else result.exitCode = process.exitValue();
         }
         finally {
+            // destroy() closes the program's streams. Once the program has ended,
+            // let the forwarder pass on all it wrote and reach the end of the
+            // stream first; closing it under the forwarder made its last read fail
+            // with "Stream closed" although nothing was lost. A grandchild that
+            // keeps the pipe open is not waited for longer than two seconds.
+            if (outputForwarder != null && !process.isAlive()) {
+                outputForwarder.join(2000);
+            }
+            forwarded = outputForwarder == null || !outputForwarder.isAlive();
             process.destroy();
-            Runtime.getRuntime().removeShutdownHook(cleanup);
+            removeHook(cleanup);
         }
         if (outputForwarder != null) {
             outputForwarder.join();
-            if (outputFailure.get() != null) throw outputFailure.get();
+            // Only a failure while forwarding is the run's; one after destroy()
+            // closed a stream the forwarder was still reading is not.
+            if (forwarded && outputFailure.get() != null) throw outputFailure.get();
         }
         result.outputWritten = outputWritten.get();
         // A program (or a Java library it calls) may write bytes that are not

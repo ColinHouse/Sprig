@@ -38,9 +38,11 @@ public final class Database {
             // Establish the driver and file now; each later operation owns its resources.
         } catch (SQLException failure) { throw new SqliteError("Cannot open SQLite database", failure); }
     }
-    /** Transaction lifetimes belong to batch(), never SQL control statements. */
-    private static void checkSql(String sql) {
-        Objects.requireNonNull(sql, "SQL");
+    /**
+     * The offset after leading whitespace, semicolons, byte order marks and comments,
+     * or -1 when a block comment runs to the end of the text.
+     */
+    private static int statementStart(String sql) {
         int offset = 0;
         while (offset < sql.length()) {
             if (Character.isWhitespace(sql.charAt(offset)) || sql.charAt(offset) == ';'
@@ -52,20 +54,34 @@ public final class Database {
             }
             if (sql.startsWith("/*", offset)) {
                 int end = sql.indexOf("*/", offset + 2);
-                if (end < 0) throw new SqliteError("Unterminated SQL comment");
+                if (end < 0) return -1;
                 offset = end + 2;
                 continue;
             }
             break;
         }
+        return offset;
+    }
+    /** Transaction lifetimes belong to batch(), never SQL control statements. */
+    private static void checkSql(String sql) {
+        Objects.requireNonNull(sql, "SQL");
+        int offset = statementStart(sql);
+        if (offset < 0) throw new SqliteError("Unterminated SQL comment");
         int end = offset;
         while (end < sql.length() && Character.isLetter(sql.charAt(end))) end++;
         String keyword = sql.substring(offset, end).toUpperCase(Locale.ROOT);
         if (Set.of("BEGIN", "COMMIT", "END", "ROLLBACK", "SAVEPOINT", "RELEASE").contains(keyword))
             throw new SqliteError("SQL transaction control is unsupported; use an atomic batch");
     }
+    /** JDBC runs only the first statement of a text and ignores the rest, so a second one is an error. */
+    private static void checkOneStatement(String sql) {
+        int count = splitScript(sql).size();
+        if (count > 1)
+            throw new SqliteError("SQL holds " + count + " statements; use one statement per SQL text, or a migration for a script");
+    }
     public long execute(String sql, Parameters parameters) {
         checkSql(sql);
+        checkOneStatement(sql);
         try (Connection connection = connect(); PreparedStatement statement = connection.prepareStatement(sql)) {
             Parameters.bind(statement, parameters.snapshot());
             return statement.executeUpdate();
@@ -73,6 +89,7 @@ public final class Database {
     }
     public Rows query(String sql, Parameters parameters) {
         checkSql(sql);
+        checkOneStatement(sql);
         try (Connection connection = connect()) {
             connection.setAutoCommit(false);
             try {
@@ -105,6 +122,7 @@ public final class Database {
                             }
                         }
                     } else {
+                        checkOneStatement(command.sql());
                         try (PreparedStatement statement = connection.prepareStatement(command.sql())) {
                             Parameters.bind(statement, command.parameters());
                             changed = Math.addExact(changed, statement.executeUpdate());
@@ -120,7 +138,10 @@ public final class Database {
         } catch (SQLException failure) { throw new SqliteError("SQLite transaction failed", failure); }
     }
 
-    /** Split a trusted SQLite script without splitting quoted semicolons or trigger bodies. */
+    /**
+     * Split SQLite text into statements without splitting quoted semicolons or trigger bodies;
+     * whitespace, semicolons and comments alone are not a statement.
+     */
     private static List<String> splitScript(String source) {
         List<String> statements = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -181,6 +202,7 @@ public final class Database {
     private static void addScriptStatement(List<String> statements, StringBuilder current) {
         String sql = current.toString().trim();
         current.setLength(0);
-        if (!sql.isEmpty() && !sql.equals(";")) statements.add(sql);
+        int start = statementStart(sql);
+        if (start >= 0 && start < sql.length()) statements.add(sql);
     }
 }

@@ -90,6 +90,11 @@ NEGATIVE = {
     "float_map_key": ("let m: Map[Float, Int] = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
     "nullable_float_map_key": ("let m: Map[Float?, Int] = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
     "float_map_key_inferred": ("let m = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
+    # A Set and distinct keep their items as map keys, so the key rule covers them.
+    "float_set": ("import \"@std/sets.spr\" as sets\nlet s = sets.of([0.5])\n", "SPR-NUM-CONVERSION"),
+    "float32_set": ("import \"@std/sets.spr\" as sets\nlet s = sets.Set[Float32]()\n", "SPR-NUM-CONVERSION"),
+    "float_distinct": ("import \"@std/lists.spr\" as lists\nprint(lists.distinct([0.5, -0.5]))\n",
+                       "SPR-NUM-CONVERSION"),
     "list_element_inexact": ("let xs: List[Float] = [9007199254740993]\n", "SPR-NUM-RANGE"),
     "jvm_int_literal_out_of_range": (
         "import java.lang.Integer as JInteger\nprint(JInteger.toBinaryString(4294967296))\n", "SPR-JVM-MEMBER"),
@@ -141,6 +146,20 @@ POSITIVE = {
     "mixed_integer_width": ("let a: Int32 = 2147483647\nlet b: Int = 1\nprint(a + b)\n", "2147483648"),
     "mixed_float_width": ("let a: Float32 = 0.5\nlet b: Float = 0.25\nprint(a + b)\n", "0.75"),
     "signed_zero": ("print(-0.0 == 0.0)\nprint(1.0 / -0.0)\n", "true\n-Infinity"),
+    # Membership and search find an element with ==: NaN nowhere, -0.0 at 0.0.
+    "nan_membership": (
+        "let nan: Float = 0.0 / 0.0\nprint(nan in [nan])\nprint([nan].contains(nan))\n"
+        "print([nan].indexOf(nan))\nlet items: MutableList[Float] = [nan]\nprint(items.remove(nan))\n",
+        "false\nfalse\n-1\nfalse"),
+    "signed_zero_membership": (
+        "print(-0.0 in [0.0])\nprint(0.0 in [-0.0])\nprint([0.0].contains(-0.0))\nprint([0.0].indexOf(-0.0))\n"
+        "let items: MutableList[Float] = [0.0]\nprint(items.remove(-0.0))\nprint(items.size())\n",
+        "true\ntrue\ntrue\n0\ntrue\n0"),
+    "float32_membership": (
+        "let zero: Float32 = 0.0\nlet negative: Float32 = -0.0\nlet nan = zero / zero\n"
+        "print(nan in [nan])\nprint(negative in [zero])\nlet items: MutableList[Float32] = [nan, zero]\n"
+        "print(items.indexOf(nan))\nprint(items.indexOf(-0.0))\nprint(items.remove(negative))\nprint(items)\n",
+        "false\ntrue\n-1\n1\ntrue\n[NaN]"),
     "list_literal_context": ("let xs: List[Float] = [1, 2]\nprint(xs[0] + xs[1])\n", "3.0"),
     "jvm_int_narrowing": ("import java.lang.Integer as JInteger\nlet x: Int = 42\nprint(JInteger.valueOf(x))\n", "42"),
 }
