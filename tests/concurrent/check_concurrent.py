@@ -33,6 +33,15 @@ def main():
         lines = command(ROOT, "run", ROOT / "tests/concurrent/contract.spr").splitlines()
         expected = (ROOT / "tests/concurrent/contract.out").read_text(encoding="utf-8").splitlines()
         assert lines == expected, "\n".join(lines)
+        # Tasks cancelled or dropped before their body ran once kept the scope waiting forever,
+        # so a hang is a failure here rather than a stuck suite.
+        try:
+            ended = subprocess.run([str(SPRIG), "run", str(ROOT / "tests/concurrent/cancellation.spr")], cwd=ROOT,
+                                   capture_output=True, text=True, encoding="utf-8", timeout=120)
+        except subprocess.TimeoutExpired as hung:
+            raise AssertionError("a scope never ended: " + str(hung.stdout or "")) from hung
+        expected = (ROOT / "tests/concurrent/cancellation.out").read_text(encoding="utf-8").splitlines()
+        assert ended.returncode == 0 and ended.stdout.splitlines() == expected, ended.stdout + ended.stderr
         api = command(ROOT, "api", "@std/concurrent.spr", "--json")
         for name in ("Task", "Scope", "Pool", "Channel", "Counter", "Lock", "Latch", "scope", "spawn", "spawn_on",
                      "parallel_map", "await_all", "channel"):
@@ -45,7 +54,8 @@ def main():
         rejected = subprocess.run([str(SPRIG), "check", str(source)], capture_output=True, text=True, encoding="utf-8")
         assert rejected.returncode != 0 and "SPR-CALL-ARITY" in rejected.stdout + rejected.stderr, \
             rejected.stdout + rejected.stderr
-    print("concurrent: example, contract (scopes, virtual threads, cancellation, I/O) and API passed")
+    print("concurrent: example, contract (scopes, virtual threads, cancellation, I/O), cancellation accounting "
+          "and API passed")
     return 0
 
 
