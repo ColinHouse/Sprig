@@ -12,6 +12,8 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from build import read_runtime_stamp, runtime_digest  # noqa: E402
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--archive", type=Path, help="verify a downloaded release ZIP instead of the local build")
 args = parser.parse_args()
@@ -39,6 +41,14 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     for name, digest in resolver["jars"].items():
         assert hashlib.sha256((sdk / "lib" / name).read_bytes()).hexdigest() == digest, name
     assert (sdk / "runtime/src/main/java/sprig/runtime").is_dir()
+    # The precompiled runtime classes are those of the shipped runtime sources.
+    runtime_classes = sdk / "lib/runtime-classes"
+    runtime_stamp = read_runtime_stamp(runtime_classes)
+    assert runtime_stamp.get("digest") == runtime_digest(sdk / "runtime/src/main/java"), runtime_stamp
+    shipped_runtime = {path.relative_to(runtime_classes / "classes").as_posix(): path.read_bytes()
+                       for path in sorted((runtime_classes / "classes").rglob("*")) if path.is_file()}
+    assert shipped_runtime and all(name.startswith("sprig/runtime/") and name.endswith(".class")
+                                   for name in shipped_runtime), sorted(shipped_runtime)[:5]
     assert (sdk / "libraries/sprig-gradle/build.gradle").is_file()
     assert (sdk / "libraries/sprig-gradle/src/main/java/dev/sprig/gradle/SprigPlugin.java").is_file()
     fabric = sdk / "libraries/sprig-fabric/template"
@@ -106,6 +116,17 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     hello = "website/snippets/tutorial/hello.spr"
     assert json.loads(command("check", hello, "--json"))["diagnostics"] == []
     assert json.loads(command("run", hello, "--json"))["programOutput"].replace("\r\n", "\n") == "Hello, Ada!\n"
+    # A build's classes directory holds the runtime classes; with the JDK that
+    # built the SDK they are the shipped bytes, copied rather than recompiled.
+    hello_build = Path(temp) / "hello build"
+    command("build", hello, "-d", str(hello_build))
+    built_runtime = {path.relative_to(hello_build / "classes").as_posix(): path.read_bytes()
+                     for path in sorted((hello_build / "classes" / "sprig" / "runtime").rglob("*")) if path.is_file()}
+    assert sorted(built_runtime) == sorted(shipped_runtime), sorted(set(built_runtime) ^ set(shipped_runtime))
+    doctor = json.loads(command("doctor", "--json"))
+    if runtime_stamp["java"] == doctor["javaVersion"]:
+        assert built_runtime == shipped_runtime
+        assert Path(doctor["runtimeClasses"]).resolve() == (runtime_classes / "classes").resolve(), doctor["runtimeClasses"]
     independent = Path(temp) / "standalone std user"
     independent.mkdir()
     source = independent / "main.spr"

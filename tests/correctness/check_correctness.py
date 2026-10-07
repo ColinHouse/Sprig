@@ -2,11 +2,15 @@
 """Regression checks for correctness defects found in the independent audit."""
 import os
 import json
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+from build import ANTLR_NAME, read_runtime_stamp, runtime_digest  # noqa: E402
 SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 CASES = ROOT / "tests" / "review_cases"
 passed = failed = 0
@@ -78,6 +82,117 @@ def javac_cache_probe():
                                   capture_output=True, text=True, env=env)
         check("javac-cache-flag-only-for-run", rejected.returncode == 2
               and "SPR-CLI-OPTION" in rejected.stdout, rejected.stdout + rejected.stderr)
+
+
+def class_files(directory):
+    """Every file under a classes directory, by relative path, with its bytes."""
+    directory = Path(directory)
+    if not directory.is_dir():
+        return {}
+    return {path.relative_to(directory).as_posix(): path.read_bytes()
+            for path in sorted(directory.rglob("*")) if path.is_file()}
+
+
+def runtime_classes_probe():
+    """Programs carry the runtime classes compiled once per runtime and JDK, not once per program.
+
+    scripts/build.py compiles them into build/runtime-classes. javac then compiles
+    only a program's generated Java against them and copies them in, so the output
+    is the same as when the runtime sources were compiled with every program.
+    """
+    shipped_dir = ROOT / "build" / "runtime-classes"
+    stamp = read_runtime_stamp(shipped_dir)
+    shipped = class_files(shipped_dir / "classes")
+    check("runtime-classes-built", stamp.get("digest") == runtime_digest(ROOT / "runtime/src/main/java")
+          and stamp.get("options") == "-encoding UTF-8 -proc:none -g"
+          and len(shipped) > 40 and all(name.startswith("sprig/runtime/") and name.endswith(".class")
+                                        for name in shipped), f"stamp={stamp} classes={len(shipped)}")
+    compiler_classpath = os.pathsep.join(map(str, [ROOT / "build" / "sprig-compiler.jar",
+                                                   ROOT / "build" / "deps" / ANTLR_NAME,
+                                                   *sorted((ROOT / "build" / "deps" / "resolver").glob("*.jar"))]))
+    with tempfile.TemporaryDirectory(prefix="sprig-runtime-classes-") as temp:
+        temp = Path(temp)
+        program = temp / "hello.spr"
+        program.write_text('print("hello")\n', encoding="utf-8")
+
+        out = temp / "out"
+        built = run("build", program, "-d", out)
+        check("runtime-classes-copied-into-build-output", built.returncode == 0
+              and class_files(out / "classes" / "sprig" / "runtime") == {
+                  name.removeprefix("sprig/runtime/"): data for name, data in shipped.items()}
+              and list((out / "classes" / "sprig" / "user").glob("*.class")),
+              built.stdout + built.stderr)
+
+        def sprig_home(home, user, *args, cache=None):
+            """The compiler with a fixture SDK home and user home; its runtime is home/runtime."""
+            env = dict(os.environ, SPRIG_JAVAC_CACHE=str(cache) if cache else "off")
+            return subprocess.run(["java", "-Dfile.encoding=UTF-8", f"-Dsprig.home={home}", f"-Duser.home={user}",
+                                   "-cp", compiler_classpath, "sprig.compiler.cli.Main", *map(str, args)],
+                                  capture_output=True, text=True, env=env)
+
+        def fixture_home(name, runtime_classes=True, java=None):
+            home = temp / name
+            shutil.copytree(ROOT / "runtime/src/main/java", home / "runtime/src/main/java")
+            if runtime_classes:
+                shutil.copytree(shipped_dir, home / "build" / "runtime-classes")
+            if java:
+                stamp_file = home / "build" / "runtime-classes" / "sprig-runtime.properties"
+                stamp_file.write_text(stamp_file.read_text(encoding="utf-8").replace(
+                    "java=" + stamp["java"], "java=" + java), encoding="utf-8")
+            user = temp / (name + "-user")
+            user.mkdir()
+            return home, user
+
+        def entries(directory):
+            return sorted(p.name for p in directory.iterdir() if p.is_dir()) if directory.is_dir() else []
+
+        # A changed runtime source changes the javac cache key, and the changed runtime runs.
+        home, user = fixture_home("edited")
+        cache = temp / "edited-javac-cache"
+        runtime_cache = user / ".sprig" / "cache" / "runtime"
+        first = sprig_home(home, user, "run", program, cache=cache)
+        check("runtime-classes-shipped-used", first.returncode == 0 and first.stdout == "hello\n"
+              and len(entries(cache)) == 1 and not entries(runtime_cache),
+              f"{first.stdout}{first.stderr} javac={entries(cache)} runtime={entries(runtime_cache)}")
+        runtime_source = home / "runtime/src/main/java/sprig/runtime/SprigRuntime.java"
+        text = runtime_source.read_text(encoding="utf-8")
+        patched = text.replace("System.out.println(format(value));", 'System.out.println("patched " + format(value));')
+        runtime_source.write_text(patched, encoding="utf-8")
+        second = sprig_home(home, user, "run", program, cache=cache)
+        third = sprig_home(home, user, "run", program, cache=cache)
+        check("javac-cache-key-follows-runtime", patched != text and second.returncode == 0
+              and second.stdout == "patched hello\n" and third.stdout == "patched hello\n"
+              and len(entries(cache)) == 2 and len(entries(runtime_cache)) == 1,
+              f"{second.stdout}{second.stderr}{third.stdout}{third.stderr} javac={entries(cache)} "
+              f"runtime={entries(runtime_cache)}")
+
+        # Classes another javac compiled are not copied: this JDK compiles the runtime
+        # once into the user cache, byte for byte what build.py made with it.
+        home, user = fixture_home("other-jdk", java="0-other")
+        runtime_cache = user / ".sprig" / "cache" / "runtime"
+        other = sprig_home(home, user, "build", program, "-d", temp / "other-out")
+        cached = entries(runtime_cache)
+        check("runtime-classes-other-jdk-cached", other.returncode == 0 and len(cached) == 1
+              and class_files(runtime_cache / cached[0] / "classes") == shipped
+              and class_files(temp / "other-out" / "classes" / "sprig" / "runtime") == {
+                  name.removeprefix("sprig/runtime/"): data for name, data in shipped.items()},
+              f"{other.stdout}{other.stderr} runtime={cached}")
+        again = sprig_home(home, user, "run", program)
+        check("runtime-classes-cache-reused", again.returncode == 0 and again.stdout == "hello\n"
+              and entries(runtime_cache) == cached, f"{again.stdout}{again.stderr} runtime={entries(runtime_cache)}")
+
+        # No precompiled classes and no writable cache: the runtime sources are
+        # compiled with the program, as before, into the same output.
+        home, _ = fixture_home("no-classes", runtime_classes=False)
+        not_a_directory = temp / "home-is-a-file"
+        not_a_directory.write_text("", encoding="utf-8")
+        fallback = sprig_home(home, not_a_directory, "build", program, "-d", temp / "fallback-out")
+        check("runtime-classes-compiled-with-program", fallback.returncode == 0
+              and class_files(temp / "fallback-out" / "classes") == class_files(out / "classes"),
+              fallback.stdout + fallback.stderr)
+        doctor = json.loads(run("doctor", "--json").stdout)
+        check("doctor-runtime-classes", Path(doctor.get("runtimeClasses") or "").resolve()
+              == (shipped_dir / "classes").resolve(), str(doctor.get("runtimeClasses")))
 
 
 def javac_json_probe():
@@ -267,6 +382,7 @@ def main():
 
     javac_json_probe()
     javac_cache_probe()
+    runtime_classes_probe()
 
     print(f"correctness regressions: {passed} passed, {failed} failed")
     return 1 if failed else 0

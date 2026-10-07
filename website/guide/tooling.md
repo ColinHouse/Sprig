@@ -53,7 +53,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 
 - **`check --syntax-only`**：`check` 本来就不生成代码；加上这个选项更快，只检查词法、缩进和语法。
 - **`run --keep`**：保留生成的 Java 文件，方便查看。
-- **`run --no-cache`**：即使同一个程序之前跑过，也重新调用 javac。默认情况下 `run` 和 `test` 会把每个程序编译出的 class 文件留在 `~/.sprig/cache/javac` 下（保留最近的 64 个），键由生成的 Java、编译器版本、运行时源码和 classpath 决定，所以再次运行没改过的程序会跳过 javac，启动时间从大约 2 秒降到不足 1 秒。设置 `SPRIG_JAVAC_CACHE=off` 关闭缓存，设成一个目录路径则换个位置。
+- **`run --no-cache`**：即使同一个程序之前跑过，也重新调用 javac。默认情况下 `run` 和 `test` 会把每个程序编译出的 class 文件留在 `~/.sprig/cache/javac` 下（保留最近的 64 个），键由生成的 Java、编译器和 Java 版本、运行时和 classpath 决定，所以再次运行没改过的程序会跳过 javac。真要调用 javac 时，它也只编译你的程序：运行时已经随 SDK 编译好，直接复制到你的 class 文件旁边。如果你用的 JDK 和构建 SDK 的不是同一个版本，第一次运行会把运行时编译一次，放进 `~/.sprig/cache/runtime`。设置 `SPRIG_JAVAC_CACHE=off` 关闭程序的缓存，设成一个目录路径则换个位置。
 - **`run --stacktrace`**：程序运行时出了没被捕获的错误，Sprig 会报 `SPR-RUNTIME-ERROR` 或 `SPR-RUNTIME-EXCEPTION`，并指出是源码的哪一行。需要完整的 JVM 堆栈时，加上这个选项。
 - **`build -d <目录>`**：`build` 默认输出到 `sprig-build/`，`-d` 可以换个目录。检查没通过时不会生成 class 文件。
 - **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。

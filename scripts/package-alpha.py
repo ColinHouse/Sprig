@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
-from build import ROOT, ANTLR_NAME, write_launchers
+from build import ROOT, ANTLR_NAME, read_runtime_stamp, runtime_digest, write_launchers
 
 
 def output(*args):
@@ -79,6 +79,12 @@ def main():
         for file in resolver:
             shutil.copy2(file, package / 'lib')
         shutil.copytree(ROOT / 'build/deps/resolver/legal', package / 'legal/resolver')
+        # Programs copy the precompiled runtime classes instead of compiling the
+        # runtime sources each time; they must be the classes of the shipped sources.
+        runtime_stamp = read_runtime_stamp(ROOT / 'build/runtime-classes')
+        if runtime_stamp.get('digest') != runtime_digest(ROOT / 'runtime/src/main/java'):
+            raise RuntimeError('build/runtime-classes is missing or older than runtime/src/main/java: run scripts/build.py first')
+        shutil.copytree(ROOT / 'build/runtime-classes', package / 'lib/runtime-classes')
         shutil.copy2(ROOT / 'scripts/internal/resolver-libraries.json', package / 'legal/resolver-libraries.json')
         for tree in ('runtime/src/main/java', 'examples', 'website/snippets', 'std', 'libraries'):
             if (ROOT / tree).is_dir():
@@ -219,7 +225,7 @@ and docs/KNOWN_LIMITATIONS.md before relying on third-party calls.
             clean = not output('git', 'status', '--porcelain')
         except (OSError, subprocess.CalledProcessError):
             revision, clean = 'no Git metadata', False
-        info = [f'Package version: {tag}', f'Source revision: {revision}', 'Working tree clean: ' + ('yes' if clean else 'no (development archive; revision alone does not identify all contents)'), 'Build Java:', output('java', '-version'), 'Bundled JAR SHA-256:']
+        info = [f'Package version: {tag}', f'Source revision: {revision}', 'Working tree clean: ' + ('yes' if clean else 'no (development archive; revision alone does not identify all contents)'), 'Build Java:', output('java', '-version'), 'Runtime classes: lib/runtime-classes, sources SHA-256 ' + runtime_stamp['digest'] + ', compiled by Java ' + runtime_stamp['java'], 'Bundled JAR SHA-256:']
         info += [hashlib.sha256(file.read_bytes()).hexdigest() + '  lib/' + file.name for file in sorted((package / 'lib').glob('*.jar'))]
         (package / 'BUILD_INFO.txt').write_text('\n'.join(info) + '\n', encoding='utf-8', newline='\n')
         (package / 'LEGAL_STATUS.txt').write_text('Sprig: Apache License 2.0 (LICENSE, NOTICE). ANTLR: BSD (THIRD_PARTY_NOTICES.md). Maven Resolver and bundled libraries: legal/resolver/ and legal/resolver-libraries.json.\n', encoding='utf-8', newline='\n')

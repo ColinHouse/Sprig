@@ -1,5 +1,6 @@
 package sprig.compiler.jvm;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -20,11 +21,46 @@ import sprig.compiler.diag.Span;
 
 /** Invokes javac in-process and translates Java errors back to Sprig spans. */
 public final class JavacRunner {
+    /**
+     * The options of every javac run, besides {@code -d} and {@code -classpath}.
+     * The precompiled runtime classes are identified by them too: classes
+     * compiled with other options would not be the bytes a program build makes.
+     */
+    public static final List<String> OPTIONS = List.of("-encoding", "UTF-8", "-proc:none", "-g");
+
     private JavacRunner() {
     }
 
     public static boolean compile(Path classesDir, List<Path> sources, Diagnostics diagnostics,
                                   Map<Path, Map<Integer, Span>> lineMaps, Map<Path, String> uriByPath) {
+        return compile(classesDir, sources, List.of(), diagnostics, lineMaps, uriByPath);
+    }
+
+    /**
+     * Compiles a program's sources. {@code runtimeClasspath} (the precompiled
+     * runtime classes) comes before the program's own classpath, so the runtime
+     * wins over a same-named class in a user JAR, as its sources did when they
+     * were compiled with the program.
+     */
+    public static boolean compile(Path classesDir, List<Path> sources, List<Path> runtimeClasspath,
+                                  Diagnostics diagnostics, Map<Path, Map<Integer, Span>> lineMaps,
+                                  Map<Path, String> uriByPath) {
+        List<String> classpath = new ArrayList<>();
+        for (Path entry : runtimeClasspath) {
+            classpath.add(entry.toString());
+        }
+        classpath.add(JvmClasspath.entries().isEmpty() ? classesDir.toString() : JvmClasspath.forProcess());
+        return run(classesDir, sources, String.join(File.pathSeparator, classpath), diagnostics, lineMaps,
+                uriByPath);
+    }
+
+    /** Compiles the runtime sources alone; the program's classpath plays no part in them. */
+    public static boolean compileRuntime(Path classesDir, List<Path> sources, Diagnostics diagnostics) {
+        return run(classesDir, sources, classesDir.toString(), diagnostics, Map.of(), Map.of());
+    }
+
+    private static boolean run(Path classesDir, List<Path> sources, String classpath, Diagnostics diagnostics,
+                               Map<Path, Map<Integer, Span>> lineMaps, Map<Path, String> uriByPath) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
             diagnostics.error(Codes.JVM_INTERNAL, Phase.JVM,
@@ -41,10 +77,10 @@ public final class JavacRunner {
         try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null,
                 StandardCharsets.UTF_8)) {
             DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
-            List<String> options = new ArrayList<>(List.of(
-                    "-d", classesDir.toString(), "-encoding", "UTF-8", "-proc:none", "-g"));
+            List<String> options = new ArrayList<>(List.of("-d", classesDir.toString()));
+            options.addAll(OPTIONS);
             options.add("-classpath");
-            options.add(JvmClasspath.entries().isEmpty() ? classesDir.toString() : JvmClasspath.forProcess());
+            options.add(classpath);
             boolean ok = compiler.getTask(null, fileManager, collector, options, null,
                     fileManager.getJavaFileObjectsFromPaths(sources)).call();
             for (javax.tools.Diagnostic<? extends JavaFileObject> javaDiagnostic : collector.getDiagnostics()) {
