@@ -4,7 +4,7 @@
 
 ## 1.1 安装
 
-Sprig 把你的代码翻译成 Java，再交给 JVM 运行，所以需要 **JDK 17 或更新版本**（注意是 JDK，不是只有 JRE）。先确认：
+Sprig 把你的代码翻译成 Java，再交给 JVM 运行，所以需要 **JDK 21 或更新版本**（注意是 JDK，不是只有 JRE）。先确认：
 
 ```bash
 java -version

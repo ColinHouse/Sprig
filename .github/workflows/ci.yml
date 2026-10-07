@@ -22,56 +22,103 @@ permissions:
   contents: read
 
 jobs:
+  # A pull request that only changes the package index under registry/ is
+  # validated by the Registry workflow; the compiler matrix and the docs job
+  # then succeed at once instead of being skipped, so every required check
+  # still reports.
+  changes:
+    name: Registry-only change?
+    runs-on: ubuntu-latest
+    outputs:
+      registry_only: ${{ steps.filter.outputs.registry_only }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          registry_only=false
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --quiet origin "${{ github.base_ref }}"
+            changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qv '^registry/'; then
+              registry_only=true
+            fi
+          fi
+          echo "registry_only=$registry_only" >> "$GITHUB_OUTPUT"
+
   test:
     name: ${{ matrix.os }} / JDK ${{ matrix.java }}
+    needs: changes
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        java: ['17', '26']
+        java: ['21', '26']
     steps:
+      - name: Registry-only change
+        if: needs.changes.outputs.registry_only == 'true'
+        run: echo "Only registry/ changed; the Registry workflow validates it."
       - uses: actions/checkout@v7
+        if: needs.changes.outputs.registry_only != 'true'
       - uses: actions/setup-java@v6
+        if: needs.changes.outputs.registry_only != 'true'
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
       - uses: actions/setup-python@v7
+        if: needs.changes.outputs.registry_only != 'true'
         with:
           python-version: '3.12'
       - name: Build parser, compiler, and runtime
+        if: needs.changes.outputs.registry_only != 'true'
         run: python scripts/build.py
       - name: Run syntax, semantics, runtime, numeric, recovery, and acceptance tests
+        if: needs.changes.outputs.registry_only != 'true'
         run: python scripts/test.py
       - name: Run reference grammar harness
+        if: needs.changes.outputs.registry_only != 'true'
         env:
           ANTLR_JAR: ${{ github.workspace }}/build/deps/antlr-4.13.2-complete.jar
         run: python scripts/test-grammar.py
       - name: Build and smoke-test offline Agent SDK archive
+        if: needs.changes.outputs.registry_only != 'true'
         run: |
           python scripts/package-alpha.py --skip-build
           python scripts/check-sdk-archive.py
 
   docs:
     name: Documentation site
+    needs: changes
     runs-on: ubuntu-latest
     steps:
+      - name: Registry-only change
+        if: needs.changes.outputs.registry_only == 'true'
+        run: echo "Only registry/ changed; the Registry workflow validates it."
       - uses: actions/checkout@v7
+        if: needs.changes.outputs.registry_only != 'true'
       - uses: actions/setup-java@v6
+        if: needs.changes.outputs.registry_only != 'true'
         with:
           distribution: temurin
           java-version: '26'
       - uses: actions/setup-python@v7
+        if: needs.changes.outputs.registry_only != 'true'
         with:
           python-version: '3.12'
       - uses: actions/setup-node@v7
+        if: needs.changes.outputs.registry_only != 'true'
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: website/package-lock.json
       - name: Build compiler for snippet verification
+        if: needs.changes.outputs.registry_only != 'true'
         run: ./scripts/build.sh
       - name: Check snippets, release metadata, and VitePress site
+        if: needs.changes.outputs.registry_only != 'true'
         run: ./scripts/check-docs.sh
 
   editor:
@@ -87,7 +134,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'

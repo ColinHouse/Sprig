@@ -39,7 +39,7 @@ state with `project --json` and `deps --json` inside a project.
 # Windows: py -3 scripts/verify.py
 ```
 
-Requires JDK 17+, Python 3.12+, Node.js 20+/npm and Git. It runs portable
+Requires JDK 21+, Python 3.12+, Node.js 20+/npm and Git. It runs portable
 build, full compiler/JVM tests (including the ordinary Java Gradle fixture),
 independent grammar tests, executed docs and the VitePress production build,
 and editor tokenization/CLI/package checks. First use downloads pinned tools/libraries.
@@ -109,7 +109,8 @@ change touches, as applicable:
   credentials or personal configuration.
 - `sprig api`, `capabilities`, `doctor`, `lsp` and topic help are available;
   query `capabilities --json` for the checkout's dependency and feature
-  support. Publishing/registry remains future work.
+  support. Packages are published through pull requests to `registry/`, validated
+  by `.github/workflows/registry.yml` (`scripts/internal/check-registry-index.py`).
 - This milestone does not authorize grammar, type, numeric, nullability,
   generic or effect redesign. Open a `design-required` issue with a motivating
   program before changing those contracts.
@@ -121,7 +122,7 @@ change touches, as applicable:
 
 ## Release support
 
-Linux/macOS × JDK17/26 and Docs are required. Windows is an experimental
+Linux/macOS × JDK21/26 and Docs are required. Windows is an experimental
 preview: its CI job runs the build, test, grammar, SDK archive, docs and editor
 gates and fails when one fails, but it is not a required check. `@std` is a
 reserved bundled package; never add a manifest dependency named std.

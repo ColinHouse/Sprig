@@ -4,7 +4,7 @@ This page gets Sprig installed and your first project running. When you're done,
 
 ## Install a JDK first
 
-Sprig compiles your code to Java and runs it on the JVM, so you need **JDK 17 or newer**. It has to be a full JDK, not just a JRE. Check with:
+Sprig compiles your code to Java and runs it on the JVM, so you need **JDK 21 or newer**. It has to be a full JDK, not just a JRE. Check with:
 
 ```bash
 java -version

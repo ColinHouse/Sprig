@@ -12,7 +12,7 @@ usage() {
 Usage: install-sprig.sh [--version vX.Y.Z[-prerelease]]
 
 Install an official Linux/macOS Sprig SDK under ~/.sprig and retain every
-installed version. Requires JDK 17+, curl, unzip, and a SHA-256 utility.
+installed version. Requires JDK 21+, curl, unzip, and a SHA-256 utility.
 Without --version, installs the newest published release. If release lookup
 fails, pass an exact --version tag to retry without release discovery.
 EOF
@@ -34,18 +34,18 @@ while [ "$#" -gt 0 ]; do
 done
 
 if ! command -v java >/dev/null 2>&1 || ! command -v javac >/dev/null 2>&1; then
-    fail 'JDK 17 or newer is required (both java and javac must be on PATH). Install a JDK, then retry.'
+    fail 'JDK 21 or newer is required (both java and javac must be on PATH). Install a JDK, then retry.'
 fi
 javac_version=$(javac -version 2>&1 | sed -E 's/^javac[[:space:]]+//')
 javac_major=${javac_version%%.*}
 case "$javac_major" in *[!0-9]*|'') fail "cannot determine javac version: $javac_version" ;; esac
-if [ "$javac_major" -lt 17 ]; then
-    fail "JDK 17 or newer is required; javac reports $javac_version"
+if [ "$javac_major" -lt 21 ]; then
+    fail "JDK 21 or newer is required; javac reports $javac_version"
 fi
 java_version=$(java -version 2>&1 | sed -nE '1s/.*version "([0-9]+)(\.[0-9]+)?.*/\1/p; 1s/^openjdk ([0-9]+).*/\1/p')
 case "$java_version" in *[!0-9]*|'') fail 'cannot determine java runtime version' ;; esac
-if [ "$java_version" -lt 17 ]; then
-    fail "JDK 17 or newer is required; java reports version $java_version"
+if [ "$java_version" -lt 21 ]; then
+    fail "JDK 21 or newer is required; java reports version $java_version"
 fi
 
 if [ -z "$tag" ]; then

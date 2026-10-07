@@ -1,0 +1,81 @@
+name: Registry
+
+# Validates the package index under registry/: entry shape, SemVer, licenses,
+# owners, immutable releases against the base branch, and for every new release
+# a clone at its tag, a check that the tag still points at the recorded commit,
+# and sprig resolve/check/test on the package with the current SDK. A pull
+# request that does not touch registry/ succeeds at once, so the check always
+# reports (a workflow-level paths: filter would leave it "Expected" forever).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  changes:
+    name: Registry files changed?
+    runs-on: ubuntu-latest
+    outputs:
+      registry: ${{ steps.filter.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+            git fetch --quiet origin "${{ github.base_ref }}"
+            changed=$(git diff --name-only "$base...HEAD")
+          else
+            changed=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
+          fi
+          if printf '%s\n' "$changed" | grep -q '^registry/'; then
+            echo "registry=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "registry=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  validate:
+    name: Validate registry index
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: No registry change
+        if: needs.changes.outputs.registry != 'true'
+        run: echo "registry/ is unchanged; nothing to validate."
+      - uses: actions/checkout@v7
+        if: needs.changes.outputs.registry == 'true'
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v6
+        if: needs.changes.outputs.registry == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v7
+        if: needs.changes.outputs.registry == 'true'
+        with:
+          python-version: '3.12'
+      - name: Build the compiler
+        if: needs.changes.outputs.registry == 'true'
+        run: python scripts/build.py
+      - name: Validate entries, immutability and new releases
+        if: needs.changes.outputs.registry == 'true'
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python scripts/internal/check-registry-index.py --base "origin/${{ github.base_ref }}" \
+              --author "${{ github.event.pull_request.user.login }}" --fetch
+          else
+            python scripts/internal/check-registry-index.py --fetch
+          fi

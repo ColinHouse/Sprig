@@ -133,7 +133,7 @@ final class PackageCommand {
         }
         List<Registry.Entry> found = new ArrayList<>();
         for (Registry.Source source : sources) {
-            Path root = Registry.locate(source, project.root, request.offline);
+            Path root = Registry.follow(source, Registry.locate(source, project.root, request.offline), project.root, request.offline);
             for (Registry.Entry entry : Registry.load(source, root)) {
                 if (entry.name.equals(request.alias)) found.add(entry);
             }
@@ -150,10 +150,28 @@ final class PackageCommand {
         Registry.Release release = request.version == null ? entry.latest() : entry.release(request.version);
         if (release == null) {
             throw new DepError(Codes.DEP_REGISTRY, request.version == null
-                    ? "Package '" + request.alias + "' has no releases in registry '" + entry.registry + "'"
+                    ? "Package '" + request.alias + "' has no usable releases in registry '" + entry.registry + "'"
+                            + (entry.releases.isEmpty() ? "" : " (every listed version is yanked)")
                     : "Package '" + request.alias + "' has no version " + request.version + " in registry '"
                             + entry.registry + "'; it lists " + entry.releases.stream().map(Registry.Release::version).toList(),
                     "Run sprig search " + request.alias + " for the listed versions.");
+        }
+        if (release.yanked()) {
+            // Asked for by version: a yanked release is never chosen for a new dependency.
+            throw new DepError(Codes.DEP_REGISTRY, "Version " + release.version() + " of '" + request.alias
+                    + "' is yanked: " + release.reason(),
+                    "Pick another version (sprig search " + request.alias + "); a lock that already pins it still resolves.");
+        }
+        if (release.refKind().equals("tag") && release.rev() != null && !request.offline) {
+            // The index recorded the commit the tag pointed at; a moved tag is refused.
+            GitCache cache = new GitCache(GitCache.defaultRoot(), false);
+            String current = cache.remoteRevision(entry.git, "tag", release.ref());
+            if (!current.equals(release.rev())) {
+                throw new DepError(Codes.DEP_REGISTRY, "Tag " + release.ref() + " of '" + request.alias + "' now points at "
+                        + current + ", not the commit the registry recorded (" + release.rev() + ")",
+                        "A published release is immutable. Ask the package owner to publish a new version, or add the "
+                                + "recorded commit directly: sprig add " + request.alias + " --git URL --rev " + release.rev() + ".");
+            }
         }
         request.kind = "sprig-git";
         request.url = entry.git;

@@ -22,7 +22,7 @@ version = catalog["compilerVersion"]
 assert invoke("version").strip() == "sprig-compiler " + version
 assert json.loads((ROOT / "website" / "package.json").read_text())["version"] == version
 assert catalog["languageVersion"] == "0.8-dev"
-assert catalog["jdk"]["minimum"] == 17
+assert catalog["jdk"]["minimum"] == 21
 assert catalog["license"] == "Apache-2.0"
 assert "Apache License" in (ROOT / "LICENSE").read_text()
 source_status = next(line.split("=", 1)[1] for line in (ROOT / "compiler/src/main/resources/sprig/compiler/tooling/catalog.properties").read_text().splitlines() if line.startswith("releaseStatus="))
