@@ -575,17 +575,20 @@ public final class Explanations {
                 out.put("whyMatters", "conform declares a foreign JVM contract for an existing local class; it adds no methods and performs no adaptation.");
                 out.put("commonCauses", List.of("The left name is not a class declared in this module (imported, dependency or value name).",
                         "The class is generic.",
-                        "The target alias is not an imported public Java interface, or the interface is generic, sealed or an annotation."));
+                        "The target alias is not an imported public Java interface, or the interface is generic, sealed or an annotation.",
+                        "A Java class is named without parentheses, an interface with them, the class is final, generic or sealed, or the named fields select no public or protected constructor."));
                 out.put("safeFixes", List.of("Declare conform in the same file as a non-generic class.",
                         "Import the target: import java.lang.Runnable as Runnable.",
+                        "To extend a Java class, name the fields its constructor takes: conform C to JavaClass(field1, field2).",
                         "For different signatures, write a separate class that composes the original."));
                 out.put("relatedCodes", List.of(Codes.CONFORM_MEMBER, Codes.CONFORM_OVERLOAD, Codes.JVM_CLASS));
             }
             case Codes.CONFORM_MEMBER -> {
-                out.put("whyMatters", "A witness method must match the Java signature exactly: name, arity, JVM parameter shapes and return shape.");
+                out.put("whyMatters", "A witness or override must match the Java signature exactly: name, arity, JVM parameter shapes and return shape; a method named like a Java method with another shape would silently become a new overload.");
                 out.put("commonCauses", List.of("The class is missing a required method.",
                         "A parameter's JVM shape differs (Int vs String, Int vs Int32, nullable primitive).",
-                        "The return shape differs (Unit vs a value, primitive vs boxed)."));
+                        "The return shape differs (Unit vs a value, primitive vs boxed).",
+                        "The method would override a final Java method, hide a static one, or has the name of a Java method but none of its shapes."));
                 out.put("safeFixes", List.of("Add or rename the method to the interface's method name.",
                         "Run sprig api <Java.Class> --json to inspect the exact interface signature.",
                         "Use composition and a separate adapter class when the signature cannot match."));
@@ -606,6 +609,17 @@ public final class Explanations {
                         "Remove the throws clause and surface failure another way.",
                         "Use an interface method that declares a compatible exception."));
                 out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.CONFORM_MEMBER));
+            }
+            case Codes.CONFORM_PARENT -> {
+                out.put("whyMatters", "The parent view declared by 'conform C to J(...) as NAME' stands for the inherited Java implementation of the current object; it exists only to call methods, like Java's super, and is not a value.");
+                out.put("commonCauses", List.of("NAME is used as a value, passed as an argument, or one of its fields is read.",
+                        "The alias is declared on an interface conform, which has no inherited implementation.",
+                        "The called method is abstract in the Java class, so nothing inherited can run.",
+                        "The alias has the name of a field or method of the class."));
+                out.put("safeFixes", List.of("Write NAME.method(...) inside a method of the class.",
+                        "Implement the behaviour in the class's own method when the Java method is abstract.",
+                        "Choose an alias that no member of the class uses."));
+                out.put("relatedCodes", List.of(Codes.CONFORM_TARGET, Codes.CONFORM_MEMBER, Codes.JVM_MEMBER));
             }
             case Codes.NUM_RANGE -> {
                 out.put("whyMatters", "Numeric literals are checked against the target type's exact range and precision.");

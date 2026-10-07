@@ -1,0 +1,18 @@
+import java.lang.Thread as Thread
+import java.lang.Runnable as Runnable
+
+class Worker:
+    let label: String
+    var ticks: Int = 0
+
+    func run() -> Unit:
+        ticks += 1
+        parent.run()
+
+conform Worker to Thread(label) as parent
+conform Worker to Runnable
+
+class Idle:
+    pass
+
+conform Idle to Thread()

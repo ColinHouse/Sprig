@@ -54,6 +54,9 @@ public final class Scope {
                     return method.symbol;
                 }
             }
+            if (root.classDecl.parentSymbol != null && name.equals(root.classDecl.parentAlias)) {
+                return root.classDecl.parentSymbol; // conform C to J(...) as NAME
+            }
         }
         ModuleScope moduleScope = root.module.scope;
         Symbol symbol = moduleScope.topVars.get(name);

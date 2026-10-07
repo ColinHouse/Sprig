@@ -5,7 +5,9 @@ class `C` and an imported Java interface `J`. It defines no methods and
 performs no adaptation: the compiler verifies that the existing class methods
 satisfy every supported abstract instance requirement of `J`, records the
 relation as an explicit foreign assignability edge, and emits `C` with `J` in
-its JVM interface list.
+its JVM interface list. With parentheses, `conform C to J(field, ...)` makes
+the generated class of `C` extend the Java class `J` instead; see
+[Extending a Java class](#extending-a-java-class).
 
 ```sprig
 import java.lang.Runnable as Runnable
@@ -28,7 +30,8 @@ It is a **declared foreign conformance conversion**, not general subtyping:
 - `Task → Runnable` and `Task? → Runnable?` are legal; `Task? → Runnable` is
   rejected until narrowed;
 - `List[Task] → List[Runnable]` is never inferred (generics stay invariant);
-- there is no class inheritance, no Sprig `interface` declaration, no
+- there is no inheritance between Sprig classes (a Java superclass is
+  declared with the class form below), no Sprig `interface` declaration, no
   structural matching and no SAM conversion;
 - `conform` does not change the class's Sprig API. `Task()` methods keep Sprig
   semantics; only the `J` view uses Java interop metadata.
@@ -48,8 +51,11 @@ conform EndTickAdapter to EndTick
 ## v1 rules
 
 - The left class must be non-generic and declared in the same module.
-- The target must be an imported **public**, non-generic, non-sealed Java
-  interface. Annotations, abstract classes and ordinary classes are rejected.
+- Without parentheses the target must be an imported **public**,
+  non-generic, non-sealed Java interface; annotations are rejected. With
+  parentheses it must be a public, non-final, non-generic, non-sealed Java
+  class, abstract or concrete (see below); a class named without parentheses,
+  or an interface named with them, is rejected with the form to write.
 - Write one declaration per relation: `conform Worker to Runnable` and
   `conform Worker to Closeable`, not a comma list.
 - Witness methods match exactly by name, arity, JVM parameter shapes, return
@@ -78,6 +84,86 @@ conform EndTickAdapter to EndTick
   JVM overload ranking: conformed classes behave like ordinary Java references
   and may report `SPR-JVM-AMBIGUOUS` where no exact class match exists.
 
+## Extending a Java class
+
+```sprig
+import conformfixture.ClassBase as ClassBase   # abstract: describe(); concrete: greet(String)
+
+class Item:
+    let name: String
+    var uses: Int = 0
+
+    func describe() -> String:
+        uses += 1
+        return "item " + name + " " + uses
+
+    func greet(who: String) -> String:
+        let inherited = parent.greet(who)   # the inherited ClassBase.greet
+        if inherited == null:
+            return "[none]"
+        return "[" + inherited + "]"
+
+conform Item to ClassBase(name) as parent
+
+let item = Item(name="wand")
+let base: ClassBase = item                  # the class extends ClassBase
+print(item.id())                            # an inherited public method
+```
+
+`conform C to J(field, ...) as NAME` makes the generated Java class of `C`
+extend `J`. The object is one object: a Java framework that holds the `J` sees
+the same instance Sprig mutates, so there is no delegate and no identity split.
+Sprig itself still has no inheritance: a Sprig class cannot extend a Sprig
+class, and `C`'s own API is unchanged.
+
+- **Constructor.** The names in parentheses are fields of `C`, passed in that
+  order to the one public or protected constructor of `J` whose parameter JVM
+  shapes match the fields' shapes exactly (`conform C to J()` selects the
+  no-argument constructor). Expressions and literals are not allowed, because
+  `super(...)` runs before any field of `C` exists; the generated constructor
+  passes its own parameters. No matching constructor is `SPR-CONFORM-TARGET`
+  with the available shapes.
+- **Abstract methods** of `J` and its ancestors (including interface methods no
+  class in the chain implements) need a method of `C` with the exact Java
+  signature, as interface witnesses do (`SPR-CONFORM-MEMBER` when missing).
+- **Overrides are matched by shape.** A method of `C` whose name is the name of
+  a public or protected instance method of the chain must match one of that
+  name's shapes exactly; it then overrides that method and the generated Java
+  carries `@Override`. A matching name with none of the shapes is rejected,
+  because Java would silently add an overload and the hook would never run.
+  Overriding a `final` method, or hiding a `static` one with the same
+  signature, is `SPR-CONFORM-MEMBER`. Checked exceptions follow the interface
+  rule (`SPR-CONFORM-EFFECTS`). Methods whose names appear nowhere in the chain
+  are ordinary Sprig methods.
+- **The parent view.** `as NAME` declares a class-scope name, visible in every
+  method of `C` (also inside lambdas there), that calls the inherited
+  implementation: `NAME.m(args)` is Java's `super.m(args)`, generated as
+  `C.super.m(args)`, for the public and protected methods of the chain. `NAME` is not a value, has no fields, never names a static
+  method and cannot call an abstract method; each of those is
+  `SPR-CONFORM-PARENT`, as is an alias on an interface conform or one that
+  shares a name with a field or method of `C`. The result of a parent call is
+  mapped like any Java result, so a reference result is nullable. The alias is
+  optional; without it an override replaces the inherited behaviour.
+- **Inherited members.** On a value of `C`, members that `C` does not declare
+  resolve through the Java view of `J` (`item.id()`, `plain.count = 7`), with
+  the ordinary interop mapping. Inside the class body there is no `self` and
+  no bare-name access to inherited members; the parent view is the explicit
+  way. A field of `C` shadows an inherited member of the same name on `C`
+  receivers, as in Java.
+- **Assignability.** `C → J`, `C → K` for every superclass `K` of `J` and
+  `C → I` for every interface the chain implements are declared conversions,
+  like `C → Interface` today; collections stay invariant.
+- **Generated Java.** `public final class C extends J implements ...`, the
+  constructor's `super(...)` first, `@Override` on witnesses and overrides, the
+  entry guards of the foreign boundary, and no generated `toString`: the
+  inherited one (or a Sprig override of it) is used.
+- **Not in v1.** Protected methods of `J` can be overridden and called through
+  the parent view, but not on values of the class (Java's own rule across
+  packages); protected fields are not reachable; generic superclasses, a second
+  Java superclass, super calls into other classes than `J`'s chain, and
+  constructor expressions are rejected. Loom's remapping covers the generated Java like any Java source of
+  a mod, because it is compiled in the same source set.
+
 ## Foreign boundary
 
 Java framework callers can pass `null` for reference parameters. A witness
@@ -103,8 +189,11 @@ reflection order. The following remain deliberate v1 boundaries:
 - boxed `Short`/`Byte`/`Character` witness parameters;
 - parameter contravariance and return covariance in the **Sprig witness**
   (covariance inside the Java interface hierarchy still resolves correctly);
-- method renaming, adapters, SAM conversion, interfaces, inheritance and
-  variance.
+- method renaming, adapters, SAM conversion, Sprig interfaces, inheritance
+  between Sprig classes and variance;
+- for class targets: protected members on values of the class (the parent
+  view may call protected methods), generic superclasses, constructor
+  expressions and calling the parent view as a value.
 
 `conform` reserves the word `conform` (like `class` or `variant`); `to` stays a
 contextual word and identifiers named `to` keep working.
@@ -112,5 +201,5 @@ contextual word and identifiers named `to` keep working.
 ## Diagnostics
 
 `SPR-CONFORM-SOURCE`, `SPR-CONFORM-TARGET`, `SPR-CONFORM-MEMBER`,
-`SPR-CONFORM-OVERLOAD` and `SPR-CONFORM-EFFECTS`. Every code has structured
+`SPR-CONFORM-OVERLOAD`, `SPR-CONFORM-EFFECTS` and `SPR-CONFORM-PARENT`. Every code has structured
 guidance: run `sprig explain <code> --json` or `sprig help conform --json`.

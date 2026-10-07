@@ -148,6 +148,42 @@ public final class JvmMetadata {
         return callable != null ? callable.display() : JavaTypes.mapFormal(generic, raw).display();
     }
 
+    /**
+     * The methods a subclass may call on itself: every public method plus the
+     * protected instance methods declared along the superclass chain, each
+     * signature once with its most derived declaration first. Used for the
+     * parent view of {@code conform C to J(...) as NAME}, where Java's
+     * {@code super.m(...)} reaches protected methods too.
+     */
+    public static List<Method> inheritable(Class<?> clazz) {
+        List<Method> out = new ArrayList<>(List.of(clazz.getMethods()));
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (Method method : out) {
+            seen.add(signatureKey(method));
+        }
+        for (Class<?> current = clazz; current != null; current = current.getSuperclass()) {
+            for (Method method : current.getDeclaredMethods()) {
+                int modifiers = method.getModifiers();
+                if (!java.lang.reflect.Modifier.isProtected(modifiers) || java.lang.reflect.Modifier.isStatic(modifiers)
+                        || method.isBridge() || method.isSynthetic()) {
+                    continue;
+                }
+                if (seen.add(signatureKey(method))) {
+                    out.add(method);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static String signatureKey(Method method) {
+        StringBuilder key = new StringBuilder(method.getName()).append('(');
+        for (Class<?> param : method.getParameterTypes()) {
+            key.append(param.getName()).append(',');
+        }
+        return key.append(')').toString();
+    }
+
     public static Map<String, Object> describe(Field field) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", field.getName());

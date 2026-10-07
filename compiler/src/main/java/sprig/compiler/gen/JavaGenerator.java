@@ -577,6 +577,9 @@ public final class JavaGenerator {
         w.map(classDecl.span);
         StringBuilder header = new StringBuilder("public final class ")
                 .append(simpleName(typeNames.get(decl)));
+        if (classDecl.superclass != null) {
+            header.append(" extends ").append(sourceName(classDecl.superclass));
+        }
         if (!classDecl.conformedInterfaces.isEmpty()) {
             List<String> interfaces = new ArrayList<>();
             for (Class<?> iface : classDecl.conformedInterfaces) {
@@ -595,23 +598,27 @@ public final class JavaGenerator {
             w.blank();
             emitFunction(w, method, classDecl);
         }
-        w.blank();
-        w.open("@Override public java.lang.String toString()");
-        StringBuilder text = new StringBuilder("return \"").append(classDecl.name);
-        if (!classDecl.fields.isEmpty()) {
-            text.append('(');
-            for (int i = 0; i < classDecl.fields.size(); i++) {
-                if (i > 0) {
-                    text.append(", ");
+        if (classDecl.superclass == null) {
+            // A class that extends a Java class keeps the inherited toString
+            // (or the Sprig override of it); a plain class prints its fields.
+            w.blank();
+            w.open("@Override public java.lang.String toString()");
+            StringBuilder text = new StringBuilder("return \"").append(classDecl.name);
+            if (!classDecl.fields.isEmpty()) {
+                text.append('(');
+                for (int i = 0; i < classDecl.fields.size(); i++) {
+                    if (i > 0) {
+                        text.append(", ");
+                    }
+                    text.append(classDecl.fields.get(i).name).append("=\" + sprig.runtime.SprigRuntime.str(")
+                        .append(mangle(classDecl.fields.get(i).name)).append(") + \"");
                 }
-                text.append(classDecl.fields.get(i).name).append("=\" + sprig.runtime.SprigRuntime.str(")
-                    .append(mangle(classDecl.fields.get(i).name)).append(") + \"");
+                text.append(')');
             }
-            text.append(')');
+            text.append("\";");
+            w.line(text.toString());
+            w.close();
         }
-        text.append("\";");
-        w.line(text.toString());
-        w.close();
         w.close();
         String file = PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java";
         emitFile(file, w);
@@ -631,6 +638,15 @@ public final class JavaGenerator {
         w.line("// Named constructor lowered to positional parameters; omitted fields");
         w.line("// receive their default expression at the call site, in declaration order.");
         w.line(ctor.toString());
+        if (classDecl.superclass != null) {
+            // The Java superclass constructor runs first, on the constructor
+            // parameters of the named fields; no field of this class exists yet.
+            List<String> superArguments = new ArrayList<>();
+            for (Decl.Field field : classDecl.superArguments) {
+                superArguments.add(mangle(field.name));
+            }
+            w.line("    super(" + String.join(", ", superArguments) + ");");
+        }
         for (Decl.Field field : classDecl.fields) {
             w.line("    this." + mangle(field.name) + " = " + mangle(field.name) + ";");
         }
@@ -826,6 +842,9 @@ public final class JavaGenerator {
         }
         if (!throwsClauses.isEmpty()) {
             sig.append(" throws ").append(String.join(", ", throwsClauses));
+        }
+        if (func.foreignBoundary) {
+            w.line("@Override"); // javac confirms the witness really overrides the Java method
         }
         w.open(sig.toString());
         if (func.foreignBoundary) {
@@ -2035,7 +2054,11 @@ public final class JavaGenerator {
                 && access.receiver instanceof Expr.Name name
                 && name.symbol != null && name.symbol.kind == Symbol.Kind.JAVA_TYPE;
         StringBuilder sb = new StringBuilder();
-        if (receiverIsClass) {
+        if (resolved.jvm.superCall) {
+            // The parent view: the inherited implementation on this object. The
+            // qualified form also works from the anonymous Fn classes lambdas use.
+            sb.append(typeNames.get(currentClassDecl)).append(".super");
+        } else if (receiverIsClass) {
             sb.append(sourceName(resolved.jvm.owner));
         } else {
             sb.append(emitExpr(((Expr.FieldAccess) callee).receiver));

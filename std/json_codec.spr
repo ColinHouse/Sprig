@@ -242,7 +242,7 @@ func field(reader: Reader, name: String) -> Field throws Error:
             return Field.Missing
         case json.Lookup.NotObject:
             throw Error(reader.path + ": expected object to read field '" + name
-                +"', found " + kind(reader.value))
+                + "', found " + kind(reader.value))
 
 # Present field of any JSON kind; a present null is a value here.
 func required_value(reader: Reader, name: String) -> json.Value throws Error:
