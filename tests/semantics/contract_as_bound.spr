@@ -1,0 +1,8 @@
+class Sink:
+    func write(line: String) -> Unit
+
+generic T:
+    func drain(lines: List[String], sink: T) -> Unit:
+        requires T: Sink
+        print(lines.size())
+print("x")

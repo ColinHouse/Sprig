@@ -1,0 +1,3 @@
+import "contract_helper_module.spr" as helper
+conform helper.Console to helper.Sink
+print("x")

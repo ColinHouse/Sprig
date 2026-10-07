@@ -3,7 +3,7 @@
 `sprig help <topic> --json` is the versioned machine-readable reference.
 `sprig capabilities --json` is the implemented feature inventory. This page
 shows a few valid forms; it does not override those commands or the numeric
-contract in `NUMERIC_SEMANTICS.md`.
+contract in [numeric semantics](numeric-semantics.md).
 
 ```sprig
 func add(a: Int, b: Int) -> Int:
@@ -23,6 +23,8 @@ class Bot:
         return "hi " + name
 
 conform Bot to Greeter  # Bot has every Greeter method, so a Bot goes where a Greeter is expected
+# a closed set of types is a variant; an open set is a contract (never generic, never a
+# requires bound, no default methods: each rejection names the alternative)
 
 let hero = Hero(name="Ada")
 hero.health += 1

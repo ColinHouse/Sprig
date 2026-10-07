@@ -39,6 +39,12 @@
 - 方法**没有函数体**的类是契约（contract）。另一个类写 `conform Console to Sink`，就必须有契约里的每个方法、类型完全一致；之后 `Console` 的值可以放在任何要 `Sink` 的地方，通过契约的方法使用。契约没有字段、没有默认实现、不能构造，也不能反向转换。例子：
 
 <<< @/snippets/contracts.spr
+- 什么时候用 variant，什么时候用契约，一句话：**一组封闭的类型用 variant，一组开放的类型用契约。** 封闭，是指你在一个地方列完所有情况、`match` 必须全部覆盖；开放，是指任何模块都可以再加一个符合契约的类。
+- 契约在 0.8 语言里有三条定下来的规则，不是「还没做」。每条违反都会报错并告诉你怎么写：
+  - **契约不能是泛型的。** `generic T:` 块里的 `class Repository` 会报 `SPR-CLASS-ABSTRACT`，泛型类也不能 `conform`。按元素类型各写一个契约（`IntRepository`），或者用一个泛型类把那一个操作放进 `fn` 字段里。
+  - **契约是类型，不是约束。** `requires T: Sink` 会报 `SPR-GENERIC-CONSTRAINT`：直接把 `Sink` 写成参数类型，`func drain(sink: Sink) -> Unit`。`requires` 只接受 `Equatable` 和 `Comparable`。契约也不能 conform 到另一个契约。
+  - **契约没有默认方法。** 有的方法带函数体、有的不带，会报 `SPR-CLASS-ABSTRACT`。共享的行为写成接收契约的模块函数：`func log_all(sink: Sink, lines: List[String]) -> Unit`。
+- 另外：契约值不能转回类（没有向下转型），也不能对类或契约的值做类型判断，`match` 只用于 enum 和 variant；`conform` 只能写在声明这个类的模块里（不能给导入的类补 conform），有同名方法但没写 `conform` 的类也不算符合契约。
 - 创建对象时必须写字段名：`Hero(name="Ada", health=80)`。少写、写错名字、重复写，都会编译报错。
 - 方法里直接写字段名就能访问当前对象的字段，不用加前缀。
 - 参数和局部变量不能和字段同名。
