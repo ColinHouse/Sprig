@@ -503,6 +503,10 @@ public final class TypeChecker {
                             module.uri, target.span));
                 }
             } else if (field.kind == ResolvedField.Kind.MODULE_VAR) {
+                if (field.symbol == null) {
+                    // An unresolved member (errorField): the lookup already reported it.
+                    return;
+                }
                 if (!field.symbol.mutable) {
                     diagnostics.add(Diagnostic.error(Codes.NAME_LET_ASSIGN, Phase.TYPE,
                             "Cannot assign to immutable top-level binding '" + access.name + "'",
