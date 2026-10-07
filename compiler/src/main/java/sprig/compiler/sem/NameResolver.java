@@ -64,6 +64,11 @@ public final class NameResolver {
             }
         }
         for (Decl decl : module.decls) {
+            if (decl instanceof Decl.Conform conform && conform.parentAlias != null) {
+                declareParentAlias(module, conform);
+            }
+        }
+        for (Decl decl : module.decls) {
             if (decl instanceof Decl.Func func && !func.isMethod()) {
                 declareFunction(module, func, null);
             }
@@ -186,6 +191,25 @@ public final class NameResolver {
     private void addBuiltin(ModuleScope scope, String name, Type type) {
         Symbol symbol = new Symbol(Symbol.Kind.BUILTIN_TYPE, name, type);
         scope.types.put(name, symbol);
+    }
+
+    /**
+     * The parent view of {@code conform C to J(...) as NAME}: a class-scope name
+     * the conformance checker verifies later. It is bound here so method bodies
+     * resolve it whatever the textual order of the class and the conform.
+     */
+    private void declareParentAlias(Module module, Decl.Conform conform) {
+        Symbol owner = module.scope.types.get(conform.sourceName);
+        if (owner == null || !(owner.decl instanceof Decl.ClassDecl classDecl) || owner.module != module
+                || classDecl.parentAlias != null) {
+            return; // the conformance checker reports the source or the second class conform
+        }
+        Symbol symbol = new Symbol(Symbol.Kind.PARENT_VIEW, conform.parentAlias, NativeType.ERROR);
+        symbol.owner = classDecl;
+        symbol.module = module;
+        symbol.span = conform.parentAliasSpan != null ? conform.parentAliasSpan : conform.span;
+        classDecl.parentAlias = conform.parentAlias;
+        classDecl.parentSymbol = symbol;
     }
 
     private void declareType(Module module, Decl decl) {

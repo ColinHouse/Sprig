@@ -1,0 +1,6 @@
+import java.lang.Thread as Thread
+
+class Worker:
+    let label: String
+
+conform Worker to Thread(label) as

@@ -110,6 +110,21 @@ public abstract class Decl extends Node {
         public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
         /** Verified foreign JVM interfaces emitted in this class's interface list. */
         public final java.util.Set<Class<?>> conformedInterfaces = new java.util.LinkedHashSet<>();
+        /** Verified Java superclass from {@code conform C to J(...)}, or null. */
+        public Class<?> superclass;
+        /** The superclass constructor the named fields select. */
+        public java.lang.reflect.Constructor<?> superConstructor;
+        /** Fields passed to {@link #superConstructor}, in its parameter order. */
+        public final List<Field> superArguments = new java.util.ArrayList<>();
+        /**
+         * The parent view declared by {@code conform C to J(...) as NAME}: the
+         * name methods use to call the inherited implementation. Filled by the
+         * name resolver before bodies are resolved, verified by the conformance
+         * checker.
+         */
+        public String parentAlias;
+        /** Symbol of {@link #parentAlias}; its kind is PARENT_VIEW. */
+        public sprig.compiler.sem.Symbol parentSymbol;
 
         public ClassDecl(String name, List<Field> fields, List<Func> methods) {
             super(name);
@@ -134,13 +149,30 @@ public abstract class Decl extends Node {
     public static final class Conform extends Decl {
         public final String sourceName;
         public final String targetAlias;
+        /**
+         * Written parentheses: the target is a Java class and these fields go
+         * to its constructor, in order. Null for an interface conform; an empty
+         * list for {@code conform C to J()}.
+         */
+        public final List<String> superArguments;
+        public final List<Span> superArgumentSpans = new java.util.ArrayList<>();
+        /** The parent view name from {@code as NAME}, or null. */
+        public final String parentAlias;
+        public Span parentAliasSpan;
         public ClassDecl source;
         public Class<?> target;
 
-        public Conform(String sourceName, String targetAlias) {
+        public Conform(String sourceName, String targetAlias, List<String> superArguments, String parentAlias) {
             super(sourceName + " to " + targetAlias);
             this.sourceName = sourceName;
             this.targetAlias = targetAlias;
+            this.superArguments = superArguments == null ? null : List.copyOf(superArguments);
+            this.parentAlias = parentAlias;
+        }
+
+        /** Whether the declaration names a Java class (parentheses written). */
+        public boolean classTarget() {
+            return superArguments != null;
         }
     }
 

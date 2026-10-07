@@ -27,6 +27,8 @@ public final class ResolvedField {
     public Type receiverType;
     public boolean constructorRef;
     public boolean payloadless;
+    /** A method reached through the parent view: the generator calls the inherited implementation. */
+    public boolean parentView;
     /** v0.8 substitution used to instantiate a generic member or payload. */
     public java.util.Map<sprig.compiler.types.TypeParameterType, Type> substitution = java.util.Map.of();
     /** v0.8 explicit generic type arguments at this use site, when present. */

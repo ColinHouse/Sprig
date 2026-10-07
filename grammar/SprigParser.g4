@@ -8,14 +8,16 @@ options { tokenVocab=SprigLexer; }
 program
     : NEWLINE* ((importStatement | exportStatement) NEWLINE NEWLINE*)*
       (NEWLINE | exportStatement NEWLINE | genericDefinition | classDefinition | enumDefinition
-      | variantDefinition | conformDefinition | functionDefinition | statement)* EOF
+      | variantDefinition | conformDefinition NEWLINE | functionDefinition | statement)* EOF
     ;
 
 // Declares a foreign JVM nominal contract: the Sprig class already specified
 // by the left name satisfies the imported Java interface named on the right.
 // 'to' stays a contextual word so existing identifiers named to keep working.
-conformDefinition: CONFORM IDENT toClause IDENT;
+conformDefinition: CONFORM IDENT toClause IDENT superArguments? (AS IDENT)?;
 toClause: {"to".equals(_input.LT(1).getText())}? IDENT;
+// Fields handed to the Java superclass constructor; names only, no expressions.
+superArguments: LPAREN (IDENT (COMMA IDENT)*)? RPAREN;
 
 // v0.8: block-scoped generic parameters around exactly one declaration.
 // Parameters are only visible inside this block and never leak. There is no

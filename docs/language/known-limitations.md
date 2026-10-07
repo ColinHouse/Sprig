@@ -5,12 +5,16 @@ by the historical design kit in `docs/history/design-kit/`.
 
 - The compiler is written in Java and emits Java source before invoking `javac`.
   It does not compile itself and is not self-hosted.
-- `conform C to J` is v1-scoped: Java interfaces only, a non-generic source
-  class and target interface, no overloaded abstract methods and no method
-  renaming or adapters. It declares a foreign JVM contract; it does not add
-  inheritance or interfaces to the language. Generic methods witness by
-  erasure; boxed `Short`/`Byte`/`Character` parameters are not expressible
-  because of the existing interop adapters.
+- `conform C to J` is v1-scoped: Java interfaces, or with
+  `conform C to J(field, ...) as NAME` one public, non-final, non-generic Java
+  class per Sprig class (abstract methods witnessed, overrides matched by
+  exact shape, `NAME.m(...)` calling the inherited implementation); a
+  non-generic source class, no overloaded abstract methods, no method renaming
+  or adapters, protected methods only through the parent view, and no `self`. It declares a foreign
+  JVM contract; it does not add inheritance between Sprig classes or interfaces
+  to the language. Generic methods witness by erasure; boxed
+  `Short`/`Byte`/`Character` parameters are not expressible because of the
+  existing interop adapters.
 - Generics accept one or more parameters (`generic K, V:`) but are fully
   explicit: no inference, no variance, and partial type arguments are never
   guessed. A type parameter `T` has no operators or methods, equality only
