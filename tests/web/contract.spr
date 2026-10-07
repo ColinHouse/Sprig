@@ -49,3 +49,14 @@ print(web.method_name(web.Method.PUT) + " " + web.operation_name(web.Method.PATC
 print(app.routes.size())
 print(json.stringify(web.schema_json(web.Schema(kind=web.SchemaType.ARRAY, items=web.Schema(kind=web.SchemaType.INTEGER)))))
 print(json.stringify(web.schema_json(web.Schema(kind=web.SchemaType.OBJECT, fields=[web.FieldSchema(name="enabled", schema=web.Schema(kind=web.SchemaType.BOOLEAN), required=false)]))))
+# json_response reports a value it cannot write as a checked Error.
+var response_error = "no error"
+try:
+    web.json_response(json.Value.Number(text="broken"), 200)
+catch problem: Error:
+    response_error = problem.message
+print(response_error)
+# A handler may let the Error of Request.json or json_response escape: the
+# server answers 400 for a malformed body and 500 for anything else.
+other.post("/json", fn(req: web.Request) => web.json_response(req.json(), 201))
+print(other.routes.size())

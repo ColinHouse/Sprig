@@ -31,7 +31,7 @@ Amounts are integers in the smallest currency unit (cents, for example) and can 
 
 ## Handlers are ordinary Sprig functions
 
-A route handler has the type `fn(web.Request) -> web.Response`. These excerpts are from `examples/mini_web/src/main.spr`:
+A route handler has the type `fn(web.Request) -> web.Response throws Error`: when something fails, it can catch the error itself or let it escape. These excerpts are from `examples/mini_web/src/main.spr`:
 
 ```sprig
 import "@web/web.spr" as web
@@ -50,6 +50,9 @@ func hello(req: web.Request) -> web.Response:
         return web.text("Hello, " + name + "!", 200)
     return web.text("Missing name", 400)
 
+func echo(req: web.Request) -> web.Response throws Error:
+    return web.json_response(req.json(), 200)
+
 app.get("/", fn(req: web.Request) => root(req))
 ```
 
@@ -57,7 +60,8 @@ app.get("/", fn(req: web.Request) => root(req))
 - Build responses with module functions: `web.text(body, status)` and `web.json_response(value, status)`. There's no static `Response.text` form.
 - `req.path_param`, `req.query` and `req.header` return `String?`, so "no such parameter" and "an empty parameter" stay distinct.
 - `req.body` is UTF-8 text, and `req.json()` parses the body into a JSON value. To find a field in it, use `json.find_member`, which tells apart a missing key, a JSON `null` value and a value that isn't an object; see the [language quick reference](/en/guide/language-tour).
-- Malformed requests get a 400, unknown routes a 404, and an unhandled error in a handler a controlled 500.
+- If the body isn't valid JSON, `req.json()` throws an `Error`, and `web.json_response` throws one for a value it can't write as JSON. Catch it in the handler to choose the response yourself, or declare `throws Error` like `echo` above and let the server answer.
+- Malformed requests get a 400 (so does a body `req.json()` can't parse, when the handler lets that error escape), unknown routes a 404, and any other error that escapes a handler a controlled 500.
 
 ## API documentation
 

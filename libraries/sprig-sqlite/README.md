@@ -43,14 +43,15 @@ locks record canonical paths and must be re-resolved after relocating a checkout
 | `Parameter.Boolean(value=Bool)` | INTEGER 0/1 |
 | `Parameter.Null` | SQL NULL, distinct from empty text and zero |
 | `Rows.size()` | Detached row count |
-| `Rows.is_null(row, column)` | Explicit nullable-result test |
+| `Rows.is_null(row, column)` | Explicit nullable-result test; `throws Error` for an unknown column or row |
 | `Rows.integer(row, column)` | Require non-null SQLite INTEGER; no Float/String coercion |
 | `Rows.text(row, column)` | Require non-null SQLite TEXT |
 | `Rows.boolean(row, column)` | Require integer 0/1 |
 
 Indices are zero-based; column labels are case-insensitive and must be unique.
 Unknown columns, invalid row indices, wrong kinds, NULL access through a non-null
-accessor, or incorrect parameter count fail explicitly. Each query is limited to
+accessor, or incorrect parameter count fail explicitly. Every `Rows` accessor
+except `size()` declares `throws Error`. Each query is limited to
 10,000 snapshot rows; whole result sets are loaded in memory. There is no cursor API.
 BLOB and Decimal bindings are deliberately absent. INTEGER money uses minor units.
 

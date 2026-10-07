@@ -42,9 +42,9 @@ class Rows:
     func size() -> Int:
         return host.size()
 
-    # True when the value is SQL NULL. An unknown column or out-of-range row
-    # still throws Error, although the signature declares no throws.
-    func is_null(row: Int, column: String) -> Bool:
+    # True when the value is SQL NULL. Throws Error for an unknown column or a
+    # bad row.
+    func is_null(row: Int, column: String) -> Bool throws Error:
         return host.isNull(row, column)
 
     # The value, which must be a non-null INTEGER. Throws Error for NULL, any

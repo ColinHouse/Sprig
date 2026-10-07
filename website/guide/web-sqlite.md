@@ -31,7 +31,7 @@ cd examples/ledger
 
 ## 处理函数就是普通的 Sprig 函数
 
-每个路由的处理函数，类型都是 `fn(web.Request) -> web.Response`。下面这几段摘自 `examples/mini_web/src/main.spr`：
+每个路由的处理函数，类型都是 `fn(web.Request) -> web.Response throws Error`：出了错，可以自己捕获，也可以让它抛出去。下面这几段摘自 `examples/mini_web/src/main.spr`：
 
 ```sprig
 import "@web/web.spr" as web
@@ -50,6 +50,9 @@ func hello(req: web.Request) -> web.Response:
         return web.text("Hello, " + name + "!", 200)
     return web.text("Missing name", 400)
 
+func echo(req: web.Request) -> web.Response throws Error:
+    return web.json_response(req.json(), 200)
+
 app.get("/", fn(req: web.Request) => root(req))
 ```
 
@@ -57,7 +60,8 @@ app.get("/", fn(req: web.Request) => root(req))
 - 响应用模块函数来构造：`web.text(内容, 状态码)` 和 `web.json_response(值, 状态码)`。没有 `Response.text` 这种静态方法的写法。
 - `req.path_param`、`req.query`、`req.header` 都返回 `String?`，所以「没有这个参数」和「参数是空字符串」能区分开。
 - `req.body` 是 UTF-8 文本，`req.json()` 把请求体解析成 JSON 值。要在 JSON 里找字段，用 `json.find_member`，它能区分键不存在、值是 JSON 的 `null`，以及要查的不是对象这几种情况，见[语言速查](/guide/language-tour)。
-- 请求格式不对时返回 400，找不到路由时返回 404，处理函数里出了没处理的错误时，返回一个受控的 500。
+- 请求体不是合法的 JSON 时，`req.json()` 会抛出 `Error`；`web.json_response` 遇到写不成 JSON 的值，也会抛出 `Error`。可以在处理函数里捕获，自己决定返回什么；也可以像上面的 `echo` 一样声明 `throws Error`，交给服务器处理。
+- 请求格式不对时返回 400（`req.json()` 解析失败、处理函数又把错误抛了出去，也是 400），找不到路由时返回 404，处理函数抛出的其他错误，返回一个受控的 500。
 
 ## 接口文档
 
