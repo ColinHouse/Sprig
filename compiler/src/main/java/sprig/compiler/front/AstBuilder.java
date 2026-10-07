@@ -123,7 +123,24 @@ public final class AstBuilder {
     }
 
     private Decl buildConform(SprigParser.ConformDefinitionContext ctx) {
-        Decl.Conform decl = new Decl.Conform(ctx.IDENT(0).getText(), ctx.IDENT(1).getText());
+        List<String> superArguments = null;
+        List<Span> superArgumentSpans = new ArrayList<>();
+        if (ctx.superArguments() != null) {
+            superArguments = new ArrayList<>();
+            for (TerminalNode ident : ctx.superArguments().IDENT()) {
+                superArguments.add(ident.getText());
+                superArgumentSpans.add(span(ident));
+            }
+        }
+        // IDENT(0) is the class, IDENT(1) the target; the contextual "to" sits
+        // inside toClause and the super arguments inside their own rule.
+        TerminalNode alias = ctx.AS() != null ? ctx.IDENT(2) : null;
+        Decl.Conform decl = new Decl.Conform(ctx.IDENT(0).getText(), ctx.IDENT(1).getText(),
+                superArguments, alias == null ? null : alias.getText());
+        decl.superArgumentSpans.addAll(superArgumentSpans);
+        if (alias != null) {
+            decl.parentAliasSpan = span(alias);
+        }
         decl.span = span(ctx);
         decl.nameSpan = span(ctx.IDENT(0));
         return decl;

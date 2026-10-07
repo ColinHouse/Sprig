@@ -33,7 +33,7 @@ plugins {
 }
 
 sprig {
-    targetSourceSet = 'client'
+    targetSourceSet = 'main'
 }
 ```
 
@@ -43,11 +43,12 @@ Fabric 依赖、拆分的 source set、模组入口和 Java 版本，都还是�
 
 | 路径 | 放什么 |
 |---|---|
-| `src/main.spr` | 用 Sprig 写的状态和逻辑 |
+| `src/main.spr` | 用 Sprig 写的状态和逻辑：tick 计数器，以及一个继承 `Item` 的 `Wand` 物品类 |
 | `tests/*.spr` | 项目测试，由 `sprigTest` 运行 |
-| `src/sprigBridge/java/` | 一层很薄的 Java 接口，供 Sprig 调用 |
+| `src/sprigBridge/java/` | 一层很薄的 Java 接口，供 Sprig 调用；Sprig 类也可以用 `conform` 直接实现 Java 接口或继承 Java 类（见 [conformance 参考（英文）](/en/reference/jvm/conformance)） |
+| `src/main/java/` | Fabric 主入口，负责注册用 Sprig 写的法杖物品 |
 | `src/client/java/` | Fabric 客户端的入口和回调注册 |
-| `build/generated/sprig/client/java/` | 生成的 Java，可以打开查看 |
+| `build/generated/sprig/main/java/` | 生成的 Java，可以打开查看 |
 
 Gradle 和 Loom 负责依赖、source set、javac 和打包 jar；Sprig 负责类型检查、生成代码、校验锁文件和运行 Sprig 测试；插件把两边接起来。依赖不会自动更新：`check` 和 `build` 只读当前的 `sprig.lock`，只有明确运行 `./gradlew sprigResolve` 才会更新它。
 

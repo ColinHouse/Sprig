@@ -71,8 +71,8 @@ def main() -> int:
 
         info = run([str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "sprigInfo"],
                    cwd=project, env=env)
-        require(info.returncode == 0 and "Target source set: client" in info.stdout,
-                "the template must target Loom's split client source set")
+        require(info.returncode == 0 and "Target source set: main" in info.stdout,
+                "the template must target Loom's common main source set, visible to both entry points")
 
         build = run([str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "clean", "build"],
                     cwd=project, env=env)
@@ -89,8 +89,12 @@ def main() -> int:
                     f"the packaged mod jar must contain {entry}; contents were:\n{jar.stdout}")
             require(jar.stdout.splitlines().count(entry) == 1,
                     f"the packaged mod jar must contain exactly one {entry}")
-        generated = project / "build/generated/sprig/client/java/sprig/user/$M_main.java"
+        generated = project / "build/generated/sprig/main/java/sprig/user/$M_main.java"
         require(generated.is_file(), "generated Sprig Java must stay inspectable under build/")
+        wand = project / "build/generated/sprig/main/java/sprig/user/$Wand.java"
+        require(wand.is_file() and "extends net.minecraft.world.item.Item" in wand.read_text(encoding="utf-8")
+                and "$Wand.super.use(" in wand.read_text(encoding="utf-8"),
+                "the Sprig wand must compile to an Item subclass that calls the inherited use")
         require(not any((project / "src").rglob("$M_main.java")),
                 "generated code must not be written into source trees")
 

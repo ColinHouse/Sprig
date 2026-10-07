@@ -27,6 +27,7 @@ import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
 import sprig.compiler.jvm.JvmMetadata;
+import sprig.compiler.jvm.JvmNullability;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.FunctionType;
@@ -116,8 +117,11 @@ public final class TypeChecker {
             Map.entry("MutableMap.set", new int[]{2, 2}), Map.entry("MutableMap.remove", new int[]{1, 1}),
             Map.entry("MutableMap.clear", new int[]{0, 0}));
 
-    private final Diagnostics diagnostics;
-    private final TypeRefResolver typeResolver;
+    /** Where the expression being checked reports; a {@link #probe} swaps in a scratch sink. */
+    private Diagnostics diagnostics;
+    /** The sink this checker was created with; checkers for global initializers report here. */
+    private final Diagnostics reported;
+    private TypeRefResolver typeResolver;
 
     private Module module;
     private Decl.Func currentFunction;
@@ -138,8 +142,41 @@ public final class TypeChecker {
 
     public TypeChecker(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
+        this.reported = diagnostics;
         this.typeResolver = new TypeRefResolver(diagnostics);
     }
+
+    /**
+     * Checks an expression without an expected type only to learn its type;
+     * what it reports is dropped and returned. The expression is checked again
+     * afterwards, for real, so its errors are reported once and the tree gets
+     * its final types. Recorded effects are only ever repeated.
+     *
+     * <p>Inside a probe a generic call whose type arguments are inferred stops
+     * once it knows them: its type is all a probe needs, and checking its
+     * arguments against them is left to the real check. So a probe costs one
+     * pass over the expression however deeply generic calls nest in it, and
+     * checking stays polynomial instead of doubling with every level.
+     */
+    private Diagnostics probe(Expr expr) {
+        Diagnostics outer = diagnostics;
+        TypeRefResolver outerResolver = typeResolver;
+        Diagnostics scratch = new Diagnostics();
+        diagnostics = scratch;
+        typeResolver = new TypeRefResolver(scratch);
+        probing++;
+        try {
+            checkExpr(expr, null);
+        } finally {
+            probing--;
+            diagnostics = outer;
+            typeResolver = outerResolver;
+        }
+        return scratch;
+    }
+
+    /** How many probes are open; see {@link #probe}. */
+    private int probing;
 
     // Module signatures include inferred binding types before any body can use
     // them. Initializers are validated again in normal source order after default
@@ -151,8 +188,10 @@ public final class TypeChecker {
         if (symbol.type != null) return;
         Stmt.VarDecl declaration = globalInitializers.get(symbol);
         if (declaration == null) return;
+        // Reported to this checker's own sink even from inside a probe: the
+        // global's type is established once, and a probe would drop its errors.
         if (!inferringGlobals.add(symbol)) {
-            diagnostics.add(Diagnostic.error(Codes.TYPE_INFER, Phase.TYPE,
+            reported.add(Diagnostic.error(Codes.TYPE_INFER, Phase.TYPE,
                     "Cyclic initializer cannot establish the type of '" + symbol.name
                             + "'; write an explicit type annotation", module.uri, symbol.span));
             symbol.type = NativeType.ERROR;
@@ -160,7 +199,7 @@ public final class TypeChecker {
         }
         // An initializer has its own module context, not the narrowing, lambda
         // depth or expected result of the expression that triggered inference.
-        TypeChecker initializer = new TypeChecker(diagnostics);
+        TypeChecker initializer = new TypeChecker(reported);
         initializer.module = module;
         initializer.globalInitializers = globalInitializers;
         initializer.inferringGlobals = inferringGlobals;
@@ -1091,6 +1130,14 @@ public final class TypeChecker {
                         "Module name '" + name.name + "' cannot be used as a value", module.uri, name.span));
                 return NativeType.ERROR;
             }
+            case PARENT_VIEW -> {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                        "'" + name.name + "' names the inherited implementation and is not a value; call a method on it: "
+                                + name.name + ".method(...)",
+                        module.uri, name.span)
+                        .withHint("The parent view only calls inherited methods of the Java class; there is no self value."));
+                return NativeType.ERROR;
+            }
             default -> {
                 return NativeType.ERROR;
             }
@@ -1428,6 +1475,12 @@ public final class TypeChecker {
 
     private void checkPositionalCallSubstituted(Decl.Func func, Expr.Call call, String label,
                                                 Map<TypeParameterType, Type> map) {
+        checkPositionalCallSubstituted(func, call, label, map, null);
+    }
+
+    /** With {@code inference}, the call's type arguments were inferred; see {@link #checkArgument}. */
+    private void checkPositionalCallSubstituted(Decl.Func func, Expr.Call call, String label,
+                                                Map<TypeParameterType, Type> map, Inference inference) {
         if (call.hasNamedArgs()) {
             diagnostics.add(Diagnostic.error(Codes.CALL_POSITIONAL_REQUIRED, Phase.TYPE,
                     "Function '" + label + "' takes positional arguments only; remove the names",
@@ -1443,9 +1496,7 @@ public final class TypeChecker {
         int count = Math.min(args.size(), func.params.size());
         for (int i = 0; i < count; i++) {
             Type expected = Substitution.apply(func.params.get(i).type, map);
-            Type actual = checkExpr(args.get(i).value, expected);
-            requireAssignable(expected, actual, args.get(i).value.span, Codes.TYPE_MISMATCH,
-                    "argument " + (i + 1) + " of " + label);
+            checkArgument(args.get(i).value, expected, inference, "argument " + (i + 1) + " of " + label);
         }
         for (int i = count; i < args.size(); i++) {
             checkExpr(args.get(i).value, null);
@@ -2143,7 +2194,7 @@ public final class TypeChecker {
                     }
                     Decl.Func func = (Decl.Func) symbol.decl;
                     if (!func.typeParams.isEmpty()) {
-                        return rejectMissingTypeArguments(func, call);
+                        return inferFunctionCall(func, symbol, call, ResolvedCall.Kind.FUNCTION);
                     }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.FUNCTION, func.returnType);
                     resolved.symbol = symbol;
@@ -2154,7 +2205,7 @@ public final class TypeChecker {
                 case METHOD -> {
                     Decl.Func func = (Decl.Func) symbol.decl;
                     if (!func.typeParams.isEmpty()) {
-                        return rejectMissingTypeArguments(func, call);
+                        return inferFunctionCall(func, symbol, call, ResolvedCall.Kind.METHOD);
                     }
                     checkComparableArguments(func, Map.of(), call.span);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
@@ -2182,10 +2233,7 @@ public final class TypeChecker {
                 case CLASS -> {
                     ClassType classType = (ClassType) symbol.type;
                     if (classType.decl.isGeneric()) {
-                        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
-                                "Class '" + classType.decl.name + "' is generic; construction requires explicit"
-                                        + " type arguments, e.g. " + classType.decl.name + "[Type](...)",
-                                module.uri, call.span));
+                        return inferClassConstruction(classType.decl, symbol, call);
                     }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, classType);
                     resolved.classDecl = classType.decl;
@@ -2244,6 +2292,13 @@ public final class TypeChecker {
             }
         }
         if (callee instanceof Expr.FieldAccess access) {
+            Decl.VariantDecl generic = unappliedGenericVariant(access.receiver);
+            if (generic != null) {
+                Decl.VariantCase variantCase = findVariantCase(generic, access.name);
+                if (variantCase != null && !variantCase.payloadless()) {
+                    return inferVariantConstruction(generic, variantCase, access, call);
+                }
+            }
             ResolvedField field = resolveFieldAccess(access, true);
             switch (field.kind) {
                 case VARIANT_CASE_VALUE -> {
@@ -2267,7 +2322,7 @@ public final class TypeChecker {
                 case MODULE_FUNCTION -> {
                     Decl.Func func = field.methodDecl;
                     if (!func.typeParams.isEmpty()) {
-                        return rejectMissingTypeArguments(func, call);
+                        return inferFunctionCall(func, field.symbol, call, ResolvedCall.Kind.MODULE_FUNCTION);
                     }
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.MODULE_FUNCTION,
                             func.returnType);
@@ -2277,6 +2332,9 @@ public final class TypeChecker {
                     return func.returnType;
                 }
                 case MODULE_TYPE -> {
+                    if (field.type instanceof ClassType classType && classType.decl.isGeneric()) {
+                        return inferClassConstruction(classType.decl, field.symbol, call);
+                    }
                     if (field.type instanceof ClassType classType) {
                         ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, classType);
                         resolved.classDecl = classType.decl;
@@ -2356,73 +2414,461 @@ public final class TypeChecker {
         return NativeType.ERROR;
     }
 
-    /**
-     * A generic call without type arguments is reported once, with the
-     * arguments the call itself implies when a parameter type names each type
-     * parameter directly (T, T?, List[T], MutableList[T]). The written
-     * arguments are checked without an expected type, so nothing follows from
-     * the unbound parameters, and the call's type is the error type.
-     */
-    private Type rejectMissingTypeArguments(Decl.Func func, Expr.Call call) {
-        List<Type> actuals = new ArrayList<>();
-        for (Expr.Arg arg : call.args) {
-            actuals.add(checkExpr(arg.value, null));
-        }
-        List<String> implied = new ArrayList<>();
-        for (String typeParam : func.typeParams) {
-            Type found = null;
-            for (int i = 0; i < func.params.size() && i < actuals.size() && found == null; i++) {
-                found = impliedTypeArgument(func.params.get(i).type, typeParam, actuals.get(i));
-            }
-            if (found == null) {
-                implied = null;
-                break;
-            }
-            implied.add(found.display());
-        }
-        String callee = calleeText(call.callee, func.name);
-        Diagnostic missing = Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
-                (func.isMethod() ? "Method '" : "Function '") + func.name
-                        + "' is generic; a call requires explicit type arguments, e.g. "
-                        + func.name + "[Type](...)",
-                module.uri, call.span);
-        // The type arguments go right after the function's name: a bare name's
-        // span, or the member name of 'module.function'.
-        Span anchor = call.callee instanceof Expr.Name ? call.callee.span
-                : call.callee instanceof Expr.FieldAccess access ? access.nameSpan : null;
-        if (implied != null) {
-            String arguments = "[" + String.join(", ", implied) + "]";
-            missing.withHint("Write " + callee + arguments + "(...); the arguments you passed say which type"
-                    + (implied.size() > 1 ? "s" : "") + ". Sprig does not infer type arguments.");
-            if (anchor != null) {
-                missing.withEdit(Span.point(anchor.endLine, anchor.endColumn), arguments, "add the type arguments");
-            }
-        } else {
-            missing.withHint("Write " + callee + "[Type](...) with the type argument"
-                    + (func.typeParams.size() > 1 ? "s" : "") + " spelled out ("
-                    + String.join(", ", func.typeParams) + "); Sprig does not infer them.");
-        }
-        diagnostics.add(missing);
-        return NativeType.ERROR;
+    // ------------------------------------------------------------------
+    // Generic calls without type arguments: inference from the arguments
+    // ------------------------------------------------------------------
+
+    /** One argument of a generic call and the declared parameter or field type it is passed for. */
+    private record GenericSlot(Expr value, Type declared, String source) {
     }
 
-    /** The type argument an actual implies for one type parameter through a direct parameter shape, or null. */
-    private static Type impliedTypeArgument(Type declared, String typeParam, Type actual) {
-        if (actual == null || actual == NativeType.ERROR || actual == NativeType.NULL || actual == NativeType.UNIT) {
-            return null;
+    /**
+     * What inference learned about one call: the solution, the arguments it
+     * already checked for real with their types, and the arguments whose own
+     * check reported an error. {@link #arguments} are the type arguments the
+     * call's arguments are checked against: the inferred ones when they are
+     * valid, otherwise a stand-in for each one the call could not establish.
+     */
+    private static final class Inference {
+        final Map<Expr, Type> checked = new java.util.IdentityHashMap<>();
+        final Set<Expr> broken = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        /** Arguments probed as a whole without an error; the tree holds their types. */
+        final Set<Expr> probed = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        /** Arguments whose shape cannot fit their parameter: reported as the mismatch they are. */
+        final Set<Expr> mismatched = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        /** Arguments whose Unit result left a parameter without a type, with the reason. */
+        final Map<Expr, String> units = new java.util.IdentityHashMap<>();
+        /** For each argument, where the inferred types its parameter mentions came from. */
+        final Map<Expr, String> notes = new java.util.IdentityHashMap<>();
+        TypeArgumentInference.Solution solution;
+        List<Type> arguments;
+        boolean valid;
+    }
+
+    /** Whether an expression's type follows from where it goes: a literal, a lambda or a match. */
+    private static boolean takesExpectedType(Expr value) {
+        if (value instanceof Expr.Unary unary && !unary.op.equals("not")) {
+            return takesExpectedType(unary.operand);
         }
-        if (declared instanceof TypeParameterType parameter && parameter.name.equals(typeParam)) {
-            return actual;
+        return value instanceof Expr.IntLit || value instanceof Expr.FloatLit || value instanceof Expr.NullLit
+                || value instanceof Expr.ListLit || value instanceof Expr.MapLit || value instanceof Expr.Lambda
+                || value instanceof Expr.Match;
+    }
+
+    /**
+     * Infers the type arguments of a generic call from its arguments alone.
+     * An argument whose type does not depend on an expected type is checked
+     * here, once, for real. Literals are taken apart and their elements,
+     * lambdas and matches are probed without an expected type; all of them
+     * are checked again against the substituted types afterwards. An argument
+     * whose check reports an error, or whose type holds an error, is no
+     * evidence, and is checked again for real so its error is reported.
+     */
+    private Inference inferTypeArguments(Decl decl, List<GenericSlot> slots, Span span) {
+        Inference inference = new Inference();
+        Expr[] current = new Expr[1];
+        TypeArgumentInference engine = new TypeArgumentInference(decl, new TypeArgumentInference.Arguments() {
+            @Override
+            public Type typeOf(Expr part) {
+                if (part == current[0] && !takesExpectedType(part)) {
+                    int before = diagnostics.errorCount();
+                    Type type = checkExpr(part, null);
+                    inference.checked.put(part, type);
+                    if (diagnostics.errorCount() != before) {
+                        inference.broken.add(part);
+                        return null;
+                    }
+                    return type;
+                }
+                if (probe(part).hasErrors() || part.type == null
+                        || TypeArgumentInference.containsError(part.type)) {
+                    inference.broken.add(current[0]);
+                    return null;
+                }
+                if (part == current[0]) {
+                    inference.probed.add(part);
+                }
+                return part.type;
+            }
+
+            @Override
+            public boolean acceptsNullable(String parameter, Type argument) {
+                return typeResolver.acceptsNullableArgument(module, decl, parameter, argument, span);
+            }
+        });
+        for (GenericSlot slot : slots) {
+            current[0] = slot.value();
+            engine.argument(slot.declared(), slot.value(), slot.source());
         }
-        if (declared instanceof NullableType nullable && nullable.inner instanceof TypeParameterType parameter
-                && parameter.name.equals(typeParam)) {
-            return actual.nonNull();
+        TypeArgumentInference.Solution solution = engine.solve();
+        inference.solution = solution;
+        for (GenericSlot slot : slots) {
+            String note = inferredFrom(decl, slot, solution);
+            if (note != null) {
+                inference.notes.put(slot.value(), note);
+            }
         }
-        if (declared instanceof ListType declaredList && declaredList.element instanceof TypeParameterType parameter
-                && parameter.name.equals(typeParam) && actual instanceof ListType actualList) {
-            return actualList.element;
+        if (solution.complete()) {
+            List<Type> checked = typeResolver.checkInferredArguments(module, decl, solution.arguments, span);
+            if (checked != null) {
+                inference.arguments = checked;
+                inference.valid = true;
+                return inference;
+            }
+        }
+        // Inferred arguments that are invalid like written ones count as unknown.
+        List<Type> partial = new ArrayList<>();
+        for (int i = 0; i < decl.typeParams.size(); i++) {
+            Type known = solution.complete() ? null : solution.arguments.get(i);
+            partial.add(known != null ? known : TypeArgumentInference.unknown(decl.typeParams.get(i)));
+        }
+        inference.arguments = partial;
+        return inference;
+    }
+
+    /**
+     * Where the inferred types a slot's parameter mentions came from, when
+     * that is another argument: "T is String, from argument 2". Attached to a
+     * mismatch on this argument, it says why the argument was expected to
+     * have that type.
+     */
+    private String inferredFrom(Decl decl, GenericSlot slot, TypeArgumentInference.Solution solution) {
+        List<String> parts = new ArrayList<>();
+        for (int i = 0; i < decl.typeParams.size(); i++) {
+            String parameter = decl.typeParams.get(i);
+            String source = solution.sources.get(parameter);
+            // A type that came from this argument itself explains nothing.
+            if (source == null || source.equals(slot.source()) || source.endsWith(" " + slot.source())
+                    || !mentions(slot.declared(), decl, parameter)) {
+                continue;
+            }
+            parts.add(parameter + " is " + spell(solution.arguments.get(i)) + ", from " + source);
+        }
+        return parts.isEmpty() ? null : String.join("; ", parts) + ".";
+    }
+
+    /** Whether a declared parameter or field type names the declaration's type parameter. */
+    private static boolean mentions(Type declared, Decl decl, String parameter) {
+        return !Substitution.apply(declared, Map.of(new TypeParameterType(decl, parameter), NativeType.ERROR))
+                .equals(declared);
+    }
+
+    /**
+     * Inside a probe a generic call stops once it knows its type arguments;
+     * see {@link #probe}. A call whose inference failed still leaves an error
+     * in the probe, so the argument it is part of is checked again for real.
+     */
+    private boolean stopAfterInference(Inference inference, int errorsBefore, Span span) {
+        if (probing == 0) {
+            return false;
+        }
+        if (!inference.valid && diagnostics.errorCount() == errorsBefore) {
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                    "Cannot infer type arguments", module.uri, span));
+        }
+        return true;
+    }
+
+    /** A generic function called without type arguments: lists.sorted(names). */
+    private Type inferFunctionCall(Decl.Func func, Symbol symbol, Expr.Call call, ResolvedCall.Kind kind) {
+        int errors = diagnostics.errorCount();
+        List<GenericSlot> slots = new ArrayList<>();
+        int count = Math.min(call.args.size(), func.params.size());
+        for (int i = 0; i < count; i++) {
+            slots.add(new GenericSlot(call.args.get(i).value, func.params.get(i).type, "argument " + (i + 1)));
+        }
+        Inference inference = inferTypeArguments(func, slots, call.span);
+        Map<TypeParameterType, Type> map = Substitution.forFunction(func, inference.arguments);
+        String callee = calleeText(call.callee, func.name);
+        Type returnType = inference.valid ? Substitution.apply(func.returnType, map) : NativeType.ERROR;
+        ResolvedCall resolved = resolvedCall(call, kind, returnType);
+        resolved.symbol = symbol;
+        resolved.methodDecl = func;
+        if (inference.valid) {
+            resolved.typeArgs = inference.arguments;
+            resolved.substitution = map;
+        }
+        if (stopAfterInference(inference, errors, call.span)) {
+            return returnType;
+        }
+        if (inference.valid) {
+            checkComparableArguments(func, map, calleeSpan(call));
+        } else if (call.args.size() == func.params.size() && !call.hasNamedArgs()) {
+            // A wrong argument count or named arguments explain a missing type argument themselves.
+            reportUninferred(func, inference, callee, typeArgs -> callee + typeArgs + "(...)", call.span);
+        }
+        checkPositionalCallSubstituted(func, call, func.name, map, inference);
+        requireAnError(inference, errors, func.name, callee + "[Type](...)", call.span);
+        return returnType;
+    }
+
+    /** A generic class constructed without type arguments: Box(value=42). */
+    private Type inferClassConstruction(Decl.ClassDecl decl, Symbol symbol, Expr.Call call) {
+        int errors = diagnostics.errorCount();
+        List<GenericSlot> slots = new ArrayList<>();
+        Set<String> given = new HashSet<>();
+        // Positional, unknown or missing fields explain a missing type argument themselves.
+        boolean structural = call.hasPositionalArgs();
+        for (Expr.Arg arg : call.args) {
+            if (arg.name == null) {
+                continue;
+            }
+            Decl.Field field = findField(decl, arg.name);
+            if (field == null) {
+                structural = true;
+            } else if (given.add(arg.name)) {
+                slots.add(new GenericSlot(arg.value, field.type, "field '" + arg.name + "'"));
+            }
+        }
+        for (Decl.Field field : decl.fields) {
+            structural |= field.defaultExpr == null && !given.contains(field.name);
+        }
+        Inference inference = inferTypeArguments(decl, slots, call.span);
+        ClassType classType = new ClassType(decl, inference.arguments);
+        String name = calleeText(call.callee, decl.name);
+        ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR,
+                inference.valid ? classType : NativeType.ERROR);
+        resolved.classDecl = decl;
+        resolved.symbol = symbol;
+        if (inference.valid) {
+            resolved.typeArgs = inference.arguments;
+            resolved.substitution = Substitution.forClass(classType);
+            resolved.instantiatedType = classType;
+        }
+        if (stopAfterInference(inference, errors, call.span)) {
+            return inference.valid ? classType : NativeType.ERROR;
+        }
+        if (!inference.valid && !structural) {
+            reportUninferred(decl, inference, name, typeArgs -> name + typeArgs + "(...)", call.span);
+        }
+        checkClassConstructor(classType, call, inference);
+        if (!inference.valid) {
+            resolved.substitution = Map.of();
+            resolved.instantiatedType = null;
+        }
+        requireAnError(inference, errors, decl.name, name + "[Type](...)", call.span);
+        return inference.valid ? classType : NativeType.ERROR;
+    }
+
+    /** A case of a generic variant constructed without type arguments: Option.Some(value=1). */
+    private Type inferVariantConstruction(Decl.VariantDecl decl, Decl.VariantCase variantCase,
+                                          Expr.FieldAccess access, Expr.Call call) {
+        int errors = diagnostics.errorCount();
+        if (access.receiver instanceof Expr.FieldAccess qualifier) {
+            resolveFieldAccess(qualifier, false); // module.Variant: recorded for tooling, like any member
+        }
+        List<GenericSlot> slots = new ArrayList<>();
+        Set<String> given = new HashSet<>();
+        boolean structural = call.hasPositionalArgs();
+        for (Expr.Arg arg : call.args) {
+            if (arg.name == null) {
+                continue;
+            }
+            Decl.Field payload = null;
+            for (Decl.Field candidate : variantCase.fields) {
+                if (candidate.name.equals(arg.name)) {
+                    payload = candidate;
+                    break;
+                }
+            }
+            if (payload == null) {
+                structural = true;
+            } else if (given.add(arg.name)) {
+                slots.add(new GenericSlot(arg.value, payload.type, "field '" + arg.name + "'"));
+            }
+        }
+        for (Decl.Field payload : variantCase.fields) {
+            structural |= !given.contains(payload.name);
+        }
+        Inference inference = inferTypeArguments(decl, slots, call.span);
+        ResolvedField field = variantCaseValue(new VariantType(decl, inference.arguments), access);
+        access.resolved = field;
+        String owner = calleeText(access.receiver, decl.name);
+        ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.VARIANT_CTOR,
+                inference.valid ? field.type : NativeType.ERROR);
+        resolved.variantCase = variantCase;
+        if (inference.valid) {
+            resolved.typeArgs = inference.arguments;
+            resolved.substitution = field.substitution;
+            resolved.instantiatedType = field.type;
+        }
+        if (stopAfterInference(inference, errors, call.span)) {
+            return inference.valid ? field.type : NativeType.ERROR;
+        }
+        if (!inference.valid && !structural) {
+            reportUninferred(decl, inference, owner + "." + access.name,
+                    typeArgs -> owner + typeArgs + "." + access.name + "(...)", call.span);
+        }
+        Type type = checkVariantConstructor(field, call, inference);
+        if (!inference.valid) {
+            resolved.substitution = Map.of();
+            resolved.instantiatedType = null;
+        }
+        requireAnError(inference, errors, decl.name, owner + "[Type]." + access.name + "(...)", call.span);
+        return inference.valid ? type : NativeType.ERROR;
+    }
+
+    /**
+     * Reports the type arguments a call left unknown, naming each one and why:
+     * no argument mentions it, an argument says nothing about it, or two
+     * arguments disagree. The hint writes the call with the inferred arguments
+     * filled in, spelled as this module writes them. When every unknown
+     * parameter is unknown only because an argument has another shape than its
+     * parameter, or is a Unit result, those arguments are reported instead,
+     * as the mismatch or the Unit result they are; a written type argument
+     * would not help. A parameter that waits only on an argument with an error
+     * of its own is left to that error.
+     */
+    private void reportUninferred(Decl decl, Inference inference, String name,
+                                  java.util.function.Function<String, String> explicitForm, Span span) {
+        TypeArgumentInference.Solution solution = inference.solution;
+        if (solution.failures.isEmpty()) {
+            return;
+        }
+        boolean byArguments = true;
+        for (String parameter : solution.failures.keySet()) {
+            TypeArgumentInference.Failure failure = solution.silences.get(parameter);
+            byArguments &= failure != null && (failure.kind() == TypeArgumentInference.Silence.MISFIT
+                    || failure.kind() == TypeArgumentInference.Silence.UNIT);
+        }
+        if (byArguments) {
+            for (String parameter : solution.failures.keySet()) {
+                TypeArgumentInference.Failure failure = solution.silences.get(parameter);
+                if (failure.kind() == TypeArgumentInference.Silence.MISFIT) {
+                    inference.mismatched.add(failure.argument());
+                } else {
+                    inference.units.putIfAbsent(failure.argument(), failure.reason() + ", so it cannot give "
+                            + parameter + " of '" + name + "' a type");
+                }
+            }
+            return;
+        }
+        List<String> unknown = new ArrayList<>(solution.failures.keySet());
+        List<String> written = new ArrayList<>();
+        for (int i = 0; i < decl.typeParams.size(); i++) {
+            Type known = solution.arguments.get(i);
+            written.add(known != null ? spell(known) : "Type");
+        }
+        String form = explicitForm.apply("[" + String.join(", ", written) + "]");
+        String parameters = String.join(" and ", unknown);
+        String hint = solution.conflicts.containsAll(unknown)
+                ? "Write " + form + " with the type you mean for " + parameters + "."
+                : "Write " + form + " with " + parameters + " spelled out; type arguments are inferred only "
+                        + "from a call's arguments, never from where its result goes.";
+        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                "Cannot infer type argument" + (unknown.size() > 1 ? "s " : " ") + String.join(", ", unknown)
+                        + " of '" + name + "': " + String.join("; ", solution.failures.values()),
+                module.uri, span).withHint(hint));
+    }
+
+    /**
+     * A failed inference is never silent: when nothing reported an error for
+     * the call, it is reported here, unless an argument carries an error that
+     * was reported before the call.
+     */
+    private void requireAnError(Inference inference, int errorsBefore, String name, String form, Span span) {
+        if (inference.valid || diagnostics.errorCount() != errorsBefore) {
+            return;
+        }
+        if (!inference.solution.blocked.isEmpty() && errorsBefore > 0) {
+            return;
+        }
+        diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                "Cannot infer the type arguments of '" + name + "' from its arguments",
+                module.uri, span).withHint("Write " + form + " with the type arguments spelled out."));
+    }
+
+    /**
+     * A type as the module being checked writes it, for hints that give code
+     * to write: a declaration from another module through its import alias
+     * (lists.Pair), a Java class through its import alias, and a variant case
+     * as its variant, because a case is not a type a program can write.
+     */
+    private String spell(Type type) {
+        return TypeSpelling.in(module, type);
+    }
+
+    /** The generic variant a case constructor's receiver names without type arguments, or null. */
+    private static Decl.VariantDecl unappliedGenericVariant(Expr receiver) {
+        Symbol symbol = null;
+        if (receiver instanceof Expr.Name name) {
+            symbol = name.symbol;
+        } else if (receiver instanceof Expr.FieldAccess qualifier && qualifier.receiver instanceof Expr.Name alias
+                && alias.symbol != null && alias.symbol.kind == Symbol.Kind.MODULE && alias.symbol.module != null) {
+            symbol = alias.symbol.module.scope.types.get(qualifier.name);
+        }
+        if (symbol != null && symbol.kind == Symbol.Kind.VARIANT && symbol.type instanceof VariantType variant
+                && variant.decl.isGeneric()) {
+            return variant.decl;
         }
         return null;
+    }
+
+    /** Where a call names its callee: the bare name, or the member name of 'module.function'. */
+    private static Span calleeSpan(Expr.Call call) {
+        if (call.callee instanceof Expr.Name name && name.span != null) {
+            return name.span;
+        }
+        if (call.callee instanceof Expr.FieldAccess access && access.nameSpan != null) {
+            return access.nameSpan;
+        }
+        return call.span;
+    }
+
+    /**
+     * Checks one argument against its expected type, as for written type
+     * arguments. An argument inference already checked for real keeps its
+     * type, and a mismatch on an argument whose type came from inference says
+     * where the expected type came from. Where a type argument stayed unknown
+     * nothing is required of an argument, because the call's own diagnostic
+     * covers it: it is only typed, unless its own check reported an error, or
+     * its shape or Unit result is what left the type argument unknown; those
+     * are reported here.
+     */
+    private Type checkArgument(Expr value, Type expected, Inference inference, String what) {
+        Type known = inference == null ? null : inference.checked.get(value);
+        if (inference != null && expected != null && TypeArgumentInference.containsUnknown(expected)) {
+            if (inference.mismatched.contains(value)) {
+                Type actual = known != null ? known : checkExpr(value, expected);
+                requireAssignable(expected, actual, value.span, Codes.TYPE_MISMATCH, what);
+                return actual;
+            }
+            String unit = inference.units.get(value);
+            if (unit != null) {
+                Type actual = known != null ? known : checkExpr(value, null);
+                diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                        Character.toUpperCase(unit.charAt(0)) + unit.substring(1), module.uri, value.span)
+                        .withTypes("a value type", "Unit")
+                        .withHint("Pass a function or lambda that returns a value; Unit is only the result "
+                                + "type of a function that returns nothing."));
+                return actual;
+            }
+            if (known != null) {
+                return known;
+            }
+            // A lambda is checked for real without an expected type, as its
+            // probe was, so errors in generic calls nested in it, whose
+            // arguments a probe does not check, are reported now.
+            if (inference.broken.contains(value) || value instanceof Expr.Lambda) {
+                return checkExpr(value, null);
+            }
+            if (!inference.probed.contains(value)) {
+                probe(value);
+            }
+            return value.type;
+        }
+        Type actual = known != null ? known : checkExpr(value, expected);
+        int before = diagnostics.all().size();
+        requireAssignable(expected, actual, value.span, Codes.TYPE_MISMATCH, what);
+        String note = inference == null ? null : inference.notes.get(value);
+        if (note != null) {
+            List<Diagnostic> all = diagnostics.all();
+            for (int i = before; i < all.size(); i++) {
+                Diagnostic mismatch = all.get(i);
+                mismatch.withHint(mismatch.hint == null ? note : mismatch.hint + " " + note);
+            }
+        }
+        return actual;
     }
 
     /** How the call names its function: 'sorted', 'lists.sorted' or 'box.get'. */
@@ -2506,6 +2952,11 @@ public final class TypeChecker {
     }
 
     private void checkClassConstructor(ClassType classType, Expr.Call call) {
+        checkClassConstructor(classType, call, null);
+    }
+
+    /** With {@code inference}, the class's type arguments were inferred; see {@link #checkArgument}. */
+    private void checkClassConstructor(ClassType classType, Expr.Call call, Inference inference) {
         Decl.ClassDecl decl = classType.decl;
         Map<TypeParameterType, Type> map = classType.args.isEmpty()
                 ? Map.of() : Substitution.forClass(classType);
@@ -2549,9 +3000,7 @@ public final class TypeChecker {
                         "Duplicate constructor field '" + arg.name + "'", module.uri, arg.value.span));
             }
             Type fieldType = Substitution.apply(field.type, map);
-            Type actual = checkExpr(arg.value, fieldType);
-            requireAssignable(fieldType, actual, arg.value.span, Codes.TYPE_MISMATCH,
-                    "field '" + arg.name + "'");
+            checkArgument(arg.value, fieldType, inference, "field '" + arg.name + "'");
         }
         Set<Type> omittedDefaultEffects = new LinkedHashSet<>();
         for (Decl.Field field : decl.fields) {
@@ -2635,6 +3084,11 @@ public final class TypeChecker {
     }
 
     private Type checkVariantConstructor(ResolvedField field, Expr.Call call) {
+        return checkVariantConstructor(field, call, null);
+    }
+
+    /** With {@code inference}, the variant's type arguments were inferred; see {@link #checkArgument}. */
+    private Type checkVariantConstructor(ResolvedField field, Expr.Call call, Inference inference) {
         Decl.VariantCase variantCase = field.variantCase;
         Map<TypeParameterType, Type> map = Map.of();
         if (field.type instanceof VariantCaseType caseType && !caseType.variantArgs.isEmpty()) {
@@ -2682,9 +3136,7 @@ public final class TypeChecker {
                         "Duplicate field '" + arg.name + "'", module.uri, arg.value.span));
             }
             Type payloadType = Substitution.apply(payload.type, map);
-            Type actual = checkExpr(arg.value, payloadType);
-            requireAssignable(payloadType, actual, arg.value.span, Codes.TYPE_MISMATCH,
-                    "field '" + arg.name + "'");
+            checkArgument(arg.value, payloadType, inference, "field '" + arg.name + "'");
         }
         for (Decl.Field payload : variantCase.fields) {
             if (!provided.contains(payload.name)) {
@@ -2799,7 +3251,13 @@ public final class TypeChecker {
 
     private ResolvedField resolveFieldAccess(Expr.FieldAccess access, boolean forCall) {
         if (access.receiver instanceof Expr.Subscript subscript && subscript.typeArgs != null) {
+            // An application whose arguments failed is resolved again, so its
+            // error is reported by this check too: the cached one may come
+            // from a check whose diagnostics were dropped, such as the probe
+            // of an inferred call's argument or the pass that collects
+            // field default effects.
             Type application = subscript.applicationType != null
+                    && !TypeArgumentInference.containsError(subscript.applicationType)
                     ? subscript.applicationType
                     : genericApplicationType(subscript, true);
             if (application instanceof VariantType variantType) {
@@ -2832,6 +3290,7 @@ public final class TypeChecker {
                 }
                 case ENUM -> enumCaseValue((EnumType) symbol.type, access);
                 case BUILTIN_TYPE -> builtinStatic(symbol.type, access);
+                case PARENT_VIEW -> parentMember(symbol, access, forCall);
                 case JAVA_TYPE -> javaMember(symbol.javaClass != null
                         ? new JavaType(symbol.javaClass) : (JavaType) symbol.type, access, true);
                 case CLASS -> {
@@ -3068,6 +3527,11 @@ public final class TypeChecker {
         if (access.name.equals("toString")) {
             return builtin(access, "toString", NativeType.STRING, classType);
         }
+        if (classType.decl.superclass != null) {
+            // A class that extends a Java class: inherited public members are
+            // reached through the Java view, as on any value of that class.
+            return javaMember(new JavaType(classType.decl.superclass), access, false);
+        }
         diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                 "Class " + classType.decl.name + " has no member '" + access.name + "'",
                 module.uri, access.span));
@@ -3114,7 +3578,50 @@ public final class TypeChecker {
         return clazz == SprigError.class ? "Error" : "Java class " + clazz.getSimpleName();
     }
 
+    /**
+     * A member reached through the parent view of {@code conform C to J(...)
+     * as NAME}: the inherited implementation of a public method of {@code J}
+     * on the current object. The view is not a value and has no fields.
+     */
+    private ResolvedField parentMember(Symbol symbol, Expr.FieldAccess access, boolean forCall) {
+        Decl.ClassDecl owner = symbol.owner;
+        if (owner == null || owner.superclass == null) {
+            return errorField(access); // the conformance checker reported why the class extends nothing
+        }
+        if (!forCall) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "'" + symbol.name + "' names the inherited " + owner.superclass.getSimpleName()
+                            + " implementation and can only be called: " + symbol.name + "." + access.name + "(...)",
+                    module.uri, access.span)
+                    .withHint("Read inherited state through a method of " + owner.superclass.getSimpleName()
+                            + ", or keep it in a Sprig field."));
+            return errorField(access);
+        }
+        ResolvedField field = javaMember(new JavaType(owner.superclass), access, false, true);
+        if (field.kind == ResolvedField.Kind.JVM_METHOD) {
+            field.parentView = true;
+        } else if (field.kind == ResolvedField.Kind.JAVA_FIELD || field.kind == ResolvedField.Kind.ERROR_MESSAGE) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "'" + symbol.name + "." + access.name + "' is a field of " + owner.superclass.getSimpleName()
+                            + "; the parent view only calls methods",
+                    module.uri, access.span)
+                    .withHint("Read the field on a value of the class, outside the class body."));
+            return errorField(access);
+        }
+        return field;
+    }
+
     private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext) {
+        return javaMember(javaType, access, staticContext, false);
+    }
+
+    /** The methods a receiver offers: public ones, plus protected ones through the parent view. */
+    private static List<Method> methodCandidates(Class<?> clazz, boolean parentView) {
+        return parentView ? JvmMetadata.inheritable(clazz) : List.of(clazz.getMethods());
+    }
+
+    private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext,
+            boolean parentView) {
         Class<?> clazz = javaType.clazz;
         if (!staticContext && Throwable.class.isAssignableFrom(clazz) && access.name.equals("message")) {
             // An Error always has a message; Java's getMessage() may return null.
@@ -3148,6 +3655,9 @@ public final class TypeChecker {
                         .getOrDefault(javaField.getDeclaringClass(), Map.of());
                 member.bindings = fieldBindings;
                 member.returnType = JavaTypes.mapValue(javaField.getGenericType(), javaField.getType(), fieldBindings);
+                if (member.returnType.isNullable() && JvmNullability.fieldNonNull(javaField)) {
+                    member.returnType = member.returnType.nonNull(); // declared non-null by annotation
+                }
                 field.jvm = member;
                 field.type = member.returnType;
                 return field;
@@ -3155,7 +3665,7 @@ public final class TypeChecker {
         } catch (NoSuchFieldException ignored) {
             // Fall through to method lookup.
         }
-        for (Method method : clazz.getMethods()) {
+        for (Method method : methodCandidates(clazz, parentView)) {
             if (!method.getName().equals(access.name)) {
                 continue;
             }
@@ -3815,7 +4325,7 @@ public final class TypeChecker {
         // Fixed-arity candidates first; the varargs expanded form only when none applies.
         for (int pass = 0; pass < 2 && best == null; pass++) {
             boolean expand = pass == 1;
-            for (Method method : clazz.getMethods()) {
+            for (Method method : methodCandidates(clazz, field.parentView)) {
                 if (!method.getName().equals(field.jvm.name)) {
                     continue;
                 }
@@ -3856,7 +4366,7 @@ public final class TypeChecker {
         }
         if (best == null) {
             List<Method> candidates = new ArrayList<>();
-            for (Method method : clazz.getMethods()) {
+            for (Method method : methodCandidates(clazz, field.parentView)) {
                 if (!method.getName().equals(field.jvm.name)
                         || java.lang.reflect.Modifier.isStatic(method.getModifiers()) != isStaticJvmReceiver(call)) {
                     continue;
@@ -3885,7 +4395,7 @@ public final class TypeChecker {
                     "Ambiguous overload for " + clazz.getSimpleName() + "." + best.getName(),
                     module.uri, call.span)
                     .withData(jvmDiagnosticData(clazz, best.getName(), argTypes, call,
-                            java.util.Arrays.stream(clazz.getMethods())
+                            methodCandidates(clazz, field.parentView).stream()
                                     .filter(m -> m.getName().equals(field.jvm.name)).toList())));
         }
         JvmMember member = new JvmMember();
@@ -3899,12 +4409,25 @@ public final class TypeChecker {
             member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i],
                     best.getParameterTypes()[i], bestBindings));
         }
+        if (field.parentView && java.lang.reflect.Modifier.isAbstract(best.getModifiers())) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    javaOwner(clazz) + "." + best.getName()
+                            + " is abstract; there is no inherited implementation to call",
+                    module.uri, call.span)
+                    .withHint("Implement the behaviour in this class's own method instead of calling the parent view."));
+        }
+        member.superCall = field.parentView;
         member.returnType = JavaTypes.mapValue(best.getGenericReturnType(), best.getReturnType(), bestBindings);
         // toString() returns a representation by Object's contract, never null,
         // so "at " + date.toString() needs no check; Kotlin reads it the same way.
         if (best.getName().equals("toString") && best.getParameterCount() == 0
                 && best.getReturnType() == String.class) {
             member.returnType = NativeType.STRING;
+        }
+        if (member.returnType.isNullable() && JvmNullability.returnsNonNull(best)) {
+            // Declared non-null by a run-time visible annotation, or by a
+            // NullMarked-style default on the class or package.
+            member.returnType = member.returnType.nonNull();
         }
         field.jvm = member;
         if (call.resolved != null && explicitMethodArgs != null) {
@@ -3990,6 +4513,7 @@ public final class TypeChecker {
      */
     private static int scoreExecutable(Executable executable, List<Type> args, List<Expr.Arg> writtenArgs,
                                        Map<TypeVariable<?>, Type> bindings, boolean bound, boolean expand) {
+        args = acceptNullableParameters(executable, args, expand);
         if (!expand) {
             return bound ? scoreBoundCandidate(executable, args, writtenArgs, bindings)
                     : scoreCandidate(executable, args, writtenArgs);
@@ -4089,6 +4613,42 @@ public final class TypeChecker {
             score += next;
         }
         return score;
+    }
+
+    /**
+     * A {@code T?} or {@code null} argument for a parameter annotated nullable
+     * scores as its non-null type when the value crosses without conversion
+     * (an {@code Int?} is already a {@code Long}; one that would need
+     * narrowing or widening stays rejected). The trailing arguments of an
+     * expanded varargs call are left alone.
+     */
+    private static List<Type> acceptNullableParameters(Executable executable, List<Type> args, boolean expand) {
+        Class<?>[] params = executable.getParameterTypes();
+        int fixed = expand ? params.length - 1 : params.length;
+        List<Type> out = null;
+        for (int i = 0; i < args.size() && i < fixed; i++) {
+            Type arg = args.get(i);
+            boolean absent = arg == NativeType.NULL;
+            if ((!arg.isNullable() && !absent) || params[i].isPrimitive()
+                    || !JvmNullability.parameterNullable(executable, i)) {
+                continue;
+            }
+            Type accepted;
+            if (absent) {
+                accepted = JavaTypes.mapFormal(executable.getGenericParameterTypes()[i], params[i]);
+            } else {
+                Class<?> image = JavaTypes.boxedFor(arg.nonNull());
+                if (image == null || !params[i].isAssignableFrom(image)) {
+                    continue;
+                }
+                accepted = arg.nonNull();
+            }
+            if (out == null) {
+                out = new ArrayList<>(args);
+            }
+            out.set(i, accepted);
+        }
+        return out == null ? args : out;
     }
 
     /**
@@ -4320,7 +4880,9 @@ public final class TypeChecker {
                         Map<TypeVariable<?>, Type> bindings =
                                 hierarchy.getOrDefault(candidate.getDeclaringClass(), Map.of());
                         for (int i = 0; i < params.length; i++) {
-                            if (argumentTypes.get(i).isNullable()) { reason = "nullable argument " + (i + 1); break; }
+                            if (argumentTypes.get(i).isNullable() && !JvmNullability.parameterNullable(candidate, i)) {
+                                reason = "nullable argument " + (i + 1); break;
+                            }
                             if (JavaTypes.capturedWrite(candidate.getGenericParameterTypes()[i], bindings)) {
                                 reason = "argument " + (i + 1) + " would write through a '? extends' wildcard of the receiver; no type can be passed in";
                                 break;

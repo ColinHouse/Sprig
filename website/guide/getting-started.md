@@ -27,13 +27,13 @@ sprig version
 
 ### 手动下载
 
-也可以从[发布页](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.0-beta.1)下载 ZIP，自己校验后解压：
+也可以从[发布页](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1)下载 ZIP，自己校验后解压：
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.0-beta.1/sprig-v0.7.0-beta.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.0-beta.1/sprig-v0.7.0-beta.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.7.0-beta.1-jdk.zip.sha256
-unzip sprig-v0.7.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.1-beta.1/sprig-v0.7.1-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.1-beta.1/sprig-v0.7.1-beta.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.7.1-beta.1-jdk.zip.sha256
+unzip sprig-v0.7.1-beta.1-jdk.zip
 ```
 
 Linux 上也可以用 `sha256sum -c`。如果校验没通过，请重新下载，不要跳过校验。解压后把目录里的 `bin` 加进 `PATH`。

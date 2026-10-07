@@ -12,6 +12,6 @@ generic T:
         copy.sort()
         return copy.toList()
 
-print(larger[Int](3, 9))
-print(larger[String]("pear", "apple"))
-print(sorted_copy[Float]([2.5, 0.5, 1.0]))
+print(larger(3, 9))
+print(larger("pear", "apple"))
+print(sorted_copy([2.5, 0.5, 1.0]))

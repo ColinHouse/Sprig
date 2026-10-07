@@ -141,6 +141,68 @@ public class Plain {
     public Plain() {}
 }
 ''',
+    "NotNull.java": '''package audit;
+@java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+@java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PARAMETER,
+        java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.TYPE_USE})
+public @interface NotNull {}
+''',
+    "Nullable.java": '''package audit;
+@java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+@java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PARAMETER,
+        java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.TYPE_USE})
+public @interface Nullable {}
+''',
+    "NullMarked.java": '''package audit;
+@java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+@java.lang.annotation.Target({java.lang.annotation.ElementType.TYPE, java.lang.annotation.ElementType.PACKAGE})
+public @interface NullMarked {}
+''',
+    "Annotated.java": '''package audit;
+public final class Annotated {
+    @NotNull public String label = "label";
+    public String plainField = "plain";
+    public Annotated() {}
+    public static @NotNull String name() { return "ada"; }
+    public static String plain() { return "plain"; }
+    @Nullable public static String maybe() { return null; }
+    public static String take(@Nullable String value) { return value == null ? "none" : value; }
+    public static String need(String value) { return value; }
+    public static @NotNull Integer boxed() { return 7; }
+    public static long sum(@Nullable Long value) { return value == null ? -1 : value; }
+}
+''',
+    "Marked.java": '''package audit;
+@NullMarked
+public final class Marked {
+    private Marked() {}
+    public static String name() { return "m"; }
+    @Nullable public static String maybe() { return null; }
+}
+''',
+    "Invisible.java": '''package audit;
+/** CLASS-retention annotations, as org.jetbrains.annotations declares them: invisible to reflection. */
+public final class Invisible {
+    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
+    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PARAMETER,
+            java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.TYPE_USE})
+    public @interface NotNull {}
+    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
+    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PARAMETER,
+            java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.TYPE_USE})
+    public @interface Nullable {}
+
+    @NotNull public String label = "label";
+    public String plainField = "plain";
+    public Invisible() {}
+    public static @NotNull String name() { return "ada"; }
+    public static String plain() { return "plain"; }
+    @Nullable public static String maybe() { return null; }
+    public static String take(@Nullable String value) { return value == null ? "none" : value; }
+    public static String need(String value) { return value; }
+    public static @NotNull java.util.List<@Nullable String> items() { return java.util.Arrays.asList("a", null); }
+}
+''',
     "Narrow.java": '''package audit;
 public class Narrow {
     public int count;
@@ -566,6 +628,102 @@ print(Interop.total(1, 2))
         verify("check-classpath-file-missing",
                missing_listing.returncode != 0 and "--classpath-file could not be read" in missing_listing.stdout + missing_listing.stderr,
                f"exit={missing_listing.returncode} {missing_listing.stdout[:300]}{missing_listing.stderr[:300]}")
+        # ------------------------------------------- nullability annotations
+        annotated_api = {m["name"]: m for m in (body(call("api", "audit.Annotated", "--classpath", cp, "--json")) or {})
+                         .get("staticMethods", [])}
+        annotated_fields = {f["name"]: f for f in (body(call("api", "audit.Annotated", "--classpath", cp, "--json")) or {})
+                            .get("fields", [])}
+        marked_api = {m["name"]: m for m in (body(call("api", "audit.Marked", "--classpath", cp, "--json")) or {})
+                      .get("staticMethods", [])}
+        verify("api-nullability-annotations",
+               annotated_api.get("name", {}).get("nullableResult") is False
+               and annotated_api.get("name", {}).get("sprigReturnType") == "String"
+               and annotated_api.get("plain", {}).get("nullableResult") is True
+               and annotated_api.get("maybe", {}).get("nullableResult") is True
+               and annotated_api.get("boxed", {}).get("sprigReturnType") == "Int32"
+               and annotated_api.get("take", {}).get("sprigParameterTypes") == ["String?"]
+               and annotated_api.get("need", {}).get("sprigParameterTypes") == ["String"]
+               and annotated_api.get("sum", {}).get("sprigParameterTypes") == ["Int?"]
+               and annotated_fields.get("label", {}).get("nullableResult") is False
+               and annotated_fields.get("label", {}).get("sprigType") == "String"
+               and annotated_fields.get("plainField", {}).get("nullableResult") is True
+               and marked_api.get("name", {}).get("nullableResult") is False
+               and marked_api.get("maybe", {}).get("nullableResult") is True,
+               str({k: (v.get("nullableResult"), v.get("sprigReturnType"), v.get("sprigParameterTypes"))
+                    for k, v in annotated_api.items()}) + str(marked_api.get("name")))
+        invisible_api = {m["name"]: m for m in (body(call("api", "audit.Invisible", "--classpath", cp, "--json")) or {})
+                         .get("staticMethods", [])}
+        invisible_fields = {f["name"]: f for f in (body(call("api", "audit.Invisible", "--classpath", cp, "--json")) or {})
+                            .get("fields", [])}
+        verify("api-nullability-class-retention",
+               invisible_api.get("name", {}).get("nullableResult") is False
+               and invisible_api.get("plain", {}).get("nullableResult") is True
+               and invisible_api.get("maybe", {}).get("nullableResult") is True
+               and invisible_api.get("take", {}).get("sprigParameterTypes") == ["String?"]
+               and invisible_api.get("need", {}).get("sprigParameterTypes") == ["String"]
+               and invisible_api.get("items", {}).get("nullableResult") is False
+               and invisible_fields.get("label", {}).get("nullableResult") is False
+               and invisible_fields.get("plainField", {}).get("nullableResult") is True,
+               str({k: (v.get("nullableResult"), v.get("sprigParameterTypes")) for k, v in invisible_api.items()})
+               + str({k: v.get("nullableResult") for k, v in invisible_fields.items()}))
+        _, invisible_run = run_file("nullability-invisible.spr", '''import audit.Invisible as Invisible
+
+print(Invisible.name().length())
+print(Invisible.take(null))
+let held: String? = "held"
+print(Invisible.take(held))
+let invisible = Invisible()
+print(invisible.label.length())
+print(Invisible.items().size())
+''')
+        verify("run-nullability-class-retention",
+               invisible_run.returncode == 0 and invisible_run.stdout == "3\nnone\nheld\n5\n2\n",
+               f"exit={invisible_run.returncode} stdout={invisible_run.stdout!r} stderr={invisible_run.stderr!r}")
+        _, invisible_plain = check_file("nullability-invisible-plain.spr",
+                                        "import audit.Invisible as Invisible\nprint(Invisible.plain().length())\n", "--json")
+        invisible_plain_diag = diagnostic(invisible_plain)
+        verify("check-nullability-class-retention-plain",
+               invisible_plain.returncode == 1 and invisible_plain_diag
+               and invisible_plain_diag["code"] == "SPR-TYPE-NULLABLE",
+               f"exit={invisible_plain.returncode} {invisible_plain.stdout}{invisible_plain.stderr}")
+        _, nullability_run = run_file("nullability.spr", '''import audit.Annotated as Annotated
+import audit.Marked as Marked
+
+print(Annotated.name().length())
+print(Annotated.boxed() + 1)
+print(Marked.name().toUpperCase())
+print(Annotated.take(null))
+let maybe = Annotated.maybe()
+print(Annotated.take(maybe))
+let held: String? = "held"
+print(Annotated.take(held))
+let count: Int? = 5
+print(Annotated.sum(count))
+let none: Int? = null
+print(Annotated.sum(none))
+let annotated = Annotated()
+print(annotated.label.length())
+annotated.plainField = null
+print(annotated.plainField == null)
+''')
+        verify("run-nullability-annotations",
+               nullability_run.returncode == 0
+               and nullability_run.stdout == "3\n8\nM\nnone\nnone\nheld\n5\n-1\n5\ntrue\n",
+               f"exit={nullability_run.returncode} stdout={nullability_run.stdout!r} stderr={nullability_run.stderr!r}")
+        for name, source, expected in (
+            ("plain-result", "print(Annotated.plain().length())\n", "SPR-TYPE-NULLABLE"),
+            ("marked-nullable-result", "print(Marked.maybe().length())\n", "SPR-TYPE-NULLABLE"),
+            ("unannotated-parameter", "let maybe = Annotated.maybe()\nAnnotated.need(maybe)\n", "SPR-TYPE-NULLABLE"),
+            ("non-null-field-write", "let a = Annotated()\na.label = null\n", "SPR-TYPE-NULL"),
+        ):
+            _, rejected = check_file(f"nullability-{name}.spr",
+                                     "import audit.Annotated as Annotated\nimport audit.Marked as Marked\n" + source,
+                                     "--json")
+            rejected_diag = diagnostic(rejected)
+            verify(f"check-nullability-{name}",
+                   rejected.returncode == 1 and rejected_diag and rejected_diag["code"] == expected
+                   and "SPR-JVM-COMPILE" not in rejected.stdout + rejected.stderr,
+                   f"exit={rejected.returncode} {rejected.stdout}{rejected.stderr}")
 
         # ---------------------------------------------- Int to int narrowing
         _, narrow_run = run_file("narrow.spr", '''import audit.Narrow as Narrow

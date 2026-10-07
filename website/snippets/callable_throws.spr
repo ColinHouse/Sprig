@@ -22,10 +22,10 @@ try:
     print(numbers(["1", "x"]))
 catch problem: Error:
     print("caught: " + problem)
-print(twice[Int](fn(n: Int) => n * 3, 2))
+print(twice(fn(n: Int) => n * 3, 2))
 let parse: fn(String) -> Int throws Error = fn(text: String) => to_number(text)
 try:
     print(parse("21"))
-    print(lists.sum_by[String](["1", "2", "three"], fn(text: String) => parse(text)))
+    print(lists.sum_by(["1", "2", "three"], fn(text: String) => parse(text)))
 catch problem: Error:
     print("caught: " + problem)

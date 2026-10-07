@@ -344,6 +344,40 @@ public final class TypeRefResolver {
                     module.uri, reportSpan));
             return null;
         }
+        return validateArguments(module, decl, args, argRefs, reportSpan);
+    }
+
+    /**
+     * Type arguments a call inferred from its arguments get the checks written
+     * ones get: the nullability rule and every annotation and generic
+     * application the declaration writes with them. Returns {@code null} after
+     * reporting a diagnostic.
+     */
+    public List<Type> checkInferredArguments(Module module, Decl decl, List<Type> args,
+                                             sprig.compiler.diag.Span span) {
+        return validateArguments(module, decl, args, List.of(), span);
+    }
+
+    /**
+     * Whether a written nullable type argument for one parameter would be
+     * accepted: the declaration does not apply {@code ?} to the parameter, and
+     * everything it writes with it stays valid. The other parameters stand for
+     * themselves. Nothing is reported.
+     */
+    public boolean acceptsNullableArgument(Module module, Decl decl, String parameter, Type argument,
+                                           sprig.compiler.diag.Span span) {
+        if (declaresNullableParameter(decl, parameter)) {
+            return false;
+        }
+        List<Type> args = new ArrayList<>();
+        for (String name : decl.typeParams) {
+            args.add(name.equals(parameter) ? argument : new TypeParameterType(decl, name));
+        }
+        return new TypeRefResolver(new Diagnostics()).validateArguments(module, decl, args, List.of(), span) != null;
+    }
+
+    private List<Type> validateArguments(Module module, Decl decl, List<Type> args, List<TypeRef> argRefs,
+                                         sprig.compiler.diag.Span reportSpan) {
         for (int i = 0; i < args.size(); i++) {
             if (args.get(i).isNullable() && declaresNullableParameter(decl, decl.typeParams.get(i))) {
                 sprig.compiler.diag.Span argSpan = reportSpan;

@@ -57,7 +57,8 @@ distinguishable from a Sprig native `List[String]` in metadata and diagnostics.
 
 Primitive mappings: `long -> Int`, `int/short/byte -> Int32`, `double ->
 Float`, `float -> Float32`, `boolean -> Bool`, `char -> String`. Boxed return
-values map to nullable counterparts. Java `Character`, `Short`, and `Byte`
+values map to nullable counterparts unless an annotation says otherwise (see
+[Nullability annotations](#nullability-annotations)). Java `Character`, `Short`, and `Byte`
 results are adapted to nullable Sprig `String` and `Int32` values without
 losing null. A `char` or `Character` parameter accepts only a single UTF-16
 unit Sprig string literal; an arbitrary `String` is rejected because it may
@@ -68,6 +69,35 @@ write or callback result is narrowed with a run-time range check, and an exact
 `long` overload is still preferred; every other narrowing or potentially lossy
 numeric conversion (`Float` to `float`, `Int` to `short`) requires an explicit
 Sprig operation. See `docs/language/numeric-semantics.md`.
+
+## Nullability annotations
+
+Java reference results are nullable and reference parameters non-null by
+default. Annotations that are visible at run time change that, matched by
+simple name so every library's spelling counts:
+
+- a result or a public field annotated `NotNull`, `NonNull` or `Nonnull` (as a
+  declaration or a type-use annotation) is a plain `T`; `Nullable` or
+  `CheckForNull` keeps `T?`;
+- a parameter annotated `Nullable` or `CheckForNull` accepts a `T?` or `null`
+  when the value crosses without conversion (an `Int?` is already a `Long`; an
+  `Int?` for an `Integer` slot would need narrowing and stays rejected);
+- `NullMarked` or `NonNullApi` on a class, an enclosing class, the package or
+  the module, and `MethodsReturnNonnullByDefault`/`FieldsAreNonnullByDefault`
+  on a package, make unannotated results and fields non-null; `NullUnmarked`
+  cancels the default. Parameters are never made nullable by a default.
+
+`sprig api` reports the outcome: `nullableResult` is false and
+`sprigReturnType`/`sprigType` drop the `?` for a non-null result or field, and
+`sprigParameterTypes` shows `T?` for a nullable parameter. Annotations with
+RUNTIME retention (JSpecify, JSR-305 `javax.annotation`/`jakarta.annotation`,
+the Checker Framework, Spring) are read through reflection; those kept only in
+class files (CLASS retention: `org.jetbrains.annotations`, the Android and
+Eclipse ones) are read from the declaring class's file, so they count too, even
+when the annotation class is absent from the classpath. Minecraft (Mojang
+mappings) is JSpecify-annotated with `@NullMarked` on every package, so its
+unannotated results and fields are non-null and its `@Nullable` members keep
+`T?`; Fabric Loader uses `org.jetbrains.annotations`.
 
 ## Arrays
 

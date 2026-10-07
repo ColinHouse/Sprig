@@ -88,8 +88,6 @@ QUICK_FIXES = [
     # After an emoji, compiler columns (code points) and LSP characters (UTF-16 units) differ.
     ("named-constructor-after-emoji", 'class P:\n    let x: Int\n    let y: Int\n'
      'let total = "😀😀".length() + P(1, 2).x\nprint(total)\n', "SPR-CALL-NAMED-REQUIRED", True),
-    ("generic-type-arguments", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n',
-     "SPR-TYPE-GENERIC-ARGS-REQUIRED", True),
     ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", True),
 ]
 
@@ -654,6 +652,61 @@ def check_quick_fixes(directory):
                 stop_quietly(started)
 
 
+INFERRED = '''import "@std/lists.spr" as lists
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+generic T:
+    class Box:
+        let value: T
+
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+let a = identity(42)
+let b = Box(value="x")
+let c = Option.Some(value=1.5)
+let d = identity[Int](7)
+let e = lists.first(["a"])
+let f = lists.Pair(first=1, second="x")
+'''
+
+
+def check_inferred_hover(directory):
+    """Hover on a generic call written without type arguments shows the ones inferred."""
+    client = Client(directory)
+    try:
+        initialize(client, directory)
+        path = directory / "inferred.spr"
+        client.open(path, INFERRED)
+        check("inferred-clean", client.wait_diagnostics(path) == [])
+        lines = INFERRED.splitlines()
+        cases = [("let a = identity(42)", "identity", "Here: `identity[Int](...) -> Int`"),
+                 ("let b = Box(value=\"x\")", "Box", "Here: `Box[String](...)`"),
+                 ("let c = Option.Some(value=1.5)", "Some", "Here: `Option[Float].Some(...)`"),
+                 # Spelled as this module writes it: through the import alias.
+                 ("let e = lists.first([\"a\"])", "first", "Here: `lists.first[String](...) -> String?`"),
+                 ("let f = lists.Pair(first=1, second=\"x\")", "Pair", "Here: `lists.Pair[Int, String](...)`")]
+        for text, needle, expected in cases:
+            line = lines.index(text)
+            hover = hover_text(client, path, line, position(INFERRED, line, needle))
+            check("hover-inferred-" + needle, expected in hover, hover)
+        line = lines.index("let d = identity[Int](7)")
+        written = hover_text(client, path, line, position(INFERRED, line, "identity"))
+        check("hover-written-type-arguments", "Here:" not in written and "func identity" in written, written)
+        check("inferred-shutdown", client.stop() == 0, "".join(client.stderr))
+    finally:
+        if client.proc.poll() is None:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(client.proc.pid), "/T", "/F"], capture_output=True)
+            client.proc.kill()
+
+
 def check_project(directory):
     project = directory / "lspdemo"
     project.mkdir()
@@ -697,6 +750,9 @@ def main():
         quick_fixes = Path(temp).resolve() / "quick fixes"
         quick_fixes.mkdir()
         check_quick_fixes(quick_fixes)
+        inferred = Path(temp).resolve() / "inferred"
+        inferred.mkdir()
+        check_inferred_hover(inferred)
         check_project(Path(temp).resolve())
     print(f"language server: {COUNT} passed, 0 failed")
 

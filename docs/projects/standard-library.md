@@ -51,8 +51,8 @@ temporary directory helper requires the runner-provided environment. See
 import "@std/test.spr" as test
 
 test.check("adds", fn() => test.equal_int(add(1, 2), 3, "sum"))
-test.check("keeps order", fn() => test.equal[List[Int]](sorted([2, 1]), [1, 2], "sorted"))
-test.check_error[Int]("rejects text", fn() => parse("x"))
+test.check("keeps order", fn() => test.equal(sorted([2, 1]), [1, 2], "sorted"))
+test.check_error("rejects text", fn() => parse("x"))
 test.finish()
 ```
 
@@ -61,7 +61,7 @@ test.finish()
   to the next check. The body is a lambda, so it may call the `equal_*`
   checks and any function that throws `Error`.
 - `check_error[T](name, body)` passes when the body throws `Error`. The
-  body may return a value, so the call names its result type.
+  body may return a value; `T` is the type of the lambda's result.
 - `finish()` prints `N passed, M failed` and ends the program with status 1
   when a check failed, which `sprig test` reports as a failed program.
 - `equal[T](actual, expected, what)` compares any value that supports `==`,
@@ -181,7 +181,9 @@ no timezone database or locale parsing is provided.
 ## Sorting, grouping and searching lists
 
 `lists` works on ordinary `List[T]` values; there is no separate dataset type.
-Every function is eager, returns a new list and leaves its input unchanged.
+Every function is eager, returns a new list and leaves its input unchanged. The
+`[T, K]` in the signatures below names the type parameters; a call usually
+leaves them out, because its arguments determine them.
 
 - `sort_by[T, K](items, key)` requires `K: Comparable`. It is stable, and keys
   use the order of `MutableList.sort()`, so Float keys put `-0.0` before `0.0`
@@ -221,17 +223,17 @@ func cents(text: String) -> Int throws Error:
     throw Error("not a number: " + text)
 
 func total(prices: List[String]) -> Int throws Error:
-    return lists.sum_by[String](prices, fn(p: String) => cents(p))
+    return lists.sum_by(prices, fn(p: String) => cents(p))
 ```
 
 ```sprig
 import "@std/lists.spr" as lists
 
-for group in lists.group_by[Order, String](orders, fn(o: Order) => o.category):
-    let total = lists.sum_by[Order](group.items, fn(o: Order) => o.cents)
+for group in lists.group_by(orders, fn(o: Order) => o.category):
+    let total = lists.sum_by(group.items, fn(o: Order) => o.cents)
     print(group.key + " " + total)
 
-let large = lists.find[Order](orders, fn(o: Order) => o.cents > 400)
+let large = lists.find(orders, fn(o: Order) => o.cents > 400)
 if large != null:
     print(large.item)
 ```
@@ -287,8 +289,9 @@ standard error in `programErrorOutput`, next to `programOutput`.
 
 ## Nullable values
 
-`nulls` covers the two ways a nullable read usually ends. Like every generic
-call, both name the value's type.
+`nulls` covers the two ways a nullable read usually ends. Both take the
+value's type from their arguments: `nulls.or_else(counts[word], 0)` is an `Int`
+when `counts` holds `Int` values.
 
 - `or_else[T](value, fallback)` returns the value, or the fallback when the
   value is `null`. The fallback is an ordinary argument, so it is evaluated
@@ -297,18 +300,19 @@ call, both name the value's type.
   when it is `null`. An uncaught error is reported at the `throw` inside
   `nulls.spr`, so the message should say which value was missing.
 
-The type argument must not be nullable itself: `or_else[String?]` is rejected
-with `SPR-TYPE-GENERIC-NULLABLE`. Reading a `Map` or a `MutableMap` gives a
+The type argument must not be nullable itself: a written `or_else[String?]` is
+rejected with `SPR-TYPE-GENERIC-NULLABLE`, and an inferred one never is, because
+a `String?` value makes `T` a `String`. Reading a `Map` or a `MutableMap` gives a
 nullable value, so `or_else` also supplies the starting value when counting:
 
 ```sprig
 import "@std/nulls.spr" as nulls
 import "@std/process.spr" as process
 
-let path = nulls.or_else[String](process.environment("TASKS_FILE"), "tasks.json")
+let path = nulls.or_else(process.environment("TASKS_FILE"), "tasks.json")
 let counts: MutableMap[String, Int] = {}
 for word in ["tea", "rice", "tea"]:
-    counts[word] = nulls.or_else[Int](counts[word], 0) + 1
+    counts[word] = nulls.or_else(counts[word], 0) + 1
 print(counts)  # {tea: 2, rice: 1}
 ```
 
@@ -438,7 +442,7 @@ import "@std/random.spr" as random
 import "@std/regex.spr" as regex
 import "@std/dates.spr" as dates
 
-let seen = sets.of[String](["pear", "apple", "pear"])
+let seen = sets.of(["pear", "apple", "pear"])
 print(seen.to_list())                                    # [pear, apple]
 print(seen.has("apple"))                                 # true
 let dice = random.seeded(42)

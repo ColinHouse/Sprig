@@ -11,5 +11,5 @@ func describe(option: Option[Int]) -> String:
         case Option.None:
             "none"
 
-print(describe(Option[Int].Some(value=1)))
+print(describe(Option.Some(value=1)))
 print(describe(Option[Int].None))

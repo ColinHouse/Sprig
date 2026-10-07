@@ -113,6 +113,7 @@ public final class Codes {
     public static final String CONFORM_MEMBER = "SPR-CONFORM-MEMBER";
     public static final String CONFORM_OVERLOAD = "SPR-CONFORM-OVERLOAD";
     public static final String CONFORM_EFFECTS = "SPR-CONFORM-EFFECTS";
+    public static final String CONFORM_PARENT = "SPR-CONFORM-PARENT";
 
     // JVM
     public static final String JVM_CLASS = "SPR-JVM-CLASS";

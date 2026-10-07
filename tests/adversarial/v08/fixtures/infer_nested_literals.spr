@@ -1,0 +1,15 @@
+# Forty generic calls nested in list literal arguments and a twenty-level
+# literal of generic constructors: checking stays polynomial in the depth.
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+generic T:
+    class Tree:
+        let value: T
+        let children: List[Tree[T]]
+
+let x = identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([identity([1])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])
+print(x.size())
+let t = Tree(value="n19", children=[Tree(value="n18", children=[Tree(value="n17", children=[Tree(value="n16", children=[Tree(value="n15", children=[Tree(value="n14", children=[Tree(value="n13", children=[Tree(value="n12", children=[Tree(value="n11", children=[Tree(value="n10", children=[Tree(value="n9", children=[Tree(value="n8", children=[Tree(value="n7", children=[Tree(value="n6", children=[Tree(value="n5", children=[Tree(value="n4", children=[Tree(value="n3", children=[Tree(value="n2", children=[Tree(value="n1", children=[Tree(value="n0", children=[Tree(value="leaf", children=[])])])])])])])])])])])])])])])])])])])])])
+print(t.value)

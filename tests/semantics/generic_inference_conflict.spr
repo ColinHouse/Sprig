@@ -1,0 +1,7 @@
+generic T:
+    func larger(a: T, b: T) -> T:
+        return b
+
+let name: String = "Ada"
+let flag: Bool = true
+print(larger(name, flag))

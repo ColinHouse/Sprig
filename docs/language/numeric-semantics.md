@@ -133,7 +133,9 @@ narrowing are ambiguous. `Int` never narrows to `short`/`byte`, and `Float`
 never narrows to `float`, which would lose precision rather than range; those
 conversions stay explicit. Primitive Java results are non-null; reference and boxed
 primitive fields/results are nullable in Sprig and require a null check before
-dereference. Java parameter annotations are not yet interpreted. JVM calls
+dereference, unless a nullability annotation visible at run time declares the
+result non-null; a parameter annotated nullable accepts `T?` (see
+`docs/jvm/interop.md`). Other Java parameter annotations are not interpreted. JVM calls
 are still direct Java calls: Java library arithmetic, unchecked exceptions,
 null returns, boxed generic collections, and arrays do not inherit Sprig's
 checked-arithmetic guarantee. Validate or adapt their contracts explicitly at

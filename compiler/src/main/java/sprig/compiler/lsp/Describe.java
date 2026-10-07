@@ -28,6 +28,9 @@ final class Describe {
         }
         Target target = occurrence.target;
         StringBuilder out = new StringBuilder(block(signature(target)));
+        if (occurrence.inferredCall != null) {
+            out.append("\n\nHere: `").append(occurrence.inferredCall).append("` (type arguments inferred)");
+        }
         Type declared = target.symbol == null ? null : target.symbol.type;
         if (!occurrence.declaration && occurrence.type != null && !occurrence.type.isError()
                 && declared != null && !declared.isError()

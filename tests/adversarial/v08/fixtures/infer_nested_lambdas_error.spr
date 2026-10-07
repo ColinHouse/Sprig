@@ -1,0 +1,8 @@
+# Forty generic calls nested in lambda arguments, with an error at the bottom.
+# Each level used to check its lambda twice, doubling the work per level.
+generic T:
+    func apply2(f: fn() -> T, other: T) -> T:
+        return f()
+
+let x = apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => apply2(fn() => 1 + true, 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1), 1)
+print(x)

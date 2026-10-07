@@ -60,12 +60,28 @@
     "output": "true\nfalse\n"
   },
   {
-    "name": "generic_no_inference",
+    "name": "generic_inferred_call",
+    "output": "42\n"
+  },
+  {
+    "name": "ctor_inferred",
+    "output": "42\n"
+  },
+  {
+    "name": "generic_uninferable_call",
     "code": "SPR-TYPE-GENERIC-ARGS-REQUIRED"
   },
   {
-    "name": "ctor_no_inference",
+    "name": "ctor_uninferable",
     "code": "SPR-TYPE-GENERIC-ARGS-REQUIRED"
+  },
+  {
+    "name": "infer_nested_lambdas_error",
+    "code": "SPR-NUM-MIXED"
+  },
+  {
+    "name": "infer_nested_literals",
+    "output": "1\nn19\n"
   },
   {
     "name": "invariant",

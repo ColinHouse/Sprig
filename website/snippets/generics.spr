@@ -1,4 +1,5 @@
-# v0.8 generics: one or more parameters per block, explicit [Type] at every use.
+# Generics: one or more parameters per block. A call or constructor takes its
+# type arguments from its arguments; Box[Int](value=41) would mean the same.
 generic T:
     class Box:
         let value: T
@@ -7,5 +8,5 @@ generic T:
     func identity(value: T) -> T:
         return value
 
-let box = Box[Int](value=41)
-print(identity[Int](box.value) + 1)
+let box = Box(value=41)
+print(identity(box.value) + 1)

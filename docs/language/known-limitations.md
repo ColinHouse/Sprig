@@ -5,15 +5,31 @@ by the historical design kit in `docs/history/design-kit/`.
 
 - The compiler is written in Java and emits Java source before invoking `javac`.
   It does not compile itself and is not self-hosted.
-- `conform C to J` is v1-scoped: Java interfaces only, a non-generic source
-  class and target interface, no overloaded abstract methods and no method
-  renaming or adapters. It declares a foreign JVM contract; it does not add
-  inheritance or interfaces to the language. Generic methods witness by
-  erasure; boxed `Short`/`Byte`/`Character` parameters are not expressible
-  because of the existing interop adapters.
-- Generics accept one or more parameters (`generic K, V:`) but are fully
-  explicit: no inference, no variance, and partial type arguments are never
-  guessed. A type parameter `T` has no operators or methods, equality only
+- `conform C to J` is v1-scoped: Java interfaces, or with
+  `conform C to J(field, ...) as NAME` one public, non-final, non-generic Java
+  class per Sprig class (abstract methods witnessed, overrides matched by
+  exact shape, `NAME.m(...)` calling the inherited implementation); a
+  non-generic source class, no overloaded abstract methods, no method renaming
+  or adapters, protected methods only through the parent view, and no `self`. It declares a foreign
+  JVM contract; it does not add inheritance between Sprig classes or interfaces
+  to the language. Generic methods witness by erasure; boxed
+  `Short`/`Byte`/`Character` parameters are not expressible because of the
+  existing interop adapters.
+- Generics accept one or more parameters (`generic K, V:`). Type arguments of
+  a generic Sprig function call, class constructor or variant case with a
+  payload are inferred from that call's arguments only: never from the
+  expected type, the assignment target or the result, so `lists.first([])`,
+  a payloadless case (`Option[Int].None`) and a parameter that no argument
+  mentions still need written `[Type]` arguments. Written arguments are all
+  or none; partial type arguments are never guessed. There is no variance. Java
+  methods and Java generic types are never inferred, and neither is a Sprig
+  parameter that appears only inside a Java type such as `JavaList[T]`.
+  Inference types a lambda or literal argument on its own first and then
+  checks it once more against the inferred types, so generic calls nested in
+  lambda or literal arguments are checked in time that grows with the square
+  of their nesting depth (a 4095-node tree literal of generic constructors
+  checks in about half a second). A type parameter `T` has no operators or
+  methods, equality only
   under `requires T: Equatable` and ordering only under
   `requires T: Comparable` (Int, Int32, Float, Float32, Decimal, BigInt and
   String). User-defined capabilities are not implemented
@@ -54,9 +70,13 @@ by the historical design kit in `docs/history/design-kit/`.
   writes through `? extends`, no wildcard syntax in Sprig); class bounds are validated,
   raw evidence never promotes to concrete arguments, and raw boundaries stay
   erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
-  implicit Java/Sprig collection conversion. Type-use nullability annotations
-  are not interpreted. Java reference results are conservatively nullable,
-  except a `toString()` result; Java reference parameters are conservatively
+  implicit Java/Sprig collection conversion. Java reference results are
+  conservatively nullable and reference parameters non-null, except where a
+  nullability annotation visible at run time says otherwise (`NotNull`,
+  `NonNull`, `Nonnull`, `Nullable`, `CheckForNull`, and the `NullMarked`,
+  `NonNullApi` and `MethodsReturnNonnullByDefault` defaults), read through
+  reflection or, for annotations kept only in class files such as
+  `org.jetbrains.annotations`, from the class file; a `toString()` result is
   non-null.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
   exception classes and top-level execution remains provisional. Checked Java

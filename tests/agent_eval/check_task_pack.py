@@ -54,11 +54,14 @@ print(area(Shape.Square(side=3)))
     },
     "04_generics": {
         "main.spr": '''generic T:
-    class Box:
-        let value: T
+    class Slot:
+        var value: T?
 
-let box = Box[Int](value=41)
-print(box.value + 1)
+let slot = Slot[Int](value=null)
+slot.value = 41
+let current = slot.value
+if current != null:
+    print(current + 1)
 ''',
     },
     "05_json_transform": {
