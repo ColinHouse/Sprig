@@ -1,0 +1,10 @@
+# One-line class declarations: immutable fields only, same class as the block form.
+class Pair(first: Int, second: Int)
+class Point(x: Float, y: Float,)
+
+generic T:
+    class Box(value: T)
+
+let p = Pair(first=1, second=2)
+print(p.first + p.second)
+print(Box(value="x").value)

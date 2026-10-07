@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -638,6 +639,14 @@ public final class ParserFrontend {
         if (within(parser, SprigParser.CatchClauseContext.class)) {
             return "This catch clause is not written the Sprig way\n" + Newcomer.CATCH;
         }
+        // Python's f"..." (or F, fr, rf): a one-letter prefix glued to the string.
+        if (type == SprigLexer.STRING && previous == SprigLexer.IDENT) {
+            Token prefix = stream.get(index - 1);
+            if (prefix.getStopIndex() + 1 == token.getStartIndex()
+                    && List.of("f", "F", "fr", "rf", "Fr", "fR", "FR").contains(prefix.getText())) {
+                return "Sprig has no f-strings or string interpolation\n" + Newcomer.INTERPOLATION;
+            }
+        }
         if (type == SprigLexer.STAR && previous == SprigLexer.DOT && lineHas(stream, index, SprigLexer.IMPORT)) {
             return "Java classes are imported one at a time\n"
                     + "Write 'import java.io.BufferedReader as BufferedReader', one line per class; "
@@ -655,6 +664,16 @@ public final class ParserFrontend {
         }
         int lineFirst = lineStart(stream, index);
         int first = stream.get(lineFirst).getType();
+        // class Pair(first: Int, second: Int) takes immutable fields only; a ':' body,
+        // a var or a default after the parenthesis asks for the block form.
+        if (first == SprigLexer.CLASS && lineFirst != index && lineHas(stream, index, SprigLexer.LPAREN)
+                && (type == SprigLexer.COLON || type == SprigLexer.VAR || type == SprigLexer.ASSIGN
+                        || (type == SprigLexer.RPAREN && previous == SprigLexer.LPAREN))) {
+            return "A one-line class lists immutable fields only\n"
+                    + "Write class Pair(first: Int, second: Int) for a record of let fields; for var fields, "
+                    + "default values, methods or no fields, write 'class Pair:' with the fields and methods "
+                    + "indented on the following lines.";
+        }
         // A guard on a match case or a filter on a for loop, as in Python, Scala or
         // Rust: the 'if' comes before the header's ':'. Sprig tests the condition
         // inside the body.

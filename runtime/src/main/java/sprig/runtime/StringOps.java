@@ -43,6 +43,12 @@ public final class StringOps {
         return offset < 0 ? -1L : value.codePointCount(0, offset);
     }
 
+    /** Code-point index of the last occurrence of {@code needle}, or -1. */
+    public static long lastIndexOf(String value, String needle) {
+        int offset = value.lastIndexOf(needle);
+        return offset < 0 ? -1L : value.codePointCount(0, offset);
+    }
+
     /** One {@link String} per Unicode code point, in order. */
     public static Iterable<String> codePoints(String value) {
         return () -> value.codePoints()

@@ -12,3 +12,9 @@ class Hero:
 let hero = Hero(name="Ada", health=80)
 hero.heal(15)
 print(hero.describe())
+
+# A record of let fields fits on one line; it is the same kind of class.
+class Position(x: Int, y: Int)
+let start = Position(x=0, y=3)
+print(start)
+print(start.y)

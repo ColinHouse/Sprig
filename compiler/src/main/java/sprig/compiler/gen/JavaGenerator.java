@@ -1992,6 +1992,12 @@ public final class JavaGenerator {
             case "Int.toInt32Exact" -> "sprig.runtime.NumericOps.toInt32Exact(" + recv + ")";
             case "Int.toDecimal", "Int32.toDecimal" -> "sprig.runtime.SprigDecimal.fromInt(" + recv + ")";
             case "Int.divTrunc" -> "sprig.runtime.NumericOps.divTrunc(" + recv + ", " + a0 + ")";
+            case "Int.compareTo" -> "java.lang.Long.compare(" + recv + ", " + a0 + ")";
+            case "Int32.compareTo" -> "java.lang.Integer.compare(" + recv + ", " + a0 + ")";
+            case "Float.compareTo" -> "java.lang.Double.compare(" + recv + ", " + a0 + ")";
+            case "Float32.compareTo" -> "java.lang.Float.compare(" + recv + ", " + a0 + ")";
+            case "Decimal.compareTo", "BigInt.compareTo" -> "java.lang.Integer.signum(" + recv + ".compareTo(" + a0 + "))";
+            case "String.lastIndexOf" -> "sprig.runtime.StringOps.lastIndexOf(" + recv + ", " + a0 + ")";
             case "Int32.divTrunc" -> "sprig.runtime.NumericOps.divTrunc32(" + recv + ", " + a0 + ")";
             case "Int32.toInt" -> "((long) " + recv + ")";
             case "Int32.toFloat" -> "((double) " + recv + ")";
