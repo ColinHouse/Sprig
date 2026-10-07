@@ -1628,7 +1628,14 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(convertedExpression(lit.items.get(i), ((ListType) lit.type).element));
+            Expr item = lit.items.get(i);
+            if (item instanceof Expr.NullLit) {
+                // A lone null would be the varargs array itself (ofItems(null)):
+                // cast it to the element type so it is one null element.
+                sb.append("((").append(boxedJavaType(((ListType) lit.type).element)).append(") null)");
+            } else {
+                sb.append(convertedExpression(item, ((ListType) lit.type).element));
+            }
         }
         return sb.append(')').toString();
     }
