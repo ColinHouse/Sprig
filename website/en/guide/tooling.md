@@ -133,7 +133,7 @@ Exit codes work like this:
 
 - A mistake in the command-line arguments, or a failure in the tool itself, returns `2`.
 - Errors in your source and runtime errors usually return `1`.
-- `run` passes your program's own exit status through, so a program that exits on purpose can also return `2` or any other value. Since v0.6.0-beta.1, a program chooses its status with `process.exit` from `@std/process`, which also has `print_error` for standard error and `read_line`, `read_lines` and `read_all` for standard input. When a program exits with a nonzero status without a JVM exception, Sprig reports `SPR-PROGRAM-EXIT` and puts the program's status in the JSON field `data.programExitCode`.
+- `run` passes your program's own exit status through, so a program that exits on purpose can also return `2` or any other value. Since v0.6.0-beta.1, a program chooses its status with `process.exit` from `@std/process`, which also has `print_error` for standard error and `read_line`, `read_lines` and `read_all` for standard input. Text mode forwards the status without adding a compiler-error message; JSON mode reports a nonzero exit as `SPR-PROGRAM-EXIT` and puts the program's status in `data.programExitCode`.
 
 ## For AI assistants
 

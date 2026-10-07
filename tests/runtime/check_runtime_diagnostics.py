@@ -84,8 +84,11 @@ with tempfile.TemporaryDirectory(prefix="sprig-runtime-diag-") as work:
 
         text = call("run", path)
         combined = text.stdout + text.stderr
-        ok = text.returncode != 0 and code in combined and message in combined
-        if code != "SPR-PROGRAM-EXIT":
+        if code == "SPR-PROGRAM-EXIT":
+            ok = text.returncode == 3 and code not in combined and "error(s)" not in combined \
+                    and "status 3" not in combined
+        else:
+            ok = text.returncode != 0 and code in combined and message in combined
             ok = ok and "\tat " not in combined
             ok = ok and "sprig-runtime-failure" not in combined
             ok = ok and "sprig-runtime-frame" not in combined

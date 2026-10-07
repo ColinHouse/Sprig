@@ -134,7 +134,9 @@ malformed expectations are runner errors.
 ## Output and exit status
 
 Human output prints one `PASS` or `FAIL` line per file and a summary. Failures
-include the relevant compiler/runtime diagnostic. `--json` prints one object
+include the relevant compiler/runtime diagnostic, except a program's deliberate
+nonzero process exit: its output comes first and the exit status appears once.
+`--json` prints one object
 with `schemaVersion`, `toolVersion`, `command`, `exitCode`, `summary`, `tests`,
 and top-level `diagnostics`. Each test row has `name`, absolute `path`, `mode`
 (`run` or `compile_fail`), `status`, structured `diagnostics`, `programOutput`,

@@ -121,7 +121,19 @@ def main():
                         assert payload["exitCode"] == code and len(diagnostics) == 1
                         assert diagnostics[0]["code"] == "SPR-PROGRAM-EXIT"
                 elif code:
-                    assert "SPR-PROGRAM-EXIT" in result.stderr and "status" in result.stderr
+                    assert "SPR-PROGRAM-EXIT" not in result.stderr and "error(s)" not in result.stderr
+
+        process_exit = directory / "process_exit.spr"
+        process_exit.write_text('import "@std/process.spr" as process\n'
+                                'process.print_error("usage: x FILE")\nprocess.exit(2)\n', encoding="utf-8")
+        human_exit = invoke("run", process_exit, cwd=directory)
+        assert human_exit.returncode == 2 and human_exit.stdout == "" \
+            and human_exit.stderr == "usage: x FILE\n", (human_exit.returncode, human_exit.stdout, human_exit.stderr)
+        json_exit = invoke("run", process_exit, "--json", cwd=directory)
+        json_exit_payload = json.loads(json_exit.stdout)
+        assert json_exit.returncode == 2 and json_exit_payload["exitCode"] == 2 \
+            and json_exit_payload["diagnostics"][0]["code"] == "SPR-PROGRAM-EXIT" \
+            and json_exit_payload["diagnostics"][0]["data"]["programExitCode"] == 2, json_exit_payload
         print(f"CLI contract: {len(invalid)} rejected-option cases and end-to-end contracts passed")
 
 

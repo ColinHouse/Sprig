@@ -282,10 +282,12 @@ catch problem: Error:
 
 `sprig run` passes its own standard input to the program and forwards the
 program's exit status. It shows what the program wrote to standard error after
-the program ends, and for a nonzero status adds an `SPR-PROGRAM-EXIT`
-diagnostic. With `--json`, and in `sprig test`, the program gets an empty
-standard input, and `sprig run --json` carries what the program wrote to
-standard error in `programErrorOutput`, next to `programOutput`.
+the program ends. In text mode, a deliberate nonzero exit adds no compiler
+error message; `--json` reports `SPR-PROGRAM-EXIT` and its
+`data.programExitCode`. In `sprig test`, program output appears before the one
+line reporting its exit status. With `--json`, and in `sprig test`, the program
+gets an empty standard input, and `sprig run --json` carries what the program
+wrote to standard error in `programErrorOutput`, next to `programOutput`.
 
 ## Nullable values
 

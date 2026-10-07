@@ -46,12 +46,11 @@ def check_process_io(launcher):
 
     # print_error goes to standard error; exit flushes and sets the status the run command forwards.
     code, out, err = run('fail')
-    assert code == 3 and out == 'before\n', (code, out, err)
-    assert err.splitlines()[0] == 'problem: 说明 😀' and 'SPR-PROGRAM-EXIT' in err, err
+    assert (code, out, err) == (3, 'before\n', 'problem: 说明 😀\n'), (code, out, err)
     code, out, err = run('ok')
     assert (code, out, err) == (0, 'done\n', 'note\n'), (code, out, err)
     code, out, err = run('status', '255')
-    assert code == 255 and 'Program exited with status 255' in err, (code, out, err)
+    assert (code, out, err) == (255, '', ''), (code, out, err)
     code, out, err = run('status', '300')
     assert code == 1 and 'SPR-RUNTIME-EXCEPTION' in err \
         and 'Exit status must be between 0 and 255: 300' in err, (code, out, err)

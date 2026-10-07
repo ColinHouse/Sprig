@@ -345,6 +345,20 @@ public final class TestCommand {
     private static void printHuman(Case test, Outcome outcome) {
         System.out.println((outcome.status.equals("passed") ? "PASS " : "FAIL ") + test.name);
         if (outcome.status.equals("passed")) return;
+        boolean programExit = outcome.diagnostics.stream().anyMatch(diagnostic ->
+                diagnostic.code.equals(Codes.PROGRAM_EXIT)
+                        && diagnostic.message.startsWith("Program exited with status "));
+        if (programExit) {
+            if (!outcome.stdout.isBlank()) {
+                String shown = outcome.stdout.length() > 8192
+                        ? outcome.stdout.substring(0, 8192) + "\n... output truncated"
+                        : outcome.stdout;
+                System.out.println(shown.stripTrailing());
+            }
+            if (!outcome.stderr.isBlank()) System.err.println(outcome.stderr.strip());
+            if (outcome.failure != null) System.err.println("  " + outcome.failure);
+            return;
+        }
         if (outcome.failure != null) System.err.println("  " + outcome.failure);
         for (Diagnostic diagnostic : outcome.diagnostics) System.err.println("  " + diagnostic.format());
         if (!outcome.stdout.isBlank()) {

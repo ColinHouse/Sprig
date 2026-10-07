@@ -171,6 +171,22 @@ class TestRunnerContract(unittest.TestCase):
             human = invoke("test", "--filter", "00_exit", cwd=root)
             self.assertIn("before exit", human.stdout)
 
+    def test_process_exit_keeps_test_failure_output_ahead_of_status(self):
+        files = {
+            "tests/00_exit.spr": 'import "@std/process.spr" as process\n'
+                                 'print("FAIL builds a site: assertion failed: output")\n'
+                                 'process.exit(2)\n',
+        }
+        with project(files) as root:
+            human = subprocess.run([str(SPRIG), "test"], cwd=root, text=True,
+                                   encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   timeout=120)
+            self.assertEqual(human.returncode, 1, human.stdout)
+            self.assertLess(human.stdout.index("FAIL builds a site"), human.stdout.index("status 2"),
+                            human.stdout)
+            self.assertNotIn("SPR-PROGRAM-EXIT", human.stdout)
+            self.assertEqual(human.stdout.count("status 2"), 1, human.stdout)
+
     def test_temp_files_and_argv_process_result(self):
         source = '''import "@std/test.spr" as testing
 import "@std/files.spr" as files

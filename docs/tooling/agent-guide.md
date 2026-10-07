@@ -131,7 +131,8 @@ include candidate signatures in `data.candidates`. CLI tooling errors use 2;
 source and runtime failures normally use 1. `run` forwards the Sprig process
 status, so an explicit program exit can use any status, including 2; non-zero
 exits without a JVM exception are reported as `SPR-PROGRAM-EXIT` with
-`data.programExitCode`.
+`data.programExitCode` in JSON mode. Text mode forwards the status without a
+compiler-error message.
 Use the code with `explain --json`, repair the source, and rerun `check` before
 `run`. Never invent syntax or accept a lossy conversion without deciding the
 numerical meaning.
