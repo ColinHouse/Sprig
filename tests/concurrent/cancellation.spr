@@ -131,3 +131,23 @@ try:
 catch problem: Error:
     print("the scope failed: " + problem.message)
 
+# 8. a cancelled task is done at once, even while its body still runs, and
+# its scope still waits for the body to end
+let entered = concurrent.latch(1)
+let let_go = concurrent.latch(1)
+let body_ended = concurrent.counter(0)
+func ignore_interrupts() -> Int:
+    entered.count_down()
+    while let_go.remaining() > 0:
+        pass
+    body_ended.set(1)
+    return 1
+func done_before_body_ends(s: concurrent.Scope) -> Int throws Error:
+    let task = concurrent.spawn(s, fn() => ignore_interrupts())
+    entered.await()
+    print("cancelled: " + task.cancel())
+    print("done at once: " + task.is_done() + ", body ended: " + body_ended.get())
+    let_go.count_down()
+    return 0
+concurrent.scope(done_before_body_ends)
+print("the scope waited for the body: " + body_ended.get())

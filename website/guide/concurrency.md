@@ -23,7 +23,7 @@ print(concurrent.scope(count_all))
 - `spawn(s, work)` 在这个作用域拥有的一条虚拟线程上运行 `fn() -> T`，返回 `Task[T]`。类型参数按通常的规则推断：这里从 lambda 的结果得到 `Int`。
 - **离开作用域时会等所有任务结束**，不管有没有 `await`。没有任务能活过启动它的那个函数。
 - **第一个失败会取消其他兄弟任务**，并由 `scope()` 作为 `Error` 重新抛出，所以 `scope` 声明了 `throws Error`。就算 body 是因为在等一个被这次失败取消掉的任务才失败的，你拿到的也是那个失败，而不是 "task was cancelled"。任务里的失败也会由那个任务的 `await()` 报出来；在那里接住它并不能撤销作用域的失败。要容忍某个任务失败，就在任务体里处理掉，比如返回 `Ok`/`Failed` 这样的 variant。`await_or(fallback)` 并不会容忍失败：任务失败或被取消时它给出兜底值，而且没有 `throws` 子句，所以一个任务体可以用它等另一个任务，但作用域照样会失败。
-- 主动取消的任务（`task.cancel()`、`s.cancel_all()`、线程池的 `shutdown_now()`）不算失败。取消会中断任务的线程，在阻塞点生效：`sleep`、`await`、通道的 `receive`、尊重中断的 Java I/O。一个从不阻塞的循环会跑到头。
+- 主动取消的任务（`task.cancel()`、`s.cancel_all()`、线程池的 `shutdown_now()`）不算失败。取消会中断任务的线程，在阻塞点生效：`sleep`、`await`、通道的 `receive`、尊重中断的 Java I/O。一个从不阻塞的循环会跑到头。所以 `cancel()` 之后 `is_done()` 马上就是 `true`，哪怕任务体还在跑、要到下一个阻塞点才停；作用域照样会等任务体结束。
 - 没有不属于作用域的 `spawn`：任务永远属于启动它的那个作用域，body 返回之后再启动任务会报 `Error`。
 - 任务体是普通的函数值，只能捕获 `let` 绑定和参数，所以其他语言里那种对局部变量的数据竞争在 Sprig 里写不出来。共享的 `MutableList`、`MutableMap` 和 `var` 字段不受保护，见下面的锁和通道。
 

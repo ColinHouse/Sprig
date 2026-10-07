@@ -116,6 +116,11 @@ public final class HostTask<T> {
         return new SprigError("task failed: " + cause, cause);
     }
 
+    /**
+     * True once the task completed or was cancelled. As with any
+     * java.util.concurrent Future, a cancelled task is done at once, even while
+     * its body still runs; its scope waits for the body all the same.
+     */
     public boolean isDone() {
         return future.isDone();
     }

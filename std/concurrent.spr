@@ -37,7 +37,9 @@ generic T:
             return inner.joinOr(fallback)
 
         # True once the task returned, failed or was cancelled; never waits. A
-        # cancelled task counts as done at once, even before its body stops.
+        # cancelled task is done at once, even while its body is still running
+        # (until its next blocking point, or to its end): is_done() does not
+        # mean the body has stopped, and the scope still waits for the body.
         func is_done() -> Bool:
             return inner.isDone()
 
@@ -67,7 +69,9 @@ class Job:
         inner.joinWithin(millis)
 
     # True once the job returned, failed or was cancelled; never waits. A
-    # cancelled job counts as done at once, even before its body stops.
+    # cancelled job is done at once, even while its body is still running
+    # (until its next blocking point, or to its end): is_done() does not mean
+    # the body has stopped, and the scope still waits for the body.
     func is_done() -> Bool:
         return inner.isDone()
 
