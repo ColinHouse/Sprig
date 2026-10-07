@@ -195,6 +195,65 @@ def runtime_classes_probe():
               == (shipped_dir / "classes").resolve(), str(doctor.get("runtimeClasses")))
 
 
+def list_mutation_probe():
+    """A function that changes the MutableList it walks behaves as it always has.
+
+    map, filter and forEach walk a read-only List by index, which visits what
+    its iterator would because nothing can change it. A MutableList, also one
+    seen through a List-typed name, keeps its iterator: adding or removing
+    usually fails with ConcurrentModificationException, and a removal that
+    leaves the iterator at the new end stops the walk without one (the
+    expected outputs below are what the iterator-only runtime printed).
+    """
+    cme = "ConcurrentModificationException"
+    with tempfile.TemporaryDirectory(prefix="sprig-list-mutation-") as temp:
+        helpers = ("func grown(items: MutableList[Int], x: Int) -> Int:\n"
+                   "    items.append(x)\n"
+                   "    return x\n\n"
+                   "func dropFirstAtTwo(items: MutableList[Int], x: Int) -> Bool:\n"
+                   "    if x == 2:\n"
+                   "        items.removeAt(0)\n"
+                   "    return true\n\n"
+                   "let xs: MutableList[Int] = [1, 2, 3]\n"
+                   "let view: List[Int] = xs\n")
+        for name, lines, expected in (
+                ("map-appends", ["print(xs.map(fn(x: Int) => grown(xs, x)))"], cme),
+                ("filter-removes", ["print(xs.filter(fn(x: Int) => xs.remove(x)))"], cme),
+                ("forEach-appends", ["xs.forEach(fn(x: Int) => xs.append(x))"], cme),
+                ("view-map-appends", ["print(view.map(fn(x: Int) => grown(xs, x)))"], cme),
+                ("view-filter-removes", ["print(view.filter(fn(x: Int) => xs.remove(x)))"], cme),
+                ("view-forEach-appends", ["view.forEach(fn(x: Int) => xs.append(x))"], cme),
+                # The filter walks the map's own result, so appending to xs is allowed.
+                ("map-then-filter-appends",
+                 ["print(xs.map(fn(x: Int) => x).filter(fn(x: Int) => grown(xs, x) > 0))", "print(xs)"],
+                 "[1, 2, 3]\n[1, 2, 3, 1, 2, 3]\n"),
+                ("snapshot-map-appends", ["print(xs.toList().map(fn(x: Int) => grown(xs, x)))", "print(xs)"],
+                 "[1, 2, 3]\n[1, 2, 3, 1, 2, 3]\n"),
+                ("filter-removal-ends-walk", ["print(xs.filter(fn(x: Int) => dropFirstAtTwo(xs, x)))", "print(xs)"],
+                 "[1, 2]\n[2, 3]\n"),
+                ("view-map-removal-ends-walk", ["print(view.map(fn(x: Int) => dropFirstAtTwo(xs, x)))"],
+                 "[true, true]\n"),
+                ("forEach-removal-ends-walk",
+                 ["xs.forEach(fn(x: Int) => print(x.toString() + \" \" + dropFirstAtTwo(xs, x).toString()))"],
+                 "1 true\n2 true\n")):
+            program = Path(temp) / (name + ".spr")
+            program.write_text(helpers + "\n".join(lines) + "\n", encoding="utf-8")
+            proc = run("run", program, "--json")
+            try:
+                data = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                data = {}
+            diagnostics = data.get("diagnostics", [])
+            if expected == cme:
+                check("list-mutation-" + name, proc.returncode == 1 and len(diagnostics) == 1
+                      and diagnostics[0].get("code") == "SPR-RUNTIME-EXCEPTION"
+                      and cme in diagnostics[0].get("message", ""), proc.stdout + proc.stderr)
+            else:
+                check("list-mutation-" + name, proc.returncode == 0 and not diagnostics
+                      and (data.get("programOutput") or "").replace("\r\n", "\n") == expected,
+                      proc.stdout + proc.stderr)
+
+
 def javac_json_probe():
     with tempfile.TemporaryDirectory(prefix="sprig-json-probe-") as temp:
         jar = ROOT / "build" / "sprig-compiler.jar"
@@ -383,6 +442,7 @@ def main():
     javac_json_probe()
     javac_cache_probe()
     runtime_classes_probe()
+    list_mutation_probe()
 
     print(f"correctness regressions: {passed} passed, {failed} failed")
     return 1 if failed else 0

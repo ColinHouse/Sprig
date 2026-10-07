@@ -3,6 +3,7 @@ package sprig.runtime;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.RandomAccess;
 
 /**
  * Runtime representation of Sprig's read-only {@code List[T]}.
@@ -48,25 +49,90 @@ public class SprigList<T> implements Iterable<T> {
         return new SprigMutableList<>(new ArrayList<>(items));
     }
 
+    // map, filter and forEach are eager: each runs its function on every item,
+    // in order, before it returns, so in xs.map(f).filter(g) every call of f
+    // comes before any call of g. Nothing changes a read-only list's items
+    // while a function runs, so walking them by index visits exactly what the
+    // iterator would. A MutableList, also when it is seen as a List, keeps its
+    // iterator: a function that changes the list it walks gets the iterator's
+    // behavior, usually a ConcurrentModificationException, as it always has.
+    // Each loop has a method of its own, so the JIT compiles and profiles it
+    // separately.
+
     public <R> SprigList<R> map(Fn1<? super T, ? extends R> f) {
-        List<R> out = new ArrayList<>(items.size());
-        for (T item : items) {
-            out.add(f.apply(item));
-        }
-        return new SprigList<>(out);
+        return new SprigList<>(indexed() ? mapByIndex(items, f) : mapByIterator(items, f));
     }
 
     public SprigList<T> filter(Fn1<? super T, Boolean> predicate) {
-        List<T> out = new ArrayList<>();
-        for (T item : items) {
-            if (Boolean.TRUE.equals(predicate.apply(item))) {
-                out.add(item);
-            }
+        int size = items.size();
+        ArrayList<T> out = indexed() ? filterByIndex(items, predicate) : filterByIterator(items, predicate);
+        // The result had room for every item, so it never regrew while it
+        // filled; one that keeps fewer than half gives the spare room back.
+        if (out.size() < size / 2) {
+            out.trimToSize();
         }
         return new SprigList<>(out);
     }
 
     public void forEachItem(Fn1<? super T, Void> action) {
+        if (indexed()) {
+            forEachByIndex(items, action);
+        } else {
+            forEachByIterator(items, action);
+        }
+    }
+
+    private boolean indexed() {
+        return items instanceof RandomAccess && !(this instanceof SprigMutableList);
+    }
+
+    private static <T, R> List<R> mapByIndex(List<T> items, Fn1<? super T, ? extends R> f) {
+        int size = items.size();
+        List<R> out = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            out.add(f.apply(items.get(i)));
+        }
+        return out;
+    }
+
+    private static <T, R> List<R> mapByIterator(List<T> items, Fn1<? super T, ? extends R> f) {
+        List<R> out = new ArrayList<>(items.size());
+        for (T item : items) {
+            out.add(f.apply(item));
+        }
+        return out;
+    }
+
+    private static <T> ArrayList<T> filterByIndex(List<T> items, Fn1<? super T, Boolean> predicate) {
+        int size = items.size();
+        ArrayList<T> out = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            T item = items.get(i);
+            if (Boolean.TRUE.equals(predicate.apply(item))) {
+                out.add(item);
+            }
+        }
+        return out;
+    }
+
+    private static <T> ArrayList<T> filterByIterator(List<T> items, Fn1<? super T, Boolean> predicate) {
+        ArrayList<T> out = new ArrayList<>(items.size());
+        for (T item : items) {
+            if (Boolean.TRUE.equals(predicate.apply(item))) {
+                out.add(item);
+            }
+        }
+        return out;
+    }
+
+    private static <T> void forEachByIndex(List<T> items, Fn1<? super T, Void> action) {
+        int size = items.size();
+        for (int i = 0; i < size; i++) {
+            action.apply(items.get(i));
+        }
+    }
+
+    private static <T> void forEachByIterator(List<T> items, Fn1<? super T, Void> action) {
         for (T item : items) {
             action.apply(item);
         }
