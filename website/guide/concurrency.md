@@ -74,6 +74,8 @@ func consume(s: concurrent.Scope) -> Int throws Error:
 print(concurrent.scope(consume))
 ```
 
+`next` 是 `var`，所以 `while next != null` 不会把它收窄。先复制到 `let word`，再检查 `word`；通过检查后，循环体里才能把它当作非空字符串使用。
+
 - `channel[T](capacity)` 是有界队列。`send` 在队列满时阻塞；`receive()` 在队列空时阻塞，通道关闭且取空后返回 `null`。通道里不放 `null`，所以 `null` 只有"结束"这一个意思。
 - `try_send` 和 `receive_within(millis)` 不阻塞。
 - 往关闭的通道 `send` 会在运行时以 `Error` 失败。`send` 没有 `throws` 子句，这样任务体里才能调用它；失败由那个任务的 `await()` 和作用域报出来。

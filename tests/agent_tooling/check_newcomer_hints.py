@@ -162,6 +162,11 @@ CASES = [
     ("nullable-operand", "let n = \"3\".toIntOrNull()\nprint(n + 1)\n", "SPR-TYPE-NULLABLE", "check it first with 'if n != null:'"),
     ("nullable-ordering", "let n = \"3\".toIntOrNull()\nif n > 2:\n    print(1)\n", "SPR-TYPE-OPERAND", "'if n != null:'"),
     ("nullable-var", "var v = \"3\".toIntOrNull()\nprint(v + 1)\n", "SPR-TYPE-NULLABLE", "a var never narrows"),
+    ("nullable-var-in-while-element", "import \"@std/concurrent.spr\" as concurrent\n"
+     "let words = concurrent.channel[String](4)\nwords.send(\"a\")\nwords.close()\n"
+     "let seen: MutableList[String] = []\nvar next = words.receive()\nwhile next != null:\n"
+     "    seen.append(next)\n    next = words.receive()\n",
+     "SPR-TYPE-NULLABLE", "next is a var, which never narrows; copy it into a let (`let word = next`) and check `word`"),
     ("module-member", "import \"@std/text.spr\" as text\nprint(text.format(\"a\"))\n", "SPR-NAME-UNRESOLVED",
      "Module 'text' has: join"),
     ("read-only-list", "let words: MutableList[String] = \"a b\".split(\" \")\n", "SPR-TYPE-ASSIGN", "toMutableList()"),

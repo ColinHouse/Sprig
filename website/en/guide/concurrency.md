@@ -74,6 +74,8 @@ func consume(s: concurrent.Scope) -> Int throws Error:
 print(concurrent.scope(consume))
 ```
 
+`next` is a `var`, so `while next != null` does not narrow it. Copy it to `let word` and check `word`; inside that check, the value can be used as a non-null string.
+
 - `channel[T](capacity)` is a bounded queue. `send` blocks while it is full; `receive()` blocks while it is empty and returns `null` once the channel is closed and drained. A channel never carries `null`, so `null` means one thing: the end.
 - `try_send` and `receive_within(millis)` do not block.
 - Sending on a closed channel fails at run time with an `Error`. `send` has no throws clause, so a task body can call it; the task's `await()` and the scope report the failure.
