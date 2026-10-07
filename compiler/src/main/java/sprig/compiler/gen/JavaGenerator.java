@@ -1525,6 +1525,16 @@ public final class JavaGenerator {
                 return wrapNegate(negate, call);
             }
             Type base = binary.left.type == null ? null : binary.left.type.nonNull();
+            if (binary.valueEquality && isStringType(binary.left.type) && isStringType(binary.right.type)) {
+                // Two Strings compare with Objects.equals directly; equalsValue
+                // would first test both sides for Double and Float. The operands
+                // are evaluated once, left to right. Objects.equals also for two
+                // non-null Strings: a Java result trusted as non-null through its
+                // annotations may still be null, and == then stays false, as
+                // before, instead of throwing.
+                String call = "java.util.Objects.equals(" + left + ", " + right + ")";
+                return wrapNegate(negate, "(" + call + ")");
+            }
             if (binary.valueEquality) {
                 String call = "sprig.runtime.SprigRuntime.equalsValue(" + left + ", " + right + ")";
                 return negate ? "(!" + call + ")" : call;
@@ -1591,6 +1601,11 @@ public final class JavaGenerator {
 
     private static String wrapNegate(boolean negate, String expression) {
         return negate ? "(!" + expression + ")" : expression;
+    }
+
+    /** {@code String} or {@code String?}. */
+    private static boolean isStringType(Type type) {
+        return type != null && type.nonNull() == NativeType.STRING;
     }
 
     /** Unboxes nullable numeric/boolean locals for primitive comparison. */
