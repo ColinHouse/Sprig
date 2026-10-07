@@ -156,6 +156,9 @@ CASES = [
     ("if-after-block-header", "let n = 3\nwhile n > 5: if n > 0:\n    print(n)\n", "SPR-SYNTAX-ERROR",
      "no one-line if or loop"),
     ("assignment-in-condition", "var line = \"a\"\nwhile (line = \"b\"):\n    print(1)\n", "SPR-SYNTAX-ERROR", "Compare with '=='"),
+    ("nullable-task-result", "import \"@std/concurrent.spr\" as concurrent\nfunc maybe() -> Int?:\n    return null\n"
+     "func body(s: concurrent.Scope) -> Int? throws Error:\n    return concurrent.spawn(s, fn() => maybe()).await()\n"
+     "print(concurrent.scope(body))\n", "SPR-TYPE-MISMATCH", "T cannot be Int? here: a written [Int?] is rejected as well."),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
      "sum.toFloat() / count.toFloat()"),

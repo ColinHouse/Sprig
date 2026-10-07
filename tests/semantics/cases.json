@@ -803,5 +803,11 @@
     "expected_diagnostic": "SPR-CONFORM-SOURCE",
     "status": "implemented",
     "source": "contract guardrails: no retroactive conformance (class not declared here)"
+  },
+  {
+    "file": "nullable_task_result.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "#187: a task's result cannot be nullable; the mismatch says why and how to keep it non-null"
   }
 ]

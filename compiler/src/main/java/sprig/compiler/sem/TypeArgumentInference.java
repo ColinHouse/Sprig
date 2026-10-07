@@ -95,15 +95,23 @@ final class TypeArgumentInference {
         final Set<String> conflicts;
         /** Inferred parameters to the argument their type came from, as in "argument 2". */
         final Map<String, String> sources;
+        /**
+         * Parameters that an argument gave a nullable type that the
+         * declaration does not accept for them (a written [X?] would be
+         * rejected too), so the parameter took the non-null type instead.
+         */
+        final Map<String, Type> refusedNullable;
 
         private Solution(List<Type> arguments, Map<String, String> failures, Map<String, Failure> silences,
-                         Set<String> blocked, Set<String> conflicts, Map<String, String> sources) {
+                         Set<String> blocked, Set<String> conflicts, Map<String, String> sources,
+                         Map<String, Type> refusedNullable) {
             this.arguments = arguments;
             this.failures = failures;
             this.silences = silences;
             this.blocked = blocked;
             this.conflicts = conflicts;
             this.sources = sources;
+            this.refusedNullable = refusedNullable;
         }
 
         boolean complete() {
@@ -115,6 +123,7 @@ final class TypeArgumentInference {
     private final List<String> parameters;
     private final Arguments arguments;
     private final Map<String, List<Bound>> bounds = new LinkedHashMap<>();
+    private final Map<String, Type> refusedNullable = new LinkedHashMap<>();
     /** The first reason an argument said nothing usable about a parameter. */
     private final Map<String, Failure> silent = new LinkedHashMap<>();
     private final Set<String> poisoned = new LinkedHashSet<>();
@@ -231,6 +240,7 @@ final class TypeArgumentInference {
             // T = X? or nothing, so the call reports the nullable argument the
             // way a written [X?] is reported.
             if (bound.isNullable() && !exact && !arguments.acceptsNullable(parameter.name, bound)) {
+                refusedNullable.putIfAbsent(parameter.name, bound);
                 bound = bound.nonNull();
             }
             bounds.computeIfAbsent(parameter.name, ignored -> new ArrayList<>())
@@ -340,7 +350,8 @@ final class TypeArgumentInference {
                 sources.put(parameter, decided[0].source());
             }
         }
-        return new Solution(solved, failures, silences, blocked, conflicts, sources);
+        return new Solution(solved, failures, silences, blocked, conflicts, sources,
+                new LinkedHashMap<>(refusedNullable));
     }
 
     /**
