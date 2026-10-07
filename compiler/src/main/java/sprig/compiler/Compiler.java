@@ -184,6 +184,27 @@ public final class Compiler {
         return this;
     }
 
+    /**
+     * The entries of a {@code --classpath-file}: one JAR or directory per
+     * line, in order, blank lines and {@code #} comments ignored. A build
+     * tool's classpath of several hundred JARs exceeds the Windows
+     * command-line limit as one argument, so it is handed over this way.
+     */
+    public static java.util.List<String> readClasspathFile(java.nio.file.Path listing) throws java.io.IOException {
+        java.util.List<String> entries = new java.util.ArrayList<>();
+        try {
+            for (String line : java.nio.file.Files.readAllLines(listing, java.nio.charset.StandardCharsets.UTF_8)) {
+                String entry = line.strip();
+                if (!entry.isEmpty() && !entry.startsWith("#")) {
+                    entries.add(entry);
+                }
+            }
+        } catch (java.io.IOException e) {
+            throw new java.io.IOException("--classpath-file could not be read: " + listing, e);
+        }
+        return entries;
+    }
+
     /** Loads a class without running static initializers. */
     public static Class<?> loadJavaClass(String name) {
         String candidate = name;

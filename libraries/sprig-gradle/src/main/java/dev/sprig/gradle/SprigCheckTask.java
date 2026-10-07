@@ -15,11 +15,7 @@ public abstract class SprigCheckTask extends SprigTask {
     @TaskAction
     public void check() {
         List<String> arguments = new ArrayList<>(List.of("check", "--offline", "--json"));
-        String classpath = getSprigClasspathArgument();
-        if (!classpath.isBlank()) {
-            arguments.add("--classpath");
-            arguments.add(classpath);
-        }
+        addClasspathArguments(arguments);
         executeSprig(arguments);
     }
 }

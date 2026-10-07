@@ -553,6 +553,20 @@ print(Interop.accepted(fn(value: String) => fail(value)))
                throwing.returncode == 1 and throwing_json and throwing_json["code"] == "SPR-TYPE-CALLABLE-THROWS",
                f"exit={throwing.returncode} {throwing.stdout}{throwing.stderr}")
 
+        # ----------------------------------------------- classpath file
+        listing = directory / "classpath.txt"
+        listing.write_text("# the fixture classes\n" + cp + "\n\n", encoding="utf-8")
+        _, listed = run_file("classpath-file.spr", '''import audit.Interop as Interop
+print(Interop.total(1, 2))
+''')
+        listed_run = call("run", directory / "classpath-file.spr", "--classpath-file", listing)
+        verify("run-classpath-file", listed_run.returncode == 0 and listed_run.stdout == "3\n",
+               f"exit={listed_run.returncode} {listed_run.stdout}{listed_run.stderr}")
+        missing_listing = call("check", directory / "classpath-file.spr", "--classpath-file", directory / "absent.txt", "--json")
+        verify("check-classpath-file-missing",
+               missing_listing.returncode != 0 and "--classpath-file could not be read" in missing_listing.stdout + missing_listing.stderr,
+               f"exit={missing_listing.returncode} {missing_listing.stdout[:300]}{missing_listing.stderr[:300]}")
+
         # ---------------------------------------------- Int to int narrowing
         _, narrow_run = run_file("narrow.spr", '''import audit.Narrow as Narrow
 let n: Int = 7

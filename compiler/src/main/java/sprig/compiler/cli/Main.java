@@ -150,6 +150,7 @@ public final class Main {
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");
         out.println("  check/build/run/api/wrap accept repeated --classpath JAR_OR_DIR");
+        out.println("  every command taking --classpath also takes --classpath-file FILE (one entry per line)");
         out.println("  fmt <file.spr|directory> [--check] [--json] canonical comment-preserving formatting");
         out.println("  lsp [--stdio] [--classpath PATH]            language server on standard input/output");
         out.println("  version");
@@ -1978,6 +1979,15 @@ public final class Main {
                     case "--classpath" -> {
                         if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.classpath.add(args[++i]);
                         else options.optionError = "--classpath requires a JAR or directory path";
+                    }
+                    case "--classpath-file" -> {
+                        if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
+                            try {
+                                options.classpath.addAll(sprig.compiler.Compiler.readClasspathFile(Path.of(args[++i])));
+                            } catch (java.io.IOException e) {
+                                options.optionError = e.getMessage();
+                            }
+                        } else options.optionError = "--classpath-file requires a file with one JAR or directory per line";
                     }
                     case "-d", "--out" -> {
                         options.outDirSpecified = true;

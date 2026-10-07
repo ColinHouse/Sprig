@@ -59,7 +59,7 @@ def main() -> int:
         require(lock.is_file(), "template must carry a generated lock for its declared dependencies")
         lock_bytes = lock.read_bytes()
 
-        check = run([str(project / "gradlew"), "--no-daemon", "clean", "check"],
+        check = run([str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "clean", "check"],
                     cwd=project, env=env)
         require(check.returncode == 0, "Fabric clean check must compile and execute Sprig tests")
         output = check.stdout + check.stderr
@@ -69,12 +69,12 @@ def main() -> int:
         require("sprigGenerate" in output, "plugin must own Sprig source generation")
         require(lock.read_bytes() == lock_bytes, "check must not rewrite the explicit Sprig lock")
 
-        info = run([str(project / "gradlew"), "--no-daemon", "sprigInfo"],
+        info = run([str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "sprigInfo"],
                    cwd=project, env=env)
         require(info.returncode == 0 and "Target source set: client" in info.stdout,
                 "the template must target Loom's split client source set")
 
-        build = run([str(project / "gradlew"), "--no-daemon", "clean", "build"],
+        build = run([str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "clean", "build"],
                     cwd=project, env=env)
         require(build.returncode == 0, "Fabric clean build must remap and package the mod")
         jars = sorted((project / "build" / "libs").glob("*.jar"))
@@ -97,7 +97,7 @@ def main() -> int:
         if args.run_client:
             capture = project.parent / "runClient-smoke.log"
             capture.parent.mkdir(parents=True, exist_ok=True)
-            command = [str(project / "gradlew"), "--no-daemon", "clean", "runClient"]
+            command = [str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "clean", "runClient"]
             with capture.open("w", encoding="utf-8") as log:
                 process = subprocess.Popen(command, cwd=project, env=env,
                                            stdout=log, stderr=subprocess.STDOUT,
