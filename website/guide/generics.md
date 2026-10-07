@@ -47,7 +47,7 @@ let entries: List[Entry[String, Int]] = [] # 写在类型里的，总是要写
 
 - 只看这次调用的实参。结果赋给什么类型、传给哪个参数，都不算数。
 - 不带类型的数字只在别的实参都没说明类型时才算数。如果 `small` 是 `Int32`，`lists.sorted([small, 8])` 排的是 `Int32`，`8` 也跟着变成 `Int32`；单独写 `lists.sorted([1, 2])`，排的就是 `Int`。
-- `null`、`[]` 和 `{}` 什么也说明不了。有元素的列表或 map 字面量按元素算。
+- `null`、`[]` 和 `{}` 什么也说明不了。有元素的列表或 map 字面量按元素算。如果直接传给普通的 `T`，字面量就作为一个整体来算，而且只在别的实参都没说明 `T` 时才算数：单独写 `identity([1])` 得到 `MutableList[Int]`，和 `let xs = [1]` 一样；旁边有一个 `List[Int]` 的值时，这个字面量也会变成 `List[Int]`。
 - lambda 的参数类型是写出来的，所以按写的算；它的函数体给出结果类型。
 - 几个实参给出的类型不一样时，取其他类型都能放进去的那一个：`Int32` 和 `Int` 得到 `Int`，同一个 variant 的两种情况得到这个 variant。找不到这样的类型，调用就报错。
 - Java 方法和 `ArrayList[String]` 这样的 Java 泛型类型，类型参数总是要写。
@@ -62,7 +62,7 @@ SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:3:22: Cannot infer type argument 
 1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-左边的 `String?` 帮不上忙，写成 `lists.first[String]([])` 就好。两个实参对不上的时候，这条错误会把两边都说出来，比如 `T is String from argument 1 but Bool from argument 2`。
+左边的 `String?` 帮不上忙，写成 `lists.first[String]([])` 就好。两个实参对不上的时候，这条错误会把两边都说出来，比如 `T is String from argument 1 but Bool from argument 2`。如果是实参的形状本身不对，比如该传函数的地方传了数字，报的就是普通的类型不匹配，因为这时写出类型参数也没用。
 
 类型参数的个数写错了，会报 `SPR-TYPE-GENERIC-ARITY`。在类型的位置只写 `Box`、不带参数，或者给不是泛型的类型加了参数，都属于这种情况。
 

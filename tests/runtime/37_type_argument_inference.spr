@@ -153,3 +153,20 @@ print(slot.value)
 let maybe: String? = null
 let same: String? = identity(maybe)
 print(same)
+
+# A literal passed for a bare T is weak like a number: next to a List value it
+# is a List too; on its own it is a MutableList, as in a let.
+let tags_by_name: Map[String, List[String]] = {"ann": ["admin"]}
+let tags: List[String] = nulls.or_else(tags_by_name["bob"], ["guest"])
+print(tags)
+let rows: List[List[Int]] = both(plain, [3])
+print(rows)
+let last_only: List[Int] = lists.fold(plain, plain, fn(acc: List[Int], n: Int) => [n])
+print(last_only)
+
+# A nullable and a plain number meet at the nullable type in either order.
+let maybe32: Int32? = 5
+let mixed: List[Int?] = both(maybe32, big)
+let mixed_too: List[Int?] = both(big, maybe32)
+print(mixed)
+print(mixed_too)

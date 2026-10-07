@@ -1,0 +1,9 @@
+import "@std/lists.spr" as lists
+
+class Order:
+    let cents: Int
+
+# K is unknown only because the lambda has two parameters: that is the type
+# mismatch the written form reports, not a missing type argument.
+let orders: List[Order] = [Order(cents=1)]
+let sorted = lists.sort_by(orders, fn(x: Order, y: Order) => x.cents)

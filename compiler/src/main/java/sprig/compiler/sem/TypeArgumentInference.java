@@ -34,9 +34,12 @@ import sprig.compiler.types.VariantType;
  * list or map literal and the result of a lambda are flexible, because there
  * the value only has to be assignable. Of the flexible types the one every
  * other is assignable to wins, so {@code Int32} and {@code Int} give
- * {@code Int}, and a variant case gives its variant. An unannotated numeric
- * literal is weak: it counts only when nothing else says what the parameter
- * is. {@code null}, {@code []} and {@code {}} say nothing.
+ * {@code Int}, {@code Int32?} and {@code Int} give {@code Int?}, and a variant
+ * case gives its variant. An unannotated numeric literal, and a list or map
+ * literal typed as a whole, is weak: it counts only when nothing else says
+ * what the parameter is, so a written {@code List[String]} wins over the
+ * {@code MutableList[String]} a literal has on its own. {@code null},
+ * {@code []} and {@code {}} say nothing.
  *
  * <p>Nothing here reports a diagnostic. The checker turns an incomplete
  * {@link Solution} into {@code SPR-TYPE-GENERIC-ARGS-REQUIRED} and checks every
@@ -62,23 +65,45 @@ final class TypeArgumentInference {
     private record Bound(Type type, boolean exact, boolean weak, String source) {
     }
 
+    /** Why an argument gave a parameter no type. */
+    enum Silence {
+        /** null, an empty literal or one holding only those: no type of its own. */
+        NOTHING,
+        /** Its type has another shape than the parameter's type, so the argument check reports it. */
+        MISFIT,
+        /** A Unit result, which is not a value. */
+        UNIT,
+        /** Only a Java type mentions the parameter, and Java type arguments are never inferred. */
+        JAVA
+    }
+
+    /** The first argument that gave a parameter no type, why, and the top-level argument it is part of. */
+    record Failure(Silence kind, String reason, Expr argument) {
+    }
+
     /** The inferred arguments in declaration order, or why some could not be inferred. */
     static final class Solution {
         /** One entry per type parameter; null where it is unknown. */
         final List<Type> arguments;
         /** Parameter to the reason it is unknown, in declaration order. */
         final Map<String, String> failures;
+        /** Unknown parameters whose only word came from arguments that gave no type, and why. */
+        final Map<String, Failure> silences;
         /** Unknown parameters whose only evidence was an argument that has an error of its own. */
         final Set<String> blocked;
         /** Unknown parameters that two arguments gave different types. */
         final Set<String> conflicts;
+        /** Inferred parameters to the argument their type came from, as in "argument 2". */
+        final Map<String, String> sources;
 
-        private Solution(List<Type> arguments, Map<String, String> failures, Set<String> blocked,
-                         Set<String> conflicts) {
+        private Solution(List<Type> arguments, Map<String, String> failures, Map<String, Failure> silences,
+                         Set<String> blocked, Set<String> conflicts, Map<String, String> sources) {
             this.arguments = arguments;
             this.failures = failures;
+            this.silences = silences;
             this.blocked = blocked;
             this.conflicts = conflicts;
+            this.sources = sources;
         }
 
         boolean complete() {
@@ -91,9 +116,11 @@ final class TypeArgumentInference {
     private final Arguments arguments;
     private final Map<String, List<Bound>> bounds = new LinkedHashMap<>();
     /** The first reason an argument said nothing usable about a parameter. */
-    private final Map<String, String> silent = new LinkedHashMap<>();
+    private final Map<String, Failure> silent = new LinkedHashMap<>();
     private final Set<String> poisoned = new LinkedHashSet<>();
     private final Set<String> mentioned = new LinkedHashSet<>();
+    /** The top-level argument being read. */
+    private Expr current;
 
     TypeArgumentInference(Decl owner, Arguments arguments) {
         this.owner = owner;
@@ -104,6 +131,7 @@ final class TypeArgumentInference {
     /** Adds the evidence of one argument passed for its declared parameter or field type. */
     void argument(Type declared, Expr value, String source) {
         mentioned.addAll(ownParameters(declared));
+        current = value;
         part(declared, value, source, false);
     }
 
@@ -117,7 +145,7 @@ final class TypeArgumentInference {
             return;
         }
         if (value instanceof Expr.NullLit) {
-            silent(declared, source + " is null", true);
+            silent(declared, source + " is null", Silence.NOTHING);
             return;
         }
         if (isNumericLiteral(value)) {
@@ -127,7 +155,7 @@ final class TypeArgumentInference {
         Type target = declared.nonNull();
         if (value instanceof Expr.ListLit list) {
             if (list.items.isEmpty()) {
-                silent(declared, source + " is an empty list", true);
+                silent(declared, source + " is an empty list", Silence.NOTHING);
                 return;
             }
             if (target instanceof ListType listType) {
@@ -139,7 +167,7 @@ final class TypeArgumentInference {
         }
         if (value instanceof Expr.MapLit map) {
             if (map.keys.isEmpty()) {
-                silent(declared, source + " is an empty map", true);
+                silent(declared, source + " is an empty map", Silence.NOTHING);
                 return;
             }
             if (target instanceof MapType mapType) {
@@ -152,7 +180,7 @@ final class TypeArgumentInference {
         }
         if (saysNothing(value)) {
             // [null] or [[]] has no type of its own to give T.
-            silent(declared, source + " holds only null or empty literals", true);
+            silent(declared, source + " holds only null or empty literals", Silence.NOTHING);
             return;
         }
         Type type = typed ? value.type : arguments.typeOf(value);
@@ -183,23 +211,26 @@ final class TypeArgumentInference {
             return;
         }
         if (actual == NativeType.UNIT) {
-            silent(declared, source + " is a Unit result, which is not a value", false);
+            silent(declared, source + " is a Unit result, which is not a value", Silence.UNIT);
             return;
         }
         if (actual == NativeType.NULL) {
-            silent(declared, source + " is null", true);
+            silent(declared, source + " is null", Silence.NOTHING);
             return;
         }
         if (visit(actual, part -> part == NativeType.NULL)) {
             // {"a": null} is typed MutableMap[String, null], which no written type argument can be.
-            silent(declared, source + " is " + actual.display(), true);
+            silent(declared, source + " is " + actual.display(), Silence.NOTHING);
             return;
         }
         if (declared instanceof TypeParameterType parameter && own(parameter)) {
             Type bound = actual;
             // A bare T takes X? only where a written [X?] would be accepted;
-            // otherwise T is X, and the argument check reports the nullable value.
-            if (bound.isNullable() && !arguments.acceptsNullable(parameter.name, bound)) {
+            // otherwise T is X, and the argument check reports the nullable
+            // value. An exact position keeps X?: List[T] against List[X?] is
+            // T = X? or nothing, so the call reports the nullable argument the
+            // way a written [X?] is reported.
+            if (bound.isNullable() && !exact && !arguments.acceptsNullable(parameter.name, bound)) {
                 bound = bound.nonNull();
             }
             bounds.computeIfAbsent(parameter.name, ignored -> new ArrayList<>())
@@ -258,17 +289,20 @@ final class TypeArgumentInference {
         }
         if (declared instanceof JavaType javaType) {
             silent(declared, "only the Java type " + javaType.display() + " of " + source
-                    + " mentions it, and Java type arguments are never inferred", false);
+                    + " mentions it, and Java type arguments are never inferred", Silence.JAVA);
             return;
         }
-        silent(declared, source + " is " + actual.display() + ", which does not fit " + declared.display(), false);
+        silent(declared, source + " is " + actual.display() + ", which does not fit " + declared.display(),
+                Silence.MISFIT);
     }
 
     Solution solve() {
         List<Type> solved = new ArrayList<>();
         Map<String, String> failures = new LinkedHashMap<>();
+        Map<String, Failure> silences = new LinkedHashMap<>();
         Set<String> blocked = new LinkedHashSet<>();
         Set<String> conflicts = new LinkedHashSet<>();
+        Map<String, String> sources = new LinkedHashMap<>();
         for (String parameter : parameters) {
             List<Bound> all = bounds.getOrDefault(parameter, List.of());
             List<Bound> pool = new ArrayList<>();
@@ -284,7 +318,9 @@ final class TypeArgumentInference {
                 if (poisoned.contains(parameter)) {
                     blocked.add(parameter);
                 } else if (silent.containsKey(parameter)) {
-                    failures.put(parameter, silent.get(parameter));
+                    Failure failure = silent.get(parameter);
+                    failures.put(parameter, failure.reason());
+                    silences.put(parameter, failure);
                 } else if (mentioned.contains(parameter)) {
                     failures.put(parameter, "no argument says what " + parameter + " is");
                 } else {
@@ -292,30 +328,34 @@ final class TypeArgumentInference {
                 }
                 continue;
             }
-            Bound[] conflict = new Bound[2];
-            Type type = resolve(pool, conflict);
+            Bound[] decided = new Bound[2];
+            Type type = resolve(pool, decided);
             solved.add(type);
             if (type == null) {
                 conflicts.add(parameter);
-                failures.put(parameter, parameter + " is " + conflict[0].type().display() + " from "
-                        + conflict[0].source() + " but " + conflict[1].type().display() + " from "
-                        + conflict[1].source());
+                failures.put(parameter, parameter + " is " + decided[0].type().display() + " from "
+                        + decided[0].source() + " but " + decided[1].type().display() + " from "
+                        + decided[1].source());
+            } else {
+                sources.put(parameter, decided[0].source());
             }
         }
-        return new Solution(solved, failures, blocked, conflicts);
+        return new Solution(solved, failures, silences, blocked, conflicts, sources);
     }
 
     /**
      * The one type every bound agrees with: all exact bounds must be equal and
-     * every flexible bound assignable to it. Without an exact bound, the first
-     * flexible bound every other one is assignable to wins; a variant case
-     * stands for its variant there, so Some(value=1) makes T Option[Int], as
-     * written type arguments would, and cases of one variant meet at the
-     * variant. An exact position keeps the case: List[Option[Int].Some] is not
-     * List[Option[Int]]. Null, with two disagreeing bounds, when there is no
-     * such type.
+     * every flexible bound assignable to it. Without an exact bound, the least
+     * candidate every flexible bound is assignable to wins. A candidate is a
+     * bound's type with a variant case read as its variant, so Some(value=1)
+     * makes T Option[Int], as written type arguments would, and cases of one
+     * variant meet at the variant; when some bound is nullable, each type is
+     * also a candidate as nullable, so Int32? and Int meet at Int? in either
+     * order. An exact position keeps the case: List[Option[Int].Some] is not
+     * List[Option[Int]]. On success {@code decided[0]} is the bound the type
+     * came from; on a conflict it holds two bounds that disagree.
      */
-    private static Type resolve(List<Bound> pool, Bound[] conflict) {
+    private static Type resolve(List<Bound> pool, Bound[] decided) {
         Bound anchor = null;
         for (Bound bound : pool) {
             if (bound.exact()) {
@@ -328,33 +368,57 @@ final class TypeArgumentInference {
                 boolean fits = bound.exact() ? bound.type().equals(anchor.type())
                         : Semantics.isAssignable(anchor.type(), bound.type());
                 if (!fits) {
-                    conflict[0] = anchor;
-                    conflict[1] = bound;
+                    decided[0] = anchor;
+                    decided[1] = bound;
                     return null;
                 }
             }
+            decided[0] = anchor;
             return anchor.type();
         }
-        for (Bound candidate : pool) {
-            Type widest = widenCase(candidate.type());
+        boolean nullable = false;
+        for (Bound bound : pool) {
+            nullable |= bound.type().isNullable();
+        }
+        List<Type> candidates = new ArrayList<>();
+        List<Bound> origins = new ArrayList<>();
+        for (Bound bound : pool) {
+            Type widened = widenCase(bound.type());
+            candidates.add(widened);
+            origins.add(bound);
+            if (nullable && !widened.isNullable()) {
+                candidates.add(NullableType.of(widened));
+                origins.add(bound);
+            }
+        }
+        Type best = null;
+        Bound origin = null;
+        for (int i = 0; i < candidates.size(); i++) {
+            Type candidate = candidates.get(i);
             boolean fits = true;
             for (Bound bound : pool) {
-                if (!Semantics.isAssignable(widest, bound.type())) {
+                if (!Semantics.isAssignable(candidate, bound.type())) {
                     fits = false;
                     break;
                 }
             }
-            if (fits) {
-                return widest;
+            // Of two fitting candidates the narrower one wins, whichever came first.
+            if (fits && (best == null || Semantics.isAssignable(best, candidate) && !best.equals(candidate))) {
+                best = candidate;
+                origin = origins.get(i);
             }
         }
+        if (best != null) {
+            decided[0] = origin;
+            return best;
+        }
         Bound first = pool.get(0);
-        conflict[0] = first;
-        conflict[1] = pool.get(pool.size() - 1);
+        decided[0] = first;
+        decided[1] = pool.get(pool.size() - 1);
         for (Bound bound : pool) {
             if (!Semantics.isAssignable(first.type(), bound.type())
                     && !Semantics.isAssignable(bound.type(), first.type())) {
-                conflict[1] = bound;
+                decided[1] = bound;
                 break;
             }
         }
@@ -374,9 +438,10 @@ final class TypeArgumentInference {
         return parameter.owner == owner && parameters.contains(parameter.name);
     }
 
-    private void silent(Type declared, String fact, boolean saysNothing) {
+    private void silent(Type declared, String fact, Silence kind) {
         for (String parameter : ownParameters(declared)) {
-            silent.putIfAbsent(parameter, saysNothing ? fact + ", which says nothing about " + parameter : fact);
+            silent.putIfAbsent(parameter, new Failure(kind,
+                    kind == Silence.NOTHING ? fact + ", which says nothing about " + parameter : fact, current));
         }
     }
 
@@ -485,18 +550,12 @@ final class TypeArgumentInference {
         return false;
     }
 
-    /** A literal whose every element is a numeric literal: what it says is weak too. */
+    /**
+     * A numeric literal, or a list or map literal typed as a whole: its type
+     * follows from where it goes, so a written argument's type wins over it.
+     * On its own, [x] is a MutableList, as in a let without a type.
+     */
     private static boolean weak(Expr expr) {
-        if (isNumericLiteral(expr)) {
-            return true;
-        }
-        if (expr instanceof Expr.ListLit list) {
-            return !list.items.isEmpty() && list.items.stream().allMatch(TypeArgumentInference::weak);
-        }
-        if (expr instanceof Expr.MapLit map) {
-            return !map.keys.isEmpty() && map.keys.stream().allMatch(TypeArgumentInference::weak)
-                    && map.values.stream().allMatch(TypeArgumentInference::weak);
-        }
-        return false;
+        return isNumericLiteral(expr) || expr instanceof Expr.ListLit || expr instanceof Expr.MapLit;
     }
 }

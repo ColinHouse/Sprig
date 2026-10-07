@@ -654,7 +654,9 @@ def check_quick_fixes(directory):
                 stop_quietly(started)
 
 
-INFERRED = '''generic T:
+INFERRED = '''import "@std/lists.spr" as lists
+
+generic T:
     func identity(value: T) -> T:
         return value
 
@@ -672,6 +674,8 @@ let a = identity(42)
 let b = Box(value="x")
 let c = Option.Some(value=1.5)
 let d = identity[Int](7)
+let e = lists.first(["a"])
+let f = lists.Pair(first=1, second="x")
 '''
 
 
@@ -686,7 +690,10 @@ def check_inferred_hover(directory):
         lines = INFERRED.splitlines()
         cases = [("let a = identity(42)", "identity", "Here: `identity[Int](...) -> Int`"),
                  ("let b = Box(value=\"x\")", "Box", "Here: `Box[String](...)`"),
-                 ("let c = Option.Some(value=1.5)", "Some", "Here: `Option[Float].Some(...)`")]
+                 ("let c = Option.Some(value=1.5)", "Some", "Here: `Option[Float].Some(...)`"),
+                 # Spelled as this module writes it: through the import alias.
+                 ("let e = lists.first([\"a\"])", "first", "Here: `lists.first[String](...) -> String?`"),
+                 ("let f = lists.Pair(first=1, second=\"x\")", "Pair", "Here: `lists.Pair[Int, String](...)`")]
         for text, needle, expected in cases:
             line = lines.index(text)
             hover = hover_text(client, path, line, position(INFERRED, line, needle))

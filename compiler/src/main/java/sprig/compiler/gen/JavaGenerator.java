@@ -1148,7 +1148,25 @@ public final class JavaGenerator {
     // Expressions
     // ------------------------------------------------------------------
 
+    /**
+     * Code generation runs only for a program without errors, so an
+     * expression the checker left with the error type, or a call it did not
+     * resolve, means the checker failed to report a problem. Generating Java
+     * for it would silently change the program; this stops the build instead.
+     */
+    private String unchecked(Expr expr) {
+        diagnostics.add(sprig.compiler.diag.Diagnostic.error(sprig.compiler.diag.Codes.JVM_INTERNAL,
+                sprig.compiler.diag.Phase.JVM,
+                "Internal compiler error: code generation reached an expression the checker could not type "
+                        + "and did not report; please report this program",
+                currentModule == null ? null : currentModule.uri, expr.span));
+        return "null";
+    }
+
     private String emitExpr(Expr expr) {
+        if (expr.type == NativeType.ERROR) {
+            return unchecked(expr);
+        }
         if (expr instanceof Expr.IntLit intLit) {
             if (intLit.type == NativeType.INT32) return intLit.value.toString();
             if (intLit.type == NativeType.FLOAT32) return java.lang.Float.toString(intLit.value.floatValue()) + "f";
@@ -1547,8 +1565,8 @@ public final class JavaGenerator {
 
     private String emitCall(Expr.Call call) {
         ResolvedCall resolved = call.resolved;
-        if (resolved == null) {
-            return "null";
+        if (resolved == null || resolved.returnType == NativeType.ERROR) {
+            return unchecked(call);
         }
         switch (resolved.kind) {
             case FUNCTION:

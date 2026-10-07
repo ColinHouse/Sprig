@@ -15,6 +15,7 @@ import sprig.compiler.diag.Span;
 import sprig.compiler.sem.ResolvedCall;
 import sprig.compiler.sem.ResolvedField;
 import sprig.compiler.sem.Symbol;
+import sprig.compiler.sem.TypeSpelling;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.JavaType;
@@ -429,13 +430,13 @@ final class SymbolIndex {
                     if (occurrence != null) {
                         occurrence.type = access.type;
                         occurrence.resultType = call.type;
-                        occurrence.inferredCall = inferredCall(call);
+                        occurrence.inferredCall = inferredCall(module, call);
                     }
                 } else if (call.callee instanceof Expr.Name name) {
                     Occurrence occurrence = symbolReference(name.span, name.symbol);
                     if (occurrence != null) {
                         occurrence.type = name.type;
-                        occurrence.inferredCall = inferredCall(call);
+                        occurrence.inferredCall = inferredCall(module, call);
                     }
                 } else {
                     expr(call.callee);
@@ -659,11 +660,12 @@ final class SymbolIndex {
 
     /**
      * A generic call written without type arguments, as it reads with the
-     * ones the compiler inferred: {@code identity[Int](...) -> Int},
-     * {@code Box[Int](...)} or {@code Option[Int].Some(...)}. Null for any
-     * other call, including one that writes its type arguments.
+     * ones the compiler inferred and as the calling module would write it:
+     * {@code identity[Int](...) -> Int}, {@code lists.Pair[Int, String](...)}
+     * or {@code f.Option[Int].Some(...)}. Null for any other call, including
+     * one that writes its type arguments.
      */
-    static String inferredCall(Expr.Call call) {
+    static String inferredCall(Module module, Expr.Call call) {
         ResolvedCall resolved = call.resolved;
         if (resolved == null || resolved.typeArgs.isEmpty() || call.callee instanceof Expr.Subscript
                 || call.callee instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Subscript) {
@@ -671,16 +673,31 @@ final class SymbolIndex {
         }
         List<String> written = new ArrayList<>();
         for (Type type : resolved.typeArgs) {
-            written.add(display(type));
+            written.add(TypeSpelling.in(module, type));
         }
         String arguments = "[" + String.join(", ", written) + "]";
         return switch (resolved.kind) {
             case FUNCTION, MODULE_FUNCTION, METHOD -> resolved.methodDecl == null ? null
-                    : resolved.methodDecl.name + arguments + "(...) -> " + display(resolved.returnType);
-            case CLASS_CTOR -> resolved.classDecl == null ? null : resolved.classDecl.name + arguments + "(...)";
+                    : calleeName(call.callee, resolved.methodDecl.name) + arguments + "(...) -> "
+                            + TypeSpelling.in(module, resolved.returnType);
+            case CLASS_CTOR -> resolved.classDecl == null ? null
+                    : calleeName(call.callee, resolved.classDecl.name) + arguments + "(...)";
             case VARIANT_CTOR -> resolved.returnType instanceof VariantCaseType caseType
-                    ? caseType.variant.name + arguments + "." + caseType.variantCase.name + "(...)" : null;
+                    && call.callee instanceof Expr.FieldAccess access
+                    ? calleeName(access.receiver, caseType.variant.name) + arguments + "." + access.name + "(...)"
+                    : null;
             default -> null;
         };
+    }
+
+    /** How a call names its callee: 'identity', 'lists.first' or 'f.Option'. */
+    private static String calleeName(Expr callee, String fallback) {
+        if (callee instanceof Expr.Name name) {
+            return name.name;
+        }
+        if (callee instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Name receiver) {
+            return receiver.name + "." + access.name;
+        }
+        return fallback;
     }
 }

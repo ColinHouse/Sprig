@@ -20,11 +20,12 @@ by the historical design kit in `docs/history/design-kit/`.
   or none; partial type arguments are never guessed. There is no variance. Java
   methods and Java generic types are never inferred, and neither is a Sprig
   parameter that appears only inside a Java type such as `JavaList[T]`.
-  Inference types a lambda or literal argument on its own first and checks it
-  again against the inferred types when that can change it; an error deep
-  inside many levels of generic calls nested in lambda arguments therefore
-  takes checking time that doubles with each level. A type parameter `T` has
-  no operators or methods, equality only
+  Inference types a lambda or literal argument on its own first and then
+  checks it once more against the inferred types, so generic calls nested in
+  lambda or literal arguments are checked in time that grows with the square
+  of their nesting depth (a 4095-node tree literal of generic constructors
+  checks in about half a second). A type parameter `T` has no operators or
+  methods, equality only
   under `requires T: Equatable` and ordering only under
   `requires T: Comparable` (Int, Int32, Float, Float32, Decimal, BigInt and
   String). User-defined capabilities are not implemented

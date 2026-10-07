@@ -47,7 +47,7 @@ Here's how the compiler works them out:
 
 - Only the call's arguments count. The type you assign the result to, or the parameter you pass it to, never does.
 - A plain number counts only when nothing else says what the type is. If `small` is an `Int32`, `lists.sorted([small, 8])` sorts `Int32` values, and the `8` becomes an `Int32` too. `lists.sorted([1, 2])` on its own sorts `Int` values.
-- `null`, `[]` and `{}` say nothing. A list or map literal with elements counts by its elements.
+- `null`, `[]` and `{}` say nothing. A list or map literal with elements counts by its elements. Passed for a plain `T`, a literal counts as a whole, and only when nothing else says what `T` is: on its own, `identity([1])` gives a `MutableList[Int]`, as `let xs = [1]` does, but next to a `List[Int]` value the literal becomes a `List[Int]` too.
 - A lambda's parameter types are written, so they count as written; its body gives the result type.
 - When arguments give different types, the one the others fit into wins: `Int32` and `Int` make `Int`, and two cases of one variant make the variant. If there's no such type, the call is an error.
 - Java methods and Java generic types such as `ArrayList[String]` always take written type arguments.
@@ -62,7 +62,7 @@ SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:3:22: Cannot infer type argument 
 1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-The `String?` on the left doesn't help, so write `lists.first[String]([])`. When two arguments disagree, the same error names both, for example `T is String from argument 1 but Bool from argument 2`.
+The `String?` on the left doesn't help, so write `lists.first[String]([])`. When two arguments disagree, the same error names both, for example `T is String from argument 1 but Bool from argument 2`. If an argument simply has the wrong shape for its parameter, such as a number where a function goes, you get the usual type mismatch instead, because writing the type arguments wouldn't help.
 
 The wrong number of type arguments is rejected with `SPR-TYPE-GENERIC-ARITY`. That includes a bare `Box` in a type position and type arguments on a type that isn't generic.
 

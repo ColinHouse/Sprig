@@ -1,0 +1,6 @@
+import "@std/lists.spr" as lists
+
+# List[T] against List[String?] can only mean T = String?, which first
+# rejects because it declares T?: reported as the written form reports it.
+let names: List[String?] = ["a", null]
+let first = lists.first(names)

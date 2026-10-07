@@ -271,6 +271,42 @@
     "source": "type argument inference: a bare T takes X? only where a written [X?] is accepted"
   },
   {
+    "file": "generic_inference_lost_error.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "implemented",
+    "source": "type argument inference review: an unknown type inside a literal argument was lost and the program miscompiled"
+  },
+  {
+    "file": "generic_inference_lost_error_lambda.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "implemented",
+    "source": "type argument inference review: an unknown type inside a lambda or map argument was lost"
+  },
+  {
+    "file": "generic_application_default_error.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "implemented",
+    "source": "type argument inference review: the same lost error in a field default"
+  },
+  {
+    "file": "generic_inference_shape.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "type argument inference review: a shape mismatch is reported as the mismatch it is"
+  },
+  {
+    "file": "generic_inference_unit.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "type argument inference review: a Unit result gives no type argument"
+  },
+  {
+    "file": "generic_inference_nullable_list.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-NULLABLE",
+    "status": "implemented",
+    "source": "type argument inference review: a nullable type in an exact position is kept"
+  },
+  {
     "file": "generic_wrong_arity.spr",
     "expected_diagnostic": "SPR-TYPE-GENERIC-ARITY",
     "status": "future semantic checker only",

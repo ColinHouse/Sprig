@@ -44,6 +44,29 @@ CASES = [
      "SPR-TYPE-GENERIC-ARGS-REQUIRED", "lists.first[Type](...)"),
     ("generic-without-implied-type", "generic T:\n    func make() -> List[T]:\n        return []\nprint(make())\n",
      "SPR-TYPE-GENERIC-ARGS-REQUIRED", "make[Type](...)"),
+    # The explicit form a hint writes is spelled as the module writes types: through an
+    # import alias, a Java class by its alias, a variant case as its variant.
+    ("generic-hint-module-type", "import \"@std/lists.spr\" as lists\ngeneric T, U:\n    func g(a: T, b: List[U]) -> Int:\n"
+     "        return b.size()\nprint(g(lists.Pair(first=1, second=\"x\"), []))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[lists.Pair[Int, String], Type](...)"),
+    ("generic-hint-java-type", "import java.util.ArrayList as ArrayList\ngeneric T, U:\n    func g(a: T, b: List[U]) -> Int:\n"
+     "        return b.size()\nlet names = ArrayList[String]()\nprint(g(names, []))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[ArrayList[String], Type](...)"),
+    ("generic-hint-case-type", "generic T:\n    variant Option:\n        Some:\n            value: T\n        None:\n"
+     "generic T, U:\n    func g(a: List[T], b: List[U]) -> Int:\n        return b.size()\n"
+     "let some = [Option.Some(value=1)]\nprint(g(some.toList(), []))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[Option[Int], Type](...)"),
+    # An argument of the wrong shape or a Unit result is reported as such, not as a missing
+    # type argument; a mismatch says where the inferred type came from.
+    ("generic-argument-shape", "import \"@std/lists.spr\" as lists\nclass Order:\n    let cents: Int\n"
+     "let orders: List[Order] = [Order(cents=1)]\nlet s = lists.sort_by(orders, fn(x: Order, y: Order) => x.cents)\n",
+     "SPR-TYPE-MISMATCH", "Type mismatch in lambda"),
+    ("generic-unit-result", "import \"@std/test.spr\" as test\nfunc fail() -> Unit throws Error:\n    throw Error(\"x\")\n"
+     "test.check_error(\"unit\", fn() => fail())\n",
+     "SPR-TYPE-UNIT", "cannot give T of 'test.check_error' a type"),
+    ("generic-inferred-source", "generic T:\n    func both(a: T, b: T) -> List[T]:\n        return [a, b]\n"
+     "print(both(null, \"x\"))\n",
+     "SPR-TYPE-NULL", "T is String, from argument 2"),
     ("input", "let line = input()\n", "SPR-NAME-UNRESOLVED", "process.read_lines()"),
     ("println", "println(1)\n", "SPR-NAME-UNRESOLVED", "print(value)"),
     ("int-call", "let n = int(\"3\")\n", "SPR-NAME-UNRESOLVED", "toIntOrNull()"),

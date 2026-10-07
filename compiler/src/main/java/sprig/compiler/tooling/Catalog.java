@@ -198,7 +198,7 @@ public final class Catalog {
                 "rules", List.of("type arguments of a generic Sprig function call, class constructor or variant case with a payload are inferred from the call's arguments when they are left out",
                         "never from the expected type, the assignment target or the result; a type position still writes Type[Arg]",
                         "written [Type] arguments still work and win; write all of them or none",
-                        "an unannotated numeric literal counts only when no other argument says what the parameter is; null, [] and {} say nothing",
+                        "an unannotated numeric literal, or a list or map literal passed for a bare T, counts only when no other argument says what the parameter is; null, [] and {} say nothing",
                         "Java methods and Java generic types keep explicit type arguments")));
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));

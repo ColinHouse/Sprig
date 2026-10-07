@@ -66,25 +66,35 @@ is never looked into.
   *exact*, because generic types are invariant.
 - **Several arguments.** All exact positions must agree, and every flexible
   argument must be assignable to that type. Without an exact position, the
-  flexible type every other one is assignable to wins: `Int32` and `Int` give
-  `Int`, `String?` and `String` give `String?` (where `[String?]` is accepted),
-  and a variant case value gives its variant (`Option.Some(value=1)` makes `T`
-  `Option[Int]`), so two cases of one variant meet at the variant.
+  narrowest type every flexible argument is assignable to wins, in any
+  argument order: `Int32` and `Int` give `Int`, `String?` and `String` give
+  `String?` and `Int32?` and `Int` give `Int?` (where a nullable argument is
+  accepted), and a variant case value gives its variant (`Option.Some(value=1)`
+  makes `T` `Option[Int]`), so two cases of one variant meet at the variant.
 - **Weak literals.** An unannotated numeric literal binds a parameter only if
   no other argument binds it. For `generic T: func pair(a: T, b: T) -> List[T]`
   and `small: Int32`, `pair(small, 8)` infers `Int32`; `pair(1, 2)` infers `Int`
   and `pair(1.5, 2.5)` `Float`. Literals of different kinds (`pair(1, 2.5)`)
-  disagree, as they do in a list literal.
+  disagree, as they do in a list literal. A list or map literal passed for a
+  bare `T` is typed as a whole and is weak in the same way: on its own,
+  `pair([1], [2])` infers `MutableList[Int]`, as `let xs = [1]` does, but next to
+  a `List[Int]` value the literal becomes a `List[Int]` too, so
+  `nulls.or_else(config["tags"], ["default"])` works for a
+  `Map[String, List[String]]`.
 - **No information.** `null`, `[]`, `{}`, a literal that holds only those, and a
-  `Unit` result say nothing. A non-empty list or map literal infers from its
-  elements, each on its own.
+  `Unit` result say nothing. A non-empty list or map literal passed for
+  `List[T]` or `Map[K, V]` infers from its elements, each on its own.
 - **Lambdas.** Lambda parameters are always annotated. A lambda is typed
   without an expected type; its parameter types bind exactly and its body
   binds the function type's result flexibly.
 - **Nullability.** A parameter written `T?` matched against `X` or `X?` binds
   `T = X`. A bare `T` matched against `X?` binds `T = X?` only if an explicit
   `[X?]` would be accepted (see the nullability rule below); otherwise
-  `T = X`, and the nullable argument is reported by the argument check.
+  `T = X`, and the nullable argument is reported by the argument check. Inside
+  another type the nullable type is kept, because `List[T]` against
+  `List[String?]` can only mean `T = String?`; where `[String?]` is not
+  accepted, the call reports `SPR-TYPE-GENERIC-NULLABLE` as the written form
+  does.
 
 After inference every argument is checked against the substituted parameter
 types exactly as with written arguments, so a literal adapts (the `8` above is
@@ -94,14 +104,29 @@ an `Int32`) and a wrong argument gets the usual `SPR-TYPE-MISMATCH` or
 and every `requires X: Comparable` is checked against them at the call.
 Generated Java is the same as for the written form.
 
+A mismatch on an argument whose expected type was inferred from another
+argument says so in its hint (`T is String, from argument 2`).
+
 A parameter that no argument determines, or that two arguments give
 incompatible types, reports `SPR-TYPE-GENERIC-ARGS-REQUIRED`. The message
 names each parameter and why (`argument 1 is an empty list, which says
 nothing about T`; `T is String from argument 1 but Bool from argument 2`), and
 the hint writes the call with the inferred arguments filled in where known,
-for example `Write lists.first[Type](...)` or
-`Write Result[Int, Type].Ok(...)`. An argument that already has an error of
-its own is no evidence, and its error is reported instead of a second one.
+spelled as the calling module writes them (`lists.Pair[Int, String]` through
+an import alias, a Java class by its import alias, a variant case as its
+variant), for example `Write lists.first[Type](...)` or
+`Write Result[Int, Type].Ok(...)`. When a parameter is unknown only because an
+argument has another shape than its parameter (`lists.sort_by(orders, 5)`) or
+is a `Unit` result, that argument is reported instead, as the
+`SPR-TYPE-MISMATCH` or `SPR-TYPE-UNIT` it is, because writing the type
+arguments would not help. An argument that already has an error of its own
+is no evidence, and its error is reported instead of a second one.
+
+Inference first types each lambda and literal argument on its own; a generic
+call nested inside it stops there once it knows its own type arguments. The
+argument is then checked once more against the inferred types, so checking
+stays polynomial in the nesting depth of generic calls instead of doubling
+with every level.
 
 ## Type parameters have almost no abilities
 
