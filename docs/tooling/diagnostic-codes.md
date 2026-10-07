@@ -137,10 +137,12 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
 ## Syntax errors
 
 - `SPR-SYNTAX-ERROR` reports layout problems in source-level terms, such as an
-  unexpected indentation or a missing indented block after `else:`. Parser
-  recovery does not expose synthetic `INDENT`, `DEDENT` or end-of-file tokens
-  as user-facing wording, and redundant end-of-file errors after a missing
-  block are suppressed.
+  unexpected indentation or a missing indented block after a header
+  (`else:`, `if ...:`, `func ...:`). Parser recovery does not expose
+  synthetic `INDENT`, `DEDENT` or end-of-file tokens as user-facing wording
+  (source text quoted in a message, such as an identifier `MAX_INDENT`, is
+  never rewritten), and redundant end-of-file errors after a missing block are
+  suppressed.
 
 ## Declaration facade errors
 

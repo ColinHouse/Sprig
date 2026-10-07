@@ -444,7 +444,9 @@ print(total)
         # The end of the file is left out only when the broken if expression reaches it.
         p.write_text('let n = 1\nlet x = if n > 0: 1 else: 2\nfunc g() -> Int:\n')
         result, found = diagnostics(p)
-        assert [(d['range']['start']['line'], 'INDENT' in d['message']) for d in found] == [(1, False), (3, True)], found
+        # The missing body is reported in source terms (#142), not as ANTLR's INDENT token.
+        assert [(d['range']['start']['line'], "Expected an indented block after 'func ...:'" in d['message'])
+                for d in found] == [(1, False), (3, True)], found
 
         # Help, capabilities and docs state the narrowing that is implemented.
         claims = [invoke('help', topic, '--json').stdout for topic in ('nullability', 'match', 'language')]
