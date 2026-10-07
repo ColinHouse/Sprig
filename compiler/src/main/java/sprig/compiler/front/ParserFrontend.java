@@ -255,17 +255,48 @@ public final class ParserFrontend {
         };
     }
 
-    /** Replace synthetic layout-token names that ANTLR exposes in generic messages. */
+    /** A quoted piece of an ANTLR message: the display of a token, which may be user source text. */
+    private static final java.util.regex.Pattern QUOTED = java.util.regex.Pattern.compile("'(?:\\\\.|[^'])*'");
+
+    /**
+     * Replaces the synthetic layout-token names that ANTLR exposes in generic
+     * messages. A quoted token display ('<EOF>') is replaced whole; other quoted
+     * text is source text and stays as written, so an identifier such as
+     * MAX_INDENT is never rewritten. Outside quotes, where ANTLR lists the
+     * token names it expected, only whole words are replaced.
+     */
     private static String readableParserMessage(String message) {
-        return message.replace("<INDENT>", "indentation")
-                .replace("<DEDENT>", "the end of an indented block")
-                .replace("<EOF>", "the end of the file")
-                .replace("INDENT", "indentation")
-                .replace("DEDENT", "the end of an indented block")
-                .replace("EOF", "the end of the file");
+        StringBuilder out = new StringBuilder();
+        java.util.regex.Matcher quoted = QUOTED.matcher(message);
+        int last = 0;
+        while (quoted.find()) {
+            out.append(readableTokenNames(message.substring(last, quoted.start())));
+            String text = quoted.group();
+            out.append(switch (text) {
+                case "'<EOF>'" -> "the end of the file";
+                case "'<INDENT>'" -> "indentation";
+                case "'<DEDENT>'" -> "the end of an indented block";
+                default -> text;
+            });
+            last = quoted.end();
+        }
+        return out.append(readableTokenNames(message.substring(last))).toString();
     }
 
-    /** The block opener immediately before a missing suite, if it is recognized here. */
+    private static String readableTokenNames(String unquoted) {
+        return unquoted.replace("<INDENT>", "indentation")
+                .replace("<DEDENT>", "the end of an indented block")
+                .replace("<EOF>", "the end of the file")
+                .replaceAll("\\bINDENT\\b", "indentation")
+                .replaceAll("\\bDEDENT\\b", "the end of an indented block")
+                .replaceAll("\\bEOF\\b", "the end of the file");
+    }
+
+    /**
+     * The header of a block whose indented body is missing, as the user wrote
+     * it ('else:', or 'if ...:' for a header with more after the keyword), or
+     * null when the token before the missing block is not a header's ':'.
+     */
     private static String missingBlockHeader(SprigParser parser, Token token) {
         if (!parser.getExpectedTokens().contains(SprigLexer.INDENT)) {
             return null;
@@ -279,11 +310,15 @@ public final class ParserFrontend {
             }
             index--;
         }
-        if (index < 1 || typeAt(stream, index) != SprigLexer.COLON
-                || typeAt(stream, index - 1) != SprigLexer.ELSE) {
+        if (index < 1 || typeAt(stream, index) != SprigLexer.COLON) {
             return null;
         }
-        return "else";
+        int first = lineStart(stream, index);
+        String keyword = stream.get(first).getText();
+        if (keyword == null || keyword.isEmpty() || !Character.isLetter(keyword.charAt(0))) {
+            return null;
+        }
+        return first == index - 1 ? keyword : keyword + " ...";
     }
 
     /**
