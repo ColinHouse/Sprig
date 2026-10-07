@@ -581,5 +581,53 @@
     "expected_diagnostic": "SPR-TYPE-MISMATCH",
     "status": "implemented",
     "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "if_expression_condition.spr",
+    "expected_diagnostic": "SPR-TYPE-CONDITION",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_branch_mismatch.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_missing_else.spr",
+    "expected_diagnostic": "SPR-SYNTAX-ERROR",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_unit_branch.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_only_null.spr",
+    "expected_diagnostic": "SPR-TYPE-INFER",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_elif_narrowing.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "if expressions; #125: a var never narrows in an elif"
+  },
+  {
+    "file": "if_expression_else_after_elif.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "if expressions; #125: a var never narrows in an else after an elif"
+  },
+  {
+    "file": "toplevel_initializer_error_continues.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "a failing top-level initializer no longer stops the module's check"
   }
 ]

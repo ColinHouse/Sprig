@@ -53,6 +53,16 @@ Blocks are defined by indentation, as in Python:
 
 Exhaustive matching pays off when code changes. Add a case to a variant, and every `match` that doesn't handle it fails to compile, so none slip through. `tests/visitor/ast_visitor.spr` in the repository, a small AST interpreter written in Sprig and run by the test suite, relies on exactly that.
 
+## Choosing a value with if
+
+<<< @/snippets/if_expressions.spr
+
+- `if` produces a value wherever an expression `match` can: after `=`, `return` or `throw`, and as a lambda's body. Each branch is one expression on its own indented line, and `elif` and `else` line up with the line the `if` starts on.
+- The `else` branch is required; leave it out and you get "An if expression needs an else branch", while the rest of the file is still checked and the editor keeps working until you add it. When there's no value to produce, write an ordinary `if` statement: an `if` at the start of a statement is always the `if` statement.
+- All branches share one type: the type the position expects, as in `let ratio: Float = if ...`, or else the type of the first branch that isn't `null`. A `null` branch makes the result nullable.
+- There's no `a if c else b` as in Python and no `c ? a : b` as in C; the compiler points you to the `if` expression instead.
+- Line breaks are ignored inside parentheses, so an `if` expression can't go straight into a call. Bind it to a `let` first and pass the name. The details are in [if expressions](/en/reference/language/if-expressions).
+
 ## Collections
 
 <<< @/snippets/collections.spr

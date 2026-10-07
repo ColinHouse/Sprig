@@ -482,7 +482,12 @@ public final class Explanations {
                         "Mismatched indentation or an unexpected token.",
                         "A construct from another language: 'else if' (Sprig writes elif), braces around a block, "
                                 + "a declaration without an initial value, ++, List<Int> (Sprig writes List[Int]) "
-                                + "or a function header without '-> Type'. The message and hint name the Sprig spelling."));
+                                + "or a function header without '-> Type'. The message and hint name the Sprig spelling.",
+                        "An if expression without its else branch, with a value on a header's line, inside "
+                                + "parentheses or used as an operand, or Python's 'a if c else b' and C's 'c ? a : b', "
+                                + "which Sprig writes as an if expression.",
+                        "An 'if' guard on a match case or an 'if' filter on a for loop: Sprig tests the condition "
+                                + "inside the body."));
                 out.put("safeFixes", List.of("Fix the first reported error, then re-check; cascades are common.",
                         "Query sprig help language --json and sprig help <topic> --json for accepted syntax."));
                 out.put("relatedCodes", List.of(Codes.LEX_INDENT_INCONSISTENT, Codes.LEX_INDENT_FIRST, Codes.LEX_CHAR));

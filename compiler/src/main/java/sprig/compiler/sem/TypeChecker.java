@@ -221,9 +221,11 @@ public final class TypeChecker {
                 inference.globalInitializers.put(declaration.symbol, declaration);
             }
         }
-        int errorsBeforeInference = diagnostics.errorCount();
+        // An initializer that fails gives its binding the error type, which is
+        // silent afterwards, so the rest of the module is still checked and
+        // reports its own errors in the same round. The statement-order check of
+        // the same initializer repeats its reports, which the sink drops.
         for (Symbol symbol : inference.globalInitializers.keySet()) inference.inferGlobal(symbol);
-        if (diagnostics.errorCount() != errorsBeforeInference) return;
         prepareDefaultEffects();
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
@@ -578,8 +580,12 @@ public final class TypeChecker {
             String op = assign.op.substring(0, 1);
             // The left-hand side supplies the context, exactly like plain `=`
             // and arithmetic: `Int32 += 1` follows the same literal rule as
-            // `x = x + 1`. Variables still never narrow implicitly.
-            Type valueType = checkExpr(assign.value, targetType);
+            // `x = x + 1`. Variables still never narrow implicitly. A String's
+            // `+=` joins its operand instead, so an if or match expression there
+            // is a join operand, typed on its own as `s += 2` is.
+            boolean joined = op.equals("+") && targetType == NativeType.STRING
+                    && (assign.value instanceof Expr.If || assign.value instanceof Expr.Match);
+            Type valueType = checkExpr(assign.value, joined ? null : targetType);
             Type result = checkArithmetic(op, targetType, valueType, assign.span, true, target, assign.value);
             requireAssignable(targetType, result, assign.value.span, Codes.TYPE_ASSIGN, "assignment");
         }
@@ -1030,6 +1036,8 @@ public final class TypeChecker {
             type = checkMapLit(mapLit, expected);
         } else if (expr instanceof Expr.Match match) {
             type = checkMatchExpression(match, expected);
+        } else if (expr instanceof Expr.If ifExpr) {
+            type = checkIfExpression(ifExpr, expected);
         } else if (expr instanceof Expr.Lambda lambda) {
             type = checkLambda(lambda, expected);
         } else {
@@ -1039,21 +1047,67 @@ public final class TypeChecker {
         return type;
     }
 
-    private Type checkMatchExpression(Expr.Match expr, Type expected) {
-        Type[] candidate = { expected };
-        boolean[] sawNull = { false };
-        checkMatch(expr.cases, branch -> {
-            Expr value = ((Stmt.ExprStmt) branch.body.get(0)).expr;
-            Type actual = checkExpr(value,candidate[0]);
-            if (actual == NativeType.NULL) sawNull[0] = true;
-            if (candidate[0] == null && actual != NativeType.NULL && actual != NativeType.ERROR) candidate[0] = actual;
-            if (candidate[0] != null && actual != NativeType.NULL) {
-                requireAssignable(candidate[0],actual,value.span,Codes.MATCH_RESULT,"match branch result");
-            } else if (expected != null) {
-                requireAssignable(expected,actual,value.span,Codes.MATCH_RESULT,"match branch result");
+    /**
+     * Result typing shared by expression match and if expressions. An expected
+     * type (annotation, parameter, return type) checks every branch. Without
+     * one, the first non-null branch establishes the type, later non-null
+     * branches must be assignable to it, and a null branch makes it nullable.
+     * There is no common-supertype inference and no new numeric promotion.
+     */
+    private final class BranchResults {
+        private final Type expected;
+        private final String code;
+        private final String role;
+        /** The hint of a plain mismatch between the established type and a branch, or null. */
+        private final java.util.function.BiFunction<Type, Type, String> mismatchHint;
+        /** Whether a Unit branch is set aside as having no value, instead of establishing Unit. */
+        private final boolean unitHasNoValue;
+        private Type candidate;
+        private boolean sawNull;
+        private boolean sawUnit;
+        private boolean sawError;
+
+        BranchResults(Type expected, String code, String role,
+                      java.util.function.BiFunction<Type, Type, String> mismatchHint, boolean unitHasNoValue) {
+            this.expected = expected;
+            this.candidate = expected;
+            this.code = code;
+            this.role = role;
+            this.mismatchHint = mismatchHint;
+            this.unitHasNoValue = unitHasNoValue;
+        }
+
+        void check(Expr value) {
+            Type actual = checkExpr(value, candidate);
+            if (actual == NativeType.ERROR) sawError = true;
+            if (actual == NativeType.UNIT && unitHasNoValue) {
+                sawUnit = true;
+                return;
             }
-        });
-        Type result = candidate[0];
+            if (actual == NativeType.NULL) sawNull = true;
+            if (candidate == null && actual != NativeType.NULL && actual != NativeType.ERROR) candidate = actual;
+            if (candidate != null && actual != NativeType.NULL) {
+                requireAssignable(candidate, actual, value.span, code, role, mismatchHint.apply(candidate, actual));
+            } else if (expected != null) {
+                requireAssignable(expected, actual, value.span, code, role, mismatchHint.apply(expected, actual));
+            }
+        }
+
+        /** The type the branches established, or null when none did. */
+        Type established() {
+            return candidate;
+        }
+
+        Type result() {
+            return expected == null && sawNull ? NullableType.of(candidate) : candidate;
+        }
+    }
+
+    private Type checkMatchExpression(Expr.Match expr, Type expected) {
+        BranchResults results = new BranchResults(expected, Codes.MATCH_RESULT, "match branch result",
+                (target, actual) -> null, false);
+        checkMatch(expr.cases, branch -> results.check(((Stmt.ExprStmt) branch.body.get(0)).expr));
+        Type result = results.established();
         if (result == null) {
             diagnostics.add(Diagnostic.error(Codes.MATCH_INFERENCE,Phase.TYPE,
                 "Cannot infer match result; write an explicit result type annotation",module.uri,expr.span));
@@ -1064,7 +1118,91 @@ public final class TypeChecker {
                 "Expression match must produce a value; use statement match for side effects",module.uri,expr.span));
             return NativeType.ERROR;
         }
-        return expected == null && sawNull[0] ? NullableType.of(result) : result;
+        return results.result();
+    }
+
+    /**
+     * An if expression: every condition is Bool and the narrowing is the if
+     * statement's. A branch sees its own condition true and every earlier
+     * condition false, the else sees all conditions false. The result typing is
+     * the expression-match typing above.
+     */
+    private Type checkIfExpression(Expr.If expr, Type context) {
+        // Unit is no value type, so it gives the branches no context; the return of
+        // a Unit function then reports the value itself.
+        Type expected = context == NativeType.UNIT || context == NativeType.ERROR ? null : context;
+        BranchResults results = new BranchResults(expected, Codes.TYPE_MISMATCH, "if branch result",
+                (target, actual) -> ifBranchHint(expected, target, actual), true);
+        Map<Symbol, Type> earlierFalse = new HashMap<>();
+        for (int i = 0; i < expr.conditions.size(); i++) {
+            Expr condition = expr.conditions.get(i);
+            narrowing.push(earlierFalse);
+            try {
+                checkCondition(condition);
+            } finally {
+                narrowing.pop();
+            }
+            Map<Symbol, Type> branch = new HashMap<>(earlierFalse);
+            branch.putAll(narrowTrue(condition));
+            narrowing.push(branch);
+            try {
+                results.check(expr.values.get(i));
+            } finally {
+                narrowing.pop();
+            }
+            earlierFalse = new HashMap<>(earlierFalse);
+            earlierFalse.putAll(narrowFalse(condition));
+        }
+        // A missing else was reported by the front end; the branches that exist
+        // still give the expression its type, so the code around it checks as usual.
+        if (expr.elseValue != null) {
+            narrowing.push(earlierFalse);
+            try {
+                results.check(expr.elseValue);
+            } finally {
+                narrowing.pop();
+            }
+        }
+        // A branch without a value (Unit) is the one error to report; a branch that
+        // failed on its own already has its error, and leaves nothing to infer from.
+        if (results.sawUnit) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_UNIT, Phase.TYPE,
+                    "An if expression must produce a value in every branch; use an if statement for side effects",
+                    module.uri, expr.span)
+                    .withHint("Write an if statement instead, with each call on its own line in its branches; "
+                            + "in a lambda, call a named function that holds that if statement."));
+            return NativeType.ERROR;
+        }
+        Type result = results.established();
+        if (result == null) {
+            if (!results.sawError) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_INFER, Phase.TYPE,
+                        "Cannot infer the type of this if expression: no branch has a value other than null",
+                        module.uri, expr.span)
+                        .withHint("Write the type on the target, for example 'let name: String? = if ...'."));
+            }
+            return NativeType.ERROR;
+        }
+        return results.result();
+    }
+
+    /** The hint for an if-expression branch whose type does not fit the result type target. */
+    private String ifBranchHint(Type expected, Type target, Type actual) {
+        if (expected != null) {
+            return "Every branch of an if expression must produce " + expected.display()
+                    + ", the type expected here; convert this branch.";
+        }
+        // Two cases of one variant: the first branch made the result that one case.
+        // The variant is spelled as this module writes it (through its import alias
+        // when it comes from another module), since the hint shows code to write.
+        if (target.nonNull() instanceof VariantCaseType first && actual.nonNull() instanceof VariantCaseType other
+                && first.variant == other.variant) {
+            return "The first branch makes the result type " + first.display() + "; write the variant on "
+                    + "the target so every case fits, for example 'let value: " + TypeSpelling.in(module, first)
+                    + " = if ...'.";
+        }
+        return "Every branch of an if expression has the type of its first branch that is not null. "
+                + "Convert this branch, or write the type on the target, for example 'let ratio: Float = if ...'.";
     }
 
     private Type checkIntLiteral(Expr.IntLit literal, Type expected) {
@@ -2197,6 +2335,14 @@ public final class TypeChecker {
         } else if (expr instanceof Expr.Match match) {
             collectMutableCaptures(match.cases.scrutinee,out);
             for (var branch : match.cases.branches) collectMutableCaptures(((Stmt.ExprStmt)branch.body.get(0)).expr,out);
+        } else if (expr instanceof Expr.If ifExpr) {
+            for (int i = 0; i < ifExpr.conditions.size(); i++) {
+                collectMutableCaptures(ifExpr.conditions.get(i), out);
+                collectMutableCaptures(ifExpr.values.get(i), out);
+            }
+            if (ifExpr.elseValue != null) {
+                collectMutableCaptures(ifExpr.elseValue, out);
+            }
         } else if (expr instanceof Expr.Lambda lambda) {
             collectMutableCaptures(lambda.body, out);
         }
@@ -2474,14 +2620,14 @@ public final class TypeChecker {
         boolean valid;
     }
 
-    /** Whether an expression's type follows from where it goes: a literal, a lambda or a match. */
+    /** Whether an expression's type follows from where it goes: a literal, a lambda, a match or an if. */
     private static boolean takesExpectedType(Expr value) {
         if (value instanceof Expr.Unary unary && !unary.op.equals("not")) {
             return takesExpectedType(unary.operand);
         }
         return value instanceof Expr.IntLit || value instanceof Expr.FloatLit || value instanceof Expr.NullLit
                 || value instanceof Expr.ListLit || value instanceof Expr.MapLit || value instanceof Expr.Lambda
-                || value instanceof Expr.Match;
+                || value instanceof Expr.Match || value instanceof Expr.If;
     }
 
     /**
@@ -5210,6 +5356,12 @@ public final class TypeChecker {
     }
 
     private void requireAssignable(Type target, Type actual, Span span, String code, String what) {
+        requireAssignable(target, actual, span, code, what, null);
+    }
+
+    /** As above; {@code mismatchHint} is the hint of a plain type mismatch that no more specific rule explains. */
+    private void requireAssignable(Type target, Type actual, Span span, String code, String what,
+                                   String mismatchHint) {
         if (Semantics.isAssignable(target, actual)) {
             return;
         }
@@ -5253,6 +5405,8 @@ public final class TypeChecker {
         String collection = collectionHint(target, actual);
         if (collection != null) {
             mismatch.withHint(collection);
+        } else if (mismatchHint != null) {
+            mismatch.withHint(mismatchHint);
         }
         diagnostics.add(mismatch);
     }

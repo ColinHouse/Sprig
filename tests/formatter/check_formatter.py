@@ -50,7 +50,20 @@ def main():
         result=invoke('fmt',path)
         assert result.returncode==0 and path.read_text()==continued_canonical, repr(path.read_text())+result.stdout+result.stderr
         assert invoke('fmt','--check',path).returncode==0
-        for source in ['enum F:\n  A\n  B\nlet x = match F.A: # map\n  # branch\n  case F.A:\n    1 # one\n  case F.B:\n    2\n', '', '# only\n# second', 'let x = [1,\n  2] # list\n', 'let x = -1 + +2\n', 'let x = "# a  b" # trailing\n', 'class C:\n  # field\n  let x: Int = 1\n  # method\n  func f() -> Int:\n    # nested\n    return x\n# top EOF' ]:
+        # An if expression is laid out like the if statement: its headers line up
+        # with the line it starts on, and each branch value sits one level deeper.
+        conditional = 'let n=2\nlet size=if n>9: # big\n      "big"\nelif n>1 :\n  # middle\n  "some"\nelse:\n        "none"\nfunc pick(flag:Bool)->Int:\n  return if flag:\n           -1\n  else:\n      +1\nprint(size+pick(true))\n'
+        conditional_canonical = 'let n = 2\nlet size = if n > 9:  # big\n    "big"\nelif n > 1:\n    # middle\n    "some"\nelse:\n    "none"\nfunc pick(flag: Bool) -> Int:\n    return if flag:\n        -1\n    else:\n        +1\nprint(size + pick(true))\n'
+        path.write_text(conditional)
+        before=invoke('run',path)
+        assert before.returncode==0 and before.stdout=='some-1\n', before.stdout+before.stderr
+        result=invoke('fmt',path)
+        assert result.returncode==0 and path.read_text()==conditional_canonical, repr(path.read_text())+result.stdout+result.stderr
+        assert invoke('fmt','--check',path).returncode==0
+        after=invoke('run',path)
+        assert (before.returncode,before.stdout,before.stderr)==(after.returncode,after.stdout,after.stderr)
+        for source in ['enum F:\n  A\n  B\nlet x = match F.A: # map\n  # branch\n  case F.A:\n    1 # one\n  case F.B:\n    2\n',
+                       'enum F:\n  A\n  B\nlet c = true\n# nested\nlet x = match F.A:\n  case F.A:\n    if c: # inner\n      1\n    else:\n      if not c:\n         2\n      else:\n         3\n  case F.B:\n    4\n', '', '# only\n# second', 'let x = [1,\n  2] # list\n', 'let x = -1 + +2\n', 'let x = "# a  b" # trailing\n', 'class C:\n  # field\n  let x: Int = 1\n  # method\n  func f() -> Int:\n    # nested\n    return x\n# top EOF' ]:
             path.write_text(source)
             result=invoke('fmt',path)
             assert result.returncode==0, result.stderr

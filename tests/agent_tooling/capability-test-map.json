@@ -10,6 +10,10 @@
   "feature.matchExpression": [
     "tests/match_expression/check_match_expression.py"
   ],
+  "feature.ifExpression": [
+    "tests/runtime/39_if_expressions.spr",
+    "tests/if_expression/check_if_expression.py"
+  ],
   "feature.sourceFunctionTypes": [
     "tests/callables/check_callables.py"
   ],

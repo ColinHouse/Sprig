@@ -16,6 +16,10 @@ class Hero:
 let hero = Hero(name="Ada")
 hero.health += 1
 let label = "health " + hero.health  # + joins text with any non-null value
+let mood = if hero.health > 50:  # if chooses a value; else is required
+    "fine"
+else:
+    "hurt"
 
 variant Expr:
     Literal(value: Int)
@@ -98,3 +102,10 @@ Expression `match` may initialize a binding or be returned directly. Every
 case contains exactly one expression; results use explicit context or the
 first non-null inferred type. Use statement match for multi-statement branches.
 See [expression matches](../language/match-expressions.md).
+
+An `if` expression chooses a value in the same positions: `if cond:`, any
+`elif cond:` and a required `else:`, each followed by one expression on its own
+indented line. Its result typing is the expression match's, and its branches
+narrow exactly like the `if` statement's. An `if` at the start of a statement
+is the `if` statement. Sprig has no `a if c else b` and no
+`c ? a : b`. See [if expressions](../language/if-expressions.md).

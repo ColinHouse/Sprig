@@ -8,6 +8,12 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Negative fixtures whose shape the grammar accepts so that the front end can
+# report the one error and still build the AST for the language server; the
+# AST builder rejects them with SPR-SYNTAX-ERROR.
+GRAMMAR_ACCEPTS = {"22_if_expression_missing_else.spr"}
+
+
 def main():
     antlr = Path(os.environ.get("ANTLR_JAR", ROOT / "build/deps/antlr-4.13.2-complete.jar")).resolve()
     if not antlr.is_file():
@@ -25,7 +31,10 @@ def main():
             for source in sorted((ROOT / "tests/syntax" / category).glob("*.spr")):
                 result = subprocess.run(["java", "-cp", os.pathsep.join((str(build), str(antlr))),
                                          "ParseSmoke", str(source)], capture_output=True, text=True)
-                if (result.returncode == 0) != (category == "positive"):
+                # A negative fixture the grammar accepts on purpose is rejected by the
+                # AST builder instead (sprig check --syntax-only still fails on it).
+                accepted = category == "positive" or source.name in GRAMMAR_ACCEPTS
+                if (result.returncode == 0) != accepted:
                     raise AssertionError(f"{category}: {source.name}\n{result.stdout}{result.stderr}")
                 count += 1
     print(f"GRAMMAR CASES PASS: {count} (syntax only; not type/runtime tests)")

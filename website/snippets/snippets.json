@@ -8,6 +8,7 @@
     "function_types.spr",
     "functions.spr",
     "generics.spr",
+    "if_expressions.spr",
     "json_fields.spr",
     "json_lookup.spr",
     "jvm_exceptions.spr",

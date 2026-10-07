@@ -1,0 +1,5 @@
+let count = 3
+let total = 1 + if count > 1:
+    count
+else:
+    0

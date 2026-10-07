@@ -1,0 +1,299 @@
+# if as an expression: positions, elif chains, nesting, nullable and typed
+# results, narrowing inside branches and source-order evaluation.
+
+class Point:
+    let x: Int
+    let y: Int
+
+variant Shape:
+    Circle(radius: Float)
+    Square(side: Float)
+
+enum Mode:
+    Fast
+    Safe
+
+let count = 2
+
+# let, with every branch on its own line
+let noun = if count == 1:
+    "item"
+else:
+    "items"
+print(count + " " + noun)
+
+# return, with an elif chain
+func size(n: Int) -> String:
+    return if n < 10:
+        "small"
+    elif n < 100:
+        "medium"
+    elif n < 1000:
+        "large"
+    else:
+        "huge"
+
+print(size(5) + " " + size(50) + " " + size(500) + " " + size(5000))
+
+# var and assignment, including a compound assignment
+var grade = "?"
+var passed = 0
+for score in [95, 72, 40]:
+    grade = if score >= 90:
+        "A"
+    elif score >= 70:
+        "B"
+    else:
+        "F"
+    passed += if grade == "F":
+        0
+    else:
+        1
+    print(score + " -> " + grade)
+print("passed " + passed)
+
+# typed results: Int32, Float (a contextual literal), Bool, class, list, variant
+let small: Int32 = if count > 1:
+    7
+else:
+    8
+print(small)
+let ratio = if count > 5:
+    0.5
+else:
+    2
+print(ratio)
+let even = if count % 2 == 0:
+    true
+else:
+    false
+print(even)
+let origin = Point(x=0, y=0)
+let point = if count > 1:
+    Point(x=1, y=2)
+else:
+    origin
+print(point.x + point.y)
+let picks: List[Int] = if count > 5:
+    [1, 2, 3]
+else:
+    []
+print(picks.size())
+let shape: Shape = if count > 1:
+    Shape.Circle(radius=1.5)
+else:
+    Shape.Square(side=2.0)
+print(shape)
+
+# nullable results: a null branch makes the inferred type nullable, and a
+# null Int? branch beside a plain Int never unboxes
+let missing = if count > 5:
+    "many"
+else:
+    null
+print(missing)
+let none_first = if count > 5:
+    null
+else:
+    count
+print(none_first)
+let absent: Int? = "x".toIntOrNull()
+let kept = if count > 1:
+    absent
+else:
+    0
+print(kept)
+let maybe_flag: Bool? = if count > 5:
+    true
+else:
+    null
+print(maybe_flag)
+let no_small: Int32? = null
+let small_or_seven = if count > 1:
+    no_small
+else:
+    7
+print(small_or_seven)
+let widened: Int = if count > 1:
+    small
+else:
+    10
+print(widened)
+
+# narrowing is the if statement's: a branch sees its own condition true and
+# every earlier condition false, and the else sees all conditions false
+func describe(value: Int?) -> String:
+    return if value == null:
+        "none"
+    else:
+        if value > 100:
+            "big " + (value - 100)
+        else:
+            "small " + value
+
+print(describe(null) + ", " + describe(150) + ", " + describe(7))
+# an elif and the else after it use the name directly; a null check repeated
+# on a name declared nullable is accepted while it is narrowed
+func size_of(value: Int?) -> String:
+    return if value == null:
+        "none"
+    elif value > 100:
+        "big"
+    else:
+        "small " + value
+
+func size_again(value: Int?) -> String:
+    return if value == null:
+        "none"
+    elif value != null and value > 100:
+        "big"
+    else:
+        "small"
+
+print(size_of(null) + " " + size_of(500) + " " + size_of(5))
+print(size_again(null) + " " + size_again(500) + " " + size_again(5))
+let word: String? = "sprig"
+let letters = if word != null and word.length() > 3:
+    word.length()
+else:
+    0
+print(letters)
+let initial = if word == null or word.length() == 0:
+    "?"
+else:
+    word.substring(0, 1)
+print(initial)
+
+# the if statement narrows the same way
+func shout(text: String?) -> String:
+    if text == null:
+        return "nothing"
+    else:
+        if text.length() == 0:
+            return "empty"
+        return text.toUpperCase()
+
+print(shout(null) + " " + shout("") + " " + shout("hi"))
+
+# nested if expressions, and if inside expression match and the other way round
+func classify(n: Int, mode: Mode) -> String:
+    return match mode:
+        case Mode.Fast:
+            if n > 0:
+                if n > 10:
+                    "fast many"
+                else:
+                    "fast few"
+            else:
+                "fast none"
+        case Mode.Safe:
+            "safe"
+
+let fast = classify(20, Mode.Fast) + ", " + classify(3, Mode.Fast) + ", " + classify(0, Mode.Fast)
+print(fast + ", " + classify(3, Mode.Safe))
+let speed = if count > 1:
+    match Mode.Safe:
+        case Mode.Fast:
+            1
+        case Mode.Safe:
+            2
+else:
+    3
+print(speed)
+
+# argument positions: line breaks are ignored inside a call's parentheses, so
+# the if expression (here a lambda's body) is bound first and the name passed
+let sign = fn(n: Int) => if n < 0:
+    "negative"
+elif n == 0:
+    "zero"
+else:
+    "positive"
+print([-4, 0, 9].map(sign))
+let step: fn(Int) -> Int = if count > 1:
+    fn(x: Int) => x * 2
+else:
+    fn(x: Int) => x + 1
+print(step(21))
+
+# a generic result type
+generic T:
+    func choose(first: Bool, a: T, b: T) -> T:
+        return if first:
+            a
+        else:
+            b
+
+print(choose[Int](true, 1, 2) + choose[Int](false, 10, 20))
+print(choose[String](false, "left", "right"))
+
+# a class field default and a method
+let vip = true
+class Ticket:
+    let seat: String = if vip:
+        "front"
+    else:
+        "back"
+    var sold: Int = 0
+
+    func label() -> String:
+        return if sold == 1:
+            "1 ticket"
+        else:
+            sold + " tickets"
+
+let ticket = Ticket()
+ticket.sold = 3
+print(ticket.seat + " " + ticket.label())
+
+# throw an Error chosen by an if expression
+func fail(code: Int) -> Int throws Error:
+    throw if code == 1:
+        Error("code one")
+    else:
+        Error("code " + code)
+
+try:
+    print(fail(4))
+catch problem: Error:
+    print(problem.message)
+
+# evaluation order: conditions run in source order, and only the chosen
+# branch runs, after its condition
+var trace = ""
+func test(name: String, result: Bool) -> Bool:
+    trace += name + " "
+    return result
+
+func value(name: String, result: Int) -> Int:
+    trace += name + " "
+    return result
+
+let picked = if test("a", false):
+    value("A", 1)
+elif test("b", true):
+    value("B", 2)
+elif test("c", true):
+    value("C", 3)
+else:
+    value("E", 4)
+print(picked)
+print(trace.trim())
+trace = ""
+let fallback = if test("a", false):
+    value("A", 1)
+else:
+    value("E", 4)
+print(fallback + " " + trace.trim())
+
+# the branch that is not chosen never runs, so it cannot fail
+let empty: List[Int] = []
+let first = if empty.size() > 0:
+    empty[0]
+else:
+    -1
+print(first)
+
+# an if at the start of a statement is still the if statement
+if count > 1:
+    print("statement")

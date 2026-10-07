@@ -1,0 +1,6 @@
+# An error in a top-level initializer does not hide the errors of the other
+# top-level statements until the next round: both are reported together.
+let first = 1 - "x"
+let second: Int = "y"
+print(first)
+print(second)

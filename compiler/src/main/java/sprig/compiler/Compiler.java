@@ -48,20 +48,23 @@ public final class Compiler {
         List<Module> order = new ArrayList<>();
         load(mainFile.toAbsolutePath().normalize(), modules, order, new ArrayList<>());
         Module main = modules.get(mainFile.toAbsolutePath().normalize());
-        if (main == null || diagnostics.hasErrors()) {
+        // A recoverable front-end error (an if expression still missing its else)
+        // keeps a well-formed AST, so the later phases run on it for the editor;
+        // the program still does not compile.
+        if (main == null || diagnostics.hasBlockingErrors()) {
             return new Compilation(main, order, Compilation.Stage.LOADED);
         }
         for (Module module : order) {
             new NameResolver(diagnostics).declare(module);
         }
-        if (diagnostics.hasErrors()) {
+        if (diagnostics.hasBlockingErrors()) {
             return new Compilation(main, order, Compilation.Stage.DECLARED);
         }
         for (Module module : order) {
             NameResolver resolver = new NameResolver(diagnostics);
             resolver.resolveBodies(module);
         }
-        if (diagnostics.hasErrors()) {
+        if (diagnostics.hasBlockingErrors()) {
             return new Compilation(main, order, Compilation.Stage.RESOLVED);
         }
         TypeChecker checker = new TypeChecker(diagnostics);

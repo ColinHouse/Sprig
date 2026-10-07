@@ -112,6 +112,7 @@ def main():
             shutil.copy2(ROOT / source, destination)
         docs = {
             'MATCH_EXPRESSIONS': 'docs/language/match-expressions.md',
+            'IF_EXPRESSIONS': 'docs/language/if-expressions.md',
             'MODULE_REEXPORTS': 'docs/language/module-reexports.md',
             'QUICK_REFERENCE': 'docs/language/quick-reference.md',
             'FEATURE_STATUS_IMPLEMENTED': 'docs/language/feature-status.md',

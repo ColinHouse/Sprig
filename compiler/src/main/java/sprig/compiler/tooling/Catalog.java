@@ -202,6 +202,11 @@ public final class Catalog {
                         "Java methods and Java generic types keep explicit type arguments")));
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
+        out.put("ifExpression", Map.of("supported", true, "helpTopic", "language",
+                "rules", List.of("if, any elifs and a required else, each with one expression on its own indented line",
+                        "the result typing of expression match; the narrowing of the if statement: a branch sees its own condition true, and else sees the if condition false only when there is no elif",
+                        "a whole value: after an assignment, return, throw or '=>', or as a branch of another if or match expression; never inside parentheses, brackets or braces, and never an operand",
+                        "an if at the start of a statement is the if statement")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
         guidance(out, "arrays", "jvm", "foreign JVM array pass-through with exact classes", "byte[] helpers via sprig.runtime.jvm.HostBytes", "List[T] and @std/jvm adapters");
         out.put("varargs", Map.of("supported", true, "helpTopic", "jvm",

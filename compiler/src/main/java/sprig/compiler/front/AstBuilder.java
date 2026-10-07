@@ -339,7 +339,7 @@ public final class AstBuilder {
             stmt.span = span(ctx);
             return stmt;
         }
-        Stmt.ExprStmt stmt = new Stmt.ExprStmt(buildExpression(ctx.expression()));
+        Stmt.ExprStmt stmt = new Stmt.ExprStmt(buildOr(ctx.orExpression()));
         stmt.span = span(ctx);
         return stmt;
     }
@@ -441,6 +441,9 @@ public final class AstBuilder {
     // ---- expressions ----
 
     Expr buildExpression(SprigParser.ExpressionContext ctx) {
+        if (ctx.ifExpression() != null) {
+            return buildIfExpression(ctx.ifExpression());
+        }
         if (ctx.matchExpression() != null) {
             var matchCtx = ctx.matchExpression();
             List<Stmt.Match.Branch> branches = new ArrayList<>();
@@ -465,6 +468,36 @@ public final class AstBuilder {
             return expr;
         }
         return buildOr(ctx.orExpression());
+    }
+
+    /**
+     * The grammar pairs conditions and branches: expression(i) is the condition
+     * of ifExpressionBranch(i), and the last branch, with no condition, is else.
+     */
+    private Expr buildIfExpression(SprigParser.IfExpressionContext ctx) {
+        List<SprigParser.ExpressionContext> conditionContexts = ctx.expression();
+        List<SprigParser.IfExpressionBranchContext> branchContexts = ctx.ifExpressionBranch();
+        List<Expr> conditions = new ArrayList<>();
+        List<Expr> values = new ArrayList<>();
+        for (int i = 0; i < conditionContexts.size(); i++) {
+            conditions.add(buildExpression(conditionContexts.get(i)));
+            values.add(buildExpression(branchContexts.get(i).expression()));
+        }
+        Expr elseValue = null;
+        if (branchContexts.size() > conditionContexts.size()) {
+            elseValue = buildExpression(branchContexts.get(branchContexts.size() - 1).expression());
+        } else {
+            // The one error of this if expression, reported at its 'if' as the
+            // parser front end reports the other shapes. It does not stop name
+            // resolution and type checking, so the editor keeps its features
+            // while the else branch is still being written.
+            diagnostics.add(Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX,
+                    ParserFrontend.MISSING_ELSE_MESSAGE, uri, span(ctx.getStart()))
+                    .withHint(ParserFrontend.MISSING_ELSE_HINT).withRelatedHelp("language").recoverable());
+        }
+        Expr.If expr = new Expr.If(conditions, values, elseValue);
+        expr.span = span(ctx);
+        return expr;
     }
 
     private Expr buildOr(SprigParser.OrExpressionContext ctx) {

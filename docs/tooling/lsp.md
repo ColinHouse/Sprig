@@ -96,7 +96,9 @@ before type checking when names do not resolve. The server follows the same
 rule and does not guess:
 
 - With a syntax error, hover, definition, references and rename return nothing.
-  The outline keeps the last version of the file that parsed.
+  The outline keeps the last version of the file that parsed. An `if`
+  expression whose `else` is still missing is the exception: it is reported,
+  and the file keeps every feature while the `else` is being written.
 - With unresolved names, names still lead to their declarations. Member
   information that needs types, such as `value.field`, waits until the names
   resolve.

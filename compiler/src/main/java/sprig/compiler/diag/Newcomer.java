@@ -32,6 +32,10 @@ public final class Newcomer {
             + "and problem.message holds the text.";
     private static final String SELF = "A method uses the object's fields and methods by name; "
             + "there is no self or this.";
+    /** How a value that depends on a condition is written; for Python's a if c else b and C's c ? a : b. */
+    public static final String IF_EXPRESSION = "Write an if expression, with each value on its own indented line: "
+            + "'let size = if count > 9:', then '    \"big\"' on the next line, then 'else:' and '    \"small\"'. "
+            + "Line breaks are ignored inside parentheses, so bind the if expression to a let first and use the name.";
 
     private static final Map<String, String> NAMES = Map.ofEntries(
             Map.entry("readLine", STDIN), Map.entry("readline", STDIN), Map.entry("readln", STDIN),

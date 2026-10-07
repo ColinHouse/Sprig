@@ -53,6 +53,16 @@
 
 穷尽检查在改代码时最有用：给 variant 加一种情况，所有没处理它的 `match` 都会报错，一个都漏不掉。仓库里的 `tests/visitor/ast_visitor.spr` 是一个用 Sprig 写的小型 AST 解释器，测试时会实际运行，靠的就是这一点。
 
+## 用 if 选一个值
+
+<<< @/snippets/if_expressions.spr
+
+- 能写表达式 `match` 的地方，`if` 也能产生一个值：`=`、`return`、`throw` 后面，以及 lambda 的函数体。每个分支是单独一行、缩进的一个表达式，`elif` 和 `else` 跟 `if` 开头的那一行对齐。
+- `else` 分支必须写，漏了会报 "An if expression needs an else branch"；在你补上之前，文件的其余部分照常检查，编辑器功能也不受影响。不需要产生值的时候，就写普通的 `if` 语句：写在语句开头的 `if` 总是 `if` 语句。
+- 所有分支是同一个类型：这个位置要求的类型，比如 `let ratio: Float = if ...`；没有要求的话，就是第一个不是 `null` 的分支的类型。有 `null` 分支，结果就是可空类型。
+- 没有 Python 的 `a if c else b`，也没有 C 的 `c ? a : b`，编译器会提示你改用 `if` 表达式。
+- 圆括号里的换行会被忽略，所以 `if` 表达式不能直接写进调用里。先用 `let` 绑定，再把名字传进去。细节见 [if 表达式（英文）](/en/reference/language/if-expressions)。
+
 ## 集合
 
 <<< @/snippets/collections.spr

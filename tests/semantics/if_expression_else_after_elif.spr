@@ -1,0 +1,10 @@
+# The else sees every condition false, so after `if name == null` the else
+# uses name as String. Only immutable names narrow: a var stays String?.
+var name: String? = "Ada"
+let greeting = if name == null:
+    "Hello"
+elif name.length() > 8:
+    "Good day"
+else:
+    "Hi " + name
+print(greeting)

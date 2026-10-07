@@ -1,0 +1,7 @@
+# The first branch makes the result an Int, so the String branch does not fit.
+let count = 3
+let label = if count > 1:
+    count
+else:
+    "none"
+print(label)

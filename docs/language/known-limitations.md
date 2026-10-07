@@ -85,6 +85,10 @@ by the historical design kit in `docs/history/design-kit/`.
   shows an `Error` as its message; Java code that turns one into text, such as
   `String.valueOf` or a Java collection's `toString()`, sees
   `sprig.runtime.SprigError: message`.
+- Expression `match` and `if` branches hold one expression each, and neither
+  form can be written inside parentheses, brackets or braces, where the layout
+  adapter ignores line breaks, or be the operand of an operator. Bind the
+  result (or a lambda that contains it) to a `let` first.
 - Lambdas have single-expression bodies and support arities zero through
   three. A lambda's `throws Error` comes from its body; it cannot be written
   on the lambda, and a lambda cannot call a function that throws a checked

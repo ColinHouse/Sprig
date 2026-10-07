@@ -203,6 +203,36 @@ public abstract class Expr extends Node {
         public Match(Stmt.Match cases) { this.cases = cases; }
     }
 
+    /**
+     * {@code if c: a elif d: b else: e} used as a value. The conditions are
+     * tested in source order and exactly one branch value is evaluated; the
+     * grammar requires the else branch, so every path produces a value.
+     * {@code values.get(i)} is the value chosen when {@code conditions.get(i)}
+     * is the first true condition.
+     */
+    public static final class If extends Expr {
+        /** The if condition, then each elif condition. */
+        public final List<Expr> conditions;
+        /** One value per condition, in the same order. */
+        public final List<Expr> values;
+        /**
+         * The else branch's value, or null when the source has no else branch.
+         * The front end reports that as a syntax error but keeps the if
+         * expression, so the editor still resolves and types the rest of the
+         * program while the else is being written; no code is generated.
+         */
+        public final Expr elseValue;
+
+        public If(List<Expr> conditions, List<Expr> values, Expr elseValue) {
+            if (conditions.isEmpty() || conditions.size() != values.size()) {
+                throw new IllegalArgumentException("an if expression has one value per condition");
+            }
+            this.conditions = List.copyOf(conditions);
+            this.values = List.copyOf(values);
+            this.elseValue = elseValue;
+        }
+    }
+
     public static final class Lambda extends Expr {
         public final List<Decl.Param> params;
         public final Expr body;

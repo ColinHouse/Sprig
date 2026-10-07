@@ -699,6 +699,16 @@ public final class NameResolver {
             }
         } else if (expr instanceof Expr.Match match) {
             resolveStmt(module,scope,match.cases);
+        } else if (expr instanceof Expr.If ifExpr) {
+            // Branches are single expressions: they declare nothing, so they
+            // resolve in the enclosing scope, in source order.
+            for (int i = 0; i < ifExpr.conditions.size(); i++) {
+                resolveExpr(module, scope, ifExpr.conditions.get(i));
+                resolveExpr(module, scope, ifExpr.values.get(i));
+            }
+            if (ifExpr.elseValue != null) {
+                resolveExpr(module, scope, ifExpr.elseValue);
+            }
         } else if (expr instanceof Expr.Lambda lambda) {
             Scope lambdaScope = childScope(scope);
             for (Decl.Param param : lambda.params) {
