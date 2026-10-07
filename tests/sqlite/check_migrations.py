@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Integration checks for Sprig-owned SQLite migration policy and JDBC atomicity."""
+from contextlib import closing
 from pathlib import Path
 import os
 import shutil
@@ -120,7 +121,9 @@ def main():
         assert '002_existing.sql' in changed_order.stderr and '001_added_late.sql' in changed_order.stderr
         # The pending file that sorts first must not run before the order error is found.
         assert database_state(drift_db) == (['002_existing.sql'], ['messages']), database_state(drift_db)
-        with sqlite3.connect(drift_db) as connection:
+        # closing(): a sqlite3 connection's own with block commits but stays open,
+        # and Windows cannot remove a database file that is still open.
+        with closing(sqlite3.connect(drift_db)) as connection:
             assert connection.execute('SELECT message FROM messages ORDER BY id').fetchall() == [('already applied',)]
 
         # The whole directory is checked before any migration runs, so a bad
