@@ -1,0 +1,33 @@
+# Starts the API on an ephemeral port and drives it over HTTP with sprig-http.
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "@http/http.spr" as http
+import "../src/store.spr" as store
+import "../src/api.spr" as api
+
+let NO_HEADERS: List[http.Header] = []
+
+func call(method: String, url: String, body: String?) -> String throws Error:
+    let response = http.send(http.Request(method=method, url=url, headers=NO_HEADERS, body=body, timeout_ms=5000))
+    return response.body + "\n" + response.status
+
+func drive() -> Unit throws Error:
+    let app = api.build_app(store.open_store(files.join(test.temp_dir(), "api.sqlite")))
+    app.run(0)
+    let base = "http://127.0.0.1:" + app.port()
+    try:
+        test.equal_text(call("GET", base + "/todos", null), "[]\n200", "empty list")
+        let created = call("POST", base + "/todos", "{\"title\":\"write report\"}")
+        assert(created.endsWith("\n201"), "created status: " + created)
+        assert(created.contains("\"title\":\"write report\""), "created body: " + created)
+        test.equal_text(call("POST", base + "/todos", "{\"name\":1}"), "{\"error\":\"body must be an object with a text 'title'\"}\n400", "bad body")
+        assert(call("POST", base + "/todos", "not json").endsWith("\n400"), "malformed json is a 400, not a crash")
+        assert(call("POST", base + "/todos/1/done", null).contains("\"done\":true"), "done")
+        test.equal_text(call("POST", base + "/todos/42/done", null), "{\"error\":\"no todo 42\"}\n404", "missing id")
+        test.equal_text(call("DELETE", base + "/todos/1", null), "\n204", "delete")
+        test.equal_text(call("GET", base + "/todos", null), "[]\n200", "empty again")
+    finally:
+        app.stop()
+
+test.check("serves the todo API over HTTP", drive)
+test.finish()

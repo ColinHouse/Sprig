@@ -1,0 +1,6 @@
+import "@std/concurrent.spr" as concurrent
+func maybe() -> Int?:
+    return null
+func body(s: concurrent.Scope) -> Int? throws Error:
+    return concurrent.spawn(s, fn() => maybe()).await()
+print(concurrent.scope(body))

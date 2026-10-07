@@ -156,6 +156,26 @@
     "status": "checked by output/scripts/test.sh"
   },
   {
+    "file": "nullable_arith.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented"
+  },
+  {
+    "file": "string_minus.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented"
+  },
+  {
+    "file": "bool_plus.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented"
+  },
+  {
+    "file": "list_times.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented"
+  },
+  {
     "file": "match_nullable.spr",
     "expected_diagnostic": "SPR-MATCH-SCRUTINEE",
     "status": "checked by output/scripts/test.sh"
@@ -751,6 +771,18 @@
     "source": "function references: only print among the built-ins is a value"
   },
   {
+    "file": "assign_unknown_field.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "implemented",
+    "source": "#141: assignment to a member the class does not declare is reported, not an internal error"
+  },
+  {
+    "file": "compound_assign_unknown_field.spr",
+    "expected_diagnostic": "SPR-NAME-UNRESOLVED",
+    "status": "implemented",
+    "source": "#141: compound assignment to an unknown member"
+  },
+  {
     "file": "contract_generic.spr",
     "expected_diagnostic": "SPR-CLASS-ABSTRACT",
     "status": "implemented",
@@ -803,5 +835,11 @@
     "expected_diagnostic": "SPR-CONFORM-SOURCE",
     "status": "implemented",
     "source": "contract guardrails: no retroactive conformance (class not declared here)"
+  },
+  {
+    "file": "nullable_task_result.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "#187: a task's result cannot be nullable; the mismatch says why and how to keep it non-null"
   }
 ]

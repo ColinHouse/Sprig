@@ -23,6 +23,10 @@ public final class HostPool {
         return HostTask.startOn(executor, work);
     }
 
+    <T> HostTask<T> submit(Fn0<T> work, Runnable whenComplete) {
+        return HostTask.startOn(executor, work, whenComplete);
+    }
+
     public long threads() {
         return threads;
     }
@@ -32,9 +36,17 @@ public final class HostPool {
         executor.shutdown();
     }
 
-    /** Stops accepting tasks and interrupts the running ones. */
+    /**
+     * Stops accepting tasks and interrupts the running ones. A task still
+     * waiting in the queue is cancelled: it will never run, and its scope must
+     * not wait for it.
+     */
     public void shutdownNow() {
-        executor.shutdownNow();
+        for (Runnable queued : executor.shutdownNow()) {
+            if (queued instanceof java.util.concurrent.Future<?> future) {
+                future.cancel(false);
+            }
+        }
     }
 
     public boolean isShutdown() {

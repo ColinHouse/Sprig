@@ -1,0 +1,18 @@
+import java.nio.file.Files as Files
+import java.nio.file.Paths as Paths
+import java.io.IOException as IOException
+
+# Files.readString 声明了 IOException，所以这个函数要么 catch，要么像这样声明。
+func read_text(name: String) -> String throws IOException:
+    let path = Paths.get(name)
+    if path == null:
+        return ""
+    let text = Files.readString(path)
+    if text == null:
+        return ""
+    return text
+
+try:
+    print(read_text("definitely-missing.txt"))
+catch problem: IOException:
+    print("could not read: " + problem.toString())

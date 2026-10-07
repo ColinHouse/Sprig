@@ -1,0 +1,10 @@
+import sprig.runtime.jvm.HostBytes as HostBytes
+import java.util.Base64 as Base64
+
+# byte[] 是不透明的 Java 值：拿到、判空、原样传给另一个 Java 方法。
+let bytes = HostBytes.utf8("tea")
+if bytes != null:
+    print(HostBytes.length(bytes))
+    let encoder = Base64.getEncoder()
+    if encoder != null:
+        print(encoder.encodeToString(bytes))

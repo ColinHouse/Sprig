@@ -1,0 +1,24 @@
+# Static blog generator: `sprig run -- [posts_dir] [out_dir]`.
+import "@std/process.spr" as process
+import "./post.spr" as post
+import "./site.spr" as site
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var posts_dir = "posts"
+    var out_dir = "site"
+    if args.size() > 0:
+        posts_dir = args[0]
+    if args.size() > 1:
+        out_dir = args[1]
+    try:
+        let count = site.build_site(posts_dir, out_dir, "Sprig Notes")
+        print("rendered " + count + " post(s) into " + out_dir)
+    catch problem: post.ParseError:
+        process.print_error("blog: " + problem.file + ": " + problem.message)
+        process.exit(2)
+    catch problem: Error:
+        process.print_error("blog: " + problem.message)
+        process.exit(1)
+
+main()

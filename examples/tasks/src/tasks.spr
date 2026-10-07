@@ -1,0 +1,74 @@
+# Task model and its JSON file format: {"tasks": [{"id": 1, "title": "...", "done": false}]}.
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+import "@std/files.spr" as files
+import "@std/lists.spr" as lists
+
+class Task:
+    let id: Int
+    let title: String
+    let done: Bool
+
+func decode(source: String) -> List[Task] throws Error:
+    let root = codec.root(json.parse(source))
+    let out: MutableList[Task] = []
+    for item in codec.required_array(root, "tasks"):
+        out.append(Task(id=codec.required_int(item, "id"), title=codec.required_string(item, "title"), done=codec.required_bool(item, "done")))
+    return out.toList()
+
+func task_json(task: Task) -> json.Value:
+    return json.Value.Object(members=[
+        json.Member(key="id", value=json.Value.Number(text="" + task.id)),
+        json.Member(key="title", value=json.Value.Text(value=task.title)),
+        json.Member(key="done", value=json.Value.Boolean(value=task.done))
+    ])
+
+func encode(tasks: List[Task]) -> String throws Error:
+    let document = json.Value.Object(members=[json.Member(key="tasks", value=json.Value.Array(values=tasks.map(task_json)))])
+    return json.stringify(document) + "\n"
+
+# An absent file is an empty task list.
+func load(path: String) -> List[Task] throws Error:
+    if not files.exists(path):
+        return []
+    return decode(files.read_utf8(path))
+
+func save(path: String, tasks: List[Task]) -> Unit throws Error:
+    files.atomic_write_utf8(path, encode(tasks))
+
+func higher(high: Int, task: Task) -> Int:
+    return if task.id > high:
+        task.id
+    else:
+        high
+
+func next_id(tasks: List[Task]) -> Int:
+    return lists.fold(tasks, 0, higher) + 1
+
+func add(tasks: List[Task], title: String) -> List[Task] throws Error:
+    if title.trim().length() == 0:
+        throw Error("a task needs a title")
+    let out = tasks.toMutableList()
+    out.append(Task(id=next_id(tasks), title=title.trim(), done=false))
+    return out.toList()
+
+# The list with the task marked done, or null when there is no such id.
+func mark_done(tasks: List[Task], id: Int) -> List[Task]?:
+    if lists.find(tasks, fn(task: Task) => task.id == id) == null:
+        return null
+    return tasks.map(fn(task: Task) => with_done(task, task.id == id))
+
+func with_done(task: Task, done: Bool) -> Task:
+    return Task(id=task.id, title=task.title, done=done)
+
+func remove(tasks: List[Task], id: Int) -> List[Task]?:
+    if lists.find(tasks, fn(task: Task) => task.id == id) == null:
+        return null
+    return tasks.filter(fn(task: Task) => task.id != id)
+
+func format(task: Task) -> String:
+    let mark = if task.done:
+        "[x]"
+    else:
+        "[ ]"
+    return mark + " " + task.id + "  " + task.title

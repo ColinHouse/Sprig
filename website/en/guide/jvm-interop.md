@@ -92,7 +92,7 @@ Imported Java classes and generic methods can take concrete type arguments, like
 - Type arguments are kept intact. You can write `List[Map[String, Int32]]` or `Host.method[String](value)`, and type arguments inherited from a superclass or interface are recognized too.
 - Results are still treated as possibly `null`, so `get` on an `ArrayList[String]` returns `String?`.
 - Type arguments of generic methods aren't inferred, so write them out.
-- A raw type (one with no type arguments) can't stand in for a parameterized one. `ArrayList[String]` works as a `List[String]`; `ArrayList[Int32]` doesn't.
+- A raw type (one with no type arguments) can't stand in for a parameterized one. `ArrayList[String]()` works as a `List[String]`; a raw `ArrayList()` doesn't.
 - Wildcards keep their bounds: a `List<? extends Number>` result gives you `Number?` elements, a `List<? extends Number>` parameter takes an `ArrayList[Int]`, and anything that would write through `? extends` (like `add`) is rejected. Generic arrays (`T[]`) aren't supported; `sprig api` shows the reason code.
 
 ## Arrays and bytes
@@ -147,6 +147,8 @@ Before writing code against a Java class, ask `sprig api` how Sprig sees it. It 
 sprig api java.time.LocalDate --member parse
 sprig api com.example.Client --classpath lib/client.jar --json
 ```
+
+Want to extend a Java class and override a protected method, like `next` of `java.util.Random`? It isn't in the public lists; `sprig api java.util.Random --member next` shows it under `protectedMethods`. Override it with the same signature in a class declared with `conform C to Random(seed) as parent`, and call the inherited version as `parent.next(bits)`.
 
 If you use a Java class a lot, `sprig wrap` can generate a Sprig wrapper file for it. The result is ordinary source code that you're free to edit:
 

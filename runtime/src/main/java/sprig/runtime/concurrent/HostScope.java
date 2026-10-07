@@ -2,9 +2,11 @@ package sprig.runtime.concurrent;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import sprig.runtime.Fn0;
 import sprig.runtime.NonNull;
@@ -35,6 +37,21 @@ public final class HostScope {
         return start(null, work);
     }
 
+    /**
+     * Starts work that only has an effect. Sprig's Unit is not a value, so the
+     * task completes with true once work has run.
+     */
+    @NonNull
+    public HostTask<Boolean> run(Runnable work) {
+        if (work == null) throw new SprigError("task work must not be null");
+        Fn0<Boolean> effect = () -> {
+            work.run();
+            return Boolean.TRUE;
+        };
+        requireOpen(effect);
+        return start(null, effect);
+    }
+
     /** Starts work on the pool's platform threads; the task still belongs to this scope. */
     @NonNull
     public <T> HostTask<T> spawnOn(HostPool pool, Fn0<T> work) {
@@ -48,11 +65,25 @@ public final class HostScope {
         if (closed) throw new SprigError("the scope has ended; spawn inside the scope body");
     }
 
+    /**
+     * Exactly one party marks a task as ended: its body, which claims the task
+     * when it starts and counts the latch down in its finally, or, when the
+     * task completed without running its body (cancelled while queued, or
+     * dropped by a pool's shutdownNow), the task's completion. A task cancelled
+     * while its body runs is still waited for until the body returns.
+     */
     private <T> HostTask<T> start(HostPool pool, Fn0<T> work) {
         CountDownLatch done = new CountDownLatch(1);
+        AtomicBoolean claimed = new AtomicBoolean();
         HostTask<?>[] self = new HostTask<?>[1];
-        Fn0<T> guarded = guarded(work, done, self);
-        HostTask<T> task = pool == null ? HostTask.startOn(virtual, guarded) : pool.submit(guarded);
+        Fn0<T> guarded = guarded(work, done, claimed, self);
+        Runnable endedUnstarted = () -> {
+            if (claimed.compareAndSet(false, true)) {
+                done.countDown();
+            }
+        };
+        HostTask<T> task = pool == null ? HostTask.startOn(virtual, guarded, endedUnstarted)
+                : pool.submit(guarded, endedUnstarted);
         self[0] = task;
         tasks.add(new Owned(task, done));
         return task;
@@ -60,18 +91,22 @@ public final class HostScope {
 
     /**
      * A failure that was not asked for by cancel() is the scope's failure: the
-     * first one cancels every sibling, and the failing task still reports it
-     * through await(). The latch tells the scope when the body has ended.
+     * first one cancels every sibling, and the failing task still reports its
+     * own failure through await(), so it is not cancelled itself. The latch
+     * tells the scope when the body has ended.
      */
-    private <T> Fn0<T> guarded(Fn0<T> work, CountDownLatch done, HostTask<?>[] self) {
+    private <T> Fn0<T> guarded(Fn0<T> work, CountDownLatch done, AtomicBoolean claimed, HostTask<?>[] self) {
         return () -> {
+            if (!claimed.compareAndSet(false, true)) {
+                throw new CancellationException("cancelled before it started");
+            }
             try {
                 return work.apply();
             } catch (RuntimeException | Error e) {
                 HostTask<?> me = self[0];
                 boolean requested = me != null && me.isCancelled();
                 if (!requested && failure.compareAndSet(null, e)) {
-                    cancelAll();
+                    cancelAllExcept(me);
                 }
                 throw e;
             } finally {
@@ -82,8 +117,14 @@ public final class HostScope {
 
     /** Asks every task to stop; each thread is interrupted. A cancelled task is not a failure of the scope. */
     public void cancelAll() {
+        cancelAllExcept(null);
+    }
+
+    private void cancelAllExcept(HostTask<?> keep) {
         for (Owned owned : tasks) {
-            owned.task().cancel();
+            if (owned.task() != keep) {
+                owned.task().cancel();
+            }
         }
     }
 

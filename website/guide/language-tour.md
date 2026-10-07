@@ -10,6 +10,7 @@
 
 - 只能用空格缩进，用 Tab 会报 `SPR-LEX-TAB`。同一个块里的缩进要一致，空几格由你定。
 - 文件里第一行代码要从第 1 列开始写。
+- 在没有开始新块的地方缩进，或者 `else:`、`if count > 0:` 这样的块头下面没有缩进的代码，报错会直接说明是哪种情况。
 - 圆括号、方括号、花括号里面可以随意换行，所以长的调用和字面量可以拆成多行。
 - `#` 后面是注释。
 
@@ -71,7 +72,7 @@
 - `else` 分支必须写，漏了会报 "An if expression needs an else branch"；在你补上之前，文件的其余部分照常检查，编辑器功能也不受影响。不需要产生值的时候，就写普通的 `if` 语句：写在语句开头的 `if` 总是 `if` 语句。
 - 所有分支是同一个类型：这个位置要求的类型，比如 `let ratio: Float = if ...`；没有要求的话，就是第一个不是 `null` 的分支的类型。有 `null` 分支，结果就是可空类型。
 - 没有 Python 的 `a if c else b`，也没有 C 的 `c ? a : b`，编译器会提示你改用 `if` 表达式。
-- 圆括号里的换行会被忽略，所以 `if` 表达式不能直接写进调用里。先用 `let` 绑定，再把名字传进去。细节见 [if 表达式（英文）](/en/reference/language/if-expressions)。
+- 圆括号里的换行会被忽略，所以 `if` 表达式不能直接写进调用里，写在调用里的 lambda 体中也不行。先把它，或者装着它的 lambda，用 `let` 绑定，再把名字传进去；也可以直接传一个具名函数。细节见 [if 表达式（英文）](/en/reference/language/if-expressions)。
 
 ## 集合
 
@@ -115,7 +116,7 @@ true
 - `elif` 和 `else` 知道前面的条件都不成立：`if x == null:` 之后的 `elif flag:` 分支和 `else` 分支里，`x` 都当作有值，不用再检查一遍。再写一次 `x != null` 也不报错，只是多余。
 - 提前返回也行：写了 `if x == null: return ...` 之后，后面的代码都把 `x` 当作有值。前面几个分支都提前返回的 `if/elif` 链也一样。
 - 把可能为 `null` 的值用在需要非空的地方，会报 `SPR-TYPE-NULLABLE`。
-- `var` 字段检查过之后，只要中间调用了函数，之前的检查就不算数了，因为函数可能改了它。
+- `var` 局部变量和类的字段都不会收窄，不管中间有没有调用函数：先把它复制到一个 `let`（`let current = name`），再判断 `current`。
 - Java 方法返回的对象一律当作可能为 `null`（`toString()` 的结果除外），见 [JVM 互操作](/guide/jvm-interop)。
 
 如果只是想要一个默认值，或者没有值就报错，用 `@std/nulls`（v0.6.0-beta.1 新增）可以省掉 `if`：
@@ -221,6 +222,7 @@ $[1].id: expected integer, found string
 
 ## 另外几个小功能
 
+- 字符串必须在同一行闭合；漏掉结尾引号或把字符串换到下一行时，`SPR-LEX-STRING` 会标出这行未闭合的字符串。
 - `sprig fmt` 把代码整理成统一的格式，会保留注释，没有配置项。见[格式化（英文）](/en/reference/tooling/formatter)。
 - 模块可以用 `export alias.Symbol` 把导入的声明再导出，但不能借此绕过依赖包的导出范围。没有 `export *` 这样的通配导出。见[重导出（英文）](/en/reference/language/module-reexports)。
 - 表达式形式的 `match` 每个分支只能写一个表达式；要写多行，就用语句形式。见 [match 表达式（英文）](/en/reference/language/match-expressions)。

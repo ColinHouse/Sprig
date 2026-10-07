@@ -1,0 +1,6 @@
+func f(n: Int) -> Int:
+    if n > 0:
+        return 1
+    else:
+    return 2
+print(f(1))

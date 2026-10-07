@@ -60,7 +60,7 @@ Sprig 不允许两个整数直接用 `/` 相除：
 
 ```text
 SPR-NUM-DIVISION [TYPE] main.spr:2:7: Integer / would truncate; use a.divTrunc(b), or convert both operands explicitly (expected explicit division, actual Int / Int)
-  hint: Write a.divTrunc(b) to drop the remainder on purpose, or a.toFloat() / b.toFloat() for a Float result. text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals.
+  hint: Write cents.divTrunc(b) to drop the remainder on purpose, or cents.toFloat() / b.toFloat() for a Float result. text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals.
 ```
 
 `7 / 2` 等于 3 还是 3.5？不同语言的答案不一样。Sprig 让你自己写出来。

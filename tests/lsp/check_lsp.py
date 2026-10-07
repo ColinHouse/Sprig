@@ -777,6 +777,46 @@ def check_inferred_hover(directory):
             client.proc.kill()
 
 
+PARENT_VIEW = """import java.util.Random as Random
+
+class CountingRandom:
+    let seed: Int
+    var calls: Int = 0
+
+    func next(bits: Int32) -> Int32:
+        calls += 1
+        return parent.next(bits)
+
+conform CountingRandom to Random(seed) as parent
+"""
+
+
+def check_parent_view_completion(directory):
+    """After the parent view's dot, completion offers the inherited methods, protected ones included."""
+    client = Client(directory)
+    try:
+        initialize(client, directory)
+        path = directory / "dice.spr"
+        client.open(path, PARENT_VIEW)
+        check("parent-view-clean", client.wait_diagnostics(path) == [])
+        line = PARENT_VIEW.splitlines().index("        return parent.next(bits)")
+        client.change(path, PARENT_VIEW.replace("parent.next(bits)", "parent."), 2)
+        response = client.at("textDocument/completion", path, line, len("        return parent."))
+        items = {item["label"]: item for item in response["result"]["items"]}
+        check("completion-parent-view-protected", items.get("next", {}).get("detail") == "protected Random.next(...)",
+              items.get("next"))
+        check("completion-parent-view-public", "nextInt" in items and "setSeed" in items
+              and items["nextInt"]["detail"] == "Random.nextInt(...)", sorted(items))
+        check("completion-parent-view-no-internals", "clone" not in items and "finalize" not in items
+              and "wait" not in items and "toString" in items, sorted(items))
+        check("parent-view-shutdown", client.stop() == 0, "".join(client.stderr))
+    finally:
+        if client.proc.poll() is None:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(client.proc.pid), "/T", "/F"], capture_output=True)
+            client.proc.kill()
+
+
 def check_project(directory):
     project = directory / "lspdemo"
     project.mkdir()
@@ -826,6 +866,9 @@ def main():
         inferred = Path(temp).resolve() / "inferred"
         inferred.mkdir()
         check_inferred_hover(inferred)
+        parent_view = Path(temp).resolve() / "parent view"
+        parent_view.mkdir()
+        check_parent_view_completion(parent_view)
         check_project(Path(temp).resolve())
     print(f"language server: {COUNT} passed, 0 failed")
 

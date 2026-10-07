@@ -42,7 +42,7 @@ sprig run hello.spr
 
 第一，**没有 `main`**。文件里的顶层语句就是程序，从上到下执行。你当然可以写一个 `main` 函数，但得自己调用它（第 4 章再说）。
 
-第二，`sprig run` 其实做了四件事：检查代码、生成 Java、用 `javac` 编译、启动 JVM。第一次运行一个程序大约要两秒，大部分时间花在 `javac` 上；没改过的程序再次运行时会跳过这一步。
+第二，`sprig run` 其实做了四件事：检查代码、生成 Java、用 `javac` 编译、启动 JVM。第一次运行一个程序会慢一点，多出来的时间主要花在 `javac` 上；没改过的程序再次运行时会跳过这一步。
 
 ## 1.3 只检查，不运行
 
@@ -52,7 +52,7 @@ sprig run hello.spr
 sprig check hello.spr
 ```
 
-它只做检查，一次列出所有错误，不生成任何东西，比 `run` 快得多。把 `hello.spr` 的第二行改成 `print(1 + "a" - 2)` 再检查，就能看到 Sprig 报错的样子：
+它只做检查，一次列出所有错误，不生成任何东西，比 `run` 快得多。把 `hello.spr` 里的 `print(1 + 2)`（第 3 行）改成 `print(1 + "a" - 2)` 再检查，就能看到 Sprig 报错的样子：
 
 ```text
 SPR-NUM-MIXED [TYPE] hello.spr:3:7: Operator '-' has no implicit conversion between String and Int (expected matching numeric families, actual String and Int)

@@ -236,9 +236,8 @@ that parses as type references as a candidate; the checker decides:
 - if the base names a generic declaration, the bracket is a type application;
 - otherwise a single plain name is indexing, as in the design kit.
 
-One consequence: `handler[index](arg)` (index, then call the result) is not a
-valid form and is diagnosed; index-then-call was never usable with the
-current function-type model.
+`handlers[index](arg)`, indexing a list of function values and calling the
+result, is an ordinary call on an indexed value.
 
 ## JVM lowering
 
@@ -260,17 +259,18 @@ Explicit type arguments also apply to imported Java classes and methods
 preserved in Sprig types and in `sprig api` metadata; class type variables
 resolve through the receiver and its inherited hierarchy. The profile is
 deliberately bounded: no wildcard syntax in Sprig (an imported wildcard keeps
-its bound and cannot be written through), no capture conversion and no Java
-generic inference; method type parameters require explicit arguments, and
-recursive/intersection bounds or generic arrays are rejected before codegen.
+its bound and cannot be written through) and no capture conversion; a method's
+own type parameters are inferred when the plain arguments fix every one of them
+exactly and are written otherwise (see JVM interop), and recursive/intersection
+bounds or generic arrays are rejected before codegen.
 Java reference results remain conservatively nullable. See
 [JVM interop](../jvm/interop.md) for arrays and collection adapters.
 
 ## Not implemented
 
 Inference of type arguments from the expected type, inference of Java method
-type variables, variance, any user-defined capability,
-generic constraints on JVM types, and registry/publishing features. The
+type variables through a lambda, `null`, a Sprig collection or the result,
+variance, any user-defined capability, and generic constraints on JVM types. The
 manifest and entry-discovery model (`sprig.toml`, `init`, `project`, `deps`,
 `run --bin`), schema-5 lockfiles, local/Git and Apache Maven resolution are implemented;
 see the current project/dependency documentation.

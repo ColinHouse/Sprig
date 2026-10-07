@@ -14,23 +14,38 @@ public final class HostChannel<T> {
     private static final Object CLOSED = new Object();
     private final LinkedBlockingQueue<Object> queue;
     private final ReentrantLock sendLock = new ReentrantLock();
+    /** Free value slots: senders take one, receivers give it back. */
+    private final java.util.concurrent.Semaphore permits;
     private volatile boolean closed;
 
     public HostChannel(long capacity) {
         if (capacity < 1 || capacity > 10_000_000) throw new SprigError("channel capacity must be 1..10000000, got " + capacity);
-        this.queue = new LinkedBlockingQueue<>((int) capacity);
+        // One slot beyond the capacity is reserved for the close marker, so
+        // close() never waits for a receiver; the permits keep senders to the
+        // declared capacity.
+        this.queue = new LinkedBlockingQueue<>((int) capacity + 1);
+        this.permits = new java.util.concurrent.Semaphore((int) capacity);
     }
 
     /** Blocks while the channel is full. Sending to a closed channel is an Error. */
     public void send(T value) {
         if (value == null) throw new SprigError("a channel carries values, not null");
-        sendLock.lock();
+        if (closed) throw new SprigError("channel is closed");
         try {
-            if (closed) throw new SprigError("channel is closed");
-            queue.put(value);
+            // Wait for a slot outside the lock, so a close() is never queued
+            // behind a sender that waits for a receiver.
+            permits.acquire();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new SprigError("sending on the channel was interrupted", e);
+        }
+        sendLock.lock();
+        try {
+            if (closed) {
+                permits.release();
+                throw new SprigError("channel is closed");
+            }
+            if (!queue.offer(value)) throw new IllegalStateException("channel slot accounting failed");
         } finally {
             sendLock.unlock();
         }
@@ -39,9 +54,15 @@ public final class HostChannel<T> {
     /** Offers without blocking: false when the channel is full or closed. */
     public boolean trySend(T value) {
         if (value == null) throw new SprigError("a channel carries values, not null");
+        if (closed || !permits.tryAcquire()) return false;
         sendLock.lock();
         try {
-            return !closed && queue.offer(value);
+            if (closed) {
+                permits.release();
+                return false;
+            }
+            if (!queue.offer(value)) throw new IllegalStateException("channel slot accounting failed");
+            return true;
         } finally {
             sendLock.unlock();
         }
@@ -56,6 +77,7 @@ public final class HostChannel<T> {
                 queue.offer(CLOSED); // keep the marker for the other receivers
                 return null;
             }
+            permits.release();
             return (T) item;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -73,6 +95,7 @@ public final class HostChannel<T> {
                 queue.offer(CLOSED);
                 return null;
             }
+            if (item != null) permits.release();
             return (T) item;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -86,11 +109,10 @@ public final class HostChannel<T> {
         try {
             if (closed) return;
             closed = true;
-            // The marker takes the last slot; a full channel waits for a receiver.
-            queue.put(CLOSED);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new SprigError("closing the channel was interrupted", e);
+            // The marker has its own reserved slot, so a full channel closes at once.
+            if (!queue.offer(CLOSED)) throw new IllegalStateException("channel slot accounting failed");
+            // Senders waiting for a slot wake up and see the channel closed.
+            permits.release(Integer.MAX_VALUE / 2);
         } finally {
             sendLock.unlock();
         }

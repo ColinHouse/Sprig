@@ -1,0 +1,34 @@
+import "@std/test.spr" as test
+import "../src/tasks.spr" as tasks
+
+func round_trip() -> Unit throws Error:
+    var list = tasks.add([], "write report")
+    list = tasks.add(list, "  ship it ")
+    test.equal_int(list.size(), 2, "two tasks")
+    test.equal_text(list[1].title, "ship it", "trimmed title")
+    test.equal_int(list[1].id, 2, "ids count up")
+    let encoded = tasks.encode(list)
+    test.equal_text(encoded, "{\"tasks\":[{\"id\":1,\"title\":\"write report\",\"done\":false},{\"id\":2,\"title\":\"ship it\",\"done\":false}]}\n", "encoding")
+    let decoded = tasks.decode(encoded)
+    test.equal_int(decoded.size(), 2, "decoded count")
+    test.equal_text(decoded[0].title, "write report", "decoded title")
+
+func done_and_remove() -> Unit throws Error:
+    let list = tasks.add(tasks.add([], "a"), "b")
+    let marked = tasks.mark_done(list, 1)
+    if marked == null:
+        throw Error("task 1 should exist")
+    test.equal_bool(marked[0].done, true, "marked")
+    test.equal_bool(marked[1].done, false, "untouched")
+    assert(tasks.mark_done(list, 7) == null, "unknown id")
+    let removed = tasks.remove(marked, 1)
+    if removed == null:
+        throw Error("task 1 should exist")
+    test.equal_int(removed.size(), 1, "one left")
+    test.equal_int(tasks.next_id(removed), 3, "ids are never reused")
+
+test.check("adds and round-trips tasks through JSON", round_trip)
+test.check("marks done and removes", done_and_remove)
+test.check_error("rejects a blank title", fn() => tasks.add([], "   "))
+test.check_error("rejects malformed JSON", fn() => tasks.decode("{\"tasks\": [{\"id\": \"x\"}]}"))
+test.finish()

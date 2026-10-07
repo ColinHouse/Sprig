@@ -127,6 +127,11 @@ public final class Codes {
     public static final String JVM_COMPILE = "SPR-JVM-COMPILE";
     public static final String JVM_INTERNAL = "SPR-JVM-INTERNAL";
 
+    // BUNDLE (sprig build --bundle)
+    public static final String BUNDLE_TOOLS = "SPR-BUNDLE-TOOLS";
+    public static final String BUNDLE_JDEPS = "SPR-BUNDLE-JDEPS";
+    public static final String BUNDLE_LAYOUT = "SPR-BUNDLE-LAYOUT";
+
     // RUNTIME
     public static final String RUNTIME_ERROR = "SPR-RUNTIME-ERROR";
     public static final String RUNTIME_EXCEPTION = "SPR-RUNTIME-EXCEPTION";

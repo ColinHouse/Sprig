@@ -1,0 +1,14 @@
+import java.lang.Math as Math
+import java.lang.Integer as Integer
+import java.lang.Float as JFloat
+import java.util.Collections as Collections
+
+# Int 变量传给 int 形参时带范围检查地收窄；有 long 重载时优先选 long。
+let n: Int = 5
+print(Integer.toBinaryString(n))
+print(Collections.nCopies[String](n, "ab"))
+let big: Int = 4294967296
+print(Math.abs(big))
+# Float 不会自动变成 float：要自己说清楚是精确转换还是允许舍入。
+let ratio: Float = 0.1
+print(JFloat.valueOf(ratio.toFloat32Lossy()))

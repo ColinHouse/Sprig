@@ -1362,10 +1362,27 @@ public final class JavaGenerator {
             }
             if (concrete && branch.binderSymbol != null) code.append(javaType(branch.binderType)).append(" ").append(localName(branch.binderSymbol)).append(" = ").append(temp).append("; ");
             Expr value = ((Stmt.ExprStmt)branch.body.get(0)).expr;
-            code.append("yield ").append(convertedExpression(value,expr.type)).append("; } ");
+            code.append(yieldStatement(convertedExpression(value, expr.type), javaType(expr.type))).append("} ");
         }
         if (!concrete) code.append("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\"); ");
         return code.append("} }))").toString();
+    }
+
+    /**
+     * A yield of one branch value. javac 17 reads `yield (` followed by a comma
+     * at the first level of parentheses, as in
+     * `(SprigMutableMap.<String, Long>ofEntries(...)).keys()`, as a call of a
+     * method named yield and rejects it (javac 26 accepts it), so a value that
+     * starts with `(` is assigned to a local of the result's Java type first.
+     * The long if expression needs no such step: each of its values is a cast
+     * `((T) (...))`, whose commas are all nested deeper.
+     */
+    private String yieldStatement(String value, String javaType) {
+        if (!value.startsWith("(")) {
+            return "yield " + value + "; ";
+        }
+        String temp = freshTemp("yielded");
+        return javaType + " " + temp + " = " + value + "; yield " + temp + "; ";
     }
 
     private String emitName(Expr.Name name) {
@@ -1525,6 +1542,16 @@ public final class JavaGenerator {
                 return wrapNegate(negate, call);
             }
             Type base = binary.left.type == null ? null : binary.left.type.nonNull();
+            if (binary.valueEquality && isStringType(binary.left.type) && isStringType(binary.right.type)) {
+                // Two Strings compare with Objects.equals directly; equalsValue
+                // would first test both sides for Double and Float. The operands
+                // are evaluated once, left to right. Objects.equals also for two
+                // non-null Strings: a Java result trusted as non-null through its
+                // annotations may still be null, and == then stays false, as
+                // before, instead of throwing.
+                String call = "java.util.Objects.equals(" + left + ", " + right + ")";
+                return wrapNegate(negate, "(" + call + ")");
+            }
             if (binary.valueEquality) {
                 String call = "sprig.runtime.SprigRuntime.equalsValue(" + left + ", " + right + ")";
                 return negate ? "(!" + call + ")" : call;
@@ -1593,6 +1620,11 @@ public final class JavaGenerator {
         return negate ? "(!" + expression + ")" : expression;
     }
 
+    /** {@code String} or {@code String?}. */
+    private static boolean isStringType(Type type) {
+        return type != null && type.nonNull() == NativeType.STRING;
+    }
+
     /** Unboxes nullable numeric/boolean locals for primitive comparison. */
     private String unbox(Expr expr, String code) {
         Type type = expr.type;
@@ -1628,7 +1660,14 @@ public final class JavaGenerator {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(convertedExpression(lit.items.get(i), ((ListType) lit.type).element));
+            Expr item = lit.items.get(i);
+            if (item instanceof Expr.NullLit) {
+                // A lone null would be the varargs array itself (ofItems(null)):
+                // cast it to the element type so it is one null element.
+                sb.append("((").append(boxedJavaType(((ListType) lit.type).element)).append(") null)");
+            } else {
+                sb.append(convertedExpression(item, ((ListType) lit.type).element));
+            }
         }
         return sb.append(')').toString();
     }
@@ -2362,7 +2401,8 @@ public final class JavaGenerator {
         String code = emitExpr(arg);
         Type type = arg.type;
         Type base = type == null ? null : type.nonNull();
-        if (arg instanceof Expr.IntLit && (param == int.class || param == Integer.class)) return "((int) " + code + ")";
+        if (arg instanceof Expr.IntLit literal && (param == int.class || param == Integer.class)
+                && literal.value.bitLength() < 32) return "((int) " + code + ")";
         if (arg instanceof Expr.IntLit && (param == short.class || param == Short.class)) return "((short) " + code + ")";
         if (arg instanceof Expr.IntLit && (param == byte.class || param == Byte.class)) return "((byte) " + code + ")";
         if (arg instanceof Expr.FloatLit && (param == float.class || param == Float.class)) return "((float) " + code + ")";

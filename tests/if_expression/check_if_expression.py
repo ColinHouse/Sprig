@@ -249,7 +249,7 @@ print(step(6) + step(3))
             ('SPR-TYPE-UNIT', 'let x = if true:\n    print(1)\nelse:\n    2\n'),
             ('SPR-TYPE-INFER', 'let x = if true:\n    null\nelse:\n    null\n'),
             ('SPR-TYPE-RETURN', 'func f() -> Unit:\n    return if true:\n        1\n    else:\n        2\n'),
-            ('SPR-NUM-MIXED', 'var v: Int? = 3\nlet x = if v != null:\n    v + 1\nelse:\n    0\n'),
+            ('SPR-TYPE-NULLABLE', 'var v: Int? = 3\nlet x = if v != null:\n    v + 1\nelse:\n    0\n'),
             ('SPR-TYPE-CAPTURE', 'func f(c: Bool) -> Int:\n    var n = 1\n    let g = fn() => if c:\n        n\n    else:\n        0\n    return g()\n'),
             ('SPR-NAME-FORWARD-REFERENCE', 'let x = if true:\n    later\nelse:\n    0\nlet later = 1\n'),
             ('SPR-NAME-UNRESOLVED', 'let x = if true:\n    missing_name\nelse:\n    0\n'),
@@ -444,7 +444,9 @@ print(total)
         # The end of the file is left out only when the broken if expression reaches it.
         p.write_text('let n = 1\nlet x = if n > 0: 1 else: 2\nfunc g() -> Int:\n')
         result, found = diagnostics(p)
-        assert [(d['range']['start']['line'], 'INDENT' in d['message']) for d in found] == [(1, False), (3, True)], found
+        # The missing body is reported in source terms (#142), not as ANTLR's INDENT token.
+        assert [(d['range']['start']['line'], "Expected an indented block after 'func ...:'" in d['message'])
+                for d in found] == [(1, False), (3, True)], found
 
         # Help, capabilities and docs state the narrowing that is implemented.
         claims = [invoke('help', topic, '--json').stdout for topic in ('nullability', 'match', 'language')]

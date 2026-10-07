@@ -117,5 +117,8 @@
   ],
   "feature.packageRegistry": [
     "tests/registry/check_registry.py"
+  ],
+  "feature.bundle": [
+    "tests/bundle/check_bundle.py"
   ]
 }
