@@ -1,0 +1,54 @@
+# A list or map literal compared with == or != takes its type from the other
+# operand, as an initializer takes it from the declared type: [] needs no
+# annotation there, and [1, 2] next to a List[Int32] holds Int32 elements.
+# Two cases of one variant compare at the variant's type, so different cases
+# are never equal.
+
+variant Shape:
+    Circle(radius: Float)
+    Square(side: Float)
+    Point
+
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+let xs: List[Int] = [1]
+print(xs == [])
+print(xs != [])
+print([] == xs)
+print(xs == [1])
+
+let narrow: List[Int32] = [1, 2]
+print(narrow == [1, 2])
+print([1, 2] == narrow)
+print(narrow != [2, 1])
+let ratios: List[Float32] = [0.1, 0.5]
+print(ratios == [0.1, 0.5])
+
+let none: MutableList[String] = []
+print(none == [])
+let missing: List[Int]? = null
+print(missing == [])
+let shapes: List[Shape] = [Shape.Circle(radius=1.0), Shape.Point]
+print(shapes == [Shape.Circle(radius=1.0), Shape.Point])
+
+let nested: Map[String, List[Int]] = {"x": [1, 2], "y": []}
+print(nested == {"x": [1, 2], "y": []})
+print(nested != {"x": [1, 2], "y": [3]})
+print({"x": [1, 2], "y": []} == nested)
+let counts: Map[String, Int32] = {}
+print(counts == {})
+
+# Cases of one variant.
+print(Shape.Circle(radius=1.0) == Shape.Square(side=1.0))
+print(Shape.Circle(radius=1.0) != Shape.Square(side=1.0))
+print(Shape.Circle(radius=1.0) == Shape.Circle(radius=1.0))
+print(Shape.Square(side=2.0) == Shape.Point)
+let circle = Shape.Circle(radius=2.0)
+print(circle == Shape.Square(side=2.0))
+print(circle == Shape.Circle(radius=2.0))
+print(Option[Int].Some(value=1) == Option[Int].None)
+print(Option.Some(value=1) == Option[Int].Some(value=1))
