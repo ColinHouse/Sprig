@@ -211,7 +211,11 @@ public final class Catalog {
         guidance(out, "asyncAwait", "concurrency", "the sprig-concurrent library: spawn[T](fn() -> T) -> Task[T] and task.await()",
                 "parallel_map, await_all, pool(threads) and spawn_on for bounded parallelism",
                 "channel[T](capacity) for values between threads; counter, lock and latch for shared state");
-        guidance(out, "errorClasses", "errors", "a class with a message: String field plus conform C to Error(message); throw it, declare throws C, catch it by name or as Error");
+        out.put("errorClasses", Map.of("supported", true, "helpTopic", "errors",
+                "rules", List.of("a class with a let message: String field becomes an error type through conform C to Error(message)",
+                        "throw it with named fields, declare throws C (or several, comma separated), catch it by name or as Error",
+                        "catch clauses match top to bottom, so the specific class goes before Error",
+                        "a class never extends another class; Error is the only conformance that adds a supertype")));
         guidance(out, "arrays", "jvm", "foreign JVM array pass-through with exact classes", "byte[] helpers via sprig.runtime.jvm.HostBytes", "List[T] and @std/jvm adapters");
         out.put("varargs", Map.of("supported", true, "helpTopic", "jvm",
                 "rules", List.of("trailing arguments are packed into the final array parameter; zero of them is allowed",
