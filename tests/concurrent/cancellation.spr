@@ -79,3 +79,34 @@ func shutdown_drops_queue(s: concurrent.Scope) -> Int throws Error:
     print("dropped task cancelled: " + dropped.is_cancelled())
     return holding.await() * 10 + ran.get()
 print(concurrent.scope(shutdown_drops_queue))
+
+# 5. a body that fails only because it awaited a task the first failure
+# cancelled reports that first failure, not the cancellation (#205)
+let waiter_started = concurrent.counter(0)
+let never = concurrent.counter(0)
+func wait_until_cancelled() -> Int:
+    waiter_started.set(1)
+    while never.get() == 0:
+        concurrent.sleep(5)
+    return 0
+func fail_after_waiter() -> Int:
+    while waiter_started.get() == 0:
+        concurrent.sleep(5)
+    return divide(1, 0)
+func await_cancelled_sibling(s: concurrent.Scope) -> Int throws Error:
+    let waiting = concurrent.spawn(s, fn() => wait_until_cancelled())
+    let failing = concurrent.spawn(s, fn() => fail_after_waiter())
+    return waiting.await() + failing.await()
+try:
+    print(concurrent.scope(await_cancelled_sibling))
+catch problem: Error:
+    print("the first failure, not the cancellation: " + problem.message.contains("zero"))
+
+# 6. an error of the body's own is reported as it is
+func own_error(s: concurrent.Scope) -> Int throws Error:
+    concurrent.spawn(s, fn() => divide(1, 0))
+    throw Error("the body gave up")
+try:
+    print(concurrent.scope(own_error))
+catch problem: Error:
+    print("the body's own error is kept: " + (problem.message == "the body gave up"))
