@@ -148,6 +148,8 @@ sprig api java.time.LocalDate --member parse
 sprig api com.example.Client --classpath lib/client.jar --json
 ```
 
+想继承一个 Java 类、覆盖它的 protected 方法，比如 `java.util.Random` 的 `next`？它不在公开成员的列表里，`sprig api java.util.Random --member next` 会把它列在 `protectedMethods` 下面。在用 `conform C to Random(seed) as parent` 声明的类里写一个签名相同的方法就能覆盖它，原来的实现用 `parent.next(bits)` 调用。
+
 如果要频繁使用某个 Java 类，可以用 `sprig wrap` 生成一个 Sprig 包装文件。生成的是普通源码，你可以随意修改：
 
 ```bash

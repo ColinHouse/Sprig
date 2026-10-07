@@ -280,7 +280,7 @@ public final class Main {
             data.put("memberCount", count);
             if (count == 0) {
                 diagnostics.error(Codes.JVM_MEMBER, Phase.JVM,
-                        "No public JVM member named '" + options.memberFilter + "' on " + clazz.getName(), null, null);
+                        "No public or protected JVM member named '" + options.memberFilter + "' on " + clazz.getName(), null, null);
                 report(diagnostics, options.json, "api", 1, null);
                 return 1;
             }
@@ -294,6 +294,15 @@ public final class Main {
                     System.out.println("  " + item.get("javaSignature") + " => "
                             + item.getOrDefault("sprigSignature", item.getOrDefault("sprigType", "")));
                     if (item.get("unusableReason") != null) System.out.println("    unavailable: " + item.get("unusableReason"));
+                }
+            }
+            List<Map<String, Object>> protectedMethods = (List<Map<String, Object>>) data.get("protectedMethods");
+            if (protectedMethods != null && !protectedMethods.isEmpty()) {
+                System.out.println("protectedMethods (in a class declared with 'conform C to "
+                        + clazz.getSimpleName() + "(...) as NAME': override them, call them as NAME.m(...)):");
+                for (Map<String, Object> item : protectedMethods) {
+                    System.out.println("  " + item.get("javaSignature") + " => " + item.get("sprigSignature")
+                            + (Boolean.TRUE.equals(item.get("final")) ? "  (final: callable, not overridable)" : ""));
                 }
             }
         }
@@ -1988,7 +1997,8 @@ public final class Main {
 
     private static int filterApiMembers(Map<String, Object> data, String member) {
         int count = 0;
-        for (String category : List.of("constructors", "staticMethods", "instanceMethods", "fields")) {
+        for (String category : List.of("constructors", "staticMethods", "instanceMethods", "protectedMethods",
+                "fields")) {
             List<Map<String, Object>> all = (List<Map<String, Object>>) data.get(category);
             List<Map<String, Object>> filtered = all.stream()
                     .filter(item -> member.equals(item.get("name"))

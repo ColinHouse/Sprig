@@ -217,7 +217,9 @@ class, and `C`'s own API is unchanged.
 - **The parent view.** `as NAME` declares a class-scope name, visible in every
   method of `C` (also inside lambdas there), that calls the inherited
   implementation: `NAME.m(args)` is Java's `super.m(args)`, generated as
-  `C.super.m(args)`, for the public and protected methods of the chain. `NAME` is not a value, has no fields, never names a static
+  `C.super.m(args)`, for the public and protected methods of the chain
+  (`sprig api J` lists the protected ones under `protectedMethods`; the
+  language server completes both after `NAME.`). `NAME` is not a value, has no fields, never names a static
   method and cannot call an abstract method; each of those is
   `SPR-CONFORM-PARENT`, as is an alias on an interface conform or one that
   shares a name with a field or method of `C`. The result of a parent call is

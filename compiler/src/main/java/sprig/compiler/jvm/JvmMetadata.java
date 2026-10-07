@@ -53,10 +53,33 @@ public final class JvmMetadata {
         List<Map<String, Object>> staticMethods = new ArrayList<>();
         List<Map<String, Object>> instanceMethods = new ArrayList<>();
         Arrays.stream(clazz.getMethods()).sorted(Comparator.comparing(Method::toGenericString))
-                .forEach(method -> (Modifier.isStatic(method.getModifiers()) ? staticMethods : instanceMethods)
-                        .add(describe(method)));
+                .forEach(method -> {
+                    if (Modifier.isStatic(method.getModifiers())) {
+                        staticMethods.add(describe(method));
+                    } else {
+                        instanceMethods.add(withAccess(describe(method), clazz, method));
+                    }
+                });
         out.put("staticMethods", staticMethods);
         out.put("instanceMethods", instanceMethods);
+        // Protected instance methods cannot be called on a value, but a class
+        // declared with `conform C to J(...) as NAME` overrides them and calls
+        // them through its parent view NAME.m(...), so they are listed apart.
+        // Only a subclass reaches them: none for an interface or a final class.
+        List<Map<String, Object>> protectedMethods = new ArrayList<>();
+        if (!clazz.isInterface() && !Modifier.isFinal(clazz.getModifiers())) {
+            inheritable(clazz).stream()
+                    .filter(method -> Modifier.isProtected(method.getModifiers()))
+                    .sorted(Comparator.comparing(Method::toGenericString))
+                    .forEach(method -> {
+                        Map<String, Object> described = withAccess(describe(method), clazz, method);
+                        described.put("reachedThrough", "a class declared with 'conform C to "
+                                + clazz.getSimpleName() + "(...) as NAME' overrides it with the same "
+                                + "signature and calls the inherited version as NAME." + method.getName() + "(...)");
+                        protectedMethods.add(described);
+                    });
+        }
+        out.put("protectedMethods", protectedMethods);
         List<Map<String, Object>> fields = new ArrayList<>();
         Arrays.stream(clazz.getFields()).sorted(Comparator.comparing(Field::getName)
                         .thenComparing(Field::toGenericString))
@@ -74,6 +97,13 @@ public final class JvmMetadata {
                 Map.of("level", "unsupported", "meaning", "the reflection shape is outside the supported profile")));
         out.put("classpath", JvmClasspath.entries().stream().map(java.nio.file.Path::toString).toList());
         return out;
+    }
+
+    /** An instance method's access, and whether it is final (no override can replace it). */
+    private static Map<String, Object> withAccess(Map<String, Object> described, Class<?> clazz, Method method) {
+        described.put("access", Modifier.isProtected(method.getModifiers()) ? "protected" : "public");
+        described.put("final", Modifier.isFinal(method.getModifiers()));
+        return described;
     }
 
     public static Map<String, Object> describe(Executable executable) {
