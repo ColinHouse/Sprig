@@ -1,6 +1,6 @@
 let n = 300
 print(n.toInt32Exact())
-print(n.toFloat())
+print(n.toFloatExact())
 let f = 2.75
 print(f.toIntTrunc())
 let a = 3

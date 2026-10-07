@@ -338,7 +338,7 @@ public final class Explanations {
                         "A method name that does not exist on the value's type.",
                         "Mixed numeric kinds that need an explicit conversion (see SPR-NUM-MIXED)."));
                 out.put("safeFixes", List.of("Use an operation the type defines; check sprig help types --json.",
-                        "Convert explicitly (toInt(), toFloatExact(), ...) before the operation.",
+                        "Convert explicitly (toFloatExact(), toIntTrunc(), ...) before the operation.",
                         "Narrow nullable values before calling methods on them."));
                 out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.NUM_MIXED, Codes.TYPE_NULLABLE));
             }

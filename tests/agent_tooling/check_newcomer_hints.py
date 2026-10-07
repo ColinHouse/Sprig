@@ -167,9 +167,15 @@ CASES = [
     ("nullable-task-result", "import \"@std/concurrent.spr\" as concurrent\nfunc maybe() -> Int?:\n    return null\n"
      "func body(s: concurrent.Scope) -> Int? throws Error:\n    return concurrent.spawn(s, fn() => maybe()).await()\n"
      "print(concurrent.scope(body))\n", "SPR-TYPE-MISMATCH", "T cannot be Int? here: a written [Int?] is rejected as well."),
-    ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
+    # Each numeric conversion has one spelling; the others name it.
+    ("int-has-no-tofloat", "let n = 3\nprint(n.toFloat())\n", "SPR-NAME-UNRESOLVED", "value.toFloatExact()"),
+    ("float-has-no-toint", "let x = 2.5\nprint(x.toInt())\n", "SPR-NAME-UNRESOLVED", "value.toIntExact()"),
+    ("decimal-has-no-fromint", "print(Decimal.fromInt(3))\n", "SPR-NAME-UNRESOLVED", "value.toDecimal()"),
+    ("int-has-no-parse", "print(Int.parse(\"12\"))\n", "SPR-NAME-UNRESOLVED", "text.toInt()"),
+    ("int32-mix-widens-exactly", "let a: Int32 = 3\nlet f = 1.5\nprint(f * a)\n", "SPR-NUM-MIXED", "a.toFloat()."),
+    ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloatExact()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
-     "sum.toFloat() / count.toFloat()"),
+     "sum.toFloatExact() / count.toFloatExact()"),
     ("nullable-operand", "let n = \"3\".toIntOrNull()\nprint(n + 1)\n", "SPR-TYPE-NULLABLE", "check it first with 'if n != null:'"),
     ("nullable-ordering", "let n = \"3\".toIntOrNull()\nif n > 2:\n    print(1)\n", "SPR-TYPE-OPERAND", "'if n != null:'"),
     ("nullable-var", "var v = \"3\".toIntOrNull()\nprint(v + 1)\n", "SPR-TYPE-NULLABLE", "a var never narrows"),

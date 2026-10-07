@@ -17,7 +17,7 @@ print((1e308 * 1e308).isInfinite())
 print(1e-300 * 1e-300)
 let small: Float32 = 0.1
 print(small.toFloat())
-print((1).toFloat())
+print((1).toFloatExact())
 print(JDouble.doubleToRawLongBits(negative_zero))
 let negative_zero32: Float32 = -0.0
 print(JFloat.floatToRawIntBits(negative_zero32))

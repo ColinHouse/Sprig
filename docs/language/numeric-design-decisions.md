@@ -67,7 +67,7 @@ IEEE/decimal semantics; none is currently performed.
 ## Compatibility and migration
 
 Old Sprig code using integer `/` must choose `divTrunc` or convert to a
-numeric family with explicit precision policy. `(3.9).toInt()` now requires an
+numeric family with explicit precision policy. `(3.9).toIntExact()` requires an
 integral value; use `toIntTrunc()` to request truncation. Calls from `Int`
 variables to Java `int` methods and from `Float` variables to Java `float`
 methods now fail at type checking; declare an appropriately sized Sprig value

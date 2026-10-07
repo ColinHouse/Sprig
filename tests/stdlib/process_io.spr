@@ -41,4 +41,4 @@ elif mode == "ok":
     process.exit(0)
     print("not reached")
 elif mode == "status":
-    process.exit(Int.parse(process.argument(1)))
+    process.exit(process.argument(1).toInt())

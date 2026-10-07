@@ -29,16 +29,16 @@ public final class BuiltinMembers {
     private static final List<String> MAP_MUTATE = List.of("set", "remove", "clear");
 
     static {
-        STATIC.put(NativeType.INT, List.of("parse", "abs", "min", "max"));
+        STATIC.put(NativeType.INT, List.of("abs", "min", "max"));
         STATIC.put(NativeType.FLOAT, List.of("sqrt", "floor", "ceil", "abs"));
-        STATIC.put(NativeType.DECIMAL, List.of("parse", "fromInt", "fromJava"));
+        STATIC.put(NativeType.DECIMAL, List.of("parse", "fromJava"));
         STATIC.put(NativeType.BIGINT, List.of("parse", "fromInt", "fromJava"));
         STATIC.put(NativeType.STRING, List.of("join", "fromCode"));
 
-        INSTANCE.put(NativeType.INT, List.of("toFloat", "toFloatExact", "toFloatLossy", "toInt32Exact",
+        INSTANCE.put(NativeType.INT, List.of("toFloatExact", "toFloatLossy", "toInt32Exact",
                 "toDecimal", "divTrunc", "compareTo", "toString"));
         INSTANCE.put(NativeType.INT32, List.of("toInt", "toFloat", "toDecimal", "divTrunc", "compareTo", "toString"));
-        INSTANCE.put(NativeType.FLOAT, List.of("toInt", "toIntExact", "toIntTrunc", "toFloat32Exact",
+        INSTANCE.put(NativeType.FLOAT, List.of("toIntExact", "toIntTrunc", "toFloat32Exact",
                 "toFloat32Lossy", "isNaN", "isInfinite", "isFinite", "approxEqual", "compareTo", "toString"));
         INSTANCE.put(NativeType.FLOAT32, List.of("toFloat", "isNaN", "isInfinite", "isFinite", "compareTo", "toString"));
         INSTANCE.put(NativeType.DECIMAL, List.of("divide", "toIntExact", "toFloatExact", "toFloatLossy",

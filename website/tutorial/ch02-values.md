@@ -46,9 +46,10 @@ Sprig 有两个常用的数值类型：`Int` 是 64 位有符号整数，`Float`
 几条规则：
 
 - **整数相除要说清楚。** `a.divTrunc(b)` 是截断除法，`%` 取余。整数之间不能直接写 `/`，下面会看到为什么。
-- **Int 和 Float 不混算。** 要先用 `toFloat()` 把整数转过去。
+- **Int 和 Float 不混算。** 要先用 `toFloatExact()` 把整数转过去。
 - **整数运算检查溢出。** `9000000000 * 1000` 在 64 位里放得下，所以正常打印；超出范围的运算在运行时报 `SPR-RUNTIME-EXCEPTION`，而不是悄悄绕回负数。
 - 浮点数转整数也要说清楚：`toIntExact()` 要求它正好是整数，否则运行时报错；`toIntTrunc()` 截掉小数部分。
+- **数字之间的转换方法，名字说明会不会丢信息。** 名字不带后缀的（`Int32` 的 `toInt()`、`toDecimal()` 等）一定成功；可能丢信息的，名字里写明丢了怎么办：`Exact` 报错，`Lossy` 四舍五入，`Trunc` 截掉小数。所以 `Int` 没有 `toFloat()`，`Float` 也没有 `toInt()`。
 
 ### 故意写错：整数直接相除
 
@@ -56,7 +57,7 @@ Sprig 有两个常用的数值类型：`Int` 是 64 位有符号整数，`Float`
 
 ```text
 SPR-NUM-DIVISION [TYPE] main.spr:3:7: Integer / would truncate; use a.divTrunc(b), or convert both operands explicitly (expected explicit division, actual Int / Int)
-  hint: Write a.divTrunc(b) to drop the remainder on purpose, or a.toFloat() / b.toFloat() for a Float result. text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals.
+  hint: Write a.divTrunc(b) to drop the remainder on purpose, or a.toFloatExact() / b.toFloatExact() for a Float result. text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals.
 ```
 
 `7 / 2` 是 3 还是 3.5？Python 2 和 Python 3 的答案不同，Java 和 JavaScript 的答案也不同。Sprig 不替你选：想要 3 就写 `divTrunc`，想要 3.5 就两边都转成 `Float`。
@@ -67,10 +68,10 @@ SPR-NUM-DIVISION [TYPE] main.spr:3:7: Integer / would truncate; use a.divTrunc(b
 
 ```text
 SPR-NUM-MIXED [TYPE] main.spr:3:7: Operator '*' has no implicit conversion between Float and Int (expected matching numeric families, actual Float and Int)
-  hint: Convert the Int side: count.toFloat().
+  hint: Convert the Int side: count.toFloatExact().
 ```
 
-注意提示直接写出了要改的那个名字：`count.toFloat()`。Sprig 的报错尽量做到"照着改就行"。
+注意提示直接写出了要改的那个名字：`count.toFloatExact()`。Sprig 的报错尽量做到"照着改就行"。
 
 ::: tip 为什么这么严格
 记账程序里 `12.50 * 3` 算出 `37.5` 没问题，但 `0.1 + 0.2` 在任何语言的双精度浮点里都等于 `0.30000000000000004`。Sprig 让每一次 Int 与 Float 之间的转换都看得见，是为了让你在该用整数（比如"分"）的地方自觉地用整数。第 16 章的记账工具就是这么做的。
@@ -232,7 +233,7 @@ SPR-TYPE-CONDITION [TYPE] main.spr:2:4: Condition must be Bool (no truthiness) (
 
 - `let` 不可改，`var` 可改；默认用 `let`。
 - 类型可以推断，签名上的类型要写（下两章会看到）。
-- 没有隐式数值转换：整数除法写 `divTrunc`，Int 和 Float 之间用 `toFloat()` 等方法明确转换；只有窄变宽（`Int32` 到 `Int`、`Float32` 到 `Float`）是自动的。
+- 没有隐式数值转换：整数除法写 `divTrunc`，Int 和 Float 之间用 `toFloatExact()` 等方法明确转换；只有窄变宽（`Int32` 到 `Int`、`Float32` 到 `Float`）是自动的。
 - 整数溢出在运行时报错；算钱用整数的分或 `Decimal`。
 - 字符串用 `+` 拼接，没有插值；长度按字符算。
 - 条件必须是 `Bool`，没有"非零即真"。
