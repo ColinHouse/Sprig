@@ -45,7 +45,9 @@ wait_forever()
 def terminating_run_waits_for_the_program(directory):
     """A terminated `sprig run` exits only after its program has: a program that
     takes 1.5 s to shut down still holds its port until then, and the CLI used to
-    exit first and leave it behind. Signals and shutdown hooks are POSIX here."""
+    exit first and leave it behind. Being terminated is not a failure of its own,
+    so the CLI adds nothing to the program's output; it used to report an internal
+    error now and then. Signals and shutdown hooks are POSIX here."""
     import socket
     source = directory / "slow_exit.spr"
     source.write_text(SLOW_EXIT, encoding="utf-8")
@@ -59,9 +61,11 @@ def terminating_run_waits_for_the_program(directory):
     assert port is not None, "the program never reported its port"
     proc.terminate()
     proc.wait(timeout=30)
+    rest = proc.stdout.read()
     proc.stdout.close()
     with socket.socket() as probe:
         assert probe.connect_ex(("127.0.0.1", port)) != 0, "the program outlived the terminated CLI"
+    assert "sprig:" not in rest, rest
 
 
 def main():
