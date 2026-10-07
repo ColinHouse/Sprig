@@ -48,11 +48,7 @@ public abstract class SprigTestTask extends SprigTask {
         }
         List<String> arguments = new ArrayList<>(List.of("test", testDirectory.getAbsolutePath(),
                 "--offline", "--json"));
-        String classpath = getSprigClasspathArgument();
-        if (!classpath.isBlank()) {
-            arguments.add("--classpath");
-            arguments.add(classpath);
-        }
+        addClasspathArguments(arguments);
         executeSprig(arguments);
     }
 }

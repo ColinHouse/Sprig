@@ -114,8 +114,17 @@ public final class LanguageServer {
                 classpath.add(args[++i]);
                 continue;
             }
+            if (args[i].equals("--classpath-file") && i + 1 < args.length) {
+                try {
+                    classpath.addAll(sprig.compiler.Compiler.readClasspathFile(java.nio.file.Path.of(args[++i])));
+                } catch (java.io.IOException e) {
+                    System.err.println("sprig lsp: " + e.getMessage());
+                    return 2;
+                }
+                continue;
+            }
             System.err.println("sprig lsp: unexpected argument '" + args[i] + "'");
-            System.err.println("Usage: sprig lsp [--stdio] [--classpath JAR_OR_DIR]...");
+            System.err.println("Usage: sprig lsp [--stdio] [--classpath JAR_OR_DIR]... [--classpath-file FILE]");
             return 2;
         }
         // Standard output carries the protocol; anything else printed goes to stderr.

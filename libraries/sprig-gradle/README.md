@@ -39,7 +39,7 @@ sprig {
 }
 ```
 
-For Fabric/Loom, choose the `client` source set; see
+For Fabric/Loom, target `main` for content both sides need (items, blocks) and `client` for a client-only mod; see
 [`sprig-fabric`](../sprig-fabric/README.md) for a runnable starter.
 
 ## Toolchain discovery
@@ -71,7 +71,10 @@ during project configuration with setup guidance.
 Java bridge sources use the convention `src/sprigBridge/java/`. The plugin
 compiles them against the selected source set's actual compile classpath,
 adds the resulting classes to both compiler visibility and host runtime output,
-and includes them in the final artifact.
+and includes them in the final artifact. The compiler receives that classpath
+through a file (`build/tmp/<task>/classpath.txt`, one entry per line, passed as
+`--classpath-file`), so a Loom classpath of several hundred JARs also works
+within the Windows command-line limit.
 
 Generated Java is placed under
 `build/generated/sprig/<sourceSet>/java/`; the compiler runtime sources are

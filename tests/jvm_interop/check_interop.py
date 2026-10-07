@@ -180,6 +180,29 @@ public final class Marked {
     @Nullable public static String maybe() { return null; }
 }
 ''',
+    "Invisible.java": '''package audit;
+/** CLASS-retention annotations, as org.jetbrains.annotations declares them: invisible to reflection. */
+public final class Invisible {
+    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
+    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PARAMETER,
+            java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.TYPE_USE})
+    public @interface NotNull {}
+    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
+    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD, java.lang.annotation.ElementType.PARAMETER,
+            java.lang.annotation.ElementType.FIELD, java.lang.annotation.ElementType.TYPE_USE})
+    public @interface Nullable {}
+
+    @NotNull public String label = "label";
+    public String plainField = "plain";
+    public Invisible() {}
+    public static @NotNull String name() { return "ada"; }
+    public static String plain() { return "plain"; }
+    @Nullable public static String maybe() { return null; }
+    public static String take(@Nullable String value) { return value == null ? "none" : value; }
+    public static String need(String value) { return value; }
+    public static @NotNull java.util.List<@Nullable String> items() { return java.util.Arrays.asList("a", null); }
+}
+''',
     "Narrow.java": '''package audit;
 public class Narrow {
     public int count;
@@ -592,6 +615,19 @@ print(Interop.accepted(fn(value: String) => fail(value)))
                throwing.returncode == 1 and throwing_json and throwing_json["code"] == "SPR-TYPE-CALLABLE-THROWS",
                f"exit={throwing.returncode} {throwing.stdout}{throwing.stderr}")
 
+        # ----------------------------------------------- classpath file
+        listing = directory / "classpath.txt"
+        listing.write_text("# the fixture classes\n" + cp + "\n\n", encoding="utf-8")
+        _, listed = run_file("classpath-file.spr", '''import audit.Interop as Interop
+print(Interop.total(1, 2))
+''')
+        listed_run = call("run", directory / "classpath-file.spr", "--classpath-file", listing)
+        verify("run-classpath-file", listed_run.returncode == 0 and listed_run.stdout == "3\n",
+               f"exit={listed_run.returncode} {listed_run.stdout}{listed_run.stderr}")
+        missing_listing = call("check", directory / "classpath-file.spr", "--classpath-file", directory / "absent.txt", "--json")
+        verify("check-classpath-file-missing",
+               missing_listing.returncode != 0 and "--classpath-file could not be read" in missing_listing.stdout + missing_listing.stderr,
+               f"exit={missing_listing.returncode} {missing_listing.stdout[:300]}{missing_listing.stderr[:300]}")
         # ------------------------------------------- nullability annotations
         annotated_api = {m["name"]: m for m in (body(call("api", "audit.Annotated", "--classpath", cp, "--json")) or {})
                          .get("staticMethods", [])}
@@ -615,6 +651,41 @@ print(Interop.accepted(fn(value: String) => fail(value)))
                and marked_api.get("maybe", {}).get("nullableResult") is True,
                str({k: (v.get("nullableResult"), v.get("sprigReturnType"), v.get("sprigParameterTypes"))
                     for k, v in annotated_api.items()}) + str(marked_api.get("name")))
+        invisible_api = {m["name"]: m for m in (body(call("api", "audit.Invisible", "--classpath", cp, "--json")) or {})
+                         .get("staticMethods", [])}
+        invisible_fields = {f["name"]: f for f in (body(call("api", "audit.Invisible", "--classpath", cp, "--json")) or {})
+                            .get("fields", [])}
+        verify("api-nullability-class-retention",
+               invisible_api.get("name", {}).get("nullableResult") is False
+               and invisible_api.get("plain", {}).get("nullableResult") is True
+               and invisible_api.get("maybe", {}).get("nullableResult") is True
+               and invisible_api.get("take", {}).get("sprigParameterTypes") == ["String?"]
+               and invisible_api.get("need", {}).get("sprigParameterTypes") == ["String"]
+               and invisible_api.get("items", {}).get("nullableResult") is False
+               and invisible_fields.get("label", {}).get("nullableResult") is False
+               and invisible_fields.get("plainField", {}).get("nullableResult") is True,
+               str({k: (v.get("nullableResult"), v.get("sprigParameterTypes")) for k, v in invisible_api.items()})
+               + str({k: v.get("nullableResult") for k, v in invisible_fields.items()}))
+        _, invisible_run = run_file("nullability-invisible.spr", '''import audit.Invisible as Invisible
+
+print(Invisible.name().length())
+print(Invisible.take(null))
+let held: String? = "held"
+print(Invisible.take(held))
+let invisible = Invisible()
+print(invisible.label.length())
+print(Invisible.items().size())
+''')
+        verify("run-nullability-class-retention",
+               invisible_run.returncode == 0 and invisible_run.stdout == "3\nnone\nheld\n5\n2\n",
+               f"exit={invisible_run.returncode} stdout={invisible_run.stdout!r} stderr={invisible_run.stderr!r}")
+        _, invisible_plain = check_file("nullability-invisible-plain.spr",
+                                        "import audit.Invisible as Invisible\nprint(Invisible.plain().length())\n", "--json")
+        invisible_plain_diag = diagnostic(invisible_plain)
+        verify("check-nullability-class-retention-plain",
+               invisible_plain.returncode == 1 and invisible_plain_diag
+               and invisible_plain_diag["code"] == "SPR-TYPE-NULLABLE",
+               f"exit={invisible_plain.returncode} {invisible_plain.stdout}{invisible_plain.stderr}")
         _, nullability_run = run_file("nullability.spr", '''import audit.Annotated as Annotated
 import audit.Marked as Marked
 

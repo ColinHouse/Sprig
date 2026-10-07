@@ -31,11 +31,7 @@ public abstract class SprigGenerateTask extends SprigTask {
         output.mkdirs();
         List<String> arguments = new ArrayList<>(List.of("build", "--emit-java-only", "--offline", "--json",
                 "-d", output.getAbsolutePath()));
-        String classpath = getSprigClasspathArgument();
-        if (!classpath.isBlank()) {
-            arguments.add("--classpath");
-            arguments.add(classpath);
-        }
+        addClasspathArguments(arguments);
         executeSprig(arguments);
     }
 }

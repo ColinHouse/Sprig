@@ -5,7 +5,7 @@ server on standard input and output, so any LSP client can use it. It was added
 in v0.6.0-beta.1.
 
 ```text
-sprig lsp [--stdio] [--classpath JAR_OR_DIR]...
+sprig lsp [--stdio] [--classpath JAR_OR_DIR]... [--classpath-file FILE]
 ```
 
 `--stdio` is accepted because many clients pass it; standard input and output
