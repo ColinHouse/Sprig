@@ -120,6 +120,7 @@ def main():
     to_string = [m for m in local_date["instanceMethods"] if m["name"] == "toString"]
     month = [m for m in local_date["instanceMethods"] if m["name"] == "getMonth"]
     check("api-tostring-non-null", to_string and to_string[0]["sprigReturnType"] == "String"
+          and to_string[0]["sprigSignature"] == "toString() -> String"
           and to_string[0]["nullableResult"] is False and month and month[0]["nullableResult"] is True)
     files = obj(run("api", "java.nio.file.Files", "--json"))
     arrays = [m for m in files["staticMethods"] if m["name"] == "readAllBytes"]

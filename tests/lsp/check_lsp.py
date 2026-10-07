@@ -297,6 +297,9 @@ def check_workspace(directory):
     error_line = MAIN.splitlines().index("    print(problem.toString() + problem.message)")
     to_string_hover = hover_text(client, main, error_line, position(MAIN, error_line, "toString"))
     check("hover-error-tostring", "Built-in method of `Error`" in to_string_hover, to_string_hover)
+    binder_hover = hover_text(client, main, error_line, position(MAIN, error_line, "problem"))
+    check("hover-error-binder", "problem: Error" in binder_hover and "SprigError" not in binder_hover,
+          binder_hover)
     message_hover = hover_text(client, main, error_line, position(MAIN, error_line, "message"))
     check("hover-error-message", "message: String" in message_hover and "String?" not in message_hover,
           message_hover)

@@ -127,9 +127,47 @@ def string_join_lowering():
               and ran.stdout.strip() == "n=340.51.5truepen items=[1, 2]3", f"{ran.stdout!r} {ran.stderr!r}")
 
 
+def run_program(name, source, expected):
+    """Check, compile with javac and run one program; the output must match."""
+    with tempfile.TemporaryDirectory(prefix="sprig-run-") as work:
+        path = Path(work) / (name + ".spr")
+        path.write_text(source, encoding="utf-8")
+        ran = run("run", path)
+        check(name, ran.returncode == 0 and ran.stdout == expected, f"{ran.stdout!r} {ran.stderr!r}")
+
+
+def generic_compound_assignment():
+    """A collection typed with a type parameter is raw in Java, so get() is an Object.
+
+    `m[key] += 1` on a MutableMap[K, String] or MutableMap[K, Int] passed check and
+    then failed in javac; the old value is now read as the element's concrete type.
+    """
+    run_program("generic-compound-assignment",
+                "generic K:\n    func bump(m: MutableMap[K, String], key: K) -> Unit:\n        m[key] += 1\n\n"
+                "generic K:\n    func count(m: MutableMap[K, Int], key: K) -> Unit:\n        m[key] += 1\n\n"
+                "generic T:\n    class Names:\n        let names: MutableMap[T, String]\n\n"
+                "        func tag(key: T) -> Unit:\n            names[key] += true\n\n"
+                'let m: MutableMap[Int, String] = {1: "a"}\nbump[Int](m, 1)\nprint(m)\n'
+                'let c: MutableMap[String, Int] = {"x": 1}\ncount[String](c, "x")\nprint(c)\n'
+                'let n = Names[Int](names={2: "b"})\nn.tag(2)\nprint(n.names)\n',
+                "{1: a1}\n{x: 2}\n{2: btrue}\n")
+
+
+def java_to_string():
+    """toString() works on an interface-typed Java value, and an overload with arguments stays Java's."""
+    run_program("java-to-string",
+                "import java.util.ArrayList as ArrayList\nimport java.math.BigInteger as BigInteger\n\n"
+                'let xs = ArrayList[String]()\nxs.add("a")\nxs.add("b")\nlet head = xs.subList(0, 1)\n'
+                'if head != null:\n    print("head " + head.toString())\n'
+                "let big = BigInteger.valueOf(255)\nif big != null:\n    print(big.toString(16))\n    print(big.toString())\n",
+                "head [a]\nff\n255\n")
+
+
 def main():
     sealed_variant_lowering()
     string_join_lowering()
+    generic_compound_assignment()
+    java_to_string()
     null_assignment = run("check", "--json", CASES / "java_nonnull_null.spr")
     check("java-null-rejected", null_assignment.returncode != 0 and
           diagnostic_codes(null_assignment) == ["SPR-TYPE-NULL"] and

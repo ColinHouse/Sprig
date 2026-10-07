@@ -96,11 +96,8 @@ public final class JvmMetadata {
         out.put("typeParameters", Arrays.stream(executable.getTypeParameters())
                 .map(TypeVariable::getName).toList());
         if (executable instanceof Method method) {
-            // toString() is a non-null String in Sprig, as the checker types it.
-            boolean textResult = method.getName().equals("toString") && method.getParameterCount() == 0
-                    && method.getReturnType() == String.class;
-            String sprigReturn = textResult ? "String"
-                    : JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display();
+            boolean textResult = isTextResult(method);
+            String sprigReturn = sprigReturn(method);
             out.put("javaReturnType", method.getReturnType().getTypeName());
             out.put("sprigReturnType", sprigReturn);
             out.put("sprigBoundaryType", sprigReturn);
@@ -195,8 +192,20 @@ public final class JvmMetadata {
             out.append(formalDisplay(executable.getGenericParameterTypes()[i], params[i]));
         }
         out.append(')');
-        if (executable instanceof Method method) out.append(" -> ").append(JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display());
+        if (executable instanceof Method method) out.append(" -> ").append(sprigReturn(method));
         return out.toString();
+    }
+
+    /** toString() is a non-null String in Sprig, as the checker types it. */
+    private static boolean isTextResult(Method method) {
+        return method.getName().equals("toString") && method.getParameterCount() == 0
+                && method.getReturnType() == String.class;
+    }
+
+    /** The Sprig type of a method's result, the same in every field of the description. */
+    private static String sprigReturn(Method method) {
+        return isTextResult(method) ? "String"
+                : JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display();
     }
 
     // ------------------------------------------------------------------
