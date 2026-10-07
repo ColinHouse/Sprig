@@ -123,7 +123,9 @@ public final class HostFiles {
     /**
      * Write a UTF-8 sibling temporary file, close it, then replace the target.
      * A symbolic link at the path is followed, as {@link #writeUtf8} follows
-     * it: the file it leads to is the target, and the link stays. A replaced
+     * it: the file it leads to is the target, and the link stays. A target
+     * this process may not write fails as writeUtf8 fails on it, with an
+     * AccessDeniedException, before anything is written. A replaced
      * file keeps its POSIX permissions where the file system has them; a new
      * one gets what writeUtf8 would create it with (rw-rw-rw- less the
      * process umask).
@@ -134,6 +136,9 @@ public final class HostFiles {
     public static void atomicWriteUtf8(String path, String text) throws IOException {
         Path target = linkTarget(Path.of(path).toAbsolutePath());
         requireWritable(target);
+        // The rename needs only the directory's write permission, so it would replace a
+        // read-only file that writeUtf8 refuses to write.
+        if (Files.exists(target) && !Files.isWritable(target)) throw new AccessDeniedException(path);
         Path parent = target.getParent();
         String name = target.getFileName() == null ? "sprig" : target.getFileName().toString();
         boolean posix = target.getFileSystem().supportedFileAttributeViews().contains("posix");

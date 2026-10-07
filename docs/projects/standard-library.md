@@ -106,10 +106,13 @@ replacement move, which is not crash-atomic. Temporary files are removed after
 success or failure. No API here promises fsync or crash durability. Like
 `write_utf8`, `atomic_write_utf8` follows a symbolic link at the path: the
 temporary file is a sibling of the file the link leads to, that file is
-replaced and the link stays. A replaced file keeps its POSIX permissions where
-the filesystem supports them, and a new file gets the permissions `write_utf8`
-would create it with (`rw-rw-rw-` less the process umask). Either way the file
-then belongs to the user who wrote it. `temp_file`
+replaced and the link stays. A file that `write_utf8` may not write, such as a
+read-only one, makes `atomic_write_utf8` fail the same way (`cannot write
+out/report.txt: access denied`) before it writes anything, although the rename
+alone would need only the directory's permission. A replaced file keeps its
+POSIX permissions where the filesystem supports them, and a new file gets the
+permissions `write_utf8` would create it with (`rw-rw-rw-` less the process
+umask). Either way the file then belongs to the user who wrote it. `temp_file`
 creates an empty file in the operating system temporary directory; callers can
 remove it with `remove_file`.
 
