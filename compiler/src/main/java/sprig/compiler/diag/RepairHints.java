@@ -83,7 +83,8 @@ final class RepairHints {
             Map.entry(Codes.CONFORM_TARGET, new Hint("conform", "import-a-public-non-generic-java-interface")),
             Map.entry(Codes.CONFORM_MEMBER, new Hint("conform", "match-the-java-signature-exactly")),
             Map.entry(Codes.CONFORM_OVERLOAD, new Hint("conform", "use-an-interface-with-unique-abstract-method-names")),
-            Map.entry(Codes.CONFORM_EFFECTS, new Hint("conform", "make-throws-compatible-with-the-interface")));
+            Map.entry(Codes.CONFORM_EFFECTS, new Hint("conform", "make-throws-compatible-with-the-interface")),
+            Map.entry(Codes.CONFORM_PARENT, new Hint("conform", "call-the-parent-view-only-as-a-method")));
 
     static String helpTopic(String code) {
         Hint hint = HINTS.get(code);

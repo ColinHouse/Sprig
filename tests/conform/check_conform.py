@@ -149,6 +149,53 @@ interface Hidden {
     void hidden();
 }
 """,
+    "ClassBase.java": """package conformfixture;
+public abstract class ClassBase {
+    private final String name;
+    protected ClassBase(String name) { this.name = name; }
+    public ClassBase(String name, int bonus) { this.name = name + bonus; }
+    public String name() { return name; }
+    public abstract String describe();
+    public String greet(String who) { return "hello " + who + " from " + name; }
+    public final String id() { return "id:" + name; }
+    public static String kind() { return "base"; }
+    protected String hook(String input) { return "base-hook:" + input; }
+    public String viaHook(String input) { return hook(input); }
+    public String label(int value) { return "int:" + value; }
+    public String label(String value) { return "text:" + value; }
+    @Override public String toString() { return "ClassBase(" + name + ")"; }
+}
+""",
+    "ClassPlain.java": """package conformfixture;
+public class ClassPlain {
+    public int count = 1;
+    public ClassPlain() {}
+    public String tag() { return "plain"; }
+}
+""",
+    "ClassHost.java": """package conformfixture;
+public final class ClassHost {
+    public static String describe(ClassBase base) { return base.describe(); }
+    public static String greet(ClassBase base) { return base.greet("host"); }
+    public static boolean same(ClassBase a, Object b) { return a == b; }
+    public static String hook(ClassBase base) { return base.viaHook("x"); }
+    public static String tag(ClassPlain plain) { return plain.tag(); }
+    public static String greetNull(ClassBase base) { return base.greet(null); }
+}
+""",
+    "ClassLocked.java": """package conformfixture;
+public final class ClassLocked { public ClassLocked() {} }
+""",
+    "ClassGeneric.java": """package conformfixture;
+public class ClassGeneric<T> { public ClassGeneric() {} }
+""",
+    "ClassChecked.java": """package conformfixture;
+public abstract class ClassChecked {
+    public ClassChecked() {}
+    public abstract void load() throws java.io.IOException;
+    public String saved() { return "saved"; }
+}
+""",
     "Support.java": """package conformfixture;
 public final class Support {
     public static String runIt(Runnable runnable) { runnable.run(); return "ok"; }
@@ -194,9 +241,125 @@ import conformfixture.Parent as Parent
 import conformfixture.Child as Child
 import conformfixture.Hidden as Hidden
 import conformfixture.Support as Support
+import conformfixture.ClassBase as ClassBase
+import conformfixture.ClassPlain as ClassPlain
+import conformfixture.ClassHost as ClassHost
+import conformfixture.ClassLocked as ClassLocked
+import conformfixture.ClassGeneric as ClassGeneric
+import conformfixture.ClassChecked as ClassChecked
+"""
+
+EXTEND_BASE = IMPORTS + """
+class Item:
+    let name: String
+    var uses: Int = 0
+
+    func describe() -> String:
+        uses += 1
+        return "item " + name + " " + uses
+
+    func greet(who: String) -> String:
+        let inherited = parent.greet(who)
+        if inherited == null:
+            return "[none]"
+        return "[" + inherited + "]"
+
+    func hook(input: String) -> String:
+        return "sprig-hook:" + input
+
+    func shout() -> String:
+        let f = fn() => parent.greet("lambda")
+        let text = f()
+        if text == null:
+            return "none"
+        return text
+
+conform Item to ClassBase(name) as parent
+
+let item = Item(name="wand")
+print(ClassHost.describe(item))
+print(ClassHost.describe(item))
+print(ClassHost.greet(item))
+print(ClassHost.hook(item))
+print(ClassHost.same(item, item))
+print(item.id())
+print(item.viaHook("y"))
+print(item.label(3))
+print(item.label("t"))
+print(ClassBase.kind())
+let base: ClassBase = item
+print(base.describe())
+print(item.toString())
+print(item.shout())
 """
 
 POSITIVE = {
+    # A Sprig class extends a Java class: abstract witness, overrides, the
+    # parent view (also from a lambda), inherited members, one identity.
+    "extend_base": (EXTEND_BASE, "item wand 1\nitem wand 2\n[hello host from wand]\nsprig-hook:x\ntrue\n"
+                    "id:wand\nsprig-hook:y\nint:3\ntext:t\nbase\nitem wand 3\nClassBase(wand)\n"
+                    "hello lambda from wand\n"),
+    "extend_plain": (IMPORTS + """
+class Plain2:
+    pass
+
+conform Plain2 to ClassPlain()
+
+let plain = Plain2()
+print(ClassHost.tag(plain))
+print(plain.count)
+plain.count = 7
+print(plain.count)
+""", "plain\n1\n7\n"),
+    "extend_checked_effects": (IMPORTS + """
+class Loader:
+    var loaded: Bool = false
+
+    func load() -> Unit throws IOException:
+        if loaded:
+            throw IOException("loaded twice")
+        loaded = true
+
+conform Loader to ClassChecked()
+
+let loader = Loader()
+loader.load()
+print(loader.loaded)
+print(loader.saved())
+""", "true\nsaved\n"),
+    "extend_override_tostring": (IMPORTS + """
+class Named:
+    let name: String
+
+    func describe() -> String:
+        return "named"
+
+    func toString() -> String:
+        return "named:" + name
+
+conform Named to ClassBase(name)
+
+let named = Named(name="n")
+print(named.toString())
+print("" + named)
+""", "named:n\nnamed:n\n"),
+    "extend_and_implement": (IMPORTS + """
+class Both:
+    let name: String
+
+    func describe() -> String:
+        return "both"
+
+    func run() -> Unit:
+        print("ran " + name)
+
+conform Both to ClassBase(name)
+conform Both to Runnable
+
+let both = Both(name="b")
+print(Support.runIt(both))
+print(ClassHost.describe(both))
+""", "ran b\nok\nboth\n"),
     "child_default_contract": (IMPORTS + """
 class Example:
     pass
@@ -352,6 +515,51 @@ child.b()
 }
 
 NEGATIVE = {
+    "class_final": (IMPORTS + "class X:\n    pass\n\nconform X to ClassLocked()\n", "SPR-CONFORM-TARGET"),
+    "class_generic": (IMPORTS + "class X:\n    pass\n\nconform X to ClassGeneric()\n", "SPR-CONFORM-TARGET"),
+    "class_without_parentheses": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                                  "        return \"x\"\n\nconform X to ClassBase\n", "SPR-CONFORM-TARGET"),
+    "interface_with_parentheses": (IMPORTS + "class X:\n    func run() -> Unit:\n        pass\n\n"
+                                   "conform X to Runnable()\n", "SPR-CONFORM-TARGET"),
+    "class_missing_abstract": (IMPORTS + "class X:\n    let name: String\n\nconform X to ClassBase(name)\n",
+                               "SPR-CONFORM-MEMBER"),
+    "class_final_override": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                             "        return \"x\"\n    func id() -> String:\n        return \"mine\"\n\n"
+                             "conform X to ClassBase(name)\n", "SPR-CONFORM-MEMBER"),
+    "class_new_overload": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                           "        return \"x\"\n    func label(value: Bool) -> String:\n        return \"b\"\n\n"
+                           "conform X to ClassBase(name)\n", "SPR-CONFORM-MEMBER"),
+    "class_static_hidden": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                            "        return \"x\"\n    func kind() -> String:\n        return \"k\"\n\n"
+                            "conform X to ClassBase(name)\n", "SPR-CONFORM-MEMBER"),
+    "class_constructor_shape": (IMPORTS + "class X:\n    let name: String\n    var uses: Int = 0\n"
+                                "    func describe() -> String:\n        return \"x\"\n\n"
+                                "conform X to ClassBase(uses)\n", "SPR-CONFORM-TARGET"),
+    "class_constructor_not_field": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                                    "        return \"x\"\n\nconform X to ClassBase(nope)\n", "SPR-CONFORM-TARGET"),
+    "class_two_superclasses": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                               "        return \"x\"\n\nconform X to ClassBase(name)\nconform X to ClassPlain()\n",
+                               "SPR-CONFORM-TARGET"),
+    "class_checked_effects": (IMPORTS + "class X:\n    func load() -> Unit throws Exception:\n"
+                              "        throw Exception(\"wide\")\n\nconform X to ClassChecked()\n",
+                              "SPR-CONFORM-EFFECTS"),
+    "parent_as_value": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                        "        let p = parent\n        return \"x\"\n\nconform X to ClassBase(name) as parent\n",
+                        "SPR-CONFORM-PARENT"),
+    "parent_on_interface": (IMPORTS + "class X:\n    func run() -> Unit:\n        pass\n\n"
+                            "conform X to Runnable as parent\n", "SPR-CONFORM-PARENT"),
+    "parent_abstract_call": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                             "        let d = parent.describe()\n        return \"x\"\n\n"
+                             "conform X to ClassBase(name) as parent\n", "SPR-CONFORM-PARENT"),
+    "parent_name_collides": (IMPORTS + "class X:\n    let name: String\n    let parent: Int\n"
+                             "    func describe() -> String:\n        return \"x\"\n\n"
+                             "conform X to ClassBase(name) as parent\n", "SPR-CONFORM-PARENT"),
+    "parent_field_read": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                          "        return parent.name\n\nconform X to ClassBase(name) as parent\n",
+                          "SPR-CONFORM-PARENT"),
+    "parent_outside_class": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
+                             "        return \"x\"\n\nconform X to ClassBase(name) as parent\n\n"
+                             "print(parent.greet(\"x\"))\n", "SPR-NAME-UNRESOLVED"),
     "source_value": ("conform notAClass to Runnable\n", "SPR-CONFORM-SOURCE"),
     "source_generic": (IMPORTS + """
 generic T:
@@ -608,6 +816,36 @@ Support.tickNull(Listener())
                and "implements conformfixture.TickCallback" in java_text
                and "implements conformfixture.Server" in java_text, java_text[:400])
         record("emit/boundary-guard", "Objects.requireNonNull(server" in java_text, java_text[:400])
+
+        # A Java caller passes null into an overriding method: the entry guard fires.
+        null_override = root / "override_null.spr"
+        null_override.write_text(EXTEND_BASE.split("let item = Item")[0]
+                                 + "ClassHost.greetNull(Item(name=\"wand\"))\n", encoding="utf-8")
+        null_result = run("run", null_override, "--classpath", classes, "--json")
+        try:
+            null_diagnostics = json.loads(null_result.stdout)["diagnostics"]
+        except (ValueError, KeyError, TypeError):
+            null_diagnostics = []
+        record("boundary/override-null-rejected", null_result.returncode == 1
+               and any(d["code"] == "SPR-RUNTIME-EXCEPTION"
+                       and "foreign boundary" in d["message"] for d in null_diagnostics),
+               null_result.stdout + null_result.stderr)
+
+        # Emitted Java for a class target: extends, super(...) first, @Override, Class.super calls, no generated toString.
+        extended = root / "generated-extend"
+        emitted_extend = run("build", root / "positive_extend_base.spr", "--classpath", classes,
+                             "--emit-java-only", "-d", extended, "--json")
+        extend_text = ""
+        for file in extended.rglob("*Item.java"):
+            extend_text = file.read_text(encoding="utf-8")
+        record("emit/extends", emitted_extend.returncode == 0
+               and "Item extends conformfixture.ClassBase" in extend_text, extend_text[:400])
+        record("emit/super-constructor", "super(name);" in extend_text
+               and extend_text.index("super(name);") < extend_text.index("this.name = name;"), extend_text[:600])
+        record("emit/override-annotation", extend_text.count("@Override") >= 3, extend_text[:600])
+        record("emit/parent-call", "$Item.super.greet(" in extend_text, extend_text[:600])
+        record("emit/no-generated-tostring", "public java.lang.String toString()" not in extend_text,
+               extend_text[:600])
 
     if failures:
         for failure in failures:

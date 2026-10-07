@@ -24,10 +24,11 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-THROWS-UNUSED | A function declares a checked Java exception that its body can never throw. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-CONFORM-EFFECTS | A witness method declares checked exceptions the Java interface method does not permit. |
-| SPR-CONFORM-MEMBER | An existing class method does not exactly match a required abstract Java method. |
+| SPR-CONFORM-MEMBER | A class method does not exactly match the Java method it witnesses or overrides, or a required abstract method is missing. |
 | SPR-CONFORM-OVERLOAD | The Java interface requires overloaded abstract methods, which Sprig classes cannot represent. |
+| SPR-CONFORM-PARENT | The parent view of a class that extends a Java class only calls inherited methods; it is not a value, has no fields and cannot reach abstract methods. |
 | SPR-CONFORM-SOURCE | The conform source must be a non-generic Sprig class declared in this module. |
-| SPR-CONFORM-TARGET | The conform target must be an imported public, non-generic, non-sealed Java interface. |
+| SPR-CONFORM-TARGET | The conform target must be an imported public, non-generic, non-sealed Java interface, or with parentheses a public, non-final, non-generic Java class whose constructor the named fields select. |
 | SPR-JVM-AMBIGUOUS | The Java overload is ambiguous for these argument types. |
 | SPR-JVM-CLASS | The imported Java class could not be loaded, or it lives in the unnamed package. |
 | SPR-JVM-CLASSPATH | A `--classpath` entry is empty, missing, or not a JAR/directory. |

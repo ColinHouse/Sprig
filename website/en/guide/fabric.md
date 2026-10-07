@@ -45,7 +45,7 @@ Fabric dependencies, split source sets, the mod entry point and the Java version
 |---|---|
 | `src/main.spr` | State and logic written in Sprig |
 | `tests/*.spr` | Project tests, run by `sprigTest` |
-| `src/sprigBridge/java/` | A thin Java interface for Sprig to call |
+| `src/sprigBridge/java/` | A thin Java interface for Sprig to call; a Sprig class can also implement a Java interface or extend a Java class directly with `conform` (see the [conformance reference](/en/reference/jvm/conformance)) |
 | `src/client/java/` | The Fabric client entry point and callback registration |
 | `build/generated/sprig/client/java/` | The generated Java, which you can read |
 

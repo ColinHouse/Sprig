@@ -81,11 +81,16 @@ public final class Semantics {
                 }
                 return false;
             }
-            if (source instanceof sprig.compiler.types.ClassType classSource
-                    && javaTarget.clazz.isInterface()) {
-                for (Class<?> declared : classSource.decl.conformedInterfaces) {
-                    if (javaTarget.clazz.isAssignableFrom(declared)) {
-                        return true; // declared foreign conformance conversion
+            if (source instanceof sprig.compiler.types.ClassType classSource) {
+                if (classSource.decl.superclass != null
+                        && javaTarget.clazz.isAssignableFrom(classSource.decl.superclass)) {
+                    return true; // the class extends the Java class or one of its ancestors
+                }
+                if (javaTarget.clazz.isInterface()) {
+                    for (Class<?> declared : classSource.decl.conformedInterfaces) {
+                        if (javaTarget.clazz.isAssignableFrom(declared)) {
+                            return true; // declared foreign conformance conversion
+                        }
                     }
                 }
             }

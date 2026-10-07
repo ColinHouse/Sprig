@@ -1,5 +1,6 @@
 package sprig.compiler.sem;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
+import sprig.compiler.diag.Span;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.FunctionType;
@@ -38,6 +40,13 @@ import sprig.compiler.types.VariantType;
  * inherited checked exceptions come from the effective declaration. Public
  * concrete {@code java.lang.Object} methods satisfy matching requirements, as
  * they do for any Java class.
+ *
+ * <p>{@code conform C to J(field, ...) as NAME} makes the generated class of
+ * {@code C} extend the Java class {@code J}: the named fields select one of
+ * its constructors, every abstract method of the chain needs a witness, a
+ * method named like an inherited method must match one of its shapes exactly
+ * (it overrides it) and {@code NAME} is the parent view that calls the
+ * inherited implementation. Sprig itself gains no inheritance.
  */
 public final class ConformanceChecker {
     private final Diagnostics diagnostics;
@@ -60,6 +69,19 @@ public final class ConformanceChecker {
         }
         Decl.ClassDecl classDecl = conform.source;
         Class<?> target = conform.target;
+        if (conform.classTarget()) {
+            checkClass(module, conform, classDecl, target);
+            return;
+        }
+        if (conform.parentAlias != null) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "'as " + conform.parentAlias + "' names an inherited implementation, which the interface "
+                            + target.getName() + " does not provide",
+                    module.uri, conform.parentAliasSpan != null ? conform.parentAliasSpan : conform.span)
+                    .withHint("Declare the parent view on the class conform: conform " + classDecl.name
+                            + " to JavaClass(...) as " + conform.parentAlias + "."));
+            return;
+        }
         if (classDecl.conformedInterfaces.contains(target)) {
             diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
                     "Class '" + classDecl.name + "' already conforms to " + target.getName(),
@@ -106,11 +128,301 @@ public final class ConformanceChecker {
     }
 
     // ------------------------------------------------------------------
+    // Class targets: extend a Java class
+    // ------------------------------------------------------------------
+
+    private void checkClass(Module module, Decl.Conform conform, Decl.ClassDecl classDecl, Class<?> target) {
+        String uri = module.uri;
+        if (classDecl.superclass != null) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                    "Class '" + classDecl.name + "' already extends " + classDecl.superclass.getName()
+                            + "; a class extends one Java class",
+                    uri, conform.span)
+                    .withHint("Keep one class conform per class; add interfaces with further conform declarations."));
+            return;
+        }
+        List<Decl.Field> arguments = new ArrayList<>();
+        boolean named = true;
+        for (int i = 0; i < conform.superArguments.size(); i++) {
+            String name = conform.superArguments.get(i);
+            Decl.Field field = fieldNamed(classDecl, name);
+            if (field == null) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                        "Constructor argument '" + name + "' is not a field of class " + classDecl.name,
+                        uri, i < conform.superArgumentSpans.size() ? conform.superArgumentSpans.get(i) : conform.span)
+                        .withHint("Name fields of the class; their values are passed to the "
+                                + target.getSimpleName() + " constructor in this order."));
+                named = false;
+            } else {
+                arguments.add(field);
+            }
+        }
+        if (!named) {
+            return;
+        }
+        Constructor<?> constructor = selectConstructor(uri, conform, target, arguments);
+        if (constructor == null) {
+            return;
+        }
+        if (conform.parentAlias != null && !parentAliasFree(uri, conform, classDecl)) {
+            return;
+        }
+        Map<String, List<Method>> declarations = new LinkedHashMap<>();
+        Map<String, Method> statics = new LinkedHashMap<>();
+        collectChain(target, declarations, statics);
+        Map<String, Requirement> contract = effectiveContract(declarations);
+        boolean ok = true;
+        for (Requirement requirement : contract.values()) {
+            if (!requirement.isAbstract() || satisfiedByObject(requirement)
+                    || methodNamed(classDecl, requirement.name()) != null) {
+                continue; // a present method is checked as an override below
+            }
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                    "Class '" + classDecl.name + "' has no method '" + requirement.name()
+                            + "' required by the abstract " + target.getName(),
+                    uri, classDecl.span)
+                    .withHint("Add the missing method with the Java signature; run sprig api "
+                            + target.getName() + " --json to see it."));
+            ok = false;
+        }
+        for (Decl.Func method : classDecl.methods) {
+            ok &= override(uri, classDecl, target, method, contract, statics);
+        }
+        if (!ok) {
+            return; // no state is mutated until every rule holds
+        }
+        for (Requirement requirement : contract.values()) {
+            markBoundary(classDecl, requirement);
+        }
+        classDecl.superclass = target;
+        classDecl.superConstructor = constructor;
+        classDecl.superArguments.addAll(arguments);
+    }
+
+    /** The one accessible constructor whose parameter shapes the named fields match exactly. */
+    private Constructor<?> selectConstructor(String uri, Decl.Conform conform, Class<?> target,
+            List<Decl.Field> arguments) {
+        List<String> written = new ArrayList<>();
+        for (Decl.Field field : arguments) {
+            written.add(shape(field.type));
+        }
+        List<String> available = new ArrayList<>();
+        Constructor<?> match = null;
+        for (Constructor<?> candidate : target.getDeclaredConstructors()) {
+            int modifiers = candidate.getModifiers();
+            if (!Modifier.isPublic(modifiers) && !Modifier.isProtected(modifiers)) {
+                continue;
+            }
+            List<String> shapes = new ArrayList<>();
+            for (Class<?> param : candidate.getParameterTypes()) {
+                shapes.add(shape(param));
+            }
+            available.add("(" + String.join(", ", shapes) + ")");
+            if (shapes.equals(written)) {
+                match = candidate;
+            }
+        }
+        if (match != null) {
+            return match;
+        }
+        available.sort(String::compareTo);
+        diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                target.getName() + " has no public or protected constructor taking ("
+                        + String.join(", ", written) + ")",
+                uri, conform.span)
+                .withTypes(available.isEmpty() ? "no accessible constructor" : String.join(" | ", available),
+                        "(" + String.join(", ", written) + ")")
+                .withHint("Name fields whose JVM shapes match one constructor exactly, in its parameter order."));
+        return null;
+    }
+
+    private boolean parentAliasFree(String uri, Decl.Conform conform, Decl.ClassDecl classDecl) {
+        String alias = conform.parentAlias;
+        Span span = conform.parentAliasSpan != null ? conform.parentAliasSpan : conform.span;
+        if (fieldNamed(classDecl, alias) != null || methodNamed(classDecl, alias) != null) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "Parent view '" + alias + "' has the name of a member of class " + classDecl.name,
+                    uri, span)
+                    .withHint("Choose a name no field or method of the class uses."));
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * A method of the class against the chain: a name no inherited method has
+     * is an ordinary Sprig method (unless it would hide a static), otherwise it
+     * must match one inherited shape exactly and override a non-final method.
+     */
+    private boolean override(String uri, Decl.ClassDecl classDecl, Class<?> target, Decl.Func method,
+            Map<String, Requirement> contract, Map<String, Method> statics) {
+        List<Requirement> sameName = new ArrayList<>();
+        for (Requirement requirement : contract.values()) {
+            if (requirement.name().equals(method.name)) {
+                sameName.add(requirement);
+            }
+        }
+        if (sameName.isEmpty()) {
+            for (Method hidden : statics.values()) {
+                if (hidden.getName().equals(method.name)
+                        && shapesMatch(method, hidden.getParameterTypes(), hidden.getReturnType())) {
+                    diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                            "Method '" + method.name + "' has the signature of the static "
+                                    + hidden.getDeclaringClass().getName() + "." + method.name
+                                    + "; an instance method cannot hide it",
+                            uri, method.span)
+                            .withHint("Rename the method."));
+                    return false;
+                }
+            }
+            return true;
+        }
+        Requirement match = null;
+        for (Requirement requirement : sameName) {
+            if (shapesMatch(method, requirement.params(), requirement.returnType())) {
+                match = requirement;
+                break;
+            }
+        }
+        if (match == null) {
+            if (sameName.size() == 1) {
+                return witness(uri, classDecl, target, sameName.get(0)); // names the exact mismatch
+            }
+            List<String> shapes = new ArrayList<>();
+            for (Requirement requirement : sameName) {
+                shapes.add(signature(requirement));
+            }
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                    "Method '" + method.name + "' has the name of a " + target.getName()
+                            + " method but none of its shapes; it would be a new overload, not an override",
+                    uri, method.span)
+                    .withHint("Match one of: " + String.join("; ", shapes) + "; or rename the method."));
+            return false;
+        }
+        if (match.isFinal()) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                    "Method '" + method.name + "' cannot override the final " + target.getName() + "." + method.name,
+                    uri, method.span)
+                    .withHint("Rename the method; a final Java method keeps its implementation."));
+            return false;
+        }
+        return effects(uri, method, target, match);
+    }
+
+    private static boolean shapesMatch(Decl.Func method, Class<?>[] params, Class<?> returnType) {
+        if (method.params.size() != params.length) {
+            return false;
+        }
+        for (int i = 0; i < params.length; i++) {
+            if (!shape(params[i]).equals(shape(method.params.get(i).type))) {
+                return false;
+            }
+        }
+        return shape(returnType).equals(shape(method.returnType));
+    }
+
+    private static String signature(Requirement requirement) {
+        List<String> params = new ArrayList<>();
+        for (Class<?> param : requirement.params()) {
+            params.add(shape(param));
+        }
+        return requirement.name() + "(" + String.join(", ", params) + ") -> " + shape(requirement.returnType());
+    }
+
+    private static Decl.Field fieldNamed(Decl.ClassDecl classDecl, String name) {
+        for (Decl.Field field : classDecl.fields) {
+            if (field.name.equals(name)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    private static Decl.Func methodNamed(Decl.ClassDecl classDecl, String name) {
+        for (Decl.Func method : classDecl.methods) {
+            if (method.name.equals(name)) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Every overridable declaration of a class chain and its interfaces, up
+     * to and including {@code Object}; public or protected instance methods
+     * only (package-private ones cannot be overridden from sprig.user).
+     * Static methods are kept apart: an instance method cannot hide one.
+     */
+    private void collectChain(Class<?> target, Map<String, List<Method>> out, Map<String, Method> statics) {
+        for (Class<?> current = target; current != null; current = current.getSuperclass()) {
+            for (Class<?> parent : current.getInterfaces()) {
+                collect(parent, out);
+            }
+            for (Method method : current.getDeclaredMethods()) {
+                int modifiers = method.getModifiers();
+                if (method.isBridge() || method.isSynthetic() || Modifier.isPrivate(modifiers)
+                        || (!Modifier.isPublic(modifiers) && !Modifier.isProtected(modifiers))) {
+                    continue;
+                }
+                if (Modifier.isStatic(modifiers)) {
+                    statics.putIfAbsent(key(method), method);
+                    continue;
+                }
+                out.computeIfAbsent(key(method), ignored -> new ArrayList<>()).add(method);
+            }
+        }
+    }
+
+    /**
+     * The effective contract of a class chain: for every signature the most
+     * derived declaration decides the shapes, whether a witness is required
+     * (it is abstract) and whether an override is allowed (it is not final). A
+     * class declaration wins over interface declarations of the same
+     * signature, as Java resolves them; the permitted checked exceptions are
+     * the intersection over the maximal declarations, as for interfaces.
+     */
+    private Map<String, Requirement> effectiveContract(Map<String, List<Method>> declarations) {
+        Map<String, Requirement> out = new LinkedHashMap<>();
+        List<String> keys = new ArrayList<>(declarations.keySet());
+        keys.sort(String::compareTo);
+        for (String key : keys) {
+            List<Method> maximal = maximal(declarations.get(key));
+            maximal.sort((left, right) -> {
+                int byOwner = left.getDeclaringClass().getName().compareTo(right.getDeclaringClass().getName());
+                return byOwner != 0 ? byOwner : left.toGenericString().compareTo(right.toGenericString());
+            });
+            Method classDeclaration = null;
+            for (Method method : maximal) {
+                if (!method.getDeclaringClass().isInterface()) {
+                    classDeclaration = method;
+                    break;
+                }
+            }
+            Method chosen = classDeclaration != null ? classDeclaration : maximal.get(0);
+            boolean required = classDeclaration != null
+                    ? isAbstract(classDeclaration)
+                    : maximal.stream().anyMatch(ConformanceChecker::isAbstract);
+            Set<Class<?>> permitted = null;
+            for (Method method : maximal) {
+                Set<Class<?>> exceptions = new LinkedHashSet<>(List.of(method.getExceptionTypes()));
+                if (permitted == null) {
+                    permitted = exceptions;
+                } else {
+                    permitted.retainAll(exceptions);
+                }
+            }
+            out.put(key, new Requirement(chosen.getName(), chosen.getParameterTypes(), chosen.getReturnType(),
+                    permitted == null ? Set.of() : permitted, required, Modifier.isFinal(chosen.getModifiers())));
+        }
+        return out;
+    }
+
+    // ------------------------------------------------------------------
     // Effective Java contract
     // ------------------------------------------------------------------
 
     private record Requirement(String name, Class<?>[] params, Class<?> returnType,
-            Set<Class<?>> permitted) {}
+            Set<Class<?>> permitted, boolean isAbstract, boolean isFinal) {}
 
     /** Collect every abstract/default/static-free declaration in the hierarchy. */
     private void collect(Class<?> iface, Map<String, List<Method>> out) {
@@ -172,7 +484,7 @@ public final class ConformanceChecker {
                 }
             }
             out.put(key, new Requirement(chosen.getName(), chosen.getParameterTypes(),
-                    chosen.getReturnType(), permitted == null ? Set.of() : permitted));
+                    chosen.getReturnType(), permitted == null ? Set.of() : permitted, true, false));
         }
         return out;
     }
@@ -252,20 +564,32 @@ public final class ConformanceChecker {
         if (target.isAnnotation()) {
             return rejectTarget(module, conform, target, "annotation interfaces cannot be implemented");
         }
-        if (!target.isInterface()) {
-            return rejectTarget(module, conform, target,
-                    "only Java interfaces are supported in v1; abstract classes and ordinary classes are rejected");
+        if (conform.classTarget()) {
+            if (target.isInterface()) {
+                return rejectTarget(module, conform, target, "it is an interface; write conform "
+                        + conform.sourceName + " to " + conform.targetAlias + " without parentheses");
+            }
+            if (target.isEnum() || target.isRecord() || target.isArray() || target.isPrimitive()) {
+                return rejectTarget(module, conform, target, "only a class can be extended");
+            }
+            if (Modifier.isFinal(target.getModifiers())) {
+                return rejectTarget(module, conform, target, "the class is final");
+            }
+        } else if (!target.isInterface()) {
+            return rejectTarget(module, conform, target, "it is a class; to extend it, name the fields its "
+                    + "constructor takes: conform " + conform.sourceName + " to " + conform.targetAlias + "(field, ...)");
         }
         if (target.getTypeParameters().length > 0 || genericAncestor(target)) {
-            return rejectTarget(module, conform, target, "generic Java interfaces are rejected in v1");
+            return rejectTarget(module, conform, target, "generic Java "
+                    + (target.isInterface() ? "interfaces" : "classes") + " are rejected in v1");
         }
         if (target.isSealed()) {
             return rejectTarget(module, conform, target,
-                    "this interface is sealed and does not allow implementations outside its permitted set");
+                    "it is sealed and does not allow implementations outside its permitted set");
         }
         if (!Modifier.isPublic(target.getModifiers())) {
             return rejectTarget(module, conform, target,
-                    "this interface is not public; generated code could not implement it");
+                    "it is not public; generated code could not reach it");
         }
         conform.target = target;
         return true;
@@ -273,19 +597,22 @@ public final class ConformanceChecker {
 
     private boolean rejectTarget(Module module, Decl.Conform conform, Class<?> target, String because) {
         diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
-                "conform target " + target.getName() + " is not a supported Java interface: " + because,
+                "conform target " + target.getName() + " is not supported: " + because,
                 module.uri, conform.span)
-                .withHint("Import a public, non-generic, non-sealed Java interface with unique abstract method names."));
+                .withHint("Import a public, non-generic, non-sealed Java interface with unique abstract method names, "
+                        + "or extend a public, non-final, non-generic Java class with conform C to X(field, ...)."));
         return false;
     }
 
-    private boolean genericAncestor(Class<?> iface) {
-        for (Class<?> parent : iface.getInterfaces()) {
+    private boolean genericAncestor(Class<?> type) {
+        for (Class<?> parent : type.getInterfaces()) {
             if (parent.getTypeParameters().length > 0 || genericAncestor(parent)) {
                 return true;
             }
         }
-        return false;
+        Class<?> superclass = type.getSuperclass();
+        return superclass != null && superclass != Object.class
+                && (superclass.getTypeParameters().length > 0 || genericAncestor(superclass));
     }
 
     // ------------------------------------------------------------------

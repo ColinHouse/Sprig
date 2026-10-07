@@ -17,6 +17,8 @@ public final class JvmMember {
     public java.util.Map<java.lang.reflect.TypeVariable<?>, Type> bindings = java.util.Map.of();
     /** The call writes the trailing arguments that the generator packs into the varargs array. */
     public boolean varargsExpanded;
+    /** Call the inherited implementation ({@code Class.super.m(...)}) instead of dispatching virtually. */
+    public boolean superCall;
 
     public boolean isStatic() {
         if (field != null) {

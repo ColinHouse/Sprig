@@ -1091,6 +1091,14 @@ public final class TypeChecker {
                         "Module name '" + name.name + "' cannot be used as a value", module.uri, name.span));
                 return NativeType.ERROR;
             }
+            case PARENT_VIEW -> {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                        "'" + name.name + "' names the inherited implementation and is not a value; call a method on it: "
+                                + name.name + ".method(...)",
+                        module.uri, name.span)
+                        .withHint("The parent view only calls inherited methods of the Java class; there is no self value."));
+                return NativeType.ERROR;
+            }
             default -> {
                 return NativeType.ERROR;
             }
@@ -2827,6 +2835,7 @@ public final class TypeChecker {
                 }
                 case ENUM -> enumCaseValue((EnumType) symbol.type, access);
                 case BUILTIN_TYPE -> builtinStatic(symbol.type, access);
+                case PARENT_VIEW -> parentMember(symbol, access, forCall);
                 case JAVA_TYPE -> javaMember(symbol.javaClass != null
                         ? new JavaType(symbol.javaClass) : (JavaType) symbol.type, access, true);
                 case CLASS -> {
@@ -3063,6 +3072,11 @@ public final class TypeChecker {
         if (access.name.equals("toString")) {
             return builtin(access, "toString", NativeType.STRING, classType);
         }
+        if (classType.decl.superclass != null) {
+            // A class that extends a Java class: inherited public members are
+            // reached through the Java view, as on any value of that class.
+            return javaMember(new JavaType(classType.decl.superclass), access, false);
+        }
         diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                 "Class " + classType.decl.name + " has no member '" + access.name + "'",
                 module.uri, access.span));
@@ -3107,6 +3121,39 @@ public final class TypeChecker {
     /** "Java class X" in a diagnostic, but Sprig's own Error under its Sprig name. */
     private static String javaOwner(Class<?> clazz) {
         return clazz == SprigError.class ? "Error" : "Java class " + clazz.getSimpleName();
+    }
+
+    /**
+     * A member reached through the parent view of {@code conform C to J(...)
+     * as NAME}: the inherited implementation of a public method of {@code J}
+     * on the current object. The view is not a value and has no fields.
+     */
+    private ResolvedField parentMember(Symbol symbol, Expr.FieldAccess access, boolean forCall) {
+        Decl.ClassDecl owner = symbol.owner;
+        if (owner == null || owner.superclass == null) {
+            return errorField(access); // the conformance checker reported why the class extends nothing
+        }
+        if (!forCall) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "'" + symbol.name + "' names the inherited " + owner.superclass.getSimpleName()
+                            + " implementation and can only be called: " + symbol.name + "." + access.name + "(...)",
+                    module.uri, access.span)
+                    .withHint("Read inherited state through a method of " + owner.superclass.getSimpleName()
+                            + ", or keep it in a Sprig field."));
+            return errorField(access);
+        }
+        ResolvedField field = javaMember(new JavaType(owner.superclass), access, false);
+        if (field.kind == ResolvedField.Kind.JVM_METHOD) {
+            field.parentView = true;
+        } else if (field.kind == ResolvedField.Kind.JAVA_FIELD || field.kind == ResolvedField.Kind.ERROR_MESSAGE) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "'" + symbol.name + "." + access.name + "' is a field of " + owner.superclass.getSimpleName()
+                            + "; the parent view only calls methods",
+                    module.uri, access.span)
+                    .withHint("Read the field on a value of the class, outside the class body."));
+            return errorField(access);
+        }
+        return field;
     }
 
     private ResolvedField javaMember(JavaType javaType, Expr.FieldAccess access, boolean staticContext) {
@@ -3894,6 +3941,14 @@ public final class TypeChecker {
             member.paramTypes.add(JavaTypes.mapFormal(best.getGenericParameterTypes()[i],
                     best.getParameterTypes()[i], bestBindings));
         }
+        if (field.parentView && java.lang.reflect.Modifier.isAbstract(best.getModifiers())) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    javaOwner(clazz) + "." + best.getName()
+                            + " is abstract; there is no inherited implementation to call",
+                    module.uri, call.span)
+                    .withHint("Implement the behaviour in this class's own method instead of calling the parent view."));
+        }
+        member.superCall = field.parentView;
         member.returnType = JavaTypes.mapValue(best.getGenericReturnType(), best.getReturnType(), bestBindings);
         // toString() returns a representation by Object's contract, never null,
         // so "at " + date.toString() needs no check; Kotlin reads it the same way.

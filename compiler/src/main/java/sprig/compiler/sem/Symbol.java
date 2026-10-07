@@ -9,7 +9,9 @@ import sprig.compiler.types.Type;
 public final class Symbol {
     public enum Kind {
         LOCAL, PARAM, FIELD, METHOD, FUNCTION, CLASS, ENUM, VARIANT, VARIANT_CASE,
-        ENUM_CASE, TOP_VAR, MODULE, JAVA_TYPE, BUILTIN_TYPE
+        ENUM_CASE, TOP_VAR, MODULE, JAVA_TYPE, BUILTIN_TYPE,
+        /** The parent view of a class that extends a Java class: only callable, never a value. */
+        PARENT_VIEW
     }
 
     public final Kind kind;
