@@ -58,6 +58,20 @@ Methods with no result use `-> Unit`. Imports come first. `let` binds once;
 classes and variant cases use named arguments; functions and JVM methods use
 positional arguments. `match` lists every case and has no wildcard.
 
+Names: functions, methods, parameters, variables, fields and module-level
+`let`s are lowerCamelCase (`readText`, `maxBy`, `userId`); types are
+UpperCamelCase: classes, contracts, variants, enums, their cases and type
+parameters (`HttpServer`, `Expr.Literal`, `Color.Red`, `T`). An acronym is a
+word (`parseJson`, `writeUtf8`, `HttpServer`); `Float.isNaN` keeps Java's
+spelling. There are no all-caps constants. Java APIs keep their Java names
+(`ArrayList.add`, `Thread.MIN_PRIORITY`), and a method that implements or
+overrides a Java method uses the Java name. Files and directories are
+`lower_snake_case.spr`; an import alias is lowerCamelCase
+(`import "@std/json_codec.spr" as jsonCodec`); package names are lowercase
+with hyphens (`sprig-web`). `@std` and the bundled libraries still name their
+functions in snake_case (`files.read_utf8`) until they are renamed to these
+rules.
+
 Use `T?` for expected absence and narrow with `if value != null` before use.
 The right side of a short-circuit `and`/`or` and the guarded block see the
 narrowing: `if box != null and box.value > 0:` narrows `box` for `box.value`,
