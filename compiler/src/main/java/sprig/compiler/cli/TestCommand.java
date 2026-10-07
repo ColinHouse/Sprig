@@ -281,7 +281,6 @@ public final class TestCommand {
             Path testTemp = Files.createDirectory(work.resolve("tmp"));
             Path javaDir = work.resolve("java");
             Path classesDir = work.resolve("classes");
-            Main.writeSources(generated, javaDir);
             Map<Path, Map<Integer, Span>> lineMaps = new HashMap<>();
             Map<Path, String> uris = new HashMap<>();
             for (String name : generated.sources.keySet()) {
@@ -289,11 +288,21 @@ public final class TestCommand {
                 lineMaps.put(javaPath, generated.lineMaps.get(name));
                 uris.put(javaPath, generated.uris.get(name));
             }
-            List<Path> javaSources = new ArrayList<>(Main.listJavaFiles(javaDir));
-            javaSources.addAll(Main.runtimeSources(diagnostics));
-            boolean compiled = JavacRunner.compile(classesDir, javaSources, diagnostics, lineMaps, uris);
-            if (!compiled || diagnostics.hasErrors())
-                return new Outcome("failed", diagnostics.all(), "", "", "javac failed");
+            List<Path> runtime = Main.runtimeSources(diagnostics);
+            Path cacheRoot = JavacCache.root();
+            String cacheKey = cacheRoot == null ? null : JavacCache.key(generated, runtime);
+            Path cached = JavacCache.lookup(cacheRoot, cacheKey);
+            if (cached != null) {
+                classesDir = cached;
+            } else {
+                Main.writeSources(generated, javaDir);
+                List<Path> javaSources = new ArrayList<>(Main.listJavaFiles(javaDir));
+                javaSources.addAll(runtime);
+                boolean compiled = JavacRunner.compile(classesDir, javaSources, diagnostics, lineMaps, uris);
+                if (!compiled || diagnostics.hasErrors())
+                    return new Outcome("failed", diagnostics.all(), "", "", "javac failed");
+                JavacCache.store(cacheRoot, cacheKey, classesDir);
+            }
             JavaRunner.Result result = JavaRunner.run(classesDir, generated.mainClass,
                     List.of(), work, false, false,
                     Map.of("SPRIG_TEST_TMPDIR", testTemp.toString()),

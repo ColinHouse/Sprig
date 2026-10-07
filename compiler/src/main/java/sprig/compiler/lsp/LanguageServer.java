@@ -459,7 +459,7 @@ public final class LanguageServer {
 
     private boolean parsed(Analysis analysis, Document document) {
         for (Diagnostic diagnostic : analysis.diagnostics) {
-            if ((diagnostic.phase == Phase.LEX || diagnostic.phase == Phase.SYNTAX)
+            if ((diagnostic.phase == Phase.LEX || diagnostic.phase == Phase.SYNTAX) && !diagnostic.recoverable
                     && document.path.equals(pathOf(diagnostic.uri))) {
                 return false;
             }

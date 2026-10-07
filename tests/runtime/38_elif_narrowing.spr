@@ -1,0 +1,88 @@
+# An if chain narrows by every condition known to be false on the way to a
+# branch: each elif, its condition included, and the else see the earlier
+# conditions false. Only immutable names narrow.
+func describe(count: Int?, verbose: Bool) -> String:
+    if count == null:
+        return "none"
+    elif verbose:
+        return "count " + count
+    else:
+        return "quiet " + count
+
+func size(x: Int?, y: Int?) -> Int:
+    if x == null:
+        return 0
+    elif y == null:
+        return x
+    return x + y
+
+func longer(a: String?, b: String?) -> String:
+    if a == null or b == null:
+        return "missing"
+    elif a.length() > b.length():
+        return a
+    else:
+        return b
+
+func flag_first(flag: Bool, value: Int?) -> String:
+    if flag:
+        return "flag"
+    elif value == null:
+        return "none"
+    else:
+        return "value " + value
+
+# A null check on a name declared nullable is allowed while it is narrowed:
+# the check is redundant, not a type confusion.
+func redundant(x: Int?) -> String:
+    if x == null:
+        return "none"
+    elif x != null and x > 5:
+        return "big"
+    return "small"
+
+func twice(x: Int?) -> String:
+    if x != null:
+        if x != null:
+            return "twice " + x
+    return "none"
+
+# After a chain whose earlier branches all exit, the statements below see
+# those conditions false, as after a single early-exit if.
+func after_chain(value: Int?) -> Int:
+    if value == null:
+        return -1
+    elif value < 0:
+        return 0
+    return value * 2
+
+func total(items: List[Int?]) -> Int:
+    var sum = 0
+    for item in items:
+        if item == null:
+            continue
+        elif item < 0:
+            continue
+        sum += item
+    return sum
+
+let none: Int? = null
+let no_text: String? = null
+print(describe(3, true))
+print(describe(3, false))
+print(describe(none, true))
+print(size(2, 3))
+print(size(none, 3))
+print(size(2, none))
+print(longer("aa", "b"))
+print(longer(no_text, "b"))
+print(flag_first(false, 9))
+print(flag_first(true, none))
+print(redundant(7))
+print(redundant(2))
+print(redundant(none))
+print(twice(2))
+print(after_chain(5))
+print(after_chain(-3))
+print(after_chain(none))
+print(total([1, none, -2, 4]))

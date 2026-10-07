@@ -37,7 +37,7 @@ adapter), `erased-generic`
 `unsupported`. Additive machine-readable fields are
 `interopReasonCodes` (stable ids such as `varargs-expansion`,
 `java-callable-adapter`, `wildcard-bounds`, `raw-generic-boundary`,
-`explicit-type-arguments-required`, `generic-array-unsupported`,
+`explicit-type-arguments-required`, `generic-bound-recursive`, `generic-array-unsupported`,
 `generic-bound-unsupported`, `generic-wrapper-unsupported`,
 `array-source-syntax-unavailable`, `bridge-superseded`), `parameterTypeShapes`/`returnTypeShape` (recursive
 `class`/`parameterized`/`type-variable`/`wildcard`/`generic-array`/`array`
@@ -153,13 +153,23 @@ let first = values.get(0)          # String?
 variables resolve through the receiver, including inherited interfaces and
 superclasses (`Source[String]` reached through `StringSource`). Java reference
 results stay conservatively nullable: `ArrayList[String].get` is `String?`, not
-`String`. Method type parameters are never inferred; a generic method requires
-explicit arguments, and a call that omits them is rejected with
-`explicit-type-arguments-required`. Recursive or intersection bounds
-(`generic-bound-unsupported`) and generic arrays `T[]`
-(`generic-array-unsupported`) are rejected, and imported class
-type-parameter bounds are validated at check time (simple class/interface
-bounds only).
+`String`. A method's own type parameters are inferred from its arguments when
+they fix every parameter exactly: a formal `T` takes the argument's type, a
+formal `List<T>` the element type of an `ArrayList[String]` argument, and a
+parameter that appears twice must get the same type (`pick("a", 1)` is
+rejected). A lambda, a Java callable, `null`, a nullable value, a Sprig
+collection or a raw Java value says nothing, and the expected type is never
+used, so `Collectors.toList()` and `Collections.emptyList()` still take written
+arguments (`Collectors.toList[Int]()`); a call that neither infers nor writes
+them is rejected with the candidate's reason `type arguments not inferable`
+(the member's code stays `explicit-type-arguments-required`). A single
+recursive bound such as `T extends Comparable<? super T>` is accepted and
+checked at each call against the written or inferred arguments
+(`generic-bound-recursive`: `Collections.sort(names)` works for
+`ArrayList[String]`); intersection bounds (`Collections.max`) and generic
+arrays `T[]` are rejected (`generic-bound-unsupported`,
+`generic-array-unsupported`), and imported class type-parameter bounds are
+validated at check time (simple class/interface bounds only).
 
 Raw evidence never becomes concrete evidence. A raw generic value cannot be
 assigned to, or passed where, a concrete parameterized type is expected;

@@ -45,13 +45,19 @@ Use `T?` for expected absence and narrow with `if value != null` before use.
 The right side of a short-circuit `and`/`or` and the guarded block see the
 narrowing: `if box != null and box.value > 0:` narrows `box` for `box.value`,
 and `if text == null or text.length() == 0:` narrows `text` for `text.length()`.
-Without an `elif`, the `else` of `if value == null:` sees `value` as non-null;
-an `elif` sees only its own condition, so write `elif value != null and ...`.
-After an early exit (`if value == null:` followed by `return`, `throw`, `break`
-or `continue`), the statements below see `value` as non-null, in a function body
-and at the top level alike. Only `let` bindings narrow; copy a `var` into a `let`
+Each `elif`, its condition included, and the `else` see every earlier condition
+false: after `if count == null:`, an `elif verbose:` branch and the `else` use
+`count` as `Int`. After an early exit (`if value == null:` followed by `return`,
+`throw`, `break` or `continue`), the statements below see `value` as non-null,
+in a function body and at the top level alike; with a chain, the conditions of
+every branch that exits before the first one that can complete count. A name
+declared `T?` may be compared with `null` again while it is narrowed; the check
+is redundant and accepted. Only `let` bindings narrow; copy a `var` into a `let`
 to check it.
-`List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
+`List[T]`/`Map[K,V]` are read-only; `MutableList`/`MutableMap` can change. A
+mutable collection goes where the read-only type is expected, as the same
+collection seen read-only (no copy; `toList()`/`toMap()` snapshot). The reverse
+needs `toMutableList()`, and element types stay invariant.
 `==`/`!=` compare numbers, `Bool`, `String`, enums, variants, lists and maps by
 value, and class objects by identity: two objects whose fields match are still
 two objects, so compare the fields you mean (`a.id == b.id`). Nullable
@@ -63,6 +69,10 @@ value is a `MutableList[Int]`. Binary operands evaluate left to right, each exac
 once, so `needle in haystack` evaluates `needle` first. Map indexing reads
 return `V?`; `m[key] += x` requires an existing `key` and raises a catchable
 `Error` when it is missing.
+Errors are `Error("text")` or an error class: a class with a `message: String`
+field plus `conform NotFound to Error(message)`. It is thrown, declared with
+`throws NotFound`, caught by name or as `Error`, and shows its message like an
+`Error`; a lambda that throws one has `throws Error`.
 `Int` is checked signed 64-bit, `Int32` checked signed 32-bit, `Float` is IEEE
 binary64, and `Float32` binary32. No implicit lossy numeric conversion occurs.
 See `sprig help numerics` for syntax and `NUMERIC_SEMANTICS.md` for details.

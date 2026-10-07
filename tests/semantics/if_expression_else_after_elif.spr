@@ -1,10 +1,10 @@
-# Only the else of an if without elif sees the if condition false; after an
-# elif, the else still sees name as String?.
-func greet(name: String?, formal: Bool) -> String:
-    return if name == null:
-        "Hello"
-    elif formal:
-        "Good day"
-    else:
-        "Hi " + name
-print(greet("Ada", false))
+# The else sees every condition false, so after `if name == null` the else
+# uses name as String. Only immutable names narrow: a var stays String?.
+var name: String? = "Ada"
+let greeting = if name == null:
+    "Hello"
+elif name.length() > 8:
+    "Good day"
+else:
+    "Hi " + name
+print(greeting)

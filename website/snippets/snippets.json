@@ -5,6 +5,7 @@
     "classes.spr",
     "collections.spr",
     "errors.spr",
+    "error_classes.spr",
     "function_types.spr",
     "functions.spr",
     "generics.spr",

@@ -21,9 +21,12 @@ by the historical design kit in `docs/history/design-kit/`.
   expected type, the assignment target or the result, so `lists.first([])`,
   a payloadless case (`Option[Int].None`) and a parameter that no argument
   mentions still need written `[Type]` arguments. Written arguments are all
-  or none; partial type arguments are never guessed. There is no variance. Java
-  methods and Java generic types are never inferred, and neither is a Sprig
-  parameter that appears only inside a Java type such as `JavaList[T]`.
+  or none; partial type arguments are never guessed. There is no variance. A
+  Java method's own type parameters are inferred only when its arguments fix
+  every one of them exactly (not through a lambda, `null`, a Sprig collection
+  or the result: `Collectors.toList()` still needs `[Int]`); Java generic types
+  (`ArrayList[String]`) always write theirs, and a Sprig parameter that appears
+  only inside a Java type such as `JavaList[T]` is not inferred either.
   Inference types a lambda or literal argument on its own first and then
   checks it once more against the inferred types, so generic calls nested in
   lambda or literal arguments are checked in time that grows with the square
@@ -84,7 +87,9 @@ by the historical design kit in `docs/history/design-kit/`.
   reach and a declared exception the body cannot throw are both errors. Sprig
   shows an `Error` as its message; Java code that turns one into text, such as
   `String.valueOf` or a Java collection's `toString()`, sees
-  `sprig.runtime.SprigError: message`.
+  `sprig.runtime.SprigError: message`. An error class (`conform E to
+  Error(message)`) is the only way to define an error type: there is no
+  hierarchy below it, and a function type still declares `throws Error`.
 - Expression `match` and `if` branches hold one expression each, and neither
   form can be written inside parentheses, brackets or braces, where the layout
   adapter ignores line breaks, or be the operand of an operator. Bind the
@@ -152,7 +157,9 @@ by the historical design kit in `docs/history/design-kit/`.
   forwards correctly quoted arguments unchanged, including under inherited
   delayed expansion; quoting for `cmd.exe` remains the caller's job. A
   Windows console shows output in its own code page, while redirected output
-  is UTF-8 as on Linux and macOS. `print` ends lines with the JVM line
+  is UTF-8 as on Linux and macOS, where output is UTF-8 whatever the locale
+  says (a process without a locale, as in a container, used to print `?` for
+  non-ASCII text). `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
 - Sprig targets v0.7.1-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),

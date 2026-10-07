@@ -134,11 +134,13 @@ matchExpressionBranch: CASE qualifiedName (AS IDENT)? COLON NEWLINE INDENT NEWLI
 // An if expression chooses one value. Like an expression-match branch, every
 // branch is exactly one expression on its own indented line, and 'elif' and
 // 'else' line up with the line that starts the expression. The else branch is
-// required: the parser front end reports a missing one with its fix.
+// required by the language; the grammar accepts its absence so that the AST
+// builder can report it as the one syntax error and still build the if
+// expression, which keeps the language server working while it is written.
 ifExpression
     : IF expression COLON ifExpressionBranch
       (ELIF expression COLON ifExpressionBranch)*
-      ELSE COLON ifExpressionBranch
+      (ELSE COLON ifExpressionBranch)?
     ;
 ifExpressionBranch: NEWLINE INDENT NEWLINE* expression statementEnd NEWLINE* DEDENT;
 expression: ifExpression | matchExpression | orExpression;

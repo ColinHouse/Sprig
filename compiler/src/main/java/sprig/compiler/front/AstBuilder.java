@@ -483,7 +483,18 @@ public final class AstBuilder {
             conditions.add(buildExpression(conditionContexts.get(i)));
             values.add(buildExpression(branchContexts.get(i).expression()));
         }
-        Expr elseValue = buildExpression(branchContexts.get(branchContexts.size() - 1).expression());
+        Expr elseValue = null;
+        if (branchContexts.size() > conditionContexts.size()) {
+            elseValue = buildExpression(branchContexts.get(branchContexts.size() - 1).expression());
+        } else {
+            // The one error of this if expression, reported at its 'if' as the
+            // parser front end reports the other shapes. It does not stop name
+            // resolution and type checking, so the editor keeps its features
+            // while the else branch is still being written.
+            diagnostics.add(Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX,
+                    ParserFrontend.MISSING_ELSE_MESSAGE, uri, span(ctx.getStart()))
+                    .withHint(ParserFrontend.MISSING_ELSE_HINT).withRelatedHelp("language").recoverable());
+        }
         Expr.If expr = new Expr.If(conditions, values, elseValue);
         expr.span = span(ctx);
         return expr;

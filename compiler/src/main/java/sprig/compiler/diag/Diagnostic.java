@@ -22,6 +22,13 @@ public final class Diagnostic {
     public Map<String, Object> repair;
     public Map<String, Object> data;
     /**
+     * Whether the compiler can go on past this error: the front end reported
+     * an incomplete construct but still built a well-formed AST for it, so name
+     * resolution and type checking run and the editor keeps its features. The
+     * program still does not compile.
+     */
+    public boolean recoverable;
+    /**
      * Mechanical rewrites that carry out the hint: each replaces {@code range}
      * (zero-length for an insertion) with {@code newText}. Applying one makes
      * the program move past this diagnostic; it does not promise to preserve
@@ -45,6 +52,11 @@ public final class Diagnostic {
     public Diagnostic withTypes(String expected, String actual) {
         this.expectedType = expected;
         this.actualType = actual;
+        return this;
+    }
+
+    public Diagnostic recoverable() {
+        this.recoverable = true;
         return this;
     }
 

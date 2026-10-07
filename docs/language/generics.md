@@ -45,9 +45,11 @@ let kiwi = Option.Some(value="kiwi")  # Option[String].Some
   `SPR-TYPE-GENERIC-ARITY`, as does a bare `Box` in a type position or
   arguments on a non-generic type. Partial arguments are never inferred.
 - Type positions (`let box: Box[Int]`), payloadless cases
-  (`Option[Int].None`), Java methods and Java generic types
-  (`ArrayList[String]`) always write their arguments; Java type variables are
-  never inferred.
+  (`Option[Int].None`) and Java generic types (`ArrayList[String]`) always
+  write their arguments. A Java method's own type parameters follow the same
+  rule as Sprig calls: inferred when the arguments fix every one exactly
+  (`Collections.sort(names)`, `List.of(1, 2, 3)`), written otherwise
+  (`Collectors.toList[Int]()`); see [JVM interop](../jvm/interop.md).
 - Nested applications are ordinary:
   `List[Option[Int]]`, `Map[String, Box[Int]]`, `Box[List[String?]]`.
 - Generic types are **invariant**. No `out`/`in`, wildcards or subtyping.

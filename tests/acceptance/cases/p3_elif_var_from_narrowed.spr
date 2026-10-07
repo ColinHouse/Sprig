@@ -1,0 +1,15 @@
+# Independent check: a var initialized from a narrowed name in an else after an
+# elif takes the narrowed type, so a later nullable assignment is rejected.
+class Node:
+    let value: Int
+    let next: Node?
+
+func walk(head: Node?, verbose: Bool) -> Int:
+    if head == null:
+        return -1
+    elif verbose:
+        return head.value
+    else:
+        var node = head
+        node = node.next
+        return 0

@@ -1,0 +1,32 @@
+# Independent check: an elif and an else see every earlier condition false, and
+# a redundant null check on a narrowed nullable name is accepted.
+func describe(count: Int?, verbose: Bool) -> String:
+    if count == null:
+        return "none"
+    elif verbose:
+        return "count " + count
+    else:
+        return "quiet " + count
+
+func classify(x: Int?) -> String:
+    if x == null:
+        return "none"
+    elif x != null and x > 5:
+        return "big"
+    return "small"
+
+func after(value: Int?) -> Int:
+    if value == null:
+        return -1
+    elif value < 0:
+        return 0
+    return value + 1
+
+let absent: Int? = null
+print(describe(3, true))
+print(describe(3, false))
+print(describe(absent, false))
+print(classify(9))
+print(classify(1))
+print(after(4))
+print(after(absent))

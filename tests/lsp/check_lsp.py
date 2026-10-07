@@ -546,9 +546,9 @@ def check_if_expressions(directory):
         check("if-expression-hover-narrowed", "value: Int?" in narrowed and "Here: `Int`" in narrowed, narrowed)
         condition = hover_text(client, path, 2, position(IF_EXPRESSIONS, 2, "value"))
         check("if-expression-hover-condition", "value: Int?" in condition and "Here:" not in condition, condition)
-        # An elif sees only its own condition: not the earlier one false, but the left side of its 'and'.
+        # An elif sees the earlier condition false (#125): the binding is narrowed in its condition.
         elif_condition = hover_text(client, path, 4, position(IF_EXPRESSIONS, 4, "value"))
-        check("if-expression-hover-elif-condition", "Here:" not in elif_condition, elif_condition)
+        check("if-expression-hover-elif-condition", "Here: `Int`" in elif_condition, elif_condition)
         right_side = hover_text(client, path, 4, position(IF_EXPRESSIONS, 4, "value", 1))
         check("if-expression-hover-elif-and", "Here: `Int`" in right_side, right_side)
         references = client.at("textDocument/references", path, 1, position(IF_EXPRESSIONS, 1, "doubled"),
@@ -572,6 +572,14 @@ def check_if_expressions(directory):
         check("if-expression-missing-else", len(errors) == 1 and errors[0]["code"] == "SPR-SYNTAX-ERROR"
               and "needs an else branch" in errors[0]["message"]
               and errors[0]["range"]["start"] == {"line": 10, "character": 12}, errors)
+        # The rest of the file keeps its features while the else is being written.
+        still = hover_text(client, path, 11, position(IF_EXPRESSIONS, 11, "describe"))
+        check("if-expression-missing-else-hover", "describe" in still and "String" in still, still)
+        definition = client.at("textDocument/definition", path, 11, position(IF_EXPRESSIONS, 11, "describe"))["result"]
+        check("if-expression-missing-else-definition", definition is not None
+              and definition["range"]["start"] == {"line": 0, "character": 5}, definition)
+        symbols = client.request("textDocument/documentSymbol", {"textDocument": {"uri": uri(path)}})["result"]
+        check("if-expression-missing-else-symbols", [s["name"] for s in symbols] == ["describe", "total", "label"], symbols)
         check("if-expression-shutdown", client.stop() == 0, "".join(client.stderr))
     finally:
         if client.proc.poll() is None:

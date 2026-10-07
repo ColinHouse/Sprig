@@ -559,6 +559,30 @@
     "source": "v0.7.1 Error text review: Java getMessage() may be null"
   },
   {
+    "file": "elif_var_from_narrowed.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "elif_lambda_narrowed.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "elif_var_binding_no_narrowing.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
+    "file": "nonnull_compare_null.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "issue #125: elif and else branches narrow by every earlier condition"
+  },
+  {
     "file": "if_expression_condition.spr",
     "expected_diagnostic": "SPR-TYPE-CONDITION",
     "status": "implemented",
@@ -592,12 +616,48 @@
     "file": "if_expression_elif_narrowing.spr",
     "expected_diagnostic": "SPR-TYPE-OPERAND",
     "status": "implemented",
-    "source": "if expressions"
+    "source": "if expressions; #125: a var never narrows in an elif"
   },
   {
     "file": "if_expression_else_after_elif.spr",
     "expected_diagnostic": "SPR-TYPE-NULLABLE",
     "status": "implemented",
-    "source": "if expressions"
+    "source": "if expressions; #125: a var never narrows in an else after an elif"
+  },
+  {
+    "file": "toplevel_initializer_error_continues.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "a failing top-level initializer no longer stops the module's check"
+  },
+  {
+    "file": "error_class_catch_unreachable.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "error classes: conform C to Error(message)"
+  },
+  {
+    "file": "error_class_unhandled.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "error classes: conform C to Error(message)"
+  },
+  {
+    "file": "throw_plain_class.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "error classes: conform C to Error(message)"
+  },
+  {
+    "file": "list_to_mutable_rejected.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "read-only views: a MutableList is a List, not the reverse"
+  },
+  {
+    "file": "nested_list_mutability_invariant.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "read-only views: element types stay invariant"
   }
 ]

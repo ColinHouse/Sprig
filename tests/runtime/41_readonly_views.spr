@@ -1,0 +1,29 @@
+# A MutableList goes where a List is expected as the same list seen read-only:
+# no copy is made, so a later change through the mutable name is visible, and
+# toList() is the way to take a snapshot. Maps work the same way.
+func total(xs: List[Int]) -> Int:
+    var sum = 0
+    for x in xs:
+        sum += x
+    return sum
+
+func keys(m: Map[String, Int]) -> Int:
+    return m.size()
+
+let numbers = [1, 2, 3]
+print(total(numbers))
+numbers.append(4)
+print(total(numbers))
+let view: List[Int] = numbers
+numbers.append(5)
+print(view)
+print(view.size())
+let counts: MutableMap[String, Int] = {"a": 1}
+print(keys(counts))
+counts["b"] = 2
+print(keys(counts))
+let snapshot = numbers.toList()
+numbers.append(6)
+print(snapshot.size())
+print(numbers.size())
+print(view == numbers)

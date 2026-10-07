@@ -141,6 +141,13 @@ public final class JvmMetadata {
                 "A functional-interface parameter accepts a Sprig function value of the shown fn(...) -> R type without a throws clause; the compiler emits the Java adapter. void accepts any result.");
         if (support.reasonCodes().contains("varargs-expansion")) interopNotes.add(
                 "Trailing arguments are packed into the final array parameter (zero of them is allowed); an opaque Java array of exactly that class is passed through. Fixed-arity overloads are preferred.");
+        if (support.reasonCodes().contains("explicit-type-arguments-required")) interopNotes.add(
+                "Method type arguments are inferred when every type parameter is fixed exactly by the arguments "
+                        + "(not through a lambda, null, a Sprig collection or the result); otherwise write them, "
+                        + "as in name[Type](...).");
+        if (support.reasonCodes().contains("generic-bound-recursive")) interopNotes.add(
+                "A recursive bound such as T extends Comparable<? super T> is checked at each call against the "
+                        + "written or inferred type arguments.");
         if (support.reasonCodes().contains("wildcard-bounds")) interopNotes.add(
                 "A wildcard keeps its bound: a result of List<? extends T> reads elements as T, a parameter List<? extends T> accepts any List whose element type fits T, and an element cannot be added through ? extends.");
         out.put("interopNotes", interopNotes);
@@ -310,9 +317,10 @@ public final class JvmMetadata {
         if (hasShape(scanned, JavaTypes.Shape.GENERIC_ARRAY)) {
             return unsupported("generic-array-unsupported", "Java generic array types (T[]) are not supported");
         }
-        if (executable.getTypeParameters().length > 0 && recursiveBounds(executable)) {
+        String boundShape = boundShape(executable);
+        if (boundShape != null) {
             return unsupported("generic-bound-unsupported",
-                    "Java method type parameters with recursive or intersection bounds are not supported");
+                    "Java method type parameters with " + boundShape + " bounds are not supported");
         }
         // Wildcards keep their bounds: a value reads at the upper bound, an
         // argument must fit the bound, and a write through ? extends has no
@@ -334,6 +342,7 @@ public final class JvmMetadata {
         if (wildcards) codes.add("wildcard-bounds");
         if (typeVariable) codes.add("raw-generic-boundary");
         if (executable.getTypeParameters().length > 0) codes.add("explicit-type-arguments-required");
+        if (recursiveBounds(executable)) codes.add("generic-bound-recursive");
         String level;
         if (callable) {
             level = "sprig-callable";
@@ -465,12 +474,55 @@ public final class JvmMetadata {
         return false;
     }
 
+    /** Whether a type parameter has a parameterized bound such as {@code T extends Comparable<? super T>}. */
     private static boolean recursiveBounds(Executable executable) {
         for (TypeVariable<?> variable : executable.getTypeParameters()) {
             for (java.lang.reflect.Type bound : variable.getBounds()) {
                 if (bound == Object.class) continue;
                 if (!(bound instanceof Class<?>)) return true; // parameterized or variable bound
             }
+        }
+        return false;
+    }
+
+    /**
+     * The shape of a type-parameter bound the compiler cannot check, or null
+     * when every bound is a class, an interface, or one parameterized type whose
+     * arguments are the executable's own type variables, wildcards over them or
+     * classes ({@code T extends Comparable<? super T>}). Such a recursive bound
+     * is checked at each call against the written or inferred type arguments.
+     */
+    private static String boundShape(Executable executable) {
+        for (TypeVariable<?> variable : executable.getTypeParameters()) {
+            java.lang.reflect.Type[] bounds = variable.getBounds();
+            if (bounds.length > 1) return "intersection";
+            for (java.lang.reflect.Type bound : bounds) {
+                if (bound == Object.class || bound instanceof Class<?>) continue;
+                if (!(bound instanceof java.lang.reflect.ParameterizedType applied)
+                        || JavaTypes.rawClass(applied) == null) {
+                    return "variable or array";
+                }
+                for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                    if (!simpleBoundArgument(argument, executable)) return "nested generic";
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean simpleBoundArgument(java.lang.reflect.Type argument, Executable executable) {
+        if (argument instanceof Class<?>) return true;
+        if (argument instanceof TypeVariable<?> variable) {
+            for (TypeVariable<?> own : executable.getTypeParameters()) {
+                if (own.equals(variable)) return true;
+            }
+            return false;
+        }
+        if (argument instanceof java.lang.reflect.WildcardType wildcard) {
+            java.lang.reflect.Type[] lower = wildcard.getLowerBounds();
+            java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
+            java.lang.reflect.Type inner = lower.length == 1 ? lower[0] : upper.length == 1 ? upper[0] : null;
+            return inner != null && (inner instanceof Class<?> || simpleBoundArgument(inner, executable));
         }
         return false;
     }

@@ -772,7 +772,8 @@ public final class JavaGenerator {
         }
         if (expr instanceof Expr.If ifExpr) {
             return ifExpr.conditions.stream().allMatch(JavaGenerator::inert)
-                    && ifExpr.values.stream().allMatch(JavaGenerator::inert) && inert(ifExpr.elseValue);
+                    && ifExpr.values.stream().allMatch(JavaGenerator::inert)
+                    && ifExpr.elseValue != null && inert(ifExpr.elseValue);
         }
         // Variant payloads and enum cases are plain data: constructing or naming
         // them runs no Sprig code (class constructors may run field defaults).
@@ -1257,6 +1258,9 @@ public final class JavaGenerator {
      */
     private String emitIfExpression(Expr.If expr) {
         String resultJava = javaType(expr.type);
+        if (expr.conditions.size() > NESTED_CONDITIONAL_LIMIT) {
+            return emitLongIfExpression(expr, resultJava);
+        }
         StringBuilder code = new StringBuilder();
         for (int i = 0; i < expr.conditions.size(); i++) {
             code.append("(").append(emitExpr(expr.conditions.get(i))).append(" ? ")
@@ -1264,6 +1268,29 @@ public final class JavaGenerator {
         }
         code.append(ifBranchValue(expr.elseValue, expr.type, resultJava));
         return code.append(")".repeat(expr.conditions.size())).toString();
+    }
+
+    /**
+     * Conditions beyond this many are emitted as the flat form below: javac
+     * parses a nested conditional recursively and overflows its stack at about
+     * 1,500 levels, while a block of ifs has no depth.
+     */
+    private static final int NESTED_CONDITIONAL_LIMIT = 64;
+
+    /**
+     * The same if expression as a Java switch expression over one block, in
+     * which each condition is an if statement that yields its branch's value:
+     * flat for any number of branches, no closure, and the same evaluation
+     * order and branch conversions as the nested conditional.
+     */
+    private String emitLongIfExpression(Expr.If expr, String resultJava) {
+        StringBuilder code = new StringBuilder("((").append(resultJava).append(") (switch (0) { default -> { ");
+        for (int i = 0; i < expr.conditions.size(); i++) {
+            code.append("if (").append(emitExpr(expr.conditions.get(i))).append(") { yield ")
+                    .append(ifBranchValue(expr.values.get(i), expr.type, resultJava)).append("; } ");
+        }
+        code.append("yield ").append(ifBranchValue(expr.elseValue, expr.type, resultJava)).append("; } }))");
+        return code.toString();
     }
 
     private String ifBranchValue(Expr value, Type resultType, String resultJava) {

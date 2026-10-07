@@ -120,8 +120,8 @@ else:
     10
 print(widened)
 
-# narrowing is the if statement's: a branch sees its own condition true, and
-# the else of an if without elif sees the if condition false
+# narrowing is the if statement's: a branch sees its own condition true and
+# every earlier condition false, and the else sees all conditions false
 func describe(value: Int?) -> String:
     return if value == null:
         "none"
@@ -132,8 +132,17 @@ func describe(value: Int?) -> String:
             "small " + value
 
 print(describe(null) + ", " + describe(150) + ", " + describe(7))
-# an elif sees only its own condition, so it checks the binding again
+# an elif and the else after it use the name directly; a null check repeated
+# on a name declared nullable is accepted while it is narrowed
 func size_of(value: Int?) -> String:
+    return if value == null:
+        "none"
+    elif value > 100:
+        "big"
+    else:
+        "small " + value
+
+func size_again(value: Int?) -> String:
     return if value == null:
         "none"
     elif value != null and value > 100:
@@ -142,6 +151,7 @@ func size_of(value: Int?) -> String:
         "small"
 
 print(size_of(null) + " " + size_of(500) + " " + size_of(5))
+print(size_again(null) + " " + size_again(500) + " " + size_again(5))
 let word: String? = "sprig"
 let letters = if word != null and word.length() > 3:
     word.length()

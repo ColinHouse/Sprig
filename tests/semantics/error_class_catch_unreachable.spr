@@ -1,0 +1,12 @@
+# A catch of an error class after a catch of Error can never run.
+class NotFound:
+    let message: String
+conform NotFound to Error(message)
+func f() -> Unit throws NotFound:
+    throw NotFound(message="x")
+try:
+    f()
+catch problem: Error:
+    print("e")
+catch problem: NotFound:
+    print("n")

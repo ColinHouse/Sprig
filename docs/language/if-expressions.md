@@ -17,6 +17,11 @@ else:
 on its own indented line. `elif` and `else` line up with the line the
 expression starts on. A missing `else` is `SPR-SYNTAX-ERROR` ("An if expression
 needs an else branch"); without a value to produce, write an `if` statement.
+That one error does not stop name resolution and type checking: the branches
+that exist give the expression its type, the rest of the program is still
+checked in the same round, and the language server keeps hover, navigation and
+completion while the `else` is being written. The program does not compile
+until it is there.
 
 At the start of a statement, `if` is always the `if` statement, whose `else`
 stays optional. Everywhere an expression `match` is accepted, `if` is an
@@ -33,12 +38,12 @@ it does a one-line `if c: a else: b`, a branch with several lines, Python's
 
 Conditions must be `Bool` (`SPR-TYPE-CONDITION`); there is no truthiness.
 Narrowing is exactly the `if` statement's, so rewriting one form as the other
-never changes what type-checks. A branch sees its own condition true. Without
-an `elif`, the `else` branch also sees the `if` condition false: after
-`if value == null:`, the `else` branch uses `value` as non-null. An `elif` sees
-only its own condition, never the earlier ones false, and neither does an
-`else` that follows an `elif`; check the binding again in that condition, as
-in `elif value != null and value > 100:`. Only immutable bindings narrow.
+never changes what type-checks. A branch sees its own condition true and every
+earlier condition false, its own condition included; the `else` sees every
+condition false. After `if value == null:`, an `elif value > 100:` branch and
+the `else` use `value` as non-null. A name declared `T?` may still be compared
+with `null` while it is narrowed (`elif value != null and value > 100:`); the
+check is redundant and accepted. Only immutable bindings narrow.
 
 Result typing is the expression-match typing. An expected type (an annotation,
 an assignment target, a return type or a lambda's expected result) checks every
@@ -63,4 +68,8 @@ Java generation emits a Java conditional expression, nested for each `elif`.
 Every branch is first converted to the Java type of the Sprig result, so both
 operands of each `?:` have that one type: Java's rules for mixed operands,
 which promote numbers and unbox an `Integer` or `Long` (throwing on `null`),
-never apply. No closures or temporaries are introduced.
+never apply. No closures or temporaries are introduced. A chain of more than
+64 conditions is emitted as a Java switch expression over one block, where each
+condition is an `if` that yields its branch's value: javac parses a nested
+conditional recursively and overflows at about 1,500 levels, while the block
+form has no depth, the same evaluation order and the same conversions.

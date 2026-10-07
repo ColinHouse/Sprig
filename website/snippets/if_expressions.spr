@@ -18,16 +18,15 @@ func shipping(cents: Int) -> Int:
 print(shipping(6400))
 print(shipping(1200))
 
-# Narrowing is the if statement's: the else of name == null, with no
-# elif in between, uses name directly. An elif sees only its own condition.
+# Narrowing is the if statement's: after name == null, the elif and the
+# else both use name directly.
 func greet(name: String?) -> String:
     return if name == null:
         "Hello, stranger"
+    elif name.length() > 8:
+        "Hello, " + name.substring(0, 8) + "..."
     else:
-        if name.length() > 8:
-            "Hello, " + name.substring(0, 8) + "..."
-        else:
-            "Hello, " + name
+        "Hello, " + name
 
 print(greet(null))
 print(greet("Ada"))

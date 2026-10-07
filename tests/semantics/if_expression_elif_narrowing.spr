@@ -1,10 +1,10 @@
-# An elif sees only its own condition, as in the if statement: after
-# `if limit == null`, the elif still sees limit as Int?.
-func size(limit: Int?) -> String:
-    return if limit == null:
-        "none"
-    elif limit > 5:
-        "big"
-    else:
-        "small"
-print(size(7))
+# An elif sees every earlier condition false, so after `if limit == null` the
+# elif uses limit as Int. Only immutable names narrow: a var stays Int?.
+var limit: Int? = 7
+let size = if limit == null:
+    "none"
+elif limit > 5:
+    "big"
+else:
+    "small"
+print(size)

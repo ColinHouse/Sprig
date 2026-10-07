@@ -1,0 +1,10 @@
+# A lambda capturing a narrowed name gets the narrower function type; declare
+# the function type when a fn() -> String? is expected.
+func pick(name: String?, verbose: Bool) -> fn() -> String?:
+    if name == null:
+        return fn() => null
+    elif verbose:
+        let f = fn() => name
+        let g: fn() -> String? = f
+        return g
+    return fn() => null

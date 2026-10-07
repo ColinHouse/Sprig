@@ -1,0 +1,15 @@
+# A var initialized from a narrowed name takes the narrowed type, in an else
+# after an elif as in a then branch; declare it as Node? to assign null later.
+class Node:
+    let value: Int
+    let next: Node?
+
+func last(head: Node?, verbose: Bool) -> Int:
+    if head == null:
+        return -1
+    elif verbose:
+        return head.value
+    else:
+        var node = head
+        node = node.next
+        return 0

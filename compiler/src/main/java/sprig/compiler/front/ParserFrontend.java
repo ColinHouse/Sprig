@@ -271,6 +271,12 @@ public final class ParserFrontend {
 
     private enum IfShape { MISSING_ELSE, INLINE, IN_GROUPING, BLOCK }
 
+    /** The error of an if expression without an else branch, shared with the AST builder. */
+    static final String MISSING_ELSE_MESSAGE = "An if expression needs an else branch";
+    static final String MISSING_ELSE_HINT = "Add 'else:' at the same indentation as the line that starts the "
+            + "if expression, with the value to use otherwise indented on the line below it. When there is no "
+            + "value to produce, write an if statement on a line of its own.";
+
     /** A shape problem of the if expression whose IF is at ifIndex, found at the token at index at. */
     private record IfProblem(IfShape shape, int ifIndex, int at) {
     }
@@ -332,11 +338,7 @@ public final class ParserFrontend {
         Token ifToken = stream.get(owner);
         int end = Math.max(ifExpressionExtent(stream, owner), ifExpressionExtent(stream, start.getTokenIndex()));
         return switch (problem.shape()) {
-            case MISSING_ELSE -> new IfExpressionError(owner,
-                    "An if expression needs an else branch",
-                    "Add 'else:' at the same indentation as the line that starts the if expression, with the "
-                            + "value to use otherwise indented on the line below it. When there is no value to "
-                            + "produce, write an if statement on a line of its own.", ifToken, end);
+            case MISSING_ELSE -> new IfExpressionError(owner, MISSING_ELSE_MESSAGE, MISSING_ELSE_HINT, ifToken, end);
             case INLINE -> new IfExpressionError(owner,
                     "Each branch of an if expression goes on its own indented line",
                     "Write 'if condition:' with the value indented on the next line, then 'else:' with the "

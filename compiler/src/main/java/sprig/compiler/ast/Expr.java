@@ -215,6 +215,12 @@ public abstract class Expr extends Node {
         public final List<Expr> conditions;
         /** One value per condition, in the same order. */
         public final List<Expr> values;
+        /**
+         * The else branch's value, or null when the source has no else branch.
+         * The front end reports that as a syntax error but keeps the if
+         * expression, so the editor still resolves and types the rest of the
+         * program while the else is being written; no code is generated.
+         */
         public final Expr elseValue;
 
         public If(List<Expr> conditions, List<Expr> values, Expr elseValue) {

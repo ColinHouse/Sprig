@@ -58,7 +58,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 <<< @/snippets/if_expressions.spr
 
 - `if` produces a value wherever an expression `match` can: after `=`, `return` or `throw`, and as a lambda's body. Each branch is one expression on its own indented line, and `elif` and `else` line up with the line the `if` starts on.
-- The `else` branch is required; leave it out and you get "An if expression needs an else branch". When there's no value to produce, write an ordinary `if` statement: an `if` at the start of a statement is always the `if` statement.
+- The `else` branch is required; leave it out and you get "An if expression needs an else branch", while the rest of the file is still checked and the editor keeps working until you add it. When there's no value to produce, write an ordinary `if` statement: an `if` at the start of a statement is always the `if` statement.
 - All branches share one type: the type the position expects, as in `let ratio: Float = if ...`, or else the type of the first branch that isn't `null`. A `null` branch makes the result nullable.
 - There's no `a if c else b` as in Python and no `c ? a : b` as in C; the compiler points you to the `if` expression instead.
 - Line breaks are ignored inside parentheses, so an `if` expression can't go straight into a call. Bind it to a `let` first and pass the name. The details are in [if expressions](/en/reference/language/if-expressions).
@@ -69,7 +69,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 
 - `List[T]` and `Map[K, V]` are read-only; to change a collection, use `MutableList[T]` or `MutableMap[K, V]`. Modifying a read-only collection is rejected with `SPR-COLLECTION-IMMUTABLE`.
 - `toMutableList()`, `toList()`, `toMutableMap()` and `toMap()` copy the collection (the outer layer only), so the original stays as it was.
-- A list declared with `let` and no type is a `MutableList`, which you can't pass where a `List` is expected. For a read-only list, write `let xs: List[Int] = [1, 2]`. A literal written directly as an argument is fine.
+- A list declared with `let` and no type is a `MutableList`. It can be passed where a `List` is expected: the function sees the same list read-only, so a later `append` through the mutable name is visible to it, and `toList()` takes a snapshot when you need one. A `List` never becomes a `MutableList` without `toMutableList()`.
 - Looking up a key in a `Map` gives you a nullable value: `null` when the key isn't there.
 - Indexing, `in`, `get`, `set`, `append`, `sort` and the lambda-taking methods `map`, `filter` and `forEach` all work.
 - Floating-point numbers can't be `Map` keys, because `NaN` and signed zero don't behave consistently under equality and hashing.
@@ -102,8 +102,8 @@ true
 
 - A type that might have no value is written `T?`. Only `T?` accepts `null`.
 - Check before you use it. Inside `if x != null:`, `x` has a value. Since v0.6.0-beta.1, `if x != null and x.length() > 3:` works too.
-- Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present.
-- The `else` branch of `if x == null:` treats `x` as present too, as long as there's no `elif`. An `elif` only knows its own condition, so check again there: `elif x != null and x > 5:`. An `if` statement and an `if` expression work the same way.
+- `elif` and `else` know the earlier conditions were false: after `if x == null:`, an `elif flag:` branch and the `else` both treat `x` as present, with no second check. Writing `x != null` again there is accepted; it is just redundant.
+- Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present. An `if/elif` chain whose earlier branches all return works the same way.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
 - Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).
@@ -132,6 +132,9 @@ port must be a number: eighty
 - The caller has two options: handle the error with `try` / `catch` (optionally with `finally`), or add `throws` to its own signature. Doing neither is rejected with `SPR-FLOW-THROWS`.
 - An `Error` has a `message` field. `print(problem)`, `"failed: " + problem` and `problem.toString()` show that same message.
 - Java checked exceptions are caught the same way: name the imported Java exception class after `catch`. Such an exception shows Java's text, class name first, and its `message` is a `String?`, because Java's `getMessage()` may return `null`.
+- Your own error types are error classes: a class with a `message: String` field plus `conform NotFound to Error(message)`. Throw it, declare it with `throws NotFound`, and catch it by name to read its fields, or as `Error` to catch every kind at once. A catch of the class after a catch of `Error` is unreachable and reported.
+
+<<< @/snippets/error_classes.spr
 
 ## Generics
 

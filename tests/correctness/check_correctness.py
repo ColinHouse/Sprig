@@ -50,6 +50,36 @@ def json_result(name, *args, expect_success=False, expected_code=None):
         return proc, {}
 
 
+def javac_cache_probe():
+    """A program run twice runs the second time from its cached classes, with the same output."""
+    with tempfile.TemporaryDirectory(prefix="sprig-javac-cache-") as temp:
+        cache = Path(temp) / "cache"
+        program = Path(temp) / "hello.spr"
+        program.write_text('print("cached " + (40 + 2))\n', encoding="utf-8")
+        env = dict(os.environ, SPRIG_JAVAC_CACHE=str(cache))
+        first = subprocess.run([str(SPRIG), "run", str(program)], capture_output=True, text=True, env=env)
+        entries = [p for p in cache.iterdir() if p.is_dir()] if cache.is_dir() else []
+        check("javac-cache-entry-written", first.returncode == 0 and first.stdout == "cached 42\n"
+              and len(entries) == 1 and (entries[0] / "sprig-javac-cache.ok").is_file()
+              and (entries[0] / "classes").is_dir(),
+              f"exit={first.returncode} stdout={first.stdout!r} entries={entries}")
+        second = subprocess.run([str(SPRIG), "run", str(program)], capture_output=True, text=True, env=env)
+        check("javac-cache-hit-same-output", second.returncode == 0 and second.stdout == first.stdout,
+              f"exit={second.returncode} stdout={second.stdout!r} stderr={second.stderr!r}")
+        program.write_text('print("cached " + (40 + 3))\n', encoding="utf-8")
+        third = subprocess.run([str(SPRIG), "run", str(program), "--no-cache"], capture_output=True, text=True, env=env)
+        entries_after = [p for p in cache.iterdir() if p.is_dir()]
+        check("javac-cache-no-cache-skips-store", third.returncode == 0 and third.stdout == "cached 43\n"
+              and len(entries_after) == 1, f"exit={third.returncode} stdout={third.stdout!r} entries={entries_after}")
+        off = subprocess.run([str(SPRIG), "run", str(program)], capture_output=True, text=True,
+                             env=dict(os.environ, SPRIG_JAVAC_CACHE="off"))
+        check("javac-cache-off", off.returncode == 0 and off.stdout == "cached 43\n", off.stdout + off.stderr)
+        rejected = subprocess.run([str(SPRIG), "check", str(program), "--no-cache", "--json"],
+                                  capture_output=True, text=True, env=env)
+        check("javac-cache-flag-only-for-run", rejected.returncode == 2
+              and "SPR-CLI-OPTION" in rejected.stdout, rejected.stdout + rejected.stderr)
+
+
 def javac_json_probe():
     with tempfile.TemporaryDirectory(prefix="sprig-json-probe-") as temp:
         jar = ROOT / "build" / "sprig-compiler.jar"
@@ -236,6 +266,7 @@ def main():
             check("json-run-carries-program-output", data.get("programOutput", "").strip() == "14")
 
     javac_json_probe()
+    javac_cache_probe()
 
     print(f"correctness regressions: {passed} passed, {failed} failed")
     return 1 if failed else 0

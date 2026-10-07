@@ -40,7 +40,7 @@ func total(head: Node?, skip: Bool) -> Int:
     elif skip:
         return -1
     else:
-        var node = head
+        var node: Node? = head
         var sum = 0
         while node != null:
             let current = node
@@ -56,7 +56,7 @@ func f(name: String?, loud: Bool) -> Int:
     if name == null:
         return 0
     elif loud:
-        let again = fn() => name
+        let again: fn() -> String? = fn() => name
         return later(again)
     return 2
 print(f("x", true))
@@ -99,20 +99,28 @@ print(f(4))
 ''', '5\n'),
 ]
 
-# The same branch in both forms, with the code both report.
+# The same branch in both forms, with the codes both report (none when both compile).
 SAME_NARROWING = [
-    ('elif-sees-only-its-condition',
+    ('elif-sees-earlier-condition-false',
      'func f(x: Int?) -> String:\n    if x == null:\n        return "none"\n    elif x > 5:\n        return "big"\n'
      '    return "small"\nprint(f(7))\n',
      'func f(x: Int?) -> String:\n    return if x == null:\n        "none"\n    elif x > 5:\n        "big"\n'
      '    else:\n        "small"\nprint(f(7))\n',
-     'SPR-TYPE-OPERAND'),
+     []),
     ('else-after-elif',
      'func f(x: Int?, v: Bool) -> String:\n    if x == null:\n        return "none"\n    elif v:\n        return "v"\n'
      '    else:\n        return "q " + x\nprint(f(3, true))\n',
      'func f(x: Int?, v: Bool) -> String:\n    return if x == null:\n        "none"\n    elif v:\n        "v"\n'
      '    else:\n        "q " + x\nprint(f(3, true))\n',
-     'SPR-TYPE-NULLABLE'),
+     []),
+    ('var-never-narrows',
+     'var x: Int? = 3\nif x == null:\n    print("none")\nelif true:\n    print("v " + x)\n',
+     'var x: Int? = 3\nlet s = if x == null:\n    "none"\nelif true:\n    "v " + x\nelse:\n    "q"\nprint(s)\n',
+     ['SPR-TYPE-NULLABLE']),
+    ('non-null-compared-with-null',
+     'func f(n: Int) -> String:\n    if n == null:\n        return "none"\n    return "n"\nprint(f(1))\n',
+     'func f(n: Int) -> String:\n    return if n == null:\n        "none"\n    else:\n        "n"\nprint(f(1))\n',
+     ['SPR-TYPE-MISMATCH']),
 ]
 
 
@@ -301,24 +309,52 @@ print(total)
         result = invoke('run', p)
         assert result.returncode == 0 and result.stdout == 'Circle(radius=1.0)\n', result.stdout + result.stderr
 
-        # Narrowing is the if statement's rule, in both forms: a branch sees its own
-        # condition true, else sees the if condition false only when there is no elif,
-        # and an elif never sees the earlier conditions false. So code written for that
-        # rule keeps compiling: a check repeated in an elif, a var or a lambda inferred
-        # in an elif or in an else after one, and `elif x != null and ...`.
+        # Narrowing is the if statement's rule, in both forms (#125): a branch sees
+        # its own condition true and every earlier condition false, the else sees all
+        # of them false, and a name declared nullable may still be compared with null
+        # while narrowed. Code written before elif chains narrowed keeps compiling: a
+        # check repeated in an elif and `elif x != null and ...`; a var or a lambda
+        # that takes a narrowed name declares its type, as in a then branch.
         for name, body, expected in COMPATIBLE_NARROWING:
             p.write_text(body)
             result = invoke('run', p)
             assert (result.returncode, result.stdout) == (0, expected), (name, result.stdout + result.stderr)
-        # Converting between the two forms never changes what type-checks: an elif, and
-        # an else after one, still see the binding as nullable in both.
-        for name, statement, expression, code in SAME_NARROWING:
+        # Converting between the two forms never changes what type-checks.
+        for name, statement, expression, codes in SAME_NARROWING:
             reports = []
             for body in (statement, expression):
                 p.write_text(body)
                 result, found = diagnostics(p)
                 reports.append([d['code'] for d in found])
-            assert reports[0] == reports[1] == [code], (name, reports)
+            assert reports[0] == reports[1] == codes, (name, reports)
+
+        # The hint for two cases of one variant spells the variant as this module
+        # writes it: through the import alias when it comes from another module.
+        shapes = pathlib.Path(d) / 'shapes.spr'
+        shapes.write_text('variant Shape:\n    Circle(radius: Float)\n    Square(side: Float)\n')
+        p.write_text('import "./shapes.spr" as shapes\nlet c = true\nlet shape = if c:\n'
+                     '    shapes.Shape.Circle(radius=1.0)\nelse:\n    shapes.Shape.Square(side=2.0)\n')
+        result, found = diagnostics(p)
+        assert [d['code'] for d in found] == ['SPR-TYPE-MISMATCH'] \
+            and "'let value: shapes.Shape = if ...'" in found[0].get('hint', ''), found
+
+        # A missing else is reported once, and the rest of the program is still
+        # resolved and checked in the same round: the editor keeps its features, and an
+        # error after the if expression is not held back until the else is written.
+        p.write_text('let n = 1\nlet x = if n > 0:\n    1\nlet y: String = x\nprint(missing)\n')
+        result, found = diagnostics(p)
+        assert [(d['code'], d['range']['start']['line']) for d in found] \
+            == [('SPR-SYNTAX-ERROR', 1), ('SPR-NAME-UNRESOLVED', 4)], found
+
+        # A long elif chain compiles: javac parses a nested conditional recursively
+        # and overflowed at about 1,500 levels, so long chains use a flat form.
+        lines = ['let n = 1499', 'let label = if n == 0:', '    "zero"']
+        for i in range(1, 1500):
+            lines += [f'elif n == {i}:', f'    "v{i}"']
+        lines += ['else:', '    "other"', 'print(label)']
+        p.write_text('\n'.join(lines) + '\n')
+        result = invoke('run', p)
+        assert (result.returncode, result.stdout) == (0, 'v1499\n'), result.stdout[:300] + result.stderr[:300]
 
         # Each malformed shape is one targeted syntax error at the place to fix.
         syntax = [

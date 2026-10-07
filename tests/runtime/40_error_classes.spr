@@ -1,0 +1,40 @@
+# Error classes: a class with a message field that conforms to Error is an
+# error type. It is thrown, declared, caught by its own name or as Error, and
+# shows its message wherever an Error does.
+class NotFound:
+    let message: String
+    let sku: String
+conform NotFound to Error(message)
+
+class Invalid:
+    let message: String
+conform Invalid to Error(message)
+
+func load(sku: String) -> Int throws NotFound, Invalid:
+    if sku == "":
+        throw Invalid(message="empty sku")
+    if sku != "A1":
+        throw NotFound(message="no item " + sku, sku=sku)
+    return 1
+
+func describe(sku: String) -> String:
+    try:
+        return "item " + load(sku)
+    catch problem: NotFound:
+        return "missing " + problem.sku
+    catch problem: Error:
+        return "other: " + problem
+
+print(describe("A1"))
+print(describe("ZZ"))
+print(describe(""))
+# a lambda that throws an error class has the type fn(String) -> Int throws Error
+let f = fn(s: String) => load(s)
+try:
+    print(f("A1"))
+    print(f("QQ"))
+catch problem: Error:
+    print("lambda: " + problem.message)
+let e: Error = NotFound(message="as error", sku="x")
+print(e)
+print(e.message)

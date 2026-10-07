@@ -134,7 +134,7 @@ a/b/c
 
 - Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32` (`a.compareTo(b)` does) or an `Int`, which is narrowed with a run-time range check like any other `Int` passed to an `int`.
 - Wildcards inside the interface's type arguments are fine: a lambda implementing `Consumer<String>` is a `Consumer<? super String>`.
-- Type variables are never inferred. `names.forEach` works because `ArrayList[String]` fixes `E`; `stream.map(fn(...) => ...)` needs `stream.map[String](...)` because `R` is the method's own.
+- A method's own type variables are inferred only from plain arguments, never from a lambda: `names.forEach` works because `ArrayList[String]` fixes `E`, while `stream.map(fn(...) => ...)` needs `stream.map[String](...)` because only the lambda would say what `R` is.
 - A function value whose type says `throws Error` can't cross into Java, because Java can't see the clause (`SPR-TYPE-CALLABLE-THROWS`). Handle the error inside a named function and pass a lambda that calls it.
 
 A varargs parameter (`String...`) takes the trailing arguments, zero or more, which the compiler packs into the array; an opaque Java array of exactly that class is passed through as it is. Fixed-arity overloads are tried first. `Path.of("etc", "sprig")`, `Files.exists(path)`, `String.format(...)` and `String.join(...)` all work this way. Only a type-variable element (`T...`, as in `Arrays.asList`) is still rejected.
@@ -161,7 +161,7 @@ Before writing the file, `wrap` checks the generated code against the same class
 - **Array syntax**: there are no array literals, array type annotations, indexing or loops over arrays; arrays can only be passed along.
 - **Wildcard syntax**: a wildcard-typed value can be held and passed on, but you can't write a wildcard in a Sprig declaration, and nothing can be added through `? extends`. Deeply nested builder APIs such as Brigadier may still want a small Java adapter; see [Fabric mods](/en/guide/fabric).
 - **Varargs of a type variable** (`T...`): there is no element class to pack into.
-- **Java generic inference**: Java methods and Java generic types take written type arguments, and there's no variance either. Sprig's own generic calls infer theirs; see [generics](/en/guide/generics).
+- **Java generic inference from the result or a lambda**: a method's type parameters are inferred when its arguments fix every one of them exactly (`Collections.sort(names)`, `List.of(1, 2, 3)`, `Objects.requireNonNullElse(a, b)`); one that only the result mentions, or that only a lambda would fix, is written (`Collectors.toList[Int]()`, `stream.map[String](...)`). Java generic types always take written arguments, and there's no variance. A single recursive bound such as `T extends Comparable<? super T>` is checked on the arguments; intersection bounds (`Collections.max`) are still rejected.
 - **Nullability defaults without annotations**: a library that annotates nothing keeps Sprig's conservative rule, every reference result is `T?`; only annotations (run-time visible or read from the class file) and `@NullMarked`-style defaults change that.
 - **Arithmetic inside Java**: an `int` overflow inside a Java method doesn't raise Sprig's numeric error.
 

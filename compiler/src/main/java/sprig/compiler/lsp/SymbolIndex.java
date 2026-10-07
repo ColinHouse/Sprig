@@ -482,7 +482,9 @@ final class SymbolIndex {
                     expr(ifExpr.conditions.get(i));
                     expr(ifExpr.values.get(i));
                 }
-                expr(ifExpr.elseValue);
+                if (ifExpr.elseValue != null) {
+                    expr(ifExpr.elseValue);
+                }
             } else if (expr instanceof Expr.Lambda lambda) {
                 String outer = container;
                 for (Decl.Param param : lambda.params) {

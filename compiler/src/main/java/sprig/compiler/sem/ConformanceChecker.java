@@ -553,14 +553,28 @@ public final class ConformanceChecker {
 
     private boolean target(Module module, Decl.Conform conform) {
         Symbol imported = module.scope.importAliases.get(conform.targetAlias);
-        if (imported == null || imported.kind != Symbol.Kind.JAVA_TYPE || imported.javaClass == null) {
+        Class<?> target = null;
+        if (imported != null && imported.kind == Symbol.Kind.JAVA_TYPE && imported.javaClass != null) {
+            target = imported.javaClass;
+        } else {
+            // The built-in Error is the one target that needs no import: a class
+            // that extends it (conform C to Error(message)) is an error class.
+            Symbol builtin = module.scope.types.get(conform.targetAlias);
+            if (builtin != null && builtin.kind == Symbol.Kind.BUILTIN_TYPE
+                    && builtin.type instanceof sprig.compiler.types.JavaType javaType
+                    && javaType.clazz == sprig.runtime.SprigError.class) {
+                target = sprig.runtime.SprigError.class;
+            }
+        }
+        if (target == null) {
             diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
-                    "conform target '" + conform.targetAlias + "' must be an imported Java interface",
+                    "conform target '" + conform.targetAlias
+                            + "' must be an imported Java interface or class, or Error",
                     module.uri, conform.span)
-                    .withHint("Add: import java.lang.Runnable as Runnable"));
+                    .withHint("Add: import java.lang.Runnable as Runnable; an error class is declared with "
+                            + "'conform " + conform.sourceName + " to Error(message)'."));
             return false;
         }
-        Class<?> target = imported.javaClass;
         if (target.isAnnotation()) {
             return rejectTarget(module, conform, target, "annotation interfaces cannot be implemented");
         }

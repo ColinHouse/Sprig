@@ -52,7 +52,7 @@ import sprig.runtime.SprigRuntime;
  *
  * <pre>
  *   sprig check file.spr [--json] [--syntax-only]
- *   sprig run file.spr [--json] [--keep] [-- args...]
+ *   sprig run file.spr [--json] [--keep] [--no-cache] [-- args...]
  *   sprig test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline]
  *   sprig build file.spr [-d outDir]
  *   sprig explain SPR-CODE
@@ -129,7 +129,7 @@ public final class Main {
         out.println("Usage: sprig <command> [options]");
         out.println();
         out.println("  check [file.spr] [--bin NAME] [--json] [--syntax-only]   parse and type-check (every bin when a project has no entry)");
-        out.println("  run   [file.spr] [--bin NAME] [--json] [--keep] [--stacktrace] [-- a b] compile and execute on the JVM");
+        out.println("  run   [file.spr] [--bin NAME] [--json] [--keep] [--no-cache] [--stacktrace] [-- a b] compile and execute on the JVM");
         out.println("  test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline] run project tests and compile-fail fixtures");
         out.println("  build [file.spr] [--bin NAME] [-d dir] [--emit-java-only] [--json] emit Java sources + .class files");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
@@ -933,7 +933,6 @@ public final class Main {
             try {
                 Path javaDir = work.resolve("java");
                 Path classesDir = work.resolve("classes");
-                writeSources(output, javaDir);
                 Map<Path, Map<Integer, Span>> lineMaps = new HashMap<>();
                 Map<Path, String> uris = new HashMap<>();
                 for (String file : output.sources.keySet()) {
@@ -941,12 +940,24 @@ public final class Main {
                     lineMaps.put(path, output.lineMaps.get(file));
                     uris.put(path, output.uris.get(file));
                 }
-                List<Path> sources = new ArrayList<>(listJavaFiles(javaDir));
-                sources.addAll(runtimeSources(diagnostics));
-                boolean compiled = JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
-                if (!compiled || diagnostics.hasErrors()) {
-                    report(diagnostics, options.json, "run", 1, null);
-                    return 1;
+                List<Path> runtime = runtimeSources(diagnostics);
+                // The same program compiled before runs from its cached classes;
+                // javac is the larger part of a run's start-up.
+                Path cacheRoot = options.noCache ? null : JavacCache.root();
+                String cacheKey = cacheRoot == null ? null : JavacCache.key(output, runtime);
+                Path cached = JavacCache.lookup(cacheRoot, cacheKey);
+                if (cached != null && !options.keep) {
+                    classesDir = cached;
+                } else {
+                    writeSources(output, javaDir);
+                    List<Path> sources = new ArrayList<>(listJavaFiles(javaDir));
+                    sources.addAll(runtime);
+                    boolean compiled = JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
+                    if (!compiled || diagnostics.hasErrors()) {
+                        report(diagnostics, options.json, "run", 1, null);
+                        return 1;
+                    }
+                    JavacCache.store(cacheRoot, cacheKey, classesDir);
                 }
                 JavaRunner.Result result = JavaRunner.run(classesDir, output.mainClass,
                         options.programArgs, work, !options.json, options.stacktrace);
@@ -1942,6 +1953,7 @@ public final class Main {
         boolean json;
         boolean syntaxOnly;
         boolean keep;
+        boolean noCache;
         Path outDir;
         boolean outDirSpecified;
         boolean emitJavaOnly;
@@ -1966,6 +1978,7 @@ public final class Main {
                     case "--syntax-only", "--parse-only" -> options.syntaxOnly = true;
                     case "--keep" -> options.keep = true;
                     case "--stacktrace" -> options.stacktrace = true;
+                    case "--no-cache" -> options.noCache = true;
                     case "--force" -> options.force = true;
                     case "--emit-java-only" -> options.emitJavaOnly = true;
                     case "--bin" -> {
@@ -2020,6 +2033,7 @@ public final class Main {
             if (syntaxOnly && !command.equals("check")) return "--syntax-only is only valid with check";
             if (emitJavaOnly && !command.equals("build")) return "--emit-java-only is only valid with build";
             if (keep && !command.equals("run")) return "--keep is only valid with run";
+            if (noCache && !command.equals("run")) return "--no-cache is only valid with run";
             if (stacktrace && !command.equals("run")) return "--stacktrace is only valid with run";
             if (force && !command.equals("wrap")) return "--force is only valid with wrap";
             if (outDirSpecified && !List.of("build", "wrap").contains(command))

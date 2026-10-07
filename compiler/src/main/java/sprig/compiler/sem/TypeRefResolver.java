@@ -531,7 +531,9 @@ public final class TypeRefResolver {
                 collectExpr(i.conditions.get(k), refs);
                 collectExpr(i.values.get(k), refs);
             }
-            collectExpr(i.elseValue, refs);
+            if (i.elseValue != null) {
+                collectExpr(i.elseValue, refs);
+            }
         }
     }
 

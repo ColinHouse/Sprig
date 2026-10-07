@@ -417,13 +417,9 @@ public final class NameResolver {
         }
         func.returnType = typeResolver.resolveReturn(module, func.returnTypeRef, func.typeParamTypes);
         for (TypeRef ref : func.throwsRefs) {
-            Type type = typeResolver.resolve(module, ref, func.typeParamTypes);
-            if (!Semantics.isErrorType(type)) {
-                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
-                        "throws requires an error type (Error or an imported Throwable)",
-                        module.uri, ref.span).withTypes("Error or imported Throwable", type.display()));
-            }
-            func.throwsTypes.add(type);
+            // Whether the type is an error type is checked by the type checker,
+            // once conformance has recorded which classes extend Error.
+            func.throwsTypes.add(typeResolver.resolve(module, ref, func.typeParamTypes));
         }
         if (func.rethrows && func.params.stream().noneMatch(param -> param.type instanceof FunctionType fn && fn.throwsAny())) {
             diagnostics.add(Diagnostic.error(Codes.FLOW_RETHROWS, Phase.FLOW,
@@ -706,7 +702,9 @@ public final class NameResolver {
                 resolveExpr(module, scope, ifExpr.conditions.get(i));
                 resolveExpr(module, scope, ifExpr.values.get(i));
             }
-            resolveExpr(module, scope, ifExpr.elseValue);
+            if (ifExpr.elseValue != null) {
+                resolveExpr(module, scope, ifExpr.elseValue);
+            }
         } else if (expr instanceof Expr.Lambda lambda) {
             Scope lambdaScope = childScope(scope);
             for (Decl.Param param : lambda.params) {
