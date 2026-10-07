@@ -80,7 +80,7 @@ The SQLite library gets a pinned `org.xerial:sqlite-jdbc:3.46.1.0` from Maven, r
 Import `@sqlite/migrations.spr` and call `Migrations(database=database, directory="migrations").apply()`:
 
 - Migration files are named `NNN_description.sql`, and the three-digit numbers must be unique.
-- Files run in filename order, and the names of applied files are recorded in the `sprig_schema_migrations` table. If an applied file sorts after one that hasn't been applied, the run stops instead of applying migrations out of order.
+- Files run in filename order, and the names of applied files are recorded in the `sprig_schema_migrations` table. Before running anything, `apply()` checks the whole directory against that table: if a name doesn't fit the pattern, two files share a number, or an applied file sorts after one that hasn't been applied, it stops and nothing runs.
 - Each file's SQL and its record are committed in the same transaction. If something fails, both are rolled back, and you can run again after fixing the file.
 - Don't edit a file that has already been applied: file contents aren't checksummed yet, so the change would go unnoticed. The migrations directory counts as trusted project code.
 

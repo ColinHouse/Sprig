@@ -3,6 +3,7 @@
 from pathlib import Path
 import os
 import shutil
+import sqlite3
 import subprocess
 import tempfile
 
@@ -18,6 +19,32 @@ def run(project, *args, success=True):
     if not success and result.returncode == 0:
         raise AssertionError((args, 'expected failure', result.stdout, result.stderr))
     return result
+
+
+def database_state(path):
+    """The ledger rows and the user tables of a database file, read by Python's own SQLite."""
+    connection = sqlite3.connect(path)
+    try:
+        tables = [row[0] for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'sprig_schema_migrations' ORDER BY name")]
+        ledger = []
+        if connection.execute("SELECT COUNT(*) FROM sqlite_master WHERE name = 'sprig_schema_migrations'").fetchone()[0]:
+            ledger = [row[0] for row in connection.execute('SELECT name FROM sprig_schema_migrations ORDER BY name')]
+        return ledger, tables
+    finally:
+        connection.close()
+
+
+def rejected_before_running(project, root, name, files, expected):
+    """A directory apply() must refuse as a whole: no migration in it may run."""
+    directory = project / name
+    directory.mkdir()
+    for file_name, content in files.items():
+        (directory / file_name).write_bytes(content if isinstance(content, bytes) else content.encode('utf-8'))
+    database = root / (name + '.sqlite')
+    failed = run(project, 'run', '--offline', '--', database, directory, success=False)
+    assert expected in failed.stderr, (name, failed.stderr)
+    assert database_state(database) == ([], []), (name, database_state(database))
 
 
 def main():
@@ -90,7 +117,30 @@ def main():
             "INSERT INTO messages(message) VALUES ('late file');\n", encoding='utf-8')
         changed_order = run(project, 'run', '--offline', '--', drift_db, drift, success=False)
         assert 'migration order changed' in changed_order.stderr
-    print('SQLite migrations: order, idempotence, quoted semicolons/triggers, rollback/retry, filename validation and transaction ownership passed')
+        assert '002_existing.sql' in changed_order.stderr and '001_added_late.sql' in changed_order.stderr
+        # The pending file that sorts first must not run before the order error is found.
+        assert database_state(drift_db) == (['002_existing.sql'], ['messages']), database_state(drift_db)
+        with sqlite3.connect(drift_db) as connection:
+            assert connection.execute('SELECT message FROM messages ORDER BY id').fetchall() == [('already applied',)]
+
+        # The whole directory is checked before any migration runs, so a bad
+        # entry after a pending migration leaves the database untouched.
+        rejected_before_running(project, root, 'pending then readme', {
+            '001_create.sql': 'CREATE TABLE created (id INTEGER);\n',
+            'README.md': 'notes about the migrations\n',
+        }, 'invalid migration filename: README.md')
+        rejected_before_running(project, root, 'pending then duplicate', {
+            '001_create.sql': 'CREATE TABLE created (id INTEGER);\n',
+            '002_first.sql': 'CREATE TABLE first (id INTEGER);\n',
+            '002_second.sql': 'CREATE TABLE second (id INTEGER);\n',
+        }, 'duplicate migration sequence: 002')
+        rejected_before_running(project, root, 'pending then unreadable', {
+            '001_create.sql': 'CREATE TABLE created (id INTEGER);\n',
+            '002_bytes.sql': b'CREATE TABLE bytes (id INTEGER); -- \xff\n',
+        }, '002_bytes.sql')
+
+    print('SQLite migrations: order, idempotence, quoted semicolons/triggers, rollback/retry, '
+          'whole-directory validation before running and transaction ownership passed')
 
 
 if __name__ == '__main__':

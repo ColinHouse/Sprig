@@ -80,7 +80,7 @@ SQLite 库通过 Maven 拿到固定版本的 `org.xerial:sqlite-jdbc:3.46.1.0`�
 导入 `@sqlite/migrations.spr`，然后调用 `Migrations(database=database, directory="migrations").apply()`：
 
 - 迁移文件命名为 `NNN_description.sql`，开头的三位编号不能重复。
-- 文件按文件名顺序执行，执行过的文件名记在 `sprig_schema_migrations` 表里。如果一个已经执行过的文件排在某个还没执行的文件后面，迁移会停下来，不会乱序执行。
+- 文件按文件名顺序执行，执行过的文件名记在 `sprig_schema_migrations` 表里。执行任何文件之前，`apply()` 会先拿整个目录和这张表核对：文件名不合规、编号重复，或者已经执行过的文件排在还没执行的文件后面，都会直接报错，一个文件也不执行。
 - 每个文件里的 SQL 和它的执行记录在同一个事务里提交。失败就一起回滚，修好以后可以再次执行。
 - 已经执行过的文件不要再改：目前不会计算文件内容的校验值，改了也发现不了。迁移目录被当作可信的项目代码。
 

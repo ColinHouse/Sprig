@@ -89,10 +89,13 @@ Import `@sqlite/migrations.spr` and call
 `Migrations(database=database, directory="migrations").apply()`. Files must be
 named `NNN_description.sql`; they are applied in sorted filename order and
 recorded by name in `sprig_schema_migrations`. Keep applied files immutable.
-The three-digit sequence prefix must be unique; if an applied file sorts after
-a pending file, application stops rather than running migrations out of order.
-Each multi-statement SQL script and its ledger row execute in the same batch
-transaction. A failure rolls both back and can be retried after fixing the
-unapplied migration. The migration directory is trusted project code, and this
-version does not hash applied files to detect edits. See
+The three-digit sequence prefix must be unique, and an applied file must not
+sort after a pending one. Before running anything, `apply()` checks every
+directory entry's name and sequence number, checks the order against the
+ledger and reads every pending file; any problem there is an `Error` and no
+migration runs. Each multi-statement SQL script and its ledger row then
+execute in the same batch transaction. A failing script rolls both back,
+the migrations before it stay applied, and `apply()` can be run again after
+fixing the unapplied migration. The migration directory is trusted project
+code, and this version does not hash applied files to detect edits. See
 [`examples/sqlite_migrations`](../../examples/sqlite_migrations/README.md).
