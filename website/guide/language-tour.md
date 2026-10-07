@@ -220,6 +220,18 @@ $[1].id: expected integer, found string
 - 导入 Java 类也是这个写法，只是换成完整类名：`import java.time.LocalDate as LocalDate`。
 - 标准库以 `@std` 开头，比如 `import "@std/json.spr" as json`。
 
+## 命名
+
+- 函数、方法、参数、变量和字段用小驼峰：`readText`、`maxBy`、`userId`。
+- 类型用大驼峰：类、契约类、`variant`、`enum`，以及它们的分支和类型参数，比如 `HttpServer`、`Expr.Literal`、`Color.Red`、`T`。
+- 缩写当成一个词：写 `parseJson`、`writeUtf8`、`HttpServer`，不写 `parseJSON`。
+- 没有全大写的常量，模块里的 `let` 也用小驼峰。
+- Java 的 API 保留 Java 原名：`ArrayList.add`、`LocalDate.of`、`Thread.MIN_PRIORITY`。实现或覆盖 Java 方法时，方法名跟 Java 一致。
+- 文件和目录用小写加下划线：`json_codec.spr`、`main.spr`。导入时起的别名是普通的名字，用小驼峰：`import "@std/json_codec.spr" as jsonCodec`。
+- 包名（`sprig.toml` 里的 `name`、注册表里的名字）用小写加连字符：`sprig-web`。
+
+`@std` 和自带的库里的函数现在还是下划线命名（比如 `files.read_utf8`），之后会按这套规则改名。
+
 ## 另外几个小功能
 
 - 字符串必须在同一行闭合；漏掉结尾引号或把字符串换到下一行时，`SPR-LEX-STRING` 会标出这行未闭合的字符串。

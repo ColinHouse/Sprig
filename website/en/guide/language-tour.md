@@ -220,6 +220,18 @@ $[1].id: expected integer, found string
 - Java classes are imported the same way, with the full class name: `import java.time.LocalDate as LocalDate`.
 - The standard library starts with `@std`, as in `import "@std/json.spr" as json`.
 
+## Names
+
+- Functions, methods, parameters, variables and fields are lowerCamelCase: `readText`, `maxBy`, `userId`.
+- Types are UpperCamelCase: classes, contracts, variants and enums, their cases and type parameters, as in `HttpServer`, `Expr.Literal`, `Color.Red` and `T`.
+- An acronym is a word: write `parseJson`, `writeUtf8` and `HttpServer`, not `parseJSON`.
+- There are no all-caps constants; a module-level `let` is lowerCamelCase too.
+- Java APIs keep their Java names: `ArrayList.add`, `LocalDate.of`, `Thread.MIN_PRIORITY`. A method that implements or overrides a Java method uses the Java name.
+- Files and directories are lowercase with underscores: `json_codec.spr`, `main.spr`. An import alias is an ordinary name, so it's lowerCamelCase: `import "@std/json_codec.spr" as jsonCodec`.
+- Package names (`name` in `sprig.toml`, registry names) are lowercase with hyphens: `sprig-web`.
+
+`@std` and the bundled libraries still name their functions with underscores (such as `files.read_utf8`); they'll be renamed to these rules.
+
 ## A few smaller features
 
 - String literals must close on the same line. A missing closing quote or a newline inside a string reports `SPR-LEX-STRING` on the unterminated literal.
