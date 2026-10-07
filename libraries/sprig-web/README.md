@@ -56,7 +56,7 @@ helpers are module functions: `web.text(body, status)` and
 |---|---|
 | App | `App(title=..., version="1.0.0", cors_origin="")`; fields shown with defaults are optional constructor fields |
 | Routes | `get`, `post`, `put`, `patch`, `delete(path, handler)`, `route(Route(...))`; registration can throw `Error` |
-| Handler | `fn(Request) -> Response throws Error`; synchronous; catch an `Error` to choose the response yourself, or declare `throws Error` and let the server answer it (see Errors) |
+| Handler | `fn(Request) -> Response throws Error`; synchronous. One rule: an answer the client should see, a 404 or a 400 that names the bad field included, is a `Response` you return; an `Error` you do not handle escapes and the server answers it (see Errors). Do not catch an `Error` only to return a generic 400 or 500 |
 | Matching | Registration order wins, exact segments or one `{name}` per segment; decoded segment matching preserves encoded slashes inside a parameter; trailing slash is significant |
 | Request | Read-only `method`, decoded `path`, UTF-8 `body`; `path_param(name)`, `query(name)`, `header(name)` return `String?` |
 | Query | UTF-8 form decoding (`+` is space); first occurrence wins; absent is null, present empty is `""`; embedded `=` preserved |
