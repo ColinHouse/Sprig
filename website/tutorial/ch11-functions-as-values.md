@@ -27,6 +27,26 @@
 
 两条相关的限制：Java 方法和内置方法（`names.add`、`text.length`）不能直接引用，写 lambda；函数值不能用 `==` 比较（同一个名字的两次引用是两个值，比较只会让人困惑）。
 
+### 故意写错：在调用里直接写 if 表达式
+
+<<< @/snippets/book/ch11_if_in_call.spr
+
+```text
+SPR-SYNTAX-ERROR [SYNTAX] ch11_if_in_call.spr:1:42: An if expression cannot be written inside parentheses, brackets or braces
+  hint: Line breaks are ignored there, so the branches cannot go on their own lines. Bind the if expression, or the lambda that holds it, to a let first, then use the name.
+```
+
+圆括号里的换行会被忽略，而 if 表达式的每个分支都要单独占一行，所以它没法写进调用的括号里，写在 lambda 体里也不行。有两种改法：把逻辑写成具名函数，直接传函数名；或者先把整个 lambda 绑定到 `let`，再传名字：
+
+<<< @/snippets/book/ch11_if_lambda.spr
+
+```text
+[small, big, big]
+[odd, even, odd]
+```
+
+逻辑只用一次时，绑定 lambda 更省事；好几个地方都要用，就写成具名函数。
+
 ### 故意写错：捕获 var
 
 <<< @/snippets/book/ch11_capture.spr

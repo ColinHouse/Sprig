@@ -31,10 +31,30 @@ of another `if` or `match` expression. Indentation blocks inside grouping
 delimiters (calls, lists, maps, parentheses) are not supported by the layout
 adapter, so an `if` expression cannot be written there, and it is not an
 operand of an operator. Bind it to a `let` first, then use the name; for a
-call argument that depends on a lambda's parameter, bind the lambda. The
-compiler reports each of these shapes with a targeted `SPR-SYNTAX-ERROR`, as
-it does a one-line `if c: a else: b`, a branch with several lines, Python's
-`a if c else b` and C's `c ? a : b`.
+call argument that depends on a lambda's parameter, pass a named function, or
+bind the lambda and pass its name:
+
+```sprig
+func size_label(n: Int) -> String:
+    return if n > 1:
+        "big"
+    else:
+        "small"
+
+let parity = fn(n: Int) => if n % 2 == 0:
+    "even"
+else:
+    "odd"
+
+print([1, 2, 3].map(size_label))   # [small, big, big]
+print([1, 2, 3].map(parity))       # [odd, even, odd]
+```
+
+This is a deliberate rule for the 0.8 language: inside a call the layout
+adapter ignores line breaks, and an `if` expression's branches each need a
+line of their own. The compiler reports each of these shapes with a targeted
+`SPR-SYNTAX-ERROR`, as it does a one-line `if c: a else: b`, a branch with
+several lines, Python's `a if c else b` and C's `c ? a : b`.
 
 Conditions must be `Bool` (`SPR-TYPE-CONDITION`); there is no truthiness.
 Narrowing is exactly the `if` statement's, so rewriting one form as the other

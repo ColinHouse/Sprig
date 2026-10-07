@@ -72,7 +72,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 - The `else` branch is required; leave it out and you get "An if expression needs an else branch", while the rest of the file is still checked and the editor keeps working until you add it. When there's no value to produce, write an ordinary `if` statement: an `if` at the start of a statement is always the `if` statement.
 - All branches share one type: the type the position expects, as in `let ratio: Float = if ...`, or else the type of the first branch that isn't `null`. A `null` branch makes the result nullable.
 - There's no `a if c else b` as in Python and no `c ? a : b` as in C; the compiler points you to the `if` expression instead.
-- Line breaks are ignored inside parentheses, so an `if` expression can't go straight into a call. Bind it to a `let` first and pass the name. The details are in [if expressions](/en/reference/language/if-expressions).
+- Line breaks are ignored inside parentheses, so an `if` expression can't go straight into a call, not even in a lambda's body there. Bind it, or the lambda that holds it, to a `let` first and pass the name, or pass a named function. The details are in [if expressions](/en/reference/language/if-expressions).
 
 ## Collections
 
