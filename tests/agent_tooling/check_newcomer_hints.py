@@ -160,6 +160,10 @@ CASES = [
      "Unexpected indentation: this line is indented but the previous line does not open a block"),
     ("missing-else-body", "func f(n: Int) -> Int:\n    if n > 0:\n        return 1\n    else:\n    return 2\nprint(f(1))\n",
      "SPR-SYNTAX-ERROR", "Expected an indented block after 'else:'"),
+    ("unterminated-string", 'let s = "abc\nprint(s)\n', "SPR-LEX-STRING", "Unterminated string literal"),
+    ("unterminated-triple-string", 'let s = """abc\nprint(s)\n', "SPR-LEX-STRING", "Unterminated string literal"),
+    ("field-without-type", "class Box:\n    let count = 0\nprint(Box().count)\n",
+     "SPR-SYNTAX-ERROR", "Fields have explicit types"),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
      "sum.toFloat() / count.toFloat()"),
@@ -321,6 +325,22 @@ def main():
             rendered = json.dumps(data)
             check("layout-wording-" + name, len(data) == 1 and expected in data[0].get("message", "")
                   and not any(token in rendered for token in ("<INDENT>", "<DEDENT>", "DEDENT", "<EOF>")), rendered)
+
+        # Unterminated quotes are one string diagnostic spanning the malformed line.
+        for name, source, start_column, end_column in (
+            ("unterminated-string", 'let s = "abc\nprint(s)\n', 8, 12),
+            ("unterminated-triple-string", 'let s = """abc\nprint(s)\n', 10, 14),
+        ):
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            diagnostics = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            first = diagnostics[0] if diagnostics else {}
+            start = first.get("range", {}).get("start", {})
+            end = first.get("range", {}).get("end", {})
+            check("unterminated-string-range-" + name,
+                  len(diagnostics) == 1 and first.get("code") == "SPR-LEX-STRING"
+                  and first.get("message") == "Unterminated string literal"
+                  and start == {"line": 0, "character": start_column}
+                  and end == {"line": 0, "character": end_column}, json.dumps(diagnostics))
 
         # Source text quoted in a parser message keeps its spelling: only ANTLR's own
         # layout-token names are replaced, never an identifier that contains one.

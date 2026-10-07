@@ -1,0 +1,3 @@
+class Box:
+    let count = 0
+print(Box().count)
