@@ -2,8 +2,11 @@
 name = "sqlite"
 description = "Typed SQLite access with explicit SQL and transactions"
 git = "https://github.com/ColinHouse/Sprig.git"
+license = "Apache-2.0"
+owners = ["ColinHouse"]
 subdir = "libraries/sprig-sqlite"
 
 [[release]]
 version = "0.7.1-beta.1"
 tag = "v0.7.1-beta.1"
+rev = "b7fe68eb1cc98cb018f1d07e472d69d73acf4328"

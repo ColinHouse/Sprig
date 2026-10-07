@@ -102,16 +102,16 @@ public final class Toml {
         if (!allowBareValues) {
             Set<String> allowed = switch (currentTable) {
                 case "" -> currentEntry == null ? Set.of("exports") : Set.of();
-                case "project" -> Set.of("name", "version", "language", "source", "entry", "exports");
+                case "project" -> Set.of("name", "version", "language", "source", "entry", "exports", "license");
                 case "bin" -> Set.of("name", "entry");
                 case "dependency" -> Set.of("name", "path", "git", "branch", "tag", "rev", "subdir");
                 case "jvm" -> Set.of("group", "artifact", "version");
                 // [[registry]] in a manifest; [registry] names a registry index file.
                 case "registry" -> currentEntry != null ? Set.of("name", "path", "url", "branch", "subdir")
-                        : Set.of("name", "description");
+                        : Set.of("name", "description", "strict", "moved_to", "moved_to_subdir");
                 // A registry index entry: packages/NAME.toml.
-                case "package" -> Set.of("name", "description", "git", "subdir");
-                case "release" -> Set.of("version", "tag", "branch", "rev");
+                case "package" -> Set.of("name", "description", "git", "subdir", "license", "owners");
+                case "release" -> Set.of("version", "tag", "branch", "rev", "yanked", "reason");
                 default -> Set.of();
             };
             if (!allowed.contains(key)) {

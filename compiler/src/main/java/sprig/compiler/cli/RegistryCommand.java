@@ -84,7 +84,8 @@ final class RegistryCommand {
         List<Map<String, Object>> registries = new ArrayList<>();
         List<Registry.Entry> matches = new ArrayList<>();
         for (Registry.Source source : sources) {
-            Path root = Registry.locate(source, project == null ? null : project.root, offline);
+            Path projectRoot = project == null ? null : project.root;
+            Path root = Registry.follow(source, Registry.locate(source, projectRoot, offline), projectRoot, offline);
             List<Registry.Entry> entries = Registry.load(source, root);
             Map<String, Object> described = new LinkedHashMap<>();
             described.put("name", source.name());
@@ -107,8 +108,11 @@ final class RegistryCommand {
         }
         for (Registry.Entry entry : matches) {
             Registry.Release latest = entry.latest();
-            System.out.println(entry.name + "  " + (latest == null ? "(no releases)" : latest.version())
+            long yanked = entry.releases.stream().filter(Registry.Release::yanked).count();
+            System.out.println(entry.name + "  " + (latest == null ? "(no usable releases)" : latest.version())
                     + "  " + GitCache.redact(entry.git) + (entry.subdir == null ? "" : " " + entry.subdir)
+                    + (entry.license == null ? "" : "  " + entry.license)
+                    + (yanked == 0 ? "" : "  (" + yanked + " yanked)")
                     + (entry.description.isEmpty() ? "" : "\n    " + entry.description));
         }
         System.out.println(matches.size() + " package(s) in " + registries.size() + " registry(ies); "
@@ -122,8 +126,13 @@ final class RegistryCommand {
         String subdir = null;
         String refKind = null;
         String ref = null;
+        String rev = null;
         String version = null;
         String description = null;
+        String license = null;
+        List<String> owners = new ArrayList<>();
+        String yank = null;
+        String reason = null;
         for (int i = 1; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--json")) continue;
@@ -134,19 +143,32 @@ final class RegistryCommand {
                 case "--registry" -> registry = value;
                 case "--git" -> git = value;
                 case "--subdir" -> subdir = value;
-                case "--tag", "--branch", "--rev" -> {
-                    if (refKind != null) throw new UsageException("Choose only one of --tag, --branch or --rev");
+                case "--tag", "--branch" -> {
+                    if (refKind != null) throw new UsageException("Choose only one of --tag or --branch");
                     refKind = arg.substring(2);
                     ref = value;
                 }
+                case "--rev" -> {
+                    if (!value.matches("[0-9a-fA-F]{40}")) throw new UsageException("--rev must be a full 40-character commit SHA");
+                    rev = value.toLowerCase(java.util.Locale.ROOT);
+                }
                 case "--version" -> version = value;
                 case "--description" -> description = value;
+                case "--license" -> license = value;
+                case "--owner" -> owners.add(value);
+                case "--yank" -> yank = value;
+                case "--reason" -> reason = value;
                 default -> throw new UsageException("Unknown option " + arg);
             }
         }
         if (registry == null) throw new UsageException("sprig publish requires --registry NAME_OR_DIR, a local registry directory");
-        if (refKind == null) throw new UsageException("sprig publish requires one of --tag TAG, --branch NAME or --rev SHA: the Git ref that holds this version");
-        if (refKind.equals("rev") && !ref.matches("[0-9a-fA-F]{40}")) throw new UsageException("--rev must be a full 40-character commit SHA");
+        if (yank == null && refKind == null && rev == null) {
+            throw new UsageException("sprig publish requires --tag TAG (the commit is recorded), --branch NAME or --rev SHA: "
+                    + "the Git ref that holds this version; or --yank VERSION --reason TEXT to withdraw a release");
+        }
+        if (yank != null && (refKind != null || rev != null)) throw new UsageException("--yank takes no --tag, --branch or --rev");
+        if (yank != null && (reason == null || reason.isBlank())) throw new UsageException("--yank requires --reason TEXT");
+        if (refKind != null && refKind.equals("branch") && rev != null) throw new UsageException("--rev pins a --tag, not a --branch");
         Path manifest = Project.findManifest(Path.of(""));
         if (manifest == null) {
             throw new DepError(Codes.PROJECT_MANIFEST, "No sprig.toml found in this directory or above",
@@ -162,7 +184,7 @@ final class RegistryCommand {
         if (source != null) {
             if (!source.isLocal()) {
                 throw new DepError(Codes.DEP_REGISTRY, "Registry '" + registry + "' is a Git registry; publish into a local "
-                        + "checkout of it and push that", "Clone the index repository and pass --registry with its directory.");
+                        + "checkout of it and open a pull request there", "Clone the index repository and pass --registry with its directory.");
             }
             root = project.root.resolve(source.path()).normalize();
         } else {
@@ -172,48 +194,97 @@ final class RegistryCommand {
             throw new DepError(Codes.DEP_REGISTRY, "Registry directory not found: " + root,
                     "Pass the name of a [[registry]] with a path, or an existing directory.");
         }
-        Path packages = root.resolve(Registry.PACKAGES_DIR);
-        Path file = packages.resolve(project.name + ".toml");
         Registry.Source local = new Registry.Source(source == null ? root.getFileName().toString() : source.name(),
                 root.toString(), null, null, null);
+        Registry.Index index = Registry.index(local, root);
+        Path packages = root.resolve(Registry.PACKAGES_DIR);
+        Path file = packages.resolve(project.name + ".toml");
         Registry.Entry existing = Files.isRegularFile(file) ? Registry.parse(local, file) : null;
         if (git == null) git = existing == null ? null : existing.git;
         if (git == null) throw new UsageException("sprig publish requires --git URL the first time a package is published");
         GitCache.rejectCredentials(git);
         if (subdir == null && existing != null) subdir = existing.subdir;
         if (subdir != null) subdir = Project.normalizeSubdir(subdir);
-        if (version == null) version = project.version;
-        if (!version.matches("[A-Za-z0-9][A-Za-z0-9_.+-]*")) throw new UsageException("Invalid version " + version);
         if (description == null) description = existing == null ? "" : existing.description;
+        if (license == null) license = existing != null && existing.license != null ? existing.license : project.license;
+        if (owners.isEmpty() && existing != null) owners = new ArrayList<>(existing.owners);
         List<Registry.Release> releases = new ArrayList<>();
-        boolean replaced = false;
-        if (existing != null) {
-            for (Registry.Release release : existing.releases) {
-                if (release.version().equals(version)) {
-                    replaced = true;
-                    continue;
-                }
-                releases.add(release);
+        Registry.Release release;
+        boolean yanked = false;
+        if (yank != null) {
+            if (existing == null || existing.release(yank) == null) {
+                throw new DepError(Codes.DEP_REGISTRY, "Package '" + project.name + "' has no version " + yank + " to yank in " + root,
+                        "Run sprig search " + project.name + " for the listed versions.");
             }
+            for (Registry.Release listed : existing.releases) {
+                if (listed.version().equals(yank)) {
+                    release = new Registry.Release(listed.version(), listed.refKind(), listed.ref(), listed.rev(), true, reason);
+                    releases.add(release);
+                } else {
+                    releases.add(listed);
+                }
+            }
+            release = existing.release(yank);
+            yanked = true;
+        } else {
+            if (version == null) version = project.version;
+            if (!Registry.isSemVer(version)) {
+                throw new UsageException("Version " + version + " is not SemVer (MAJOR.MINOR.PATCH, optional -pre and +build)");
+            }
+            if (existing != null) {
+                for (Registry.Release listed : existing.releases) {
+                    if (listed.version().equals(version)) {
+                        throw new DepError(Codes.DEP_REGISTRY, "Version " + version + " of '" + project.name
+                                + "' is already published; a published release never changes",
+                                "Publish a new version, or withdraw this one with --yank " + version + " --reason TEXT.");
+                    }
+                    releases.add(listed);
+                }
+            }
+            if (refKind == null) {
+                release = new Registry.Release(version, "rev", rev, null, false, null);
+            } else if (refKind.equals("tag")) {
+                if (rev == null) rev = resolveTag(project.root, git, ref);
+                release = new Registry.Release(version, "tag", ref, rev, false, null);
+            } else {
+                release = new Registry.Release(version, "branch", ref, null, false, null);
+            }
+            releases.add(release);
         }
-        Registry.Release release = new Registry.Release(version, refKind,
-                refKind.equals("rev") ? ref.toLowerCase(java.util.Locale.ROOT) : ref);
-        releases.add(release);
-        Registry.Entry entry = new Registry.Entry(local.name(), project.name, description, git, subdir, releases);
+        Registry.Entry entry = new Registry.Entry(local.name(), project.name, description, git, subdir, license, owners, releases);
+        if (index.strict()) Registry.requireStrict(entry);
         Files.createDirectories(packages);
         Files.writeString(file, Registry.render(entry), StandardCharsets.UTF_8);
         if (json) {
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("file", file.toString());
-            details.put("replacedVersion", replaced);
+            details.put("yanked", yanked);
+            details.put("release", release.version());
             details.put("package", entry.asMap());
             System.out.print(JsonWriter.result(List.of(), manifest.toUri().toString(), "publish", 0, null, details));
         } else {
-            System.out.println((replaced ? "Updated " : "Published ") + project.name + " " + version + " (" + refKind
-                    + " " + ref + ") in " + file);
-            System.out.println("Commit and push the registry so others can run: sprig add " + project.name);
+            System.out.println((yanked ? "Yanked " : "Published ") + project.name + " " + release.version()
+                    + (yanked ? "" : " (" + release.refKind() + " " + release.ref()
+                            + (release.rev() != null && !release.refKind().equals("rev") ? ", commit " + release.rev() : "") + ")")
+                    + " in " + file);
+            System.out.println("Next: commit " + Registry.PACKAGES_DIR + "/" + project.name + ".toml and open a pull request to the "
+                    + "index repository that changes only that file; its CI validates the entry. Others then run: sprig add "
+                    + project.name);
         }
         return 0;
+    }
+
+    /** The commit a tag points at: from the package's own checkout when it is one, otherwise from the remote. */
+    private static String resolveTag(Path projectRoot, String git, String tag) throws DepError {
+        try {
+            Process process = new ProcessBuilder("git", "-C", projectRoot.toString(), "rev-parse", "--verify", "--quiet", tag + "^{commit}")
+                    .redirectErrorStream(true).start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+            if (process.waitFor() == 0 && output.matches("[0-9a-f]{40}")) return output;
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+        }
+        return new GitCache(GitCache.defaultRoot(), false).remoteRevision(git, "tag", tag);
     }
 
     private static int failure(String command, boolean json, Diagnostic diagnostic, int exitCode) {

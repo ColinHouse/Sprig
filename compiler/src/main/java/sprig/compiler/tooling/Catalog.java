@@ -252,11 +252,12 @@ public final class Catalog {
         guidance(out, "tuples", "language", "a one-line class with named fields: class Pair(first: Int, second: Int), built as Pair(first=1, second=2)", "variants with named fields");
         guidance(out, "destructuring", "language", "explicit field access");
         out.put("packageRegistry", Map.of("supported", true, "helpTopic", "dependencies",
-                "rules", List.of("a registry is an index of where packages live: packages/NAME.toml with the Git repository, subdir and releases",
-                        "sprig add NAME [--version V] writes the Git dependency the index names; the lock pins the commit as for any Git dependency",
-                        "sprig search [TEXT] lists packages; sprig publish writes this package's entry into a local registry directory",
-                        "[[registry]] tables name registries by path or Git url; without any, the Sprig repository's registry directory is the default",
-                        "there is no central hosted registry, no authentication and no upload: publishing is a commit to an index repository")));
+                "rules", List.of("a registry is an index of where packages live: packages/NAME.toml with the Git repository, subdir, license, owners and releases",
+                        "a release is a SemVer version with a tag (and the commit rev it pointed at when published), a branch, or a rev; the newest is chosen by SemVer order; a yanked release is never chosen for a new dependency and still resolves from a lock",
+                        "sprig add NAME [--version V] writes the Git dependency the index names and refuses a tag that moved away from the recorded commit; the lock pins the commit as for any Git dependency",
+                        "sprig search [TEXT] lists packages; sprig publish --tag T records the entry with the commit, a published version never changes (publish a new one or --yank V --reason TEXT)",
+                        "[[registry]] tables name registries by path or Git url; without any, the Sprig repository's registry directory is the default, which is strict: tags pinned to commits, license and owners required, validated by the Registry workflow on pull requests to registry/",
+                        "there is no central hosted registry, no authentication and no upload: publishing is a pull request that changes only registry/packages/NAME.toml")));
         guidance(out, "centralSprigRegistry", "dependencies", "local path dependencies", "Git dependencies");
         return out;
     }
