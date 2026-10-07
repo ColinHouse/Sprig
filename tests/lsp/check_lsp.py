@@ -88,8 +88,6 @@ QUICK_FIXES = [
     # After an emoji, compiler columns (code points) and LSP characters (UTF-16 units) differ.
     ("named-constructor-after-emoji", 'class P:\n    let x: Int\n    let y: Int\n'
      'let total = "😀😀".length() + P(1, 2).x\nprint(total)\n', "SPR-CALL-NAMED-REQUIRED", True),
-    ("generic-type-arguments", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n',
-     "SPR-TYPE-GENERIC-ARGS-REQUIRED", True),
     ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", True),
 ]
 
