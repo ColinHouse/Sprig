@@ -978,9 +978,12 @@ public final class Main {
                             .forEach(System.err::println);
                 }
                 if (result.exitCode != 0) {
-                    diagnostics.add(runtimeDiagnostic(result.stderr, result.exitCode,
+                    Diagnostic runtimeFailure = runtimeDiagnostic(result.stderr, result.exitCode,
                             source.toAbsolutePath().toUri().toString(), lineMaps, uris,
-                            options.stacktrace));
+                            options.stacktrace);
+                    if (options.json || !runtimeFailure.code.equals(Codes.PROGRAM_EXIT)) {
+                        diagnostics.add(runtimeFailure);
+                    }
                 }
                 String uncalledMain = result.exitCode == 0 && result.stdout.isEmpty()
                         ? uncalledMainNote(compilation.main) : null;

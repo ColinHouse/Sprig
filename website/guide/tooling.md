@@ -129,7 +129,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 - 命令行参数写错，或者工具本身出错，返回 `2`。
 - 源码错误和运行时错误，一般返回 `1`。
-- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。从 v0.6.0-beta.1 开始，程序用 `@std/process` 的 `process.exit` 指定退出码；同一个模块还有写标准错误的 `print_error`，以及读标准输入的 `read_line`、`read_lines`、`read_all`。程序以非零状态退出、又没有抛出 JVM 异常时，Sprig 会报 `SPR-PROGRAM-EXIT`，程序的退出码记在 JSON 的 `data.programExitCode` 里。
+- `run` 会把程序自己的退出码原样传出来，所以程序主动退出时，也可能返回 `2` 或别的值。从 v0.6.0-beta.1 开始，程序用 `@std/process` 的 `process.exit` 指定退出码；同一个模块还有写标准错误的 `print_error`，以及读标准输入的 `read_line`、`read_lines`、`read_all`。文本模式只传回退出码，不附加编译器错误说明；JSON 模式会用 `SPR-PROGRAM-EXIT` 表示非零退出，程序的退出码记在 `data.programExitCode` 里。
 
 ## 给 AI 助手用
 
