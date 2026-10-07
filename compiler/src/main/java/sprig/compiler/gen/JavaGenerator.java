@@ -1362,10 +1362,27 @@ public final class JavaGenerator {
             }
             if (concrete && branch.binderSymbol != null) code.append(javaType(branch.binderType)).append(" ").append(localName(branch.binderSymbol)).append(" = ").append(temp).append("; ");
             Expr value = ((Stmt.ExprStmt)branch.body.get(0)).expr;
-            code.append("yield ").append(convertedExpression(value,expr.type)).append("; } ");
+            code.append(yieldStatement(convertedExpression(value, expr.type), javaType(expr.type))).append("} ");
         }
         if (!concrete) code.append("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\"); ");
         return code.append("} }))").toString();
+    }
+
+    /**
+     * A yield of one branch value. javac 17 reads `yield (` followed by a comma
+     * at the first level of parentheses, as in
+     * `(SprigMutableMap.<String, Long>ofEntries(...)).keys()`, as a call of a
+     * method named yield and rejects it (javac 26 accepts it), so a value that
+     * starts with `(` is assigned to a local of the result's Java type first.
+     * The long if expression needs no such step: each of its values is a cast
+     * `((T) (...))`, whose commas are all nested deeper.
+     */
+    private String yieldStatement(String value, String javaType) {
+        if (!value.startsWith("(")) {
+            return "yield " + value + "; ";
+        }
+        String temp = freshTemp("yielded");
+        return javaType + " " + temp + " = " + value + "; yield " + temp + "; ";
     }
 
     private String emitName(Expr.Name name) {
