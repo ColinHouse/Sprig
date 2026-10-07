@@ -1,0 +1,40 @@
+43
+4
+[echo, echo]
+[7, 8]
+[9, 7]
+[7, 40]
+[1, 2]
+[1.5, 2.5]
+[0.5, 2.5]
+[7, 8]
+evaluated left
+evaluated right
+[left, right]
+6
+ready true
+seven 7
+some fig
+some kiwi
+none
+some lime
+ann: 2
+bob: 1
+525
+6
+3
+2
+ann 75
+bob 150
+ann 300
+[1, 2, 3]
+[3, 7]
+[fig, pear]
+plum
+[7]
+0x
+2
+2
+0
+2
+null

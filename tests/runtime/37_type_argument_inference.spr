@@ -1,0 +1,155 @@
+# Type arguments inferred from the arguments of a call. Each call could write
+# its type arguments and would mean the same; the annotated lets hold the
+# inferred result types, so a wrong inference fails to compile.
+import "@std/lists.spr" as lists
+import "@std/nulls.spr" as nulls
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+generic T:
+    func both(first: T, second: T) -> List[T]:
+        return [first, second]
+
+generic T:
+    class Box:
+        let value: T
+
+generic K, V:
+    class Entry:
+        let key: K
+        let value: V
+
+generic T:
+    class Slot:
+        let value: T?
+
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+class Order:
+    let customer: String
+    let cents: Int
+
+func show(option: Option[String]) -> String:
+    return match option:
+        case Option.Some as some:
+            "some " + some.value
+        case Option.None:
+            "none"
+
+func tick(label: String) -> String:
+    print("evaluated " + label)
+    return label
+
+# Inside a generic function, its own T is an ordinary type argument.
+generic T:
+    func twice(value: T) -> List[T]:
+        return both(value, value)
+
+generic T:
+    func count_of(items: List[T], target: T) -> Int:
+        requires T: Equatable
+        return lists.count(items, fn(item: T) => item == target)
+
+generic T:
+    func smallest_two(items: List[T]) -> List[T] throws Error:
+        requires T: Comparable
+        return lists.take(lists.sorted(items), 2)
+
+# Functions: a plain argument names T.
+let number: Int = identity(42)
+let word: String = identity("pear")
+print(number + 1)
+print(word.length())
+print(twice("echo"))
+
+# A numeric literal counts only when nothing else says what T is.
+let small: Int32 = 7
+let big: Int = 40
+let narrow: List[Int32] = both(small, 8)
+let narrow_too: List[Int32] = both(9, small)
+let wide: List[Int] = both(small, big)
+let plain: List[Int] = both(1, 2)
+let floats: List[Float] = both(1.5, 2.5)
+let single: Float32 = 0.5
+let singles: List[Float32] = both(single, 2.5)
+print(narrow)
+print(narrow_too)
+print(wide)
+print(plain)
+print(floats)
+print(singles)
+
+# Written type arguments still work and win.
+let written: List[Int] = both[Int](small, 8)
+print(written)
+
+# Arguments are evaluated once, left to right.
+print(both(tick("left"), tick("right")))
+
+# Constructors take their type arguments from named arguments.
+let box: Box[Int] = Box(value=3)
+print(box.value * 2)
+let entry: Entry[String, Bool] = Entry(key="ready", value=true)
+print(entry.key + " " + entry.value.toString())
+let pair: lists.Pair[String, Int32] = lists.Pair(first="seven", second=small)
+print(pair.first + " " + pair.second.toString())
+
+# Variant cases with a payload, and a case value as a type argument.
+let fig: Option[String] = Option.Some(value="fig")
+print(show(fig))
+let options: List[Option[String]] = both(Option.Some(value="kiwi"), Option[String].None)
+for option in options:
+    print(show(option))
+let held: Box[Option[String]] = Box(value=Option.Some(value="lime"))
+print(show(held.value))
+
+# Lambdas: written parameter types and the result type of the body.
+let orders: List[Order] = [Order(customer="ann", cents=300), Order(customer="bob", cents=150),
+    Order(customer="ann", cents=75)]
+for group in lists.group_by(orders, fn(o: Order) => o.customer):
+    print(group.key + ": " + group.items.size().toString())
+let total: Int = lists.fold(orders, 0, fn(sum: Int, o: Order) => sum + o.cents)
+print(total)
+let sums: List[Int32] = [1, 2, 3]
+let total32: Int32 = lists.fold(sums, 0, fn(sum: Int32, n: Int32) => sum + n)
+print(total32)
+let summed: Box[Int] = lists.fold(plain, Box(value=0), fn(acc: Box[Int], n: Int) => Box(value=acc.value + n))
+print(summed.value)
+print(count_of(["a", "b", "a"], "a"))
+
+# requires K: Comparable holds for the inferred key type Int.
+for order in lists.sort_by(orders, fn(o: Order) => o.cents):
+    print(order.customer + " " + order.cents.toString())
+print(lists.sorted([3, 1, 2]))
+print(lists.sorted([small, 3]))
+print(smallest_two(["pear", "fig", "plum"]))
+
+# List literals infer from their elements; nested generics nest. A literal
+# passed for a bare T is typed on its own, so [small] is a MutableList[Int32].
+let first: String? = lists.first(["plum", "lime"])
+print(first)
+let nested: Box[Box[MutableList[Int32]]] = Box(value=Box(value=[small]))
+print(nested.value.value)
+let indexed = lists.first(lists.enumerate(["x", "y"]))
+if indexed != null:
+    print(indexed.index.toString() + indexed.value)
+let zipped: List[lists.Pair[String, Int]] = lists.zip(["a", "b"], [1, 2])
+print(zipped.size())
+
+# Nullable: T? matched against Int? makes T Int; a bare T keeps String?.
+let counts: Map[String, Int] = {"ann": 2}
+let found: Int? = counts["ann"]
+let missing: Int? = counts["zed"]
+print(nulls.or_else(found, 0))
+print(nulls.or_else(missing, 0))
+let slot: Slot[Int] = Slot(value=found)
+print(slot.value)
+let maybe: String? = null
+let same: String? = identity(maybe)
+print(same)

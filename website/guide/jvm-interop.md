@@ -161,7 +161,7 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 - **数组语法**：没有数组字面量、数组类型标注、下标和遍历，数组只能原样传递。
 - **通配符语法**：带通配符类型的值可以持有和传递，但不能在 Sprig 的声明里写通配符，也不能穿过 `? extends` 往里加元素。像 Brigadier 这样层层嵌套的 builder API 可能仍然需要一个简单的 Java 适配层，见 [Fabric 模组](/guide/fabric)。
 - **元素是类型变量的变长参数**（`T...`）：没有可以打包的元素类。
-- **泛型推断**：类型参数要自己写，也没有协变和逆变。
+- **Java 泛型推断**：Java 方法和 Java 泛型类型的类型参数要自己写，也没有协变和逆变。Sprig 自己的泛型调用会算出类型参数，见[泛型](/guide/generics)。
 - **可空性注解**：不读取 Java 的可空性注解。
 - **Java 内部的计算**：Java 方法里发生的 `int` 溢出，不会触发 Sprig 的数值错误。
 

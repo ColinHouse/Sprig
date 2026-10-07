@@ -98,12 +98,25 @@ public final class Explanations {
                 out.put("goodExample", "match expr:\n    case Expr.Literal as lit:\n        print(lit.value)\n    case Expr.Add as add:\n        print(add.left)");
                 out.put("relatedCodes", List.of(Codes.MATCH_DUPLICATE, Codes.MATCH_WRONG_TYPE));
             }
-            case Codes.GENERIC_ARGS_REQUIRED, Codes.GENERIC_ARITY -> {
-                out.put("whyMatters", "Sprig does not infer type arguments, so generic uses are fully written out and readable.");
-                out.put("confusedWith", List.of("Java diamond inference", "TypeScript generic inference"));
-                out.put("commonCauses", List.of("A generic declaration was used without explicit [Type] arguments, or with the wrong count."));
-                out.put("safeFixes", List.of("Write Box[Int](...), identity[String](...), or Entry[String, Int](...) with every parameter in declaration order."));
-                out.put("relatedCodes", List.of(Codes.GENERIC_ARITY, Codes.GENERIC_ARGS_REQUIRED));
+            case Codes.GENERIC_ARGS_REQUIRED -> {
+                out.put("whyMatters", "Type arguments come only from a call's arguments, so a call means the same wherever its result goes; when the arguments cannot say, the call writes them.");
+                out.put("confusedWith", List.of("Java diamond inference from the assignment target", "TypeScript contextual typing"));
+                out.put("commonCauses", List.of("No argument mentions a type parameter, as in a make() -> List[T] call.",
+                        "The only argument for a parameter is null, [] or {}, which say nothing about it.",
+                        "Two arguments give a parameter different types, such as String and Bool.",
+                        "A variant case's payload does not mention every parameter, as in Result.Ok(value=1)."));
+                out.put("safeFixes", List.of("Write every type argument in declaration order: lists.first[String]([]), Result[Int, String].Ok(value=1).",
+                        "Pass an argument whose type is known, such as a typed local instead of null."));
+                out.put("badExample", "let first = lists.first([])");
+                out.put("goodExample", "let first = lists.first[String]([])");
+                out.put("relatedCodes", List.of(Codes.GENERIC_ARITY, Codes.GENERIC_CONSTRAINT));
+            }
+            case Codes.GENERIC_ARITY -> {
+                out.put("whyMatters", "Written type arguments name every parameter in declaration order, so a partial list is never guessed.");
+                out.put("confusedWith", List.of("Java raw types", "TypeScript default type parameters"));
+                out.put("commonCauses", List.of("A generic declaration was written with the wrong number of [Type] arguments, a bare generic name was used in a type position, or a non-generic type was given type arguments."));
+                out.put("safeFixes", List.of("Write Box[Int], identity[String](...) or Entry[String, Int](...) with every parameter in declaration order, or leave the arguments of a call out entirely when its arguments determine them."));
+                out.put("relatedCodes", List.of(Codes.GENERIC_ARGS_REQUIRED));
             }
             case Codes.GENERIC_CONSTRAINT -> {
                 out.put("whyMatters", "Capabilities are closed and checked: a generic function states what it needs, and every call proves it.");
@@ -290,11 +303,10 @@ public final class Explanations {
             case Codes.TYPE_INFER -> {
                 out.put("whyMatters", "Local inference only reads an initializer; ambiguous initializers must be annotated.");
                 out.put("commonCauses", List.of("let x = null has no inferable type.",
+                        "An empty list or map literal has no expected type to take its element types from.",
                         "Top-level initializers reference each other in a cycle.",
-                        "A generic value is constructed without explicit [Type] arguments.",
                         "The initializer is a Unit call."));
-                out.put("safeFixes", List.of("Write the type: let x: String? = null.",
-                        "Write generic arguments: Box[Int](value=1).",
+                out.put("safeFixes", List.of("Write the type: let x: String? = null, let names: List[String] = [].",
                         "Break a cycle by annotating one binding or reordering initialization."));
                 out.put("relatedCodes", List.of(Codes.TYPE_UNIT, Codes.GENERIC_ARGS_REQUIRED, Codes.TYPE_MISMATCH));
             }

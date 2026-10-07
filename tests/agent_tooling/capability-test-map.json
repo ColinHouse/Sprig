@@ -28,7 +28,9 @@
     "tests/runtime/19_generics.spr"
   ],
   "feature.genericTypeInference": [
-    "tests/semantics/generic_inference.spr"
+    "tests/runtime/37_type_argument_inference.spr",
+    "tests/semantics/generic_inference.spr",
+    "tests/semantics/generic_inference_conflict.spr"
   ],
   "feature.nullableTypes": [
     "tests/runtime/07_nullable.spr",

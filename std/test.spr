@@ -32,8 +32,8 @@ func check(name: String, body: fn() -> Unit throws Error) -> Unit:
         print("FAIL " + name + ": " + problem)
 
 # Passes when the body throws Error and fails when it returns. The body may
-# return a value, so the call names its result type:
-# test.check_error[Int]("rejects text", fn() => parse("x")).
+# return a value; T is the type of the lambda's result:
+# test.check_error("rejects text", fn() => parse("x")).
 generic T:
     func check_error(name: String, body: fn() -> T throws Error) -> Unit:
         try:

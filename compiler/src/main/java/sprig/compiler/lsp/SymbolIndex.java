@@ -86,6 +86,11 @@ final class SymbolIndex {
         Type type;
         /** Result type of the call this member name is the callee of. */
         Type resultType;
+        /**
+         * The call this name is the callee of, written with the type arguments
+         * the compiler inferred for it, e.g. {@code identity[Int](...) -> Int}.
+         */
+        String inferredCall;
 
         Occurrence(Path path, Span span, Target target, Info info, boolean declaration) {
             this.path = path;
@@ -424,6 +429,13 @@ final class SymbolIndex {
                     if (occurrence != null) {
                         occurrence.type = access.type;
                         occurrence.resultType = call.type;
+                        occurrence.inferredCall = inferredCall(call);
+                    }
+                } else if (call.callee instanceof Expr.Name name) {
+                    Occurrence occurrence = symbolReference(name.span, name.symbol);
+                    if (occurrence != null) {
+                        occurrence.type = name.type;
+                        occurrence.inferredCall = inferredCall(call);
                     }
                 } else {
                     expr(call.callee);
@@ -643,5 +655,32 @@ final class SymbolIndex {
 
     static String display(Type type) {
         return type == null ? "?" : type.display();
+    }
+
+    /**
+     * A generic call written without type arguments, as it reads with the
+     * ones the compiler inferred: {@code identity[Int](...) -> Int},
+     * {@code Box[Int](...)} or {@code Option[Int].Some(...)}. Null for any
+     * other call, including one that writes its type arguments.
+     */
+    static String inferredCall(Expr.Call call) {
+        ResolvedCall resolved = call.resolved;
+        if (resolved == null || resolved.typeArgs.isEmpty() || call.callee instanceof Expr.Subscript
+                || call.callee instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Subscript) {
+            return null;
+        }
+        List<String> written = new ArrayList<>();
+        for (Type type : resolved.typeArgs) {
+            written.add(display(type));
+        }
+        String arguments = "[" + String.join(", ", written) + "]";
+        return switch (resolved.kind) {
+            case FUNCTION, MODULE_FUNCTION, METHOD -> resolved.methodDecl == null ? null
+                    : resolved.methodDecl.name + arguments + "(...) -> " + display(resolved.returnType);
+            case CLASS_CTOR -> resolved.classDecl == null ? null : resolved.classDecl.name + arguments + "(...)";
+            case VARIANT_CTOR -> resolved.returnType instanceof VariantCaseType caseType
+                    ? caseType.variant.name + arguments + "." + caseType.variantCase.name + "(...)" : null;
+            default -> null;
+        };
     }
 }

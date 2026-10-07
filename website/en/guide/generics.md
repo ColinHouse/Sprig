@@ -1,6 +1,6 @@
 # Generics
 
-Sprig's generics follow one rule: **be explicit where you declare them and where you use them.** The compiler doesn't infer type arguments, generics have no variance, and one generic type never converts into another behind your back.
+Sprig's generics are deliberately small. You declare type parameters in a `generic` block, a call works out its type arguments from the arguments you pass, generics have no variance, and one generic type never converts into another behind your back.
 
 Here's a complete example first:
 
@@ -23,27 +23,46 @@ generic T:
 - A block can declare several type parameters, as in `generic K, V:`. The names have to be distinct.
 - Type parameters only exist inside the block; using `T` outside it is rejected with `SPR-NAME-UNRESOLVED`.
 
-## Writing the type arguments
+## Type arguments
+
+Most of the time you don't write them. A call takes its type arguments from the arguments you pass:
 
 ```sprig
-let box = Box[Int](value=42)          # generic class
-let value = identity[Int](42)          # generic function
-let entry = Entry[String, Int](key="age", value=18)
-let some: Option[Int] = Option[Int].Some(value=1)
-let none: Option[Int] = Option[Int].None
+let box = Box(value=42)                    # Box[Int]
+let value = identity("pear")               # identity[String]
+let entry = Entry(key="age", value=18)     # Entry[String, Int]
+let some = Option.Some(value=1)            # Option[Int].Some
+let groups = lists.group_by(orders, fn(o: Order) => o.customer)   # group_by[Order, String]
 ```
 
-Leave the type arguments out, and the compiler won't guess them for you:
+You can always write them yourself, and then yours are used. It's all or nothing: once you write one, you write every one, in declaration order. Some places always need them:
+
+```sprig
+let box = Box[Int](value=42)
+let none = Option[Int].None                # a case without a payload has no arguments to look at
+let entries: List[Entry[String, Int]] = [] # in a type, you always write them
+```
+
+Here's how the compiler works them out:
+
+- Only the call's arguments count. The type you assign the result to, or the parameter you pass it to, never does.
+- A plain number counts only when nothing else says what the type is. If `small` is an `Int32`, `lists.sorted([small, 8])` sorts `Int32` values, and the `8` becomes an `Int32` too. `lists.sorted([1, 2])` on its own sorts `Int` values.
+- `null`, `[]` and `{}` say nothing. A list or map literal with elements counts by its elements.
+- A lambda's parameter types are written, so they count as written; its body gives the result type.
+- When arguments give different types, the one the others fit into wins: `Int32` and `Int` make `Int`, and two cases of one variant make the variant. If there's no such type, the call is an error.
+- Java methods and Java generic types such as `ArrayList[String]` always take written type arguments.
+
+After that, every argument is checked against the types the compiler found, exactly as if you had written them. When the arguments can't say, the compiler stops and asks you to write them:
 
 <<< @/snippets/guide/generics_missing_args.spr
 
 ```text
-SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:5:7: Function 'identity' is generic; a call requires explicit type arguments, e.g. identity[Type](...)
-  hint: Write identity[Int](...); the arguments you passed say which type. Sprig does not infer type arguments.
+SPR-TYPE-GENERIC-ARGS-REQUIRED [TYPE] main.spr:3:22: Cannot infer type argument T of 'lists.first': argument 1 is an empty list, which says nothing about T
+  hint: Write lists.first[Type](...) with T spelled out; type arguments are inferred only from a call's arguments, never from where its result goes.
 1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-The hint names the type the argument implies, but it is still you who writes it: `identity[Int](42)`. With `--json`, the same rewrite is in the diagnostic's `suggestedEdits`.
+The `String?` on the left doesn't help, so write `lists.first[String]([])`. When two arguments disagree, the same error names both, for example `T is String from argument 1 but Bool from argument 2`.
 
 The wrong number of type arguments is rejected with `SPR-TYPE-GENERIC-ARITY`. That includes a bare `Box` in a type position and type arguments on a type that isn't generic.
 
@@ -72,12 +91,12 @@ pear
 
 - The Comparable types are `Int`, `Int32`, `Float`, `Float32`, `Decimal`, `BigInt` and `String`, the types that already have `<`. A type parameter of the calling function qualifies too, if that function also declares `requires X: Comparable`.
 - A comparison means exactly what it means on the concrete type; for example, every comparison with a Float NaN is false.
-- Every call is checked. Passing a type without ordering is an error at the call:
+- Every call is checked, whether you write the type argument or the compiler works it out. Passing a type without ordering is an error at the call:
 
 <<< @/snippets/guide/generics_comparable_bool.spr
 
 ```text
-SPR-GENERIC-CONSTRAINT [TYPE] main.spr:8:13: Type argument 'Bool' for T is not Comparable, which 'larger' requires (expected Comparable type, actual Bool)
+SPR-GENERIC-CONSTRAINT [TYPE] main.spr:8:7: Type argument 'Bool' for T is not Comparable, which 'larger' requires (expected Comparable type, actual Bool)
   hint: Comparable types are Int, Int32, Float, Float32, Decimal, BigInt and String; for other types, pass an explicit comparison function.
 ```
 
@@ -95,9 +114,11 @@ generic T:
 
 then `Box[String?]` is rejected with `SPR-TYPE-GENERIC-NULLABLE`, because the declaration already decides whether that spot can be null. Write `Box[String]` instead.
 
+When the compiler works the type out, it follows the same rule. A `String?` passed where the declaration writes `T?` makes `T` a `String`, so `Box(value=maybe)` is a `Box[String]`. Passed for a plain `T`, it makes `T` a `String?`, unless the declaration writes `T?` somewhere else; then `T` is `String`, and the nullable argument is reported as it would be with `[String]` written out.
+
 ## Generic variants
 
-Variants can be generic too. You write the type argument when you create a value, and only the case name in a `match` branch:
+Variants can be generic too. A case with a payload works out its type arguments from the payload, like a constructor; a case without one, such as `Option[Int].None`, needs them written. In a `match` branch you write only the case name:
 
 <<< @/snippets/guide/generics_option.spr
 
@@ -120,4 +141,4 @@ Imported Java classes can take concrete type arguments too, such as `ArrayList[S
 
 ## Not implemented yet
 
-Type inference, variance and user-defined capabilities don't exist yet. The full list is in [known limitations](/en/reference/language/known-limitations).
+Inferring type arguments from the expected type, variance and user-defined capabilities don't exist yet. The full list is in [known limitations](/en/reference/language/known-limitations).

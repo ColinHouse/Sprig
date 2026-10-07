@@ -111,7 +111,7 @@ port must be a number: eighty
 
 - `or_else` 返回这个值；值是 `null` 时返回你给的默认值。
 - `require` 返回这个值；值是 `null` 时抛出 `Error`，消息由你来写。
-- 两个函数都要在方括号里写出类型，和所有泛型调用一样。
+- 两个函数都不用在方括号里写类型：和其他泛型调用一样，类型从你传的值里来。
 
 ## 错误处理
 
@@ -126,7 +126,7 @@ port must be a number: eighty
 
 <<< @/snippets/generics.spr
 
-你自己写的类、variant 和函数可以放进 `generic T:`（或 `generic K, V:`）块里。用的时候每次都要写出类型参数，比如 `Box[Int](value=42)`。Sprig 不推断类型参数，泛型也没有协变和逆变。要对类型参数用 `==`，需要在函数开头写 `requires T: Equatable`；要比较大小，写 `requires T: Comparable`。详细规则见[泛型](/guide/generics)。
+你自己写的类、variant 和函数可以放进 `generic T:`（或 `generic K, V:`）块里。调用时类型参数由实参算出来，所以 `Box(value=42)` 就是 `Box[Int]`。实参说明不了的时候，比如传的是空列表，就自己写出来：`lists.first[String]([])`。泛型没有协变和逆变。要对类型参数用 `==`，需要在函数开头写 `requires T: Equatable`；要比较大小，写 `requires T: Comparable`。详细规则见[泛型](/guide/generics)。
 
 ## Lambda
 
@@ -202,7 +202,7 @@ $[1].id: expected integer, found string
 
 下面这些目前都还没有：
 
-- 泛型推断、协变和逆变
+- 从期望的类型推断类型参数，以及协变和逆变
 - 继承和接口
 - `%=`
 - 元组和解构

@@ -161,7 +161,7 @@ Before writing the file, `wrap` checks the generated code against the same class
 - **Array syntax**: there are no array literals, array type annotations, indexing or loops over arrays; arrays can only be passed along.
 - **Wildcard syntax**: a wildcard-typed value can be held and passed on, but you can't write a wildcard in a Sprig declaration, and nothing can be added through `? extends`. Deeply nested builder APIs such as Brigadier may still want a small Java adapter; see [Fabric mods](/en/guide/fabric).
 - **Varargs of a type variable** (`T...`): there is no element class to pack into.
-- **Generic inference**: write the type arguments yourself; there's no variance either.
+- **Java generic inference**: Java methods and Java generic types take written type arguments, and there's no variance either. Sprig's own generic calls infer theirs; see [generics](/en/guide/generics).
 - **Nullability annotations**: Java's nullability annotations aren't read.
 - **Arithmetic inside Java**: an `int` overflow inside a Java method doesn't raise Sprig's numeric error.
 

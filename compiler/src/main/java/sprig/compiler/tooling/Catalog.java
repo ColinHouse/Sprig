@@ -194,7 +194,12 @@ public final class Catalog {
                         "parameters match exactly after the Java mapping; void accepts any result; wildcards inside the interface's type arguments read as their bound",
                         "method type variables are never inferred; bind them through the receiver or explicit method[Type] arguments",
                         "a function value with throws Error cannot cross into Java")));
-        guidance(out, "genericTypeInference", "generics", "write every explicit Type[Arg] argument");
+        out.put("genericTypeInference", Map.of("supported", true, "helpTopic", "generics",
+                "rules", List.of("type arguments of a generic Sprig function call, class constructor or variant case with a payload are inferred from the call's arguments when they are left out",
+                        "never from the expected type, the assignment target or the result; a type position still writes Type[Arg]",
+                        "written [Type] arguments still work and win; write all of them or none",
+                        "an unannotated numeric literal counts only when no other argument says what the parameter is; null, [] and {} say nothing",
+                        "Java methods and Java generic types keep explicit type arguments")));
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");

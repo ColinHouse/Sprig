@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## 现在能用吗？
 
-Sprig 还在早期。当前发布的版本是实验性的 v0.7.0-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它还没有泛型推断和接口，也不建议用在生产环境。完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
+Sprig 还在早期。当前发布的版本是实验性的 v0.7.0-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它还没有接口，也不建议用在生产环境。完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
 
 ## 五分钟跑起来
 

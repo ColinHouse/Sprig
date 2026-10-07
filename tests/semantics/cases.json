@@ -243,8 +243,32 @@
   {
     "file": "generic_inference.spr",
     "expected_diagnostic": "SPR-TYPE-GENERIC-ARGS-REQUIRED",
-    "status": "future semantic checker only",
-    "source": "v0.8 generics"
+    "status": "implemented",
+    "source": "type argument inference: null and the expected type say nothing about T"
+  },
+  {
+    "file": "generic_inference_conflict.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-ARGS-REQUIRED",
+    "status": "implemented",
+    "source": "type argument inference: two arguments give T different types"
+  },
+  {
+    "file": "generic_inference_variant.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-ARGS-REQUIRED",
+    "status": "implemented",
+    "source": "type argument inference: a variant case payload that does not mention every parameter"
+  },
+  {
+    "file": "generic_inference_comparable.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "type argument inference: requires T: Comparable is checked on the inferred argument"
+  },
+  {
+    "file": "generic_inference_nullable.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "type argument inference: a bare T takes X? only where a written [X?] is accepted"
   },
   {
     "file": "generic_wrong_arity.spr",

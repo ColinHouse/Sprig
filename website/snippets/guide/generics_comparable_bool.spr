@@ -5,4 +5,4 @@ generic T:
             return a
         return b
 
-print(larger[Bool](true, false))
+print(larger(true, false))
