@@ -1,0 +1,15 @@
+# A list literal whose only element is null is a one-element list (#163).
+let names: List[String?] = [null]
+print(names.size())
+print(names[0] == null)
+let numbers: List[Int?] = [null]
+print(numbers.size())
+print(numbers[0] == null)
+let growing: MutableList[String?] = [null]
+growing.append("x")
+print(growing.size())
+print(growing[1] == "x")
+let twice: List[Int?] = [null, null]
+print(twice.size())
+let mixed: List[String?] = [null, "x"]
+print(mixed)
