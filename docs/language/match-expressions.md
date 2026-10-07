@@ -34,7 +34,7 @@ adapter. Bind the match result to a local before composing it in those positions
 An [`if` expression](if-expressions.md) chooses a value by condition instead of
 by case; it shares this branch shape, these positions and this result typing.
 
-Java generation uses a Java 17 switch expression containing an explicitly typed
+Java generation uses a Java switch expression (JDK 21 target) containing an explicitly typed
 scrutinee temporary and conditional `yield` branches. No closure captures are
 introduced, erased payloads use the existing boxing/unboxing rules, and Sprig
 result typing is checked before Java is generated.

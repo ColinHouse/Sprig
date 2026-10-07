@@ -29,6 +29,9 @@ to `Float`; a `Float32` target rounds the decimal token directly to binary32.
 Floating literal overflow and nonzero underflow to zero are compile errors.
 Representable subnormal values are allowed. Runtime parsing via `String.toFloat`
 uses Java's parser and is a separate, potentially overflowing API.
+`String.toInt`, `toIntOrNull` and `toFloat` trim leading and trailing
+whitespace before parsing (`" 12 ".toIntOrNull()` is `12`), where
+`Long.parseLong` would reject the text; a sign is accepted as in Java.
 
 ## Conversion contract
 
@@ -73,6 +76,13 @@ binary float require explicit conversion. No operand is silently narrowed.
 | `Float32`/`Float` pair | `Float`, IEEE | `Float`, IEEE | `Float`, IEEE | own width | IEEE comparison |
 | `BigInt`, `BigInt` | `BigInt`, exact | compile error | `BigInt`, checked zero | exact | exact integer comparison |
 | `Decimal`, `Decimal` | `Decimal`, exact | compile error | compile error | exact | numeric decimal comparison |
+
+An unsuffixed literal is not an `Int` or `Float` operand: it adopts the width
+of the other operand (the contextual literal rule above). `a32 + 1` with
+`a32: Int32` is `Int32` arithmetic and overflows where `a32 + one` with
+`one: Int` widens to `Int`; `f32 + 1.0` with `f32: Float32` is `Float32`
+arithmetic, so it prints `1.1` where Java's `(double) 0.1f + 1.0` prints
+`1.1000000014901161`.
 
 For integer quotient use `a.divTrunc(b)` (toward zero). Division or remainder
 by zero raises `SprigNumericError`. `MIN_VALUE.divTrunc(-1)` and negating

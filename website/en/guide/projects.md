@@ -131,7 +131,7 @@ sprig add json-codec         # written as an ordinary Git dependency (git, tag, 
 sprig add json-codec --version 0.7.1-beta.1
 ```
 
-A registry is only an index: a directory with one `packages/NAME.toml` per package naming its Git repository, subdirectory and the tag of each release. It is not a new way to fetch code; after `add` the manifest holds the full Git dependency and `check`/`run` never consult the registry again. A project declares its registries with `[[registry]]` tables (a local `path` or a Git `url`); without any, the default is the `registry/` directory of the Sprig repository, which lists the first-party libraries.
+A registry is only an index: a directory with one `packages/NAME.toml` per package naming its Git repository, subdirectory and the tag of each release. It is not a new way to fetch code; after `add` the manifest holds the full Git dependency and `check`/`run` never consult the registry again. A project declares its registries with `[[registry]]` tables, each with a `name` plus a local `path` or a Git `url` (`--registry` takes that name); without any, the default is the `registry/` directory of the Sprig repository, which lists the first-party libraries.
 
 Each release is a SemVer version with one Git ref, usually a tag plus the commit (`rev`) it pointed at when it was published. The newest release is chosen by SemVer order, not list position. A yanked release is never chosen for a new dependency, while a project that already locked it still resolves; a tag that moved away from the recorded commit is refused, because a published release is immutable.
 
@@ -144,7 +144,7 @@ cd my-package
 sprig publish --registry ../Sprig/registry --tag v1.0.0 --license Apache-2.0 --owner your-github-handle
 ```
 
-`publish` writes the entry into the local index directory and records the commit the tag points at; committing that file and opening the pull request is the next step. The default registry is strict: names are lowercase letters, digits and hyphens; every release is a tag pinned to a commit (no branches); `license` (an SPDX identifier) and `owners` (GitHub handles) are required; a published version is never changed or deleted, only withdrawn with `sprig publish --yank 1.0.0 --reason "why"`. A change to an existing entry comes from one of its owners or needs maintainer approval. The workflow clones each new release at its tag, checks the commit, and runs `sprig resolve`, `sprig check` and `sprig test` with the current SDK.
+`publish` writes the entry into the local index directory and records the commit the tag points at; committing that file and opening the pull request is the next step. The default registry is strict: names are lowercase letters, digits and hyphens; every release is a tag pinned to a commit (no branches); `license` (an SPDX identifier) and `owners` (GitHub handles) are required; a published version is never changed or deleted, only withdrawn with `sprig publish --registry ../Sprig/registry --yank 1.0.0 --reason "why"`. A change to an existing entry comes from one of its owners or needs maintainer approval. The workflow clones each new release at its tag, checks the commit, and runs `sprig resolve`, `sprig check` and `sprig test` with the current SDK.
 
 An unlisted package or version is `SPR-DEP-REGISTRY`; `sprig search` shows what is there. The [dependency contract](/en/reference/projects/dependencies) has the details.
 

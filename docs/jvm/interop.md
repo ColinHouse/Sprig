@@ -189,7 +189,7 @@ Raw evidence never becomes concrete evidence. A raw generic value cannot be
 assigned to, or passed where, a concrete parameterized type is expected;
 concrete arguments are checked invariantly and subtype conversions project
 arguments through the hierarchy (`ArrayList[String]` is accepted as
-`List[String]`, `ArrayList[Int32]` is not). Concrete-to-raw stays an erased
+`List[String]`; a raw `ArrayList()` is not). Concrete-to-raw stays an erased
 boundary: a raw receiver such as `ArrayList()` keeps its previous erased
 behavior and `api` labels it `erased-generic`. The same rule covers the Sprig
 collection images: a raw `SprigList`/`SprigMap` result never becomes
@@ -287,7 +287,7 @@ the user program executes that class. See [dependencies](../projects/dependencie
 function, checked Java exceptions must be caught or covered by that function's
 `throws` declaration. Top-level module statements currently may leave a
 checked Java exception uncaught; it then aborts the program at runtime. This
-top-level rule is provisional, as described in `KNOWN_LIMITATIONS.md`. Java
+top-level rule is provisional, as described in [known limitations](../language/known-limitations.md). Java
 library arithmetic and nullability are not magically upgraded to Sprig's
 checked numeric or non-null contracts. A caught Java exception's `message` is
 `getMessage()`, a `String?`; Sprig's `Error` (and the first-party errors built on

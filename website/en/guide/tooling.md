@@ -26,6 +26,8 @@ Projects and dependencies:
 | `sprig add`, `sprig remove` | Adds or removes a dependency; see [projects](/en/guide/projects) |
 | `sprig project` | Shows project information |
 | `sprig deps` | Lists declared dependencies |
+| `sprig search [text]` | Lists the packages a registry offers |
+| `sprig publish --registry DIR ...` | Writes a release entry into a local registry directory, see [Projects](/en/guide/projects) |
 
 Looking things up:
 
@@ -157,7 +159,7 @@ Editor setup and the details of each feature are in the [language server referen
 
 These are planned but not implemented:
 
-- publishing packages, and a module registry
+- a hosted central package registry with accounts and upload: today's registries are Git or local directory indexes, and publishing is a pull request to `registry/`, see [Projects](/en/guide/projects)
 - incremental checking
 
 Early design proposals are in the [Agent tool protocol](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md). It's a historical proposal, not a description of what exists. For what `sprig api` can and can't tell you, see the [JVM interop reference](/en/reference/jvm/interop).

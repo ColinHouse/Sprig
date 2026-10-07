@@ -122,7 +122,7 @@ import "@math/vector.spr" as vector
 
 ```text
 $ sprig search json
-json-codec  0.7.1-beta.1  https://github.com/ColinHouse/Sprig.git libraries/sprig-json-codec
+json-codec  0.7.1-beta.1  https://github.com/ColinHouse/Sprig.git libraries/sprig-json-codec  Apache-2.0
     Path-aware JSON decoding and encoding over @std/json
 1 package(s) in 1 registry(ies); add one with: sprig add NAME [--version V]
 ```

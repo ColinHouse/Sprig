@@ -1,6 +1,7 @@
 # Sprig diagnostic codes (stable)
 
-Generated from `bin/sprig codes`. Codes never change meaning;
+The codes are those of `bin/sprig codes` (a test keeps the two lists equal);
+the wording here is edited for reading. Codes never change meaning;
 new behavior gets a new code. See also `sprig explain <code>`.
 
 | Code | Meaning |
