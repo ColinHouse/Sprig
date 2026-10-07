@@ -15,9 +15,21 @@ by the historical design kit in `docs/history/design-kit/`.
   to the language. Generic methods witness by erasure; boxed
   `Short`/`Byte`/`Character` parameters are not expressible because of the
   existing interop adapters.
-- Generics accept one or more parameters (`generic K, V:`) but are fully
-  explicit: no inference, no variance, and partial type arguments are never
-  guessed. A type parameter `T` has no operators or methods, equality only
+- Generics accept one or more parameters (`generic K, V:`). Type arguments of
+  a generic Sprig function call, class constructor or variant case with a
+  payload are inferred from that call's arguments only: never from the
+  expected type, the assignment target or the result, so `lists.first([])`,
+  a payloadless case (`Option[Int].None`) and a parameter that no argument
+  mentions still need written `[Type]` arguments. Written arguments are all
+  or none; partial type arguments are never guessed. There is no variance. Java
+  methods and Java generic types are never inferred, and neither is a Sprig
+  parameter that appears only inside a Java type such as `JavaList[T]`.
+  Inference types a lambda or literal argument on its own first and then
+  checks it once more against the inferred types, so generic calls nested in
+  lambda or literal arguments are checked in time that grows with the square
+  of their nesting depth (a 4095-node tree literal of generic constructors
+  checks in about half a second). A type parameter `T` has no operators or
+  methods, equality only
   under `requires T: Equatable` and ordering only under
   `requires T: Comparable` (Int, Int32, Float, Float32, Decimal, BigInt and
   String). User-defined capabilities are not implemented

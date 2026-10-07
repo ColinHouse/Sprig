@@ -1,6 +1,6 @@
 # The two ways a nullable read usually ends: a fallback value or an Error.
-# Like every generic call, both name the value's type:
-# nulls.or_else[Int](counts[key], 0).
+# Both take the value's type from their arguments:
+# nulls.or_else(counts[key], 0) is an Int for a Map[String, Int].
 
 # The fallback is an ordinary argument, so it is evaluated even when unused.
 generic T:

@@ -1,0 +1,14 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+# The unknown type inside the list literal must be reported, not lost while
+# the argument is typed for inference (the program used to print null).
+let x = identity([Option[Strng].None])
+print(x.size())

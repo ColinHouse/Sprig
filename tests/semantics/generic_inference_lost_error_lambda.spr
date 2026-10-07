@@ -1,0 +1,17 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+generic T:
+    func apply(f: fn() -> T) -> T:
+        return f()
+
+generic T:
+    class Box:
+        let value: T
+
+let a = apply(fn() => Option[Strng].None)
+let b = Box(value={"k": Option[Strng].Some(value=1)})
+print(1)

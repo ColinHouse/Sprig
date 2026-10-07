@@ -40,10 +40,33 @@ CASES = [
      "import \"@std/files.spr\" as files"),
     ("positional-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2)\n",
      "SPR-CALL-NAMED-REQUIRED", "P(x=1, y=2)"),
-    ("generic-without-type-arguments", "import \"@std/lists.spr\" as lists\nprint(lists.sorted([3, 1, 2]))\n",
-     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "lists.sorted[Int](...)"),
+    ("generic-without-type-arguments", "import \"@std/lists.spr\" as lists\nprint(lists.first([]))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "lists.first[Type](...)"),
     ("generic-without-implied-type", "generic T:\n    func make() -> List[T]:\n        return []\nprint(make())\n",
      "SPR-TYPE-GENERIC-ARGS-REQUIRED", "make[Type](...)"),
+    # The explicit form a hint writes is spelled as the module writes types: through an
+    # import alias, a Java class by its alias, a variant case as its variant.
+    ("generic-hint-module-type", "import \"@std/lists.spr\" as lists\ngeneric T, U:\n    func g(a: T, b: List[U]) -> Int:\n"
+     "        return b.size()\nprint(g(lists.Pair(first=1, second=\"x\"), []))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[lists.Pair[Int, String], Type](...)"),
+    ("generic-hint-java-type", "import java.util.ArrayList as ArrayList\ngeneric T, U:\n    func g(a: T, b: List[U]) -> Int:\n"
+     "        return b.size()\nlet names = ArrayList[String]()\nprint(g(names, []))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[ArrayList[String], Type](...)"),
+    ("generic-hint-case-type", "generic T:\n    variant Option:\n        Some:\n            value: T\n        None:\n"
+     "generic T, U:\n    func g(a: List[T], b: List[U]) -> Int:\n        return b.size()\n"
+     "let some = [Option.Some(value=1)]\nprint(g(some.toList(), []))\n",
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[Option[Int], Type](...)"),
+    # An argument of the wrong shape or a Unit result is reported as such, not as a missing
+    # type argument; a mismatch says where the inferred type came from.
+    ("generic-argument-shape", "import \"@std/lists.spr\" as lists\nclass Order:\n    let cents: Int\n"
+     "let orders: List[Order] = [Order(cents=1)]\nlet s = lists.sort_by(orders, fn(x: Order, y: Order) => x.cents)\n",
+     "SPR-TYPE-MISMATCH", "Type mismatch in lambda"),
+    ("generic-unit-result", "import \"@std/test.spr\" as test\nfunc fail() -> Unit throws Error:\n    throw Error(\"x\")\n"
+     "test.check_error(\"unit\", fn() => fail())\n",
+     "SPR-TYPE-UNIT", "cannot give T of 'test.check_error' a type"),
+    ("generic-inferred-source", "generic T:\n    func both(a: T, b: T) -> List[T]:\n        return [a, b]\n"
+     "print(both(null, \"x\"))\n",
+     "SPR-TYPE-NULL", "T is String, from argument 2"),
     ("input", "let line = input()\n", "SPR-NAME-UNRESOLVED", "process.read_lines()"),
     ("println", "println(1)\n", "SPR-NAME-UNRESOLVED", "print(value)"),
     ("int-call", "let n = int(\"3\")\n", "SPR-NAME-UNRESOLVED", "toIntOrNull()"),
@@ -114,6 +137,7 @@ VALID = [
     ("elif", "let n = 2\nif n == 1:\n    print(1)\nelif n == 2:\n    print(2)\nelse:\n    print(3)\n"),
     ("not-equal", "print(1 != 2)\n"),
     ("main-called", "func main() -> Unit:\n    print(\"hi\")\n\nmain()\n"),
+    ("inferred-type-arguments", "import \"@std/lists.spr\" as lists\nprint(lists.sorted([3, 1, 2]))\n"),
 ]
 
 
@@ -177,8 +201,6 @@ def main():
             # The arguments are quoted from the source after characters outside the BMP.
             ("named-constructor-after-emoji", 'class P:\n    let x: Int\n    let y: Int\n'
              'let total = "😀😀".length() + P(1, 2).x\nprint(total)\n', "SPR-CALL-NAMED-REQUIRED", "x=1, y=2", 0),
-            ("generic-type-arguments", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n',
-             "SPR-TYPE-GENERIC-ARGS-REQUIRED", "[Int]", 0),
             ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", "elif", 0),
         ]
         for name, source, code, new_text, expected_exit in EDITS:
@@ -200,11 +222,11 @@ def main():
             else:
                 check("edit-applied-" + name, again.returncode == expected_exit and not remaining, again.stdout)
 
-        # One diagnostic for a positional constructor call and for a generic call without
-        # type arguments: the follow-on field and element errors are not reported.
+        # One diagnostic for a positional constructor call and for a generic call whose type
+        # arguments cannot be inferred: the follow-on field and element errors are not reported.
         for name, source, code in (
             ("positional-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2)\n", "SPR-CALL-NAMED-REQUIRED"),
-            ("generic-call", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n', "SPR-TYPE-GENERIC-ARGS-REQUIRED"),
+            ("generic-call", 'import "@std/lists.spr" as lists\nprint(lists.first([]))\n', "SPR-TYPE-GENERIC-ARGS-REQUIRED"),
         ):
             (work / "case.spr").write_text(source, encoding="utf-8")
             diagnostics = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]

@@ -1,0 +1,8 @@
+generic T:
+    func wrap(value: T) -> T?:
+        return value
+
+# wrap applies '?' to T, so T cannot be String?: T is String, and the
+# nullable argument is reported as it is for wrap[String](name).
+let name: String? = null
+print(wrap(name))

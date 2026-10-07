@@ -1,0 +1,9 @@
+generic T, E:
+    variant Result:
+        Ok:
+            value: T
+        Err:
+            error: E
+
+# The payload names T only; E has to be written: Result[Int, String].Ok(value=1).
+let ok = Result.Ok(value=1)

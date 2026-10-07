@@ -60,6 +60,13 @@ return `V?`; `m[key] += x` requires an existing `key` and raises a catchable
 `Int` is checked signed 64-bit, `Int32` checked signed 32-bit, `Float` is IEEE
 binary64, and `Float32` binary32. No implicit lossy numeric conversion occurs.
 See `sprig help numerics` for syntax and `NUMERIC_SEMANTICS.md` for details.
+Generic declarations sit in a `generic T:` block. A generic call, constructor
+or variant case with a payload infers its type arguments from its arguments
+(`Box(value=1)` is a `Box[Int]`, `lists.sort_by(orders, fn(o: Order) => o.cents)`
+needs no `[Order, Int]`); written arguments (`Box[Int](value=1)`) still work,
+all or none. Nothing is inferred from the expected type, so `lists.first([])`,
+`Option[Int].None` and type positions write their arguments. See
+[generics](../language/generics.md).
 
 The v0.7 design kit in `docs/history/design-kit/` includes unimplemented targets. Check
 `FEATURE_STATUS_IMPLEMENTED.md` and `KNOWN_LIMITATIONS.md` before relying on

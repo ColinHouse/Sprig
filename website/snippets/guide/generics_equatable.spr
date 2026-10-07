@@ -3,5 +3,5 @@ generic T:
         requires T: Equatable
         return a == b
 
-print(same[String]("a", "a"))
-print(same[Int](1, 2))
+print(same("a", "a"))
+print(same(1, 2))

@@ -86,7 +86,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-TYPE-RETURN | Returned value does not match the declared return type. |
 | SPR-TYPE-UNIT | Unit is only a function/method result; it cannot be a field, parameter, collection element, or ordinary value. |
 | SPR-TYPE-GENERIC-ARITY | A generic declaration was used with the wrong number of type arguments (supply every parameter in declaration order). |
-| SPR-TYPE-GENERIC-ARGS-REQUIRED | A generic function or constructor needs explicit `[Type]` arguments; Sprig does not infer them. |
+| SPR-TYPE-GENERIC-ARGS-REQUIRED | A generic call or constructor needs written `[Type]` arguments: its arguments do not say what a type parameter is, or two of them disagree. |
 | SPR-TYPE-GENERIC-NULLABLE | This type parameter is used with `?` in the declaration, so its argument must be non-nullable. |
 | SPR-GENERIC-CONSTRAINT | A `requires` clause names an unknown capability or is misplaced, or a type argument is not `Comparable` where the callee requires it. |
 | SPR-PROJECT-MANIFEST | `sprig.toml` is missing, malformed, or lacks a required field. |
@@ -122,9 +122,8 @@ same zero-based positions as `range`, a zero-length range for an insertion,
 and `newText` replacing exactly that range. Applying an edit moves the program
 past the diagnostic; whether it is what the author meant (adding `throws Error`
 to a function, say) is still theirs to judge. Edits exist today for a missing
-`@std` import, an undeclared `throws`, positional constructor arguments, a
-generic call whose arguments imply its type arguments, and `else if`. In an
-editor, `sprig lsp` offers the same edits as quick fixes; see
+`@std` import, an undeclared `throws`, positional constructor arguments and
+`else if`. In an editor, `sprig lsp` offers the same edits as quick fixes; see
 [language server](lsp.md#quick-fixes).
 
 `machineApplicable` is true only for a correction that is semantics-preserving

@@ -1,6 +1,7 @@
 # A set of values compared with ==, kept in first-insertion order. Membership
-# is a map lookup, so it does not scan the whole set. Like every generic
-# call, construction names the element type: sets.of[String](["a", "b"]).
+# is a map lookup, so it does not scan the whole set. sets.of(["a", "b"])
+# takes the element type from its items; an empty set names it:
+# sets.of[String]([]).
 generic T:
     class Set:
         let members: MutableMap[T, Bool] = {}

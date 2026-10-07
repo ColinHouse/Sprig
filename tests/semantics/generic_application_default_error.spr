@@ -1,0 +1,12 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+# A field default is checked once to collect its effects and once for real;
+# the unknown type must be reported by the real check.
+class Holder:
+    let choice: Option[Int] = Option[Strng].None
+
+print(1)

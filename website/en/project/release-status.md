@@ -42,7 +42,7 @@ Coming from v0.6? Read the upgrade section of the [v0.7.0-beta.1 release notes](
 
 ## Changes since the release
 
-This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.7.1-beta.1, it says so. So far that's quick fixes in the language server.
+This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.7.1-beta.1, it says so. So far that's quick fixes in the language server, and generic calls that work out their type arguments from the arguments you pass.
 
 ## How it was verified
 

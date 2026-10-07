@@ -1,0 +1,8 @@
+import "@std/test.spr" as test
+
+func fail() -> Unit throws Error:
+    throw Error("boom")
+
+# A Unit result gives T no type, and no written type argument could.
+test.check_error("unit body", fn() => fail())
+test.finish()

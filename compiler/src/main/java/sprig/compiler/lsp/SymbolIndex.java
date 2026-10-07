@@ -15,6 +15,7 @@ import sprig.compiler.diag.Span;
 import sprig.compiler.sem.ResolvedCall;
 import sprig.compiler.sem.ResolvedField;
 import sprig.compiler.sem.Symbol;
+import sprig.compiler.sem.TypeSpelling;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.JavaType;
@@ -86,6 +87,11 @@ final class SymbolIndex {
         Type type;
         /** Result type of the call this member name is the callee of. */
         Type resultType;
+        /**
+         * The call this name is the callee of, written with the type arguments
+         * the compiler inferred for it, e.g. {@code identity[Int](...) -> Int}.
+         */
+        String inferredCall;
 
         Occurrence(Path path, Span span, Target target, Info info, boolean declaration) {
             this.path = path;
@@ -424,6 +430,13 @@ final class SymbolIndex {
                     if (occurrence != null) {
                         occurrence.type = access.type;
                         occurrence.resultType = call.type;
+                        occurrence.inferredCall = inferredCall(module, call);
+                    }
+                } else if (call.callee instanceof Expr.Name name) {
+                    Occurrence occurrence = symbolReference(name.span, name.symbol);
+                    if (occurrence != null) {
+                        occurrence.type = name.type;
+                        occurrence.inferredCall = inferredCall(module, call);
                     }
                 } else {
                     expr(call.callee);
@@ -643,5 +656,48 @@ final class SymbolIndex {
 
     static String display(Type type) {
         return type == null ? "?" : type.display();
+    }
+
+    /**
+     * A generic call written without type arguments, as it reads with the
+     * ones the compiler inferred and as the calling module would write it:
+     * {@code identity[Int](...) -> Int}, {@code lists.Pair[Int, String](...)}
+     * or {@code f.Option[Int].Some(...)}. Null for any other call, including
+     * one that writes its type arguments.
+     */
+    static String inferredCall(Module module, Expr.Call call) {
+        ResolvedCall resolved = call.resolved;
+        if (resolved == null || resolved.typeArgs.isEmpty() || call.callee instanceof Expr.Subscript
+                || call.callee instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Subscript) {
+            return null;
+        }
+        List<String> written = new ArrayList<>();
+        for (Type type : resolved.typeArgs) {
+            written.add(TypeSpelling.in(module, type));
+        }
+        String arguments = "[" + String.join(", ", written) + "]";
+        return switch (resolved.kind) {
+            case FUNCTION, MODULE_FUNCTION, METHOD -> resolved.methodDecl == null ? null
+                    : calleeName(call.callee, resolved.methodDecl.name) + arguments + "(...) -> "
+                            + TypeSpelling.in(module, resolved.returnType);
+            case CLASS_CTOR -> resolved.classDecl == null ? null
+                    : calleeName(call.callee, resolved.classDecl.name) + arguments + "(...)";
+            case VARIANT_CTOR -> resolved.returnType instanceof VariantCaseType caseType
+                    && call.callee instanceof Expr.FieldAccess access
+                    ? calleeName(access.receiver, caseType.variant.name) + arguments + "." + access.name + "(...)"
+                    : null;
+            default -> null;
+        };
+    }
+
+    /** How a call names its callee: 'identity', 'lists.first' or 'f.Option'. */
+    private static String calleeName(Expr callee, String fallback) {
+        if (callee instanceof Expr.Name name) {
+            return name.name;
+        }
+        if (callee instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Name receiver) {
+            return receiver.name + "." + access.name;
+        }
+        return fallback;
     }
 }
