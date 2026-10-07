@@ -1,0 +1,14 @@
+import "@std/nulls.spr" as nulls
+
+let stock: Map[String, Int] = {"tea": 12}
+print(nulls.or_else(stock["tea"], 0))
+print(nulls.or_else(stock["milk"], 0))
+
+func port(text: String) -> Int throws Error:
+    return nulls.require(text.toIntOrNull(), "port must be a number: " + text)
+
+try:
+    print(port("8080"))
+    print(port("eighty"))
+catch problem: Error:
+    print(problem.message)

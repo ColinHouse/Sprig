@@ -1,0 +1,11 @@
+func label(celsius: Int) -> String:
+    if celsius < 0:
+        return "freezing"
+    elif celsius < 20:
+        return "cool"
+    else:
+        return "warm"
+
+print(label(-5))
+print(label(12))
+print(label(30))

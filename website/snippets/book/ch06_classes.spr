@@ -1,0 +1,22 @@
+class Expense:
+    let item: String
+    let cents: Int
+    var note: String = ""
+
+    func is_big() -> Bool:
+        return cents > 10000
+
+    func describe() -> String:
+        let suffix = if note == "":
+            ""
+        else:
+            " (" + note + ")"
+        return item + ": " + cents + suffix
+
+let coffee = Expense(item="Coffee", cents=1250)
+coffee.note = "morning"
+print(coffee)
+print(coffee.describe())
+print(coffee.is_big())
+let rent = Expense(item="Rent", cents=120000, note="October")
+print(rent.is_big())

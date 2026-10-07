@@ -1,0 +1,6 @@
+[project]
+name = "sprig-concurrent"
+version = "0.1.0"
+language = "0.8"
+source = "src"
+exports = ["concurrent.spr"]

@@ -10,7 +10,7 @@ hero:
   actions:
     - theme: brand
       text: 开始入门教程
-      link: /tutorial
+      link: /tutorial/
     - theme: alt
       text: 安装
       link: /guide/getting-started
@@ -68,7 +68,7 @@ sprig resolve
 sprig run
 ```
 
-看到 `Hello, Sprig!` 就可以开始[入门教程](/tutorial)了：用半小时写一个记账小工具。
+看到 `Hello, Sprig!` 就可以开始[入门教程](/tutorial/)了：它是一本按章节编排的书，从第一个程序到一个完整的记账小工具。
 
 ## 参与进来
 

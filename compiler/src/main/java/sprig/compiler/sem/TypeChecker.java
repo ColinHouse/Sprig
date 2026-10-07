@@ -55,7 +55,10 @@ public final class TypeChecker {
             Map.entry("Int.toString", new int[]{0, 0}), Map.entry("Int.toFloat", new int[]{0, 0}),
             Map.entry("Int.toFloatExact", new int[]{0, 0}), Map.entry("Int.toFloatLossy", new int[]{0, 0}),
             Map.entry("Int.toInt32Exact", new int[]{0, 0}), Map.entry("Int.toDecimal", new int[]{0, 0}),
-            Map.entry("Int.divTrunc", new int[]{1, 1}),
+            Map.entry("Int.divTrunc", new int[]{1, 1}), Map.entry("Int.compareTo", new int[]{1, 1}),
+            Map.entry("Int32.compareTo", new int[]{1, 1}), Map.entry("Float.compareTo", new int[]{1, 1}),
+            Map.entry("Float32.compareTo", new int[]{1, 1}), Map.entry("Decimal.compareTo", new int[]{1, 1}),
+            Map.entry("BigInt.compareTo", new int[]{1, 1}), Map.entry("String.lastIndexOf", new int[]{1, 1}),
             Map.entry("Int32.toString", new int[]{0, 0}), Map.entry("Int32.toInt", new int[]{0, 0}),
             Map.entry("Int32.toFloat", new int[]{0, 0}), Map.entry("Int32.toDecimal", new int[]{0, 0}),
             Map.entry("Int32.divTrunc", new int[]{1, 1}),
@@ -3971,6 +3974,15 @@ public final class TypeChecker {
             case "Int.toDecimal", "Int32.toDecimal" -> {
                 return NativeType.DECIMAL;
             }
+            case "Int.compareTo", "Int32.compareTo", "Float.compareTo", "Float32.compareTo", "Decimal.compareTo",
+                 "BigInt.compareTo" -> {
+                // Int32 like String.compareTo, so fn(a: Int, b: Int) => a.compareTo(b) is a
+                // Java Comparator; the argument is the receiver's own type, no conversion.
+                checkArity(call, 1, 1, id);
+                Type actual = checkExpr(first.value, receiver);
+                requireAssignable(receiver, actual, first.value.span, Codes.NUM_MIXED, "compareTo argument");
+                return NativeType.INT32;
+            }
             case "Int.divTrunc", "Int32.divTrunc" -> {
                 Type target = id.startsWith("Int32") ? NativeType.INT32 : NativeType.INT;
                 Type actual = checkExpr(first.value, target);
@@ -4059,6 +4071,11 @@ public final class TypeChecker {
             case "Bool.toString" -> {
                 checkArity(call, 0, 0, id);
                 return NativeType.STRING;
+            }
+            case "String.lastIndexOf" -> {
+                checkArity(call, 1, 1, id);
+                requireString(call.args.get(0));
+                return NativeType.INT;
             }
             case "String.length", "String.indexOf" -> {
                 checkArity(call, id.endsWith("indexOf") ? 1 : 0, id.endsWith("indexOf") ? 1 : 0, id);
@@ -4857,7 +4874,10 @@ public final class TypeChecker {
         Class<?>[] raw = executable.getParameterTypes();
         java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         if (JavaTypes.isCallableClass(raw[index])) {
-            FunctionType expected = JavaTypes.callable(generic[index]);
+            // Fn0<T> with T bound by the receiver or the method's type arguments
+            // takes the function type those bindings give.
+            Type bound = JavaTypes.mapFormal(generic[index], raw[index], bindings);
+            FunctionType expected = bound instanceof FunctionType boundFn ? boundFn : JavaTypes.callable(generic[index]);
             if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
             return 4;
         }

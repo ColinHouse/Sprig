@@ -1,0 +1,9 @@
+import "@std/lists.spr" as lists
+
+let words = ["pear", "fig", "banana"]
+print(lists.sorted(words))
+print(lists.sort_by(words, fn(w: String) => w.length()))
+print(lists.sum([1, 2, 3]))
+print(lists.find(words, fn(w: String) => w.length() > 4))
+print(lists.any(words, fn(w: String) => w == "fig"))
+print(lists.reversed(words))

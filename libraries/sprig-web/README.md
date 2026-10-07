@@ -20,8 +20,9 @@ sprig run
 ```
 
 Locks for local dependencies contain machine paths; resolve again after relocation.
-The server binds **127.0.0.1**. `app.run(port)` starts the server; `0` asks the OS
-for an ephemeral port. `app.port()` reports the actual port. `app.stop()` stops
+`app.run(port)` binds **127.0.0.1**; `app.run_on(host, port)` binds another
+address, such as `"0.0.0.0"` for every interface of a container (no TLS: put a
+reverse proxy in front). `0` asks the OS for an ephemeral port. `app.port()` reports the actual port. `app.stop()` stops
 it and is idempotent; a stopped App can start again. The live server keeps the
 JVM running. Use Ctrl+C in the terminal to end it.
 
@@ -49,7 +50,7 @@ helpers are module functions: `web.text(body, status)` and
 | Area | API / contract |
 |---|---|
 | App | `App(title=..., version="1.0.0", cors_origin="")`; fields shown with defaults are optional constructor fields |
-| Routes | `get(path, handler)`, `post(path, handler)`, `delete(path, handler)`, `route(Route(...))`; registration can throw `Error` |
+| Routes | `get`, `post`, `put`, `patch`, `delete(path, handler)`, `route(Route(...))`; registration can throw `Error` |
 | Handler | `fn(Request) -> Response`; synchronous; handle recoverable `Error` inside the handler, because callable types have no throws clause |
 | Matching | Registration order wins, exact segments or one `{name}` per segment; decoded segment matching preserves encoded slashes inside a parameter; trailing slash is significant |
 | Request | Read-only `method`, decoded `path`, UTF-8 `body`; `path_param(name)`, `query(name)`, `header(name)` return `String?` |
@@ -57,7 +58,7 @@ helpers are module functions: `web.text(body, status)` and
 | Header | Case-insensitive request lookup via JDK; response `Header(name=..., value=...)` list or `with_header(name,value)` |
 | JSON | `req.json() -> json.Value`; `web.json_response(value,status)` uses existing closed `@std/json` data and exact number lexemes |
 | Errors | Malformed JSON/URI/UTF-8 becomes 400; missing route 404; handled application `Error` and unchecked handler errors become a generic 500 without exception details |
-| CORS | Explicit `cors_origin` adds allow-origin, GET/POST/DELETE/OPTIONS, Content-Type and Vary headers; OPTIONS 204; no credential mode |
+| CORS | Explicit `cors_origin` adds allow-origin, GET/POST/PUT/PATCH/DELETE/OPTIONS, Content-Type and Vary headers; OPTIONS 204; no credential mode |
 | Response | `Response(status=..., body=..., content_type="text/plain; charset=utf-8", headers=[])`; status 200..599; transport owns framing; 204/304 omit body |
 
 Invalid JSON response values become controlled 500 after the library explicitly

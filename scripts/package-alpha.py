@@ -101,7 +101,7 @@ def main():
         if examples_readme.is_file():
             examples_index = examples_readme.read_text(encoding='utf-8')
             examples_index = examples_index.replace(
-                'Begin with the [executable bilingual tutorial](../website/tutorial.md).',
+                'Begin with the [executable bilingual tutorial](../website/tutorial/index.md).',
                 'Begin with the [Sprig Agent Guide](../AGENT_GUIDE.md).')
             examples_index = examples_index.replace(
                 '../website/guide/fabric.md', '../docs/SHOWCASES.md')

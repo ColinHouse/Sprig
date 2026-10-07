@@ -50,7 +50,7 @@ JSON 里各个字段的含义见 [Agent 工具参考（英文）](/en/reference/
 
 `expectedType` 和 `actualType` 说得很清楚：这里需要 `Int`，给的却是 `String`。接下来怎么改，取决于你本来想做什么：要么把值改成整数，要么把变量声明成 `String`。不要只是为了让编译通过，就随手加一个类型转换。
 
-入门教程里也有好几个故意写错的例子，比如[第 1 步](/tutorial#_1-值和类型)，它们都由文档检查实际验证过。给 Sprig 加新功能时也是这样：既要有能通过的程序，也要有应该被拒绝的程序，测试才能证明编译器真的会拒绝错误的写法。
+入门教程里也有好几个故意写错的例子，比如[第 2 章](/tutorial/ch02-values)，它们都由文档检查实际验证过。给 Sprig 加新功能时也是这样：既要有能通过的程序，也要有应该被拒绝的程序，测试才能证明编译器真的会拒绝错误的写法。
 
 ## 用 AI 写 Sprig，效果怎么样
 
@@ -60,7 +60,7 @@ JSON 里各个字段的含义见 [Agent 工具参考（英文）](/en/reference/
 
 ## 接下来
 
-- [入门教程](/tutorial)
+- [入门教程](/tutorial/)
 - [已发布版本和源码的功能状态（英文）](/en/reference/language/feature-status)
 - [项目测试（英文）](/en/reference/tooling/testing)
 - [参与贡献（英文）](/en/project/contributing)

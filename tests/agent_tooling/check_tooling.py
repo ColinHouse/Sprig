@@ -65,10 +65,20 @@ def main():
         for example in data["examples"]:
             example_path = ROOT / example
             if example_path.suffix == ".spr":
-                parsed = run("check", example_path, "--json")
+                # An example inside a project (a library's example) is checked
+                # from that project, with its tracked lock; the rest stand alone.
+                project = next((parent for parent in example_path.parents
+                                if (parent / "sprig.toml").is_file() and parent != ROOT), None)
+                def in_project(*args):
+                    if project is None:
+                        return run(*args)
+                    return subprocess.run([str(SPRIG), *map(str, args)], cwd=project, text=True,
+                                          capture_output=True)
+                target = example_path if project is None else example_path.relative_to(project)
+                parsed = in_project("check", target, "--offline", "--json") if project else run("check", target, "--json")
                 check("help-example-check-" + topic,
                       parsed.returncode == 0 and not obj(parsed)["diagnostics"])
-                executed = run("run", example_path, "--json")
+                executed = in_project("run", target, "--offline", "--json") if project else run("run", target, "--json")
                 check("help-example-run-" + topic,
                       executed.returncode == 0 and not obj(executed)["diagnostics"])
     check("help-text", "Syntax:" in run("help", "match").stdout)

@@ -79,7 +79,7 @@ export default defineConfig({
       },
       themeConfig: {
         nav: [
-          { text: '入门教程', link: '/tutorial', activeMatch: '^/tutorial' },
+          { text: '入门教程', link: '/tutorial/', activeMatch: '^/tutorial' },
           { text: '指南', link: '/guide/getting-started', activeMatch: '^/guide/' },
           { text: '示例', link: '/examples', activeMatch: '^/examples' },
           {
@@ -91,7 +91,38 @@ export default defineConfig({
         ],
         sidebar: {
           '/tutorial': [
-            { text: '从零开始', items: [{ text: '入门教程：记账小工具', link: '/tutorial' }] }
+            { text: 'Sprig 程序设计语言', items: [{ text: '前言', link: '/tutorial/' }] },
+            {
+              text: '第一部分：基础',
+              items: [
+                { text: '1. 入门', link: '/tutorial/ch01-getting-started' },
+                { text: '2. 值与类型', link: '/tutorial/ch02-values' },
+                { text: '3. 控制流', link: '/tutorial/ch03-control-flow' },
+                { text: '4. 函数', link: '/tutorial/ch04-functions' },
+                { text: '5. 集合', link: '/tutorial/ch05-collections' }
+              ]
+            },
+            {
+              text: '第二部分：类型系统',
+              items: [
+                { text: '6. 类', link: '/tutorial/ch06-classes' },
+                { text: '7. 枚举、variant 和 match', link: '/tutorial/ch07-enums-variants' },
+                { text: '8. 可空值', link: '/tutorial/ch08-nullable' },
+                { text: '9. 错误处理', link: '/tutorial/ch09-errors' },
+                { text: '10. 泛型', link: '/tutorial/ch10-generics' },
+                { text: '11. 函数作为值', link: '/tutorial/ch11-functions-as-values' }
+              ]
+            },
+            {
+              text: '第三部分：工程与生态',
+              items: [
+                { text: '12. 模块与项目', link: '/tutorial/ch12-modules-projects' },
+                { text: '13. 调用 Java', link: '/tutorial/ch13-java' },
+                { text: '14. 并发', link: '/tutorial/ch14-concurrency' },
+                { text: '15. 工具链与 AI 助手', link: '/tutorial/ch15-tooling' },
+                { text: '16. 项目：记账小工具', link: '/tutorial/ch16-project-ledger' }
+              ]
+            }
           ],
           '/guide/': [
             {
@@ -108,6 +139,7 @@ export default defineConfig({
                 { text: 'Gradle 集成', link: '/guide/gradle' },
                 { text: 'Fabric 模组', link: '/guide/fabric' },
                 { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
+                { text: '并发', link: '/guide/concurrency' },
                 { text: '项目测试（英文）', link: '/en/reference/tooling/testing' }
               ]
             }
@@ -184,6 +216,7 @@ export default defineConfig({
                 { text: 'Gradle integration', link: '/en/guide/gradle' },
                 { text: 'Fabric mods', link: '/en/guide/fabric' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
+                { text: 'Concurrency', link: '/en/guide/concurrency' },
                 { text: 'Testing projects', link: '/en/reference/tooling/testing' }
               ]
             }

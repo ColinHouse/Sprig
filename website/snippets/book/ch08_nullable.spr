@@ -1,0 +1,16 @@
+func find(words: List[String], target: String) -> Int?:
+    for i in range(words.size()):
+        if words[i] == target:
+            return i
+    return null
+
+let words: List[String] = ["alpha", "beta"]
+let index = find(words, "beta")
+if index != null:
+    print("found at " + index)
+else:
+    print("missing")
+
+let other = find(words, "gamma")
+print(other == null)
+print(other)

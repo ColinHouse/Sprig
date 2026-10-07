@@ -453,10 +453,16 @@ print(total)
                      'docs/language/feature-status.md', 'docs/tooling/agent-guide.md',
                      'website/en/guide/language-tour.md', 'website/guide/language-tour.md'):
             claims.append((ROOT / name).read_text(encoding='utf-8'))
+        # #125: each elif and the else see every earlier condition false. The pre-#125 wording
+        # ("never the earlier ones false", "only when there is no elif") must be gone everywhere,
+        # and the capability inventory and the quick reference must state the implemented rule.
         for text in claims:
-            for stale in ('earlier ones false', 'earlier conditions false', 'every earlier condition false',
+            for stale in ('never the earlier ones false', 'earlier ones false', 'only when there is no elif',
                           'elif or else after if x == null', 'start of a line', '行首'):
-                assert stale not in text.replace('never the earlier ones false', ''), stale
+                assert stale not in text, stale
+        flat = [' '.join(text.split()) for text in claims]
+        assert 'every earlier condition false' in flat[3], 'capabilities must state the elif narrowing rule'
+        assert 'every earlier condition false' in flat[5], 'quick-reference must state the elif narrowing rule'
         assert "`if`/`elif`/`else` is a value expression" in (ROOT / 'docs/tooling/agent-guide.md').read_text()
         # With type argument inference: an if expression's value passed on through a let, a lambda
         # whose body is an if expression, and inferred calls inside the branches.

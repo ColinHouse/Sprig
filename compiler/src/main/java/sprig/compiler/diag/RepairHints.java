@@ -52,6 +52,7 @@ final class RepairHints {
             Map.entry(Codes.DEP_NOT_FOUND, new Hint("dependencies", "check-manifest-path-name-and-exports")),
             Map.entry(Codes.DEP_CYCLE, new Hint("dependencies", "break-the-dependency-cycle")),
             Map.entry(Codes.DEP_GIT, new Hint("dependencies", "verify-git-remote-ref-and-availability")),
+            Map.entry(Codes.DEP_REGISTRY, new Hint("dependencies", "run-sprig-search-and-pick-a-listed-package-or-version")),
             Map.entry(Codes.JVM_CLASS, new Hint("jvm", "check-class-name-classpath-and-package")),
             Map.entry(Codes.SYNTAX_ERROR, new Hint("language", "fix-the-first-syntax-error-then-recheck")),
             Map.entry(Codes.LEX_INDENT_INCONSISTENT, new Hint("language", "align-indentation-with-an-earlier-level")),

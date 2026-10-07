@@ -1,0 +1,2 @@
+let xs: List[Int] = [1, 2]
+xs.append(3)

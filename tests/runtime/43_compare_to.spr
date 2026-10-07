@@ -1,0 +1,24 @@
+# compareTo on the ordered native types returns Int32 (-1, 0, 1 for Decimal and
+# BigInt; the JDK's compare for the others), so a lambda over it is a Java
+# Comparator. lastIndexOf counts code points like indexOf.
+import java.util.ArrayList as ArrayList
+
+print((3).compareTo(4))
+print((3).compareTo(3))
+print((2.5).compareTo(1.5))
+let small: Int32 = 7
+print(small.compareTo(1))
+let big = 9000000000000000000
+print(big.compareTo(-9000000000000000000))
+print("ab".compareTo("b"))
+
+let xs = ArrayList[Int]()
+xs.add(3)
+xs.add(-5)
+xs.add(10)
+xs.sort(fn(a: Int, b: Int) => b.compareTo(a))
+print(xs)
+
+print("héllo wörld".lastIndexOf("l"))
+print("héllo wörld".indexOf("l"))
+print("abc".lastIndexOf("z"))

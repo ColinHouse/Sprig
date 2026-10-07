@@ -1,0 +1,10 @@
+# Int 是 64 位有符号整数，运算会检查溢出；Float 是 IEEE 双精度。
+let a = 7
+let b = 2
+print(a.divTrunc(b))
+print(a % b)
+print(a.toFloat() / b.toFloat())
+print(2.5 * 4.0)
+print(9000000000 * 1000)
+let big: Int32 = 2000000000
+print(big)

@@ -33,6 +33,8 @@ public final class Project {
     public final List<String> exports;
     public final List<Dependency> dependencies;
     public final List<JvmDependency> jvmDependencies;
+    /** Declared package registries, in order; empty means the default registry. */
+    public final List<Registry.Source> registries;
 
     public static final class Bin {
         public final String name;
@@ -208,6 +210,34 @@ public final class Project {
             jvm.add(new JvmDependency(group, artifact, depVersion));
         }
         this.jvmDependencies = List.copyOf(jvm);
+
+        Set<String> registryNames = new HashSet<>();
+        List<Registry.Source> sources = new ArrayList<>();
+        List<Map<String, String>> registryEntries = toml.entries("registry");
+        for (int i = 0; i < registryEntries.size(); i++) {
+            Map<String, String> entry = registryEntries.get(i);
+            String registryName = entry.get("name");
+            if (registryName == null || registryName.isBlank())
+                throw new Toml.TomlException("[[registry]] requires name", toml.entryLine("registry", i, "name"));
+            if (!registryNames.add(registryName))
+                throw new Toml.TomlException("Duplicate registry name '" + registryName + "'",
+                        toml.entryLine("registry", i, "name"));
+            if ((entry.get("path") != null) == (entry.get("url") != null))
+                throw new Toml.TomlException("registry '" + registryName + "' requires exactly one of path or url",
+                        toml.lastEntryLine("registry", i, Set.of("path", "url")));
+            for (String key : List.of("branch", "subdir"))
+                if (entry.get(key) != null && entry.get("url") == null)
+                    throw new Toml.TomlException(key + " is only valid for a url registry",
+                            toml.entryLine("registry", i, key));
+            for (String key : List.of("path", "url", "branch", "subdir"))
+                if (entry.containsKey(key) && entry.get(key).isBlank())
+                    throw new Toml.TomlException("Registry " + key + " cannot be blank", toml.entryLine("registry", i, key));
+            String subdir = entry.containsKey("subdir")
+                    ? normalizeSubdir(entry.get("subdir"), toml.entryLine("registry", i, "subdir")) : null;
+            sources.add(new Registry.Source(registryName, entry.get("path"), entry.get("url"),
+                    entry.getOrDefault("branch", "main"), subdir));
+        }
+        this.registries = List.copyOf(sources);
     }
 
     private static void validatePath(String text, String field, int line) {

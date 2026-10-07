@@ -1,7 +1,7 @@
 # Examples
 
 This directory contains programs with an independent purpose, not a syntax
-gallery. Begin with the [executable bilingual tutorial](../website/tutorial.md).
+gallery. Begin with the [executable bilingual tutorial](../website/tutorial/index.md).
 Tutorial snippets live under `website/snippets/`; regression fixtures live in
 `tests/`.
 

@@ -1,0 +1,6 @@
+# The default Sprig package registry: an index of where the first-party
+# libraries live. `sprig search` reads it; `sprig add NAME` turns an entry into
+# an ordinary Git dependency with the listed tag and subdirectory.
+[registry]
+name = "sprig"
+description = "First-party Sprig libraries from the Sprig repository"

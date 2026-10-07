@@ -1,0 +1,25 @@
+# A one-line class is the block form with let fields only: same construction,
+# same printing, same identity comparison, same generic use.
+class Pair(first: Int, second: Int)
+
+class Named:
+    let first: Int
+    let second: Int
+
+generic T:
+    class Box(value: T)
+
+func swap(pair: Pair) -> Pair:
+    return Pair(first=pair.second, second=pair.first)
+
+let p = Pair(first=1, second=2)
+print(p)
+print(swap(p))
+print(p == p)
+print(p == Pair(first=1, second=2))
+print(Named(first=1, second=2))
+let box = Box(value=p)
+print(box.value.first)
+let boxes: List[Box[String]] = [Box(value="a"), Box[String](value="b")]
+for item in boxes:
+    print(item.value)

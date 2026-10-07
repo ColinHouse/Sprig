@@ -1,0 +1,29 @@
+# 错误类：带 message 字段的类，再声明它遵循 Error。
+class NotFound:
+    let message: String
+    let sku: String
+conform NotFound to Error(message)
+
+class OutOfStock:
+    let message: String
+    let missing: Int
+conform OutOfStock to Error(message)
+
+func take(sku: String, wanted: Int) -> Int throws NotFound, OutOfStock:
+    if sku != "A1":
+        throw NotFound(message="no item " + sku, sku=sku)
+    if wanted > 5:
+        throw OutOfStock(message="only 5 left", missing=wanted - 5)
+    return wanted
+
+func order(sku: String, wanted: Int) -> String:
+    try:
+        return "took " + take(sku, wanted)
+    catch problem: NotFound:
+        return "unknown sku " + problem.sku
+    catch problem: Error:
+        return "problem: " + problem
+
+print(order("A1", 2))
+print(order("ZZ", 1))
+print(order("A1", 9))

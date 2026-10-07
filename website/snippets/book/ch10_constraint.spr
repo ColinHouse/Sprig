@@ -1,0 +1,7 @@
+generic T:
+    func largest(items: List[T]) -> T:
+        var best = items[0]
+        for item in items:
+            if item > best:
+                best = item
+        return best

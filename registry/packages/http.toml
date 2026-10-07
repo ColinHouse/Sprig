@@ -1,0 +1,9 @@
+[package]
+name = "http"
+description = "Small synchronous JDK HTTP/HTTPS client"
+git = "https://github.com/ColinHouse/Sprig.git"
+subdir = "libraries/sprig-http"
+
+[[release]]
+version = "0.7.1-beta.1"
+tag = "v0.7.1-beta.1"

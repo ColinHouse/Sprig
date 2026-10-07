@@ -169,7 +169,11 @@ checked at each call against the written or inferred arguments
 `ArrayList[String]`); intersection bounds (`Collections.max`) and generic
 arrays `T[]` are rejected (`generic-bound-unsupported`,
 `generic-array-unsupported`), and imported class type-parameter bounds are
-validated at check time (simple class/interface bounds only).
+validated at check time (simple class/interface bounds only). An `Fn0..Fn3`
+parameter or result whose type arguments are the method's or class's type
+variables is usable once those are bound: `HostTask.start[T](work)` takes a
+`fn() -> T`, which is how `sprig-concurrent` hands Sprig function values to
+its Java kernel.
 
 Raw evidence never becomes concrete evidence. A raw generic value cannot be
 assigned to, or passed where, a concrete parameterized type is expected;

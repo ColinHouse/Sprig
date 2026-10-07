@@ -12,6 +12,7 @@ library through application packages.
 | [`sprig-cli`](sprig-cli/README.md) | Explicit command-line option parsing and usage text. |
 | [`sprig-json-codec`](sprig-json-codec/README.md) | Path-aware JSON decoding and encoding over `@std/json`. The implementation is the bundled `@std/json_codec.spr`; the package reexports it for existing dependents. |
 | [`sprig-http`](sprig-http/README.md) | Small synchronous JDK HTTP/HTTPS client. |
+| [`sprig-concurrent`](sprig-concurrent/README.md) | Tasks, pools, channels, counters, locks and latches over `java.util.concurrent`. |
 
 ## Persistence and server integration
 
@@ -27,8 +28,10 @@ library through application packages.
 | [`sprig-gradle`](sprig-gradle/README.md) | Java Gradle plugin for classpaths, bridge compilation, generated/runtime sources and Sprig tests. |
 | [`sprig-fabric`](sprig-fabric/README.md) | Small Fabric/Loom starter using the SDK-bundled Gradle plugin. |
 
-Packages are local source distributions today. Use Maven coordinates for
-third-party JVM dependencies; Sprig does not yet provide a public registry.
+Packages are source distributions reached by path or Git. The repository's
+`registry/` directory is the default package registry: `sprig search` lists
+these libraries and `sprig add NAME` adds one as a Git dependency at its
+released tag. Use Maven coordinates for third-party JVM dependencies.
 The v0.7.1-beta.1 SDK includes these first-party packages and their documented
 examples. They remain experimental Beta APIs; check each package guide and the
 installed SDK's capabilities before adopting them.

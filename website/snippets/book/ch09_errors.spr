@@ -1,0 +1,19 @@
+func parse_amount(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+func total(lines: List[String]) -> Int throws Error:
+    var sum = 0
+    for line in lines:
+        sum += parse_amount(line)
+    return sum
+
+try:
+    print(total(["12", "30"]))
+    print(total(["12", "abc"]))
+catch problem: Error:
+    print("failed: " + problem.message)
+finally:
+    print("done")

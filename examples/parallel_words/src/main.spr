@@ -1,0 +1,48 @@
+# Count words in several texts at once: one task per text, a channel for
+# progress, a counter for the total, and a lock around a shared list.
+import "@concurrent/concurrent.spr" as concurrent
+
+let texts: List[String] = [
+    "the quick brown fox jumps over the lazy dog",
+    "sprig keeps recoverable errors explicit",
+    "a task is a plain function value running on another thread",
+    "channels carry values between threads"
+]
+
+func word_count(line: String) -> Int:
+    return line.split(" ").size()
+
+# parallel_map starts one task per item and returns the results in item order.
+let counts = concurrent.parallel_map(texts, fn(line: String) => word_count(line))
+print(counts)
+
+# A counter that every task adds to, and a channel the tasks report through.
+let total = concurrent.counter(0)
+let progress = concurrent.channel[String](16)
+let finished: MutableList[String] = []
+let guard = concurrent.lock()
+
+func process(line: String) -> Int:
+    let words = word_count(line)
+    total.add(words)
+    guard.run(fn() => finished.append(line.substring(0, 5)))
+    progress.try_send("done " + words)
+    return words
+
+let pool = concurrent.pool(2)
+let tasks: MutableList[concurrent.Task[Int]] = []
+for line in texts:
+    tasks.append(concurrent.spawn_on(pool, fn() => process(line)))
+let results = concurrent.await_all(tasks)
+progress.close()
+pool.shutdown()
+print(results)
+print("total " + total.get())
+
+var reports = 0
+var report = progress.receive()
+while report != null:
+    reports += 1
+    report = progress.receive()
+print("reports " + reports)
+print("finished " + finished.size())

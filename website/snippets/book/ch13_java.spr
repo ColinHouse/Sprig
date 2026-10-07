@@ -1,0 +1,21 @@
+import java.util.ArrayList as ArrayList
+import java.util.Collections as Collections
+import java.time.LocalDate as LocalDate
+import java.lang.Math as Math
+
+let names = ArrayList[String]()
+names.add("pear")
+names.add("apple")
+Collections.sort(names)
+print(names)
+print(names.size())
+
+# Java 返回的对象一律当作可能为 null，先判断再用。
+let first = names.get(0)
+if first != null:
+    print(first.toUpperCase())
+
+let date = LocalDate.of(2024, 2, 28)
+if date != null:
+    print(date.plusDays(2))
+print(Math.max(3, 9))

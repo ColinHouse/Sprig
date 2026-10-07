@@ -62,7 +62,7 @@ public final class Toml {
         if (line.startsWith("[[") && line.endsWith("]]")) {
             String name = line.substring(2, line.length() - 2).trim();
             requireName(name, lineNumber);
-            if (!allowBareValues && !Set.of("bin", "dependency", "jvm").contains(name)) {
+            if (!allowBareValues && !Set.of("bin", "dependency", "jvm", "registry", "release").contains(name)) {
                 throw new TomlException("Unknown array table '" + name + "'", lineNumber);
             }
             currentTable = name;
@@ -75,7 +75,8 @@ public final class Toml {
             String name = line.substring(1, line.length() - 1).trim();
             requireName(name, lineNumber);
             if (!allowBareValues) {
-                if (!name.equals("project")) {
+                // project: a manifest; package and registry: a registry index file.
+                if (!Set.of("project", "package", "registry").contains(name)) {
                     throw new TomlException("Unknown table '" + name + "'", lineNumber);
                 }
                 if (tables.containsKey(name)) {
@@ -105,6 +106,12 @@ public final class Toml {
                 case "bin" -> Set.of("name", "entry");
                 case "dependency" -> Set.of("name", "path", "git", "branch", "tag", "rev", "subdir");
                 case "jvm" -> Set.of("group", "artifact", "version");
+                // [[registry]] in a manifest; [registry] names a registry index file.
+                case "registry" -> currentEntry != null ? Set.of("name", "path", "url", "branch", "subdir")
+                        : Set.of("name", "description");
+                // A registry index entry: packages/NAME.toml.
+                case "package" -> Set.of("name", "description", "git", "subdir");
+                case "release" -> Set.of("version", "tag", "branch", "rev");
                 default -> Set.of();
             };
             if (!allowed.contains(key)) {

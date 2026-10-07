@@ -1,0 +1,14 @@
+# 没写类型的列表字面量是 MutableList；List 是只读的。
+let scores = [90, 72, 85]
+scores.append(60)
+print(scores)
+print(scores.size())
+print(scores[0])
+print(72 in scores)
+print(scores.contains(99))
+
+let names: List[String] = ["Ada", "Bob"]
+print(names.map(fn(n: String) => n.toUpperCase()))
+print(scores.filter(fn(s: Int) => s >= 80))
+scores.sort()
+print(scores)

@@ -13,6 +13,8 @@ class Hero:
     let name: String
     var health: Int = 100
 
+class Pair(first: Int, second: Int)  # one line: let fields only, same class otherwise
+
 let hero = Hero(name="Ada")
 hero.health += 1
 let label = "health " + hero.health  # + joins text with any non-null value
@@ -60,7 +62,10 @@ collection seen read-only (no copy; `toList()`/`toMap()` snapshot). The reverse
 needs `toMutableList()`, and element types stay invariant.
 `==`/`!=` compare numbers, `Bool`, `String`, enums, variants, lists and maps by
 value, and class objects by identity: two objects whose fields match are still
-two objects, so compare the fields you mean (`a.id == b.id`). Nullable
+two objects, so compare the fields you mean (`a.id == b.id`). `a.compareTo(b)` on
+`Int`, `Int32`, `Float`, `Float32`, `Decimal`, `BigInt` and `String` takes the
+receiver's own type and returns `Int32`, so `fn(a: Int, b: Int) => a.compareTo(b)`
+is a Java `Comparator`. Nullable
 `Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?` comparisons are null-safe and widen
 to the common type (`Int32?` → `Int?`, `Float32?` → `Float?`). A `T?` value is
 not joined into a `String`; check it or give it a fallback with `or_else` first.

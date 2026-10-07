@@ -124,7 +124,19 @@ public final class JavaTypes {
                 args.add(mapped);
             }
             if (isCallableClass(rawClass)) {
+                // Fn0<T> with T bound through the receiver or the method's type
+                // arguments is the concrete function type those bindings give;
+                // without bindings the written arguments must already be concrete.
                 sprig.compiler.types.FunctionType fn = callable(generic);
+                if (fn == null && !bindings.isEmpty() && args.size() == rawClass.getTypeParameters().length) {
+                    Type result = args.get(args.size() - 1);
+                    List<Type> params = new ArrayList<>(args.subList(0, args.size() - 1));
+                    if (params.stream().anyMatch(param -> param == NativeType.UNIT || param.isNullable()
+                            && param.nonNull() instanceof JavaWildcardType) || result instanceof JavaWildcardType) {
+                        return null;
+                    }
+                    fn = new sprig.compiler.types.FunctionType(params, result);
+                }
                 return fn == null ? null : valuePosition ? NullableType.of(fn) : fn;
             }
             if (rawClass == sprig.runtime.SprigList.class && args.size() == 1) {

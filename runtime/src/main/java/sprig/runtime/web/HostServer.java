@@ -15,9 +15,15 @@ public final class HostServer {
     private final ExecutorService executor;
     private boolean stopped;
     public HostServer(long port, Fn1<HostRequest, HostResponse> handler) {
+        this("127.0.0.1", port, handler);
+    }
+
+    /** Binds the given host name or address; "0.0.0.0" listens on every interface. */
+    public HostServer(String host, long port, Fn1<HostRequest, HostResponse> handler) {
         if (port < 0 || port > 65535) throw new SprigError("port must be 0..65535");
-        try { server = HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", (int) port), 0); }
-        catch (IOException error) { throw new SprigError("cannot bind HTTP server", error); }
+        if (host == null || host.isBlank()) throw new SprigError("host must not be blank");
+        try { server = HttpServer.create(new java.net.InetSocketAddress(host, (int) port), 0); }
+        catch (IOException | IllegalArgumentException error) { throw new SprigError("cannot bind HTTP server to " + host + ":" + port, error); }
         // One request at a time keeps the first synchronous library's mutable routes/database state explicit.
         executor = Executors.newSingleThreadExecutor();
         server.setExecutor(executor);

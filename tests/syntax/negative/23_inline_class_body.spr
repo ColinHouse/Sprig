@@ -1,0 +1,3 @@
+class Pair(first: Int, second: Int):
+    func sum() -> Int:
+        return first + second

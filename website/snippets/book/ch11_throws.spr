@@ -1,0 +1,22 @@
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+# 调用了会抛出 Error 的函数，lambda 的类型就带上 throws Error。
+let parser = fn(text: String) => parse(text)
+
+generic T:
+    func map_all(items: List[String], convert: fn(String) -> T throws Error) -> List[T] rethrows:
+        let out: MutableList[T] = []
+        for item in items:
+            out.append(convert(item))
+        return out
+
+try:
+    print(map_all(["1", "2"], parser))
+    print(map_all(["1", "x"], parser))
+catch problem: Error:
+    print(problem.message)
+print(map_all(["a", "bbb"], fn(s: String) => s.length()))

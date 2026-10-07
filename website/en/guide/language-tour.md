@@ -35,6 +35,7 @@ Blocks are defined by indentation, as in Python:
 <<< @/snippets/classes.spr
 
 - Fields are declared with `let` (fixed once the object exists) or `var` (can change), optionally with a default.
+- A small class with only `let` fields and no methods fits on one line: `class Position(x: Int, y: Int)`. It is the same kind of class as the block form; `var` fields, defaults and methods need the block.
 - You create objects with field names: `Hero(name="Ada", health=80)`. Missing, misspelled or repeated fields are compile errors.
 - Inside a method, a field's bare name refers to the current object's field; there's no prefix.
 - Parameters and local variables can't have the same name as a field.

@@ -35,6 +35,12 @@ CASES = [
     ("double-bar", "if true || false:\n    print(1)\n", "SPR-LEX-CHAR", "'or'"),
     ("bang", "if !true:\n    print(1)\n", "SPR-LEX-CHAR", "'not'"),
     ("interpolation", "let n = 1\nprint($\"{n}\")\n", "SPR-LEX-CHAR", "interpolation"),
+    ("f-string", "let name = \"Ada\"\nprint(f\"hello {name}\")\n", "SPR-SYNTAX-ERROR", "f-strings"),
+    ("format-method", "let name = \"Ada\"\nprint(\"hello {}\".format(name))\n", "SPR-NAME-UNRESOLVED", "format strings"),
+    ("lines-method", "let s = \"a\"\nprint(s.lines())\n", "SPR-NAME-UNRESOLVED", "text.lines(value)"),
+    ("one-line-class-body", "class Pair(first: Int, second: Int):\n    func sum() -> Int:\n        return first + second\n",
+     "SPR-SYNTAX-ERROR", "one-line class"),
+    ("one-line-class-var", "class Pair(var first: Int, second: Int)\n", "SPR-SYNTAX-ERROR", "immutable fields only"),
     ("read-line", "let line = readLine()\n", "SPR-NAME-UNRESOLVED", "@std/process.spr"),
     ("std-module-without-import", "let text = files.read_utf8(\"x.txt\")\n", "SPR-NAME-UNRESOLVED",
      "import \"@std/files.spr\" as files"),
@@ -316,7 +322,7 @@ def main():
                  "startsWith": "startsWith(\"a\")", "endsWith": "endsWith(\"a\")", "compareTo": "compareTo(\"a\")",
                  "toUpperCase": "toUpperCase()",
                  "toLowerCase": "toLowerCase()", "trim": "trim()", "split": "split(\",\")",
-                 "replace": "replace(\"a\", \"b\")", "repeat": "repeat(2)", "toInt": "toInt()",
+                 "replace": "replace(\"a\", \"b\")", "repeat": "repeat(2)", "lastIndexOf": "lastIndexOf(\"a\")", "toInt": "toInt()",
                  "toIntOrNull": "toIntOrNull()", "toFloat": "toFloat()", "toString": "toString()"}
         check("help-strings-lists-every-method", set(strings) == set(calls), str(strings))
         program = "\n".join(f"let v{i} = \"a1\".{calls[name]}" for i, name in enumerate(strings) if name in calls)

@@ -66,7 +66,7 @@ def main():
               "tests/agent_eval/check_task_pack.py", "tests/examples/check_task_tracker.py",
               "tests/cli_contract/check_cli_contract.py", "tests/launcher/check_windows_arguments.py", "tests/test_runner/check_test_runner.py", "tests/http/check_http.py", "tests/bootstrap/check_probe.py",
               "tests/project/check_project.py", "tests/project_deps/check_deps.py", "tests/project_deps/check_git_monorepo.py", "tests/project_deps/check_git_lock.py", "tests/project_deps/check_add_remove.py",
-              "tests/project_deps/check_cleanup.py", "tests/adversarial/v08/check_generics.py",
+              "tests/project_deps/check_cleanup.py", "tests/registry/check_registry.py", "tests/adversarial/v08/check_generics.py",
               "tests/capabilities/check_comparable.py",
               "tests/adversarial/v08/check_projects.py"]
     suites += ["tests/adversarial/regressions/check_semantics.py",
@@ -81,7 +81,7 @@ def main():
     suites += ["tests/application_foundation/check_composition.py", "tests/conform/check_conform.py",
                "tests/callables/check_callables.py", "tests/launcher/check_launcher_jit.py",
                "tests/installer/check_installer.py", "tests/upgrade/check_upgrade.py",
-               "tests/cli_library/check_cli_library.py", "tests/json_codec/check_json_codec.py", "tests/web/check_web.py", "tests/sqlite/check_sqlite.py", "tests/sqlite/check_migrations.py", "tests/dogfood/check_installed_sdk.py", "tests/maven/check_resolver.py", "scripts/test-stdlib.py",
+               "tests/cli_library/check_cli_library.py", "tests/json_codec/check_json_codec.py", "tests/concurrent/check_concurrent.py", "tests/web/check_web.py", "tests/sqlite/check_sqlite.py", "tests/sqlite/check_migrations.py", "tests/dogfood/check_installed_sdk.py", "tests/maven/check_resolver.py", "scripts/test-stdlib.py",
                "scripts/test-showcases.py", "tests/project_deps/check_refresh_locks.py",
                "tests/release_hardening/check_hardening.py"]
     for suite in suites:

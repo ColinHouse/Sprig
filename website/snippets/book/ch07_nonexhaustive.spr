@@ -1,0 +1,11 @@
+variant Shape:
+    Circle(radius: Float)
+    Rect(width: Float, height: Float)
+    Dot
+
+func name(shape: Shape) -> String:
+    match shape:
+        case Shape.Circle:
+            return "circle"
+        case Shape.Rect:
+            return "rect"

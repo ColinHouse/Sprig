@@ -1,0 +1,15 @@
+# 参数和返回类型都要写；没有返回值就写 -> Unit。
+func area(width: Int, height: Int) -> Int:
+    return width * height
+
+func greet(name: String) -> Unit:
+    print("Hello, " + name + "!")
+
+func factorial(n: Int) -> Int:
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(area(3, 4))
+greet("Ada")
+print(factorial(10))

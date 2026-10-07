@@ -1,0 +1,9 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.add("bob")
+names.add("Al")
+names.add("cy")
+names.sort(fn(a: String, b: String) => a.length() - b.length())
+print(names)
+names.forEach(fn(n: String) => print(n.toUpperCase()))

@@ -1,0 +1,3 @@
+let items = [1, 2]
+if items:
+    print("有东西")

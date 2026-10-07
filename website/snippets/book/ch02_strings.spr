@@ -1,0 +1,10 @@
+# + 的任一侧是 String 时就是拼接，其他值自动变成文字；没有插值语法。
+let item = "tea"
+let count = 3
+print(item + " x " + count)
+print("length " + item.length())
+print(item.toUpperCase() + " " + item.substring(0, 1))
+print("a,b,c".split(","))
+print("  padded  ".trim())
+print("é😀".length())
+print("é😀"[1])

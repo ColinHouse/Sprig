@@ -1,0 +1,230 @@
+# Tasks, pools, channels, counters, locks and latches over java.util.concurrent.
+# Sprig owns the API; the small Java kernel in sprig.runtime.concurrent owns
+# the executor, queue and lock mechanics. A task body is a plain function
+# value: it captures only immutable bindings, so the usual data races on
+# locals cannot happen; shared MutableList/MutableMap values and var fields
+# are not protected, guard them with a Lock or send values through a Channel.
+import java.util.concurrent.atomic.AtomicLong as AtomicLong
+import sprig.runtime.concurrent.HostChannel as HostChannel
+import sprig.runtime.concurrent.HostLatch as HostLatch
+import sprig.runtime.concurrent.HostLock as HostLock
+import sprig.runtime.concurrent.HostPool as HostPool
+import sprig.runtime.concurrent.HostTask as HostTask
+
+# A computation running on another thread. await() waits for its value; a
+# failure inside the task is rethrown by await() as an Error, so the body does
+# not need (and cannot have) a throws clause: handle Error inside it or let
+# await() report it.
+generic T:
+    class Task:
+        let inner: HostTask[T]
+
+        # Waits for the result. A failure inside the task is an Error here.
+        func await() -> T throws Error:
+            return inner.join()
+
+        # Waits at most millis; a timeout is an Error and the task keeps running.
+        func await_within(millis: Int) -> T throws Error:
+            return inner.joinWithin(millis)
+
+        # The result, or the fallback when the task failed or was cancelled. It
+        # has no throws clause, so another task body can wait on this one.
+        func await_or(fallback: T) -> T:
+            return inner.joinOr(fallback)
+
+        func is_done() -> Bool:
+            return inner.isDone()
+
+        # Asks the task to stop (its thread is interrupted); true when it had
+        # not finished yet. await() on a cancelled task is an Error.
+        func cancel() -> Bool:
+            return inner.cancel()
+
+        func is_cancelled() -> Bool:
+            return inner.isCancelled()
+
+# Starts work on the shared pool of daemon threads: a program whose top-level
+# statements end does not wait for unfinished tasks, so await() what matters.
+generic T:
+    func spawn(work: fn() -> T) -> Task[T]:
+        return Task[T](inner=HostTask.start[T](work))
+
+# A fixed number of worker threads. Tasks beyond that many run as earlier ones
+# finish, in submission order. shutdown() lets running tasks finish.
+class Pool:
+    let inner: HostPool
+
+    func threads() -> Int:
+        return inner.threads()
+
+    # Stops accepting tasks; the running and queued ones still finish.
+    func shutdown() -> Unit:
+        inner.shutdown()
+
+    # Stops accepting tasks and interrupts the running ones.
+    func shutdown_now() -> Unit:
+        inner.shutdownNow()
+
+    func is_shutdown() -> Bool:
+        return inner.isShutdown()
+
+    # After shutdown(): true when every task finished within millis.
+    func await_termination(millis: Int) -> Bool throws Error:
+        return inner.awaitTermination(millis)
+
+func pool(threads: Int) -> Pool throws Error:
+    if threads < 1:
+        throw Error("a pool needs at least one thread, got " + threads)
+    return Pool(inner=HostPool(threads))
+
+generic T:
+    func spawn_on(pool: Pool, work: fn() -> T) -> Task[T] throws Error:
+        if pool.is_shutdown():
+            throw Error("pool is shut down; it accepts no more tasks")
+        return Task[T](inner=pool.inner.submit[T](work))
+
+# Waits for every task, in order; the first failure is rethrown.
+generic T:
+    func await_all(tasks: List[Task[T]]) -> List[T] throws Error:
+        let values: MutableList[T] = []
+        for task in tasks:
+            values.append(task.await())
+        return values
+
+# One task per item on the shared pool; results in item order.
+generic T, R:
+    func parallel_map(items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
+        let tasks: MutableList[Task[R]] = []
+        for item in items:
+            tasks.append(spawn[R](fn() => transform(item)))
+        return await_all[R](tasks)
+
+# One task per item on the given pool; results in item order.
+generic T, R:
+    func parallel_map_on(pool: Pool, items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
+        let tasks: MutableList[Task[R]] = []
+        for item in items:
+            tasks.append(spawn_on[R](pool, fn() => transform(item)))
+        return await_all[R](tasks)
+
+# A bounded queue between threads. send blocks while it is full, receive
+# blocks while it is empty and open; after close() the remaining values are
+# still received, then receive() returns null.
+generic T:
+    class Channel:
+        let inner: HostChannel[T]
+
+        # Blocks while the channel is full. Sending to a closed channel fails
+        # at run time with an Error; it has no throws clause so a task body can
+        # send, and the task's await() reports that failure.
+        func send(value: T) -> Unit:
+            inner.send(value)
+
+        # Does not block: false when the channel is full or closed.
+        func try_send(value: T) -> Bool:
+            return inner.trySend(value)
+
+        # Blocks until a value arrives; null once the channel is closed and drained.
+        func receive() -> T?:
+            return inner.receive()
+
+        # Waits at most millis; null when nothing arrived in time, or when the
+        # channel is closed and drained (check is_closed() to tell the two apart).
+        func receive_within(millis: Int) -> T?:
+            return inner.receiveWithin(millis)
+
+        # No more values can be sent; receivers drain what is left, then see null.
+        func close() -> Unit:
+            inner.close()
+
+        func is_closed() -> Bool:
+            return inner.isClosed()
+
+        # Values waiting to be received.
+        func size() -> Int:
+            return inner.size()
+
+generic T:
+    func channel(capacity: Int) -> Channel[T] throws Error:
+        if capacity < 1:
+            throw Error("channel capacity must be at least 1, got " + capacity)
+        return Channel[T](inner=HostChannel[T](capacity))
+
+# An Int that several threads change atomically.
+class Counter:
+    let inner: AtomicLong
+
+    func get() -> Int:
+        return inner.get()
+
+    func set(value: Int) -> Unit:
+        inner.set(value)
+
+    # Adds delta and returns the new value.
+    func add(delta: Int) -> Int:
+        return inner.addAndGet(delta)
+
+    # Adds one and returns the new value.
+    func increment() -> Int:
+        return inner.incrementAndGet()
+
+    # Subtracts one and returns the new value.
+    func decrement() -> Int:
+        return inner.decrementAndGet()
+
+    # Sets updated only when the value is still expected; true when it did.
+    func compare_and_set(expected: Int, updated: Int) -> Bool:
+        return inner.compareAndSet(expected, updated)
+
+func counter(start: Int) -> Counter:
+    return Counter(inner=AtomicLong(start))
+
+# Mutual exclusion around shared mutable state. The lock is reentrant: the
+# thread holding it may take it again.
+class Lock:
+    let inner: HostLock
+
+    # Runs the action while holding the lock.
+    func run(action: fn() -> Unit) -> Unit:
+        inner.run(action)
+
+    func is_held_by_current_thread() -> Bool:
+        return inner.isHeldByCurrentThread()
+
+func lock() -> Lock:
+    return Lock(inner=HostLock())
+
+# Runs work while holding the lock and returns its result.
+generic T:
+    func locked(lock: Lock, work: fn() -> T) -> T:
+        return lock.inner.withLock[T](work)
+
+# A count that tasks lower; whoever waits continues when it reaches zero.
+class Latch:
+    let inner: HostLatch
+
+    func count_down() -> Unit:
+        inner.countDown()
+
+    func remaining() -> Int:
+        return inner.remaining()
+
+    func await() -> Unit:
+        inner.await()
+
+    # True when the count reached zero within millis.
+    func await_within(millis: Int) -> Bool throws Error:
+        if millis < 0:
+            throw Error("timeout millis must not be negative: " + millis)
+        return inner.awaitWithin(millis)
+
+func latch(count: Int) -> Latch throws Error:
+    if count < 0:
+        throw Error("latch count must not be negative: " + count)
+    return Latch(inner=HostLatch(count))
+
+# Pauses the current thread. Unlike time.sleep it has no throws clause, so a
+# task body can pause; cancelling a sleeping task ends it with an Error that
+# its await() reports.
+func sleep(millis: Int) -> Unit:
+    HostTask.sleep(millis)
