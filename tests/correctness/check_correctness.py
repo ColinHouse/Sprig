@@ -365,6 +365,33 @@ def yield_values_never_start_with_a_parenthesis():
               ran.stdout == "[k]\n{k: 4}\n1\n[x, y]\n[b]\n", f"{ran.stdout!r} {ran.stderr!r}")
 
 
+def string_equality_lowering():
+    """== and != on two Strings call Objects.equals, also when both sides are non-null.
+
+    SprigRuntime.equalsValue tests both operands for Double and Float before
+    equals, and that cost showed in a loop comparing each code point of a text
+    with a literal (#157). Other reference types keep equalsValue.
+    """
+    with tempfile.TemporaryDirectory(prefix="sprig-equality-") as work:
+        source = Path(work) / "same.spr"
+        source.write_text("func same(a: String, b: String, maybe: String?, items: List[String]) -> Bool:\n"
+                          "    return a == b and maybe != a and items == [b]\n\n"
+                          'print(same("x", "x", null, ["x"]))\n'
+                          'print(same("x", "y", "x", ["y"]))\n', encoding="utf-8")
+        out = Path(work) / "out"
+        result = run("build", source, "--emit-java-only", "-d", out)
+        generated = list(out.rglob("$M_same.java"))
+        java = generated[0].read_text(encoding="utf-8") if generated else ""
+        check("string-equality-uses-string-equals", result.returncode == 0
+              and "(java.util.Objects.equals(a, b))" in java
+              and "(!(java.util.Objects.equals(maybe, a)))" in java
+              and "SprigRuntime.equalsValue(items, " in java,
+              f"exit={result.returncode} {result.stdout}{result.stderr}{java[:600]}")
+        ran = run("run", source)
+        check("string-equality-runs", ran.returncode == 0 and ran.stdout == "true\nfalse\n",
+              f"{ran.stdout!r} {ran.stderr!r}")
+
+
 def run_program(name, source, expected):
     """Check, compile with javac and run one program; the output must match."""
     with tempfile.TemporaryDirectory(prefix="sprig-run-") as work:
@@ -405,6 +432,7 @@ def main():
     sealed_variant_lowering()
     yield_values_never_start_with_a_parenthesis()
     string_join_lowering()
+    string_equality_lowering()
     generic_compound_assignment()
     java_to_string()
     null_assignment = run("check", "--json", CASES / "java_nonnull_null.spr")

@@ -1,0 +1,209 @@
+# Code-point positions on short and long text: CJK and Hangul, Latin-1,
+# combining marks, emoji and other supplementary code points, unpaired
+# surrogates. Each text is joined from a list of code points with
+# String.fromCode, and every position operation is checked against that list,
+# not against another String operation. Long texts (32 UTF-16 units or more)
+# have their count remembered between calls, so the program also alternates
+# between texts, interleaves short strings, indexes equal texts held in
+# different objects, and checks the boundaries and the error an index outside
+# the text raises, before and after the text was first indexed.
+import java.lang.StringIndexOutOfBoundsException as IndexProblem
+
+func joined(codes: List[Int]) -> String:
+    var text = ""
+    for code in codes:
+        text += String.fromCode(code)
+    return text
+
+func repeated(codes: List[Int], times: Int) -> List[Int]:
+    let out: MutableList[Int] = []
+    for t in range(times):
+        for code in codes:
+            out.append(code)
+    return out.toList()
+
+func plus(a: List[Int], b: List[Int]) -> List[Int]:
+    let out: MutableList[Int] = []
+    for code in a:
+        out.append(code)
+    for code in b:
+        out.append(code)
+    return out.toList()
+
+func taken(codes: List[Int], count: Int) -> List[Int]:
+    let out: MutableList[Int] = []
+    for i in range(count):
+        out.append(codes[i])
+    return out.toList()
+
+func first_index(codes: List[Int], code: Int) -> Int:
+    for i in range(codes.size()):
+        if codes[i] == code:
+            return i
+    return -1
+
+func last_index(codes: List[Int], code: Int) -> Int:
+    var i = codes.size() - 1
+    while i >= 0:
+        if codes[i] == code:
+            return i
+        i -= 1
+    return -1
+
+# Every position of one text, in order, backwards and strided; each mismatch
+# is printed. Returns the number of mismatches.
+func check(label: String, text: String, codes: List[Int]) -> Int:
+    var bad = 0
+    let n = codes.size()
+    if text.length() != n:
+        print(label + ": length " + text.length() + ", expected " + n)
+        bad += 1
+    for i in range(n):
+        let element = String.fromCode(codes[i])
+        if text.codeAt(i) != codes[i] or text[i] != element or text.charAt(i) != element:
+            print(label + ": element " + i)
+            bad += 1
+        if text.substring(i, i + 1) != element or text.substring(i).length() != n - i:
+            print(label + ": substring at " + i)
+            bad += 1
+    var j = n - 1
+    while j >= 0:
+        if text.codeAt(j) != codes[j]:
+            print(label + ": backwards " + j)
+            bad += 1
+        j -= 1
+    for k in range(n):
+        let i = (k * 7) % n
+        if text.codeAt(i) != codes[i] or text.length() != n:
+            print(label + ": strided " + i)
+            bad += 1
+    var position = 0
+    for c in text:
+        if position >= n or c != String.fromCode(codes[position]):
+            print(label + ": iteration " + position)
+            bad += 1
+        position += 1
+    if position != n:
+        print(label + ": iterated " + position + " elements, expected " + n)
+        bad += 1
+    let parts = text.split("")
+    if parts.size() != n + 1 or parts[n] != "":
+        print(label + ": split into " + parts.size())
+        bad += 1
+    else:
+        for i in range(n):
+            if parts[i] != String.fromCode(codes[i]):
+                print(label + ": split part " + i)
+                bad += 1
+    return bad
+
+func expect_error(label: String, action: fn() -> String) -> Unit:
+    try:
+        let value = action()
+        print(label + ": no error, got " + value)
+    catch problem: IndexProblem:
+        let message = problem.getMessage()
+        if message != null:
+            print(label + ": " + message)
+
+# First and last positions, whole and empty slices, and every out-of-range
+# form; the text is used here before anything else indexes it.
+func boundaries(label: String, text: String, codes: List[Int]) -> Unit:
+    let n = codes.size()
+    expect_error(label + " codeAt(-1)", fn() => text.codeAt(-1).toString())
+    expect_error(label + " codeAt(n)", fn() => text.codeAt(n).toString())
+    expect_error(label + " [n]", fn() => text[n])
+    expect_error(label + " charAt(n)", fn() => text.charAt(n))
+    expect_error(label + " substring(n + 1)", fn() => text.substring(n + 1))
+    expect_error(label + " substring(-1)", fn() => text.substring(-1))
+    expect_error(label + " substring(0, n + 1)", fn() => text.substring(0, n + 1))
+    expect_error(label + " substring(-1, 0)", fn() => text.substring(-1, 0))
+    if n > 0:
+        expect_error(label + " substring(1, 0)", fn() => text.substring(1, 0))
+        print(label + " first " + text.codeAt(0) + " last " + text.codeAt(n - 1) + " length " + text.length())
+    let whole = text.substring(0) == text and text.substring(0, n) == text
+    let empty = text.substring(n) == "" and text.substring(n, n) == ""
+    print(label + " whole " + whole + " empty " + empty)
+    expect_error(label + " codeAt(n) again", fn() => text.codeAt(n).toString())
+
+let bmp_unit = [26481, 20140, 30340, 233, 101, 769, 54620, 44544, 32, 97]
+let mixed_unit = [65, 128512, 26481, 233, 101, 769, 54620, 131072, 32, 129418, 20140, 97, 776]
+let latin_unit = [99, 97, 102, 233, 32, 252, 223, 241]
+let emoji_unit = [128512, 129418, 128054, 128077]
+
+let short_bmp = [26481, 20140, 233, 101, 769, 54620]
+let long_bmp = repeated(bmp_unit, 8)
+let long_mixed = repeated(mixed_unit, 6)
+let long_latin = repeated(latin_unit, 5)
+let cjk_32 = repeated([25935, 25463, 29392, 29432, 26481, 20140, 30340, 54620], 4)
+let cjk_31 = taken(cjk_32, 31)
+let emoji_32 = repeated(emoji_unit, 4)
+let emoji_31 = plus(taken(emoji_32, 15), [97])
+let lone = plus(plus([55357], repeated([120, 121], 20)), [56832])
+
+# Out-of-range errors on a text never indexed before, then all positions.
+let texts: List[List[Int]] = [[], [65], [128512], short_bmp, mixed_unit, cjk_31, cjk_32, emoji_31, emoji_32, long_bmp, long_mixed, long_latin, lone]
+let labels = ["empty", "one ASCII", "one emoji", "short BMP", "short mixed", "CJK 31 units", "CJK 32 units", "emoji 31 units", "emoji 32 units", "long BMP", "long mixed", "long Latin-1", "unpaired surrogates"]
+var mismatches = 0
+for t in range(texts.size()):
+    let text = joined(texts[t])
+    boundaries(labels[t], text, texts[t])
+    mismatches += check(labels[t], text, texts[t])
+print("single texts checked, mismatches " + mismatches)
+
+# Alternating between long texts, with short strings indexed in between.
+let first = joined(long_mixed)
+let second = joined(long_bmp)
+let separator = joined([12289, 32])
+var alternating = 0
+for i in range(long_mixed.size()):
+    let k = i % long_bmp.size()
+    if first.codeAt(i) != long_mixed[i] or separator.length() != 2 or second.codeAt(k) != long_bmp[k]:
+        alternating += 1
+    if first[i] != String.fromCode(long_mixed[i]) or second[k] != String.fromCode(long_bmp[k]):
+        alternating += 1
+    if first.length() != long_mixed.size() or second.length() != long_bmp.size() or separator[1] != " ":
+        alternating += 1
+print("alternating mismatches " + alternating)
+
+# Equal texts in different objects answer for themselves.
+let twin_a = joined(long_mixed)
+let twin_b = joined(long_mixed)
+var twins = 0
+for i in range(long_mixed.size()):
+    if twin_a.codeAt(i) != long_mixed[i] or twin_b.codeAt(i) != long_mixed[i]:
+        twins += 1
+print("twins equal " + (twin_a == twin_b) + ", mismatches " + twins)
+
+# indexOf and lastIndexOf count code points, cold and after indexing.
+func searches(label: String, text: String, codes: List[Int]) -> Unit:
+    let fox = String.fromCode(129418)
+    let east = String.fromCode(26481)
+    let accent = "e" + String.fromCode(769)
+    let found = text.indexOf(fox) == first_index(codes, 129418) and text.lastIndexOf(fox) == last_index(codes, 129418)
+    let found_bmp = text.indexOf(east) == first_index(codes, 26481) and text.lastIndexOf(east) == last_index(codes, 26481)
+    let pair = text.indexOf(accent) == first_index(codes, 101) and text.lastIndexOf(accent) == last_index(codes, 101)
+    print(label + " " + text.indexOf(fox) + " " + text.lastIndexOf(fox) + " " + text.indexOf(east) + " "
+        + text.lastIndexOf(east) + " " + text.indexOf(accent) + " " + text.lastIndexOf(accent) + " "
+        + text.indexOf("") + " " + text.lastIndexOf("") + " " + text.indexOf("missing") + " "
+        + found + " " + found_bmp + " " + pair)
+
+searches("cold mixed", joined(long_mixed), long_mixed)
+searches("cold BMP", joined(long_bmp), long_bmp)
+let warm_mixed = joined(long_mixed)
+let warm_bmp = joined(long_bmp)
+print(warm_mixed.length() + " " + warm_bmp.length())
+searches("warm mixed", warm_mixed, long_mixed)
+print(warm_bmp.codeAt(0))
+searches("warm BMP", warm_bmp, long_bmp)
+
+# Two unpaired halves joined make one supplementary code point.
+let halves = String.fromCode(55357) + String.fromCode(56832)
+print(halves.length())
+print(halves.codeAt(0))
+print(halves == String.fromCode(128512))
+let long_halves = "x".repeat(40) + String.fromCode(55357) + String.fromCode(56832) + "y".repeat(40)
+print(long_halves.length())
+print(long_halves.codeAt(40))
+print(long_halves.substring(40, 41) == String.fromCode(128512))
+print(long_halves.indexOf("y"))
