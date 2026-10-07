@@ -4,8 +4,8 @@ import "./support.spr" as support
 
 let document = json.parse(
     "{\"projects\": [{\"id\": \"alpha\", \"targets\": [{\"item_id\": \"stone\", \"amount\": 3}]},"
-    +" {\"id\": \"beta\", \"targets\": [{\"item_id\": \"dirt\", \"amount\": \"lots\"}]}],"
-    +" \"tags\": [], \"meta\": {\"owner\": \"ada\"}}")
+    + " {\"id\": \"beta\", \"targets\": [{\"item_id\": \"dirt\", \"amount\": \"lots\"}]}],"
+    + " \"tags\": [], \"meta\": {\"owner\": \"ada\"}}")
 let root = codec.root(document)
 
 # 10. arrays and element paths
