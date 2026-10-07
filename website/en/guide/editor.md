@@ -44,7 +44,7 @@ The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the ex
 | Feature | With the language server | With v0.5.0-beta.1 |
 |---|---|---|
 | Errors | Shown as you type, in the Problems panel. An error inside an imported file shows on its `import` line | Shown when you save |
-| Quick fixes | When an error's fix is one mechanical rewrite, such as `else if` to `elif` or a missing `@std` import, the lightbulb next to it offers that change, and one click applies it | Not available |
+| Quick fixes | When an error's fix is one mechanical rewrite, such as `else if` to `elif` or a missing `@std` import, the lightbulb next to it offers that change, and one click applies it. Needs a compiler newer than v0.7.1-beta.1 | Not available |
 | Hover | Any name: its declaration and type, including local variables and parameters, plus the comment above it | Keywords, `JavaClass.method`, `module.function` and your top-level declarations, from the saved file |
 | Completion | After a dot, the members of any value, including local variables; elsewhere, the names in scope and keywords | Keywords, the file's declarations and imported names; members after `JavaClass.`, `module.`, an enum name or a top-level variable |
 | Go to Definition (F12) | Any name, across files | Import paths, `module.member` and declarations in the same file |
