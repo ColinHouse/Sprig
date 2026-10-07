@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 
 import decimal
+import json
 import pathlib
 import random
 import subprocess
@@ -95,6 +96,12 @@ NEGATIVE = {
     "float32_set": ("import \"@std/sets.spr\" as sets\nlet s = sets.Set[Float32]()\n", "SPR-NUM-CONVERSION"),
     "float_distinct": ("import \"@std/lists.spr\" as lists\nprint(lists.distinct([0.5, -0.5]))\n",
                        "SPR-NUM-CONVERSION"),
+    # Generic code is checked again with its type arguments: a map literal keyed
+    # by T, and a Set made from T in generic code, are Float keys for T = Float.
+    "generic_literal_key": ("generic T:\n    func seen(value: T) -> Bool:\n        let index = {value: 1}\n"
+                            "        return value in index\nprint(seen(0.5))\n", "SPR-NUM-CONVERSION"),
+    "generic_nested_set": ("import \"@std/sets.spr\" as sets\ngeneric T:\n    func unique(values: List[T]) -> Int:\n"
+                           "        return sets.of(values).size()\nprint(unique([0.5]))\n", "SPR-NUM-CONVERSION"),
     "list_element_inexact": ("let xs: List[Float] = [9007199254740993]\n", "SPR-NUM-RANGE"),
     "jvm_int_literal_out_of_range": (
         "import java.lang.Integer as JInteger\nprint(JInteger.toBinaryString(4294967296))\n", "SPR-JVM-MEMBER"),
@@ -161,6 +168,11 @@ POSITIVE = {
         "print(items.indexOf(nan))\nprint(items.indexOf(-0.0))\nprint(items.remove(negative))\nprint(items)\n",
         "false\ntrue\n-1\n1\ntrue\n[NaN]"),
     "list_literal_context": ("let xs: List[Float] = [1, 2]\nprint(xs[0] + xs[1])\n", "3.0"),
+    # A map literal keyed by T is fine for every key type but Float and Float32.
+    "generic_literal_key_int": (
+        "generic T:\n    func seen(value: T) -> Bool:\n        let index = {value: 1}\n"
+        "        return value in index\nprint(seen(3))\nprint(seen(\"a\"))\nprint(seen([0.5]))\n",
+        "true\ntrue\ntrue"),
     "jvm_int_narrowing": ("import java.lang.Integer as JInteger\nlet x: Int = 42\nprint(JInteger.valueOf(x))\n", "42"),
 }
 
@@ -184,6 +196,54 @@ with tempfile.TemporaryDirectory(prefix="sprig-numeric-") as work:
         result = call("run", path)
         verify(f"positive {name}", result.returncode == 0 and result.stdout.strip() == expected,
                f"exit={result.returncode} {result.stdout}{result.stderr}")
+
+    # A Float that generic code turns into a Map key is reported at the use
+    # that gives the type argument, in the program's own file, with the place
+    # inside the generic code in the hint (#212): the line is the program's.
+    padding = "# padding keeps the use away from line 1\n\n"
+    located = {
+        "set_written": ("import \"@std/sets.spr\" as sets\n" + padding + "let s = sets.Set[Float32]()\n",
+                        4, "@std/sets.spr:"),
+        "set_inferred": ("import \"@std/sets.spr\" as sets\n" + padding + "let s = sets.of([0.5])\n",
+                         4, "@std/sets.spr:"),
+        "distinct_inferred": ("import \"@std/lists.spr\" as lists\n" + padding
+                              + "print(lists.distinct([0.5, -0.5]))\n", 4, "@std/lists.spr:"),
+        "literal_key": ("generic T:\n    func seen(value: T) -> Bool:\n        let index = {value: 1}\n"
+                        "        return value in index\n" + padding + "print(seen(0.5))\n", 7, ".spr:3:"),
+        "nested_set": ("import \"@std/sets.spr\" as sets\ngeneric T:\n    func unique(values: List[T]) -> Int:\n"
+                       "        return sets.of(values).size()\n" + padding + "print(unique([0.5]))\n",
+                       7, "@std/sets.spr:"),
+    }
+    for name, (source, line, inside) in located.items():
+        path = directory / f"located_{name}.spr"
+        path.write_text(source)
+        result = call("check", "--json", path)
+        try:
+            reports = [d for d in json.loads(result.stdout)["diagnostics"] if d["code"] == "SPR-NUM-CONVERSION"]
+        except (ValueError, KeyError):
+            reports = []
+        verify(f"located {name}", result.returncode == 1 and len(reports) == 1
+               and reports[0]["uri"].endswith("/" + path.name)
+               and reports[0]["range"]["start"]["line"] == line - 1
+               and "cannot be Map keys" in reports[0]["message"]
+               and inside in reports[0].get("hint", ""),
+               f"exit={result.returncode} {result.stdout}{result.stderr}")
+
+    # Generic code reports what it does with a concrete Float once, where it does
+    # it, not again at each use of that generic code.
+    path = directory / "located_inner.spr"
+    path.write_text("generic K, V:\n    func keyed(keys: List[K], extra: V) -> Int:\n"
+                    "        let index = {extra: keys.size()}\n        return index.size()\n"
+                    "generic T:\n    func outer(value: T) -> Int:\n        return keyed([value], 1.5)\n"
+                    "print(outer(1))\nprint(outer(\"a\"))\n")
+    result = call("check", "--json", path)
+    try:
+        reports = [d for d in json.loads(result.stdout)["diagnostics"] if d["code"] == "SPR-NUM-CONVERSION"]
+    except (ValueError, KeyError):
+        reports = []
+    verify("located inner once", result.returncode == 1 and len(reports) == 1
+           and reports[0]["range"]["start"]["line"] == 6,
+           f"exit={result.returncode} {result.stdout}{result.stderr}")
 
     # Seeded independent Python integer oracle. One Sprig program amortizes
     # javac startup while checking runtime arithmetic on nonconstant locals.

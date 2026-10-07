@@ -66,7 +66,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-NAME-NOT-A-VALUE | A type or module name was used as a value. |
 | SPR-NAME-UNRESOLVED | A name has no declaration in the current scope chain. |
 | SPR-NUM-RANGE | A numeric literal is outside its target range or underflows to zero. |
-| SPR-NUM-CONVERSION | An implicit numeric conversion risks precision or range loss. |
+| SPR-NUM-CONVERSION | An implicit numeric conversion risks precision or range loss, or a `Float`/`Float32` is a `Map` key, also through generic code (reported at the use that gives the type argument). |
 | SPR-NUM-DIVISION | Integer/BigInt `/` would truncate, or Decimal `/` lacks a rounding policy. |
 | SPR-NUM-MIXED | A numeric operator cannot implicitly mix these numeric families. |
 | SPR-RUNTIME-ERROR | Uncaught Sprig Error value at runtime; the wrapped message, `origin` data and source range are reported. |

@@ -142,6 +142,11 @@ public final class TypeChecker {
     private final Deque<List<Type>> lambdaEffects = new ArrayDeque<>();
     /** v0.8 lexical generic parameters of the declaration being checked. */
     private Map<String, Type> activeTypeParams = Map.of();
+    /** What generic bodies infer and the generic uses made, checked again with type arguments. */
+    private final GenericUses genericUses = new GenericUses();
+
+    /** The hint for a Float or Float32 map key that a map literal gives it. */
+    static final String FLOAT_MAP_KEY_HINT = "Use an explicit quantized Int key or Decimal key.";
 
     public TypeChecker(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
@@ -257,6 +262,16 @@ public final class TypeChecker {
         narrowing.push(new HashMap<>());
         checkSequence(module.topStatements);
         narrowing.pop();
+        // Every body this module's generic uses reach is checked by now: its
+        // own declarations above, the modules it imports before it.
+        genericUses.verify(typeResolver, diagnostics);
+    }
+
+    /** A generic use with known type arguments, checked again once the module is done; see {@link GenericUses}. */
+    private void recordGenericUse(Decl target, List<Type> args, Span span) {
+        if (probing == 0) {
+            genericUses.use(target, args, module, span);
+        }
     }
 
     private Decl.Field collectingDefault;
@@ -1618,6 +1633,7 @@ public final class TypeChecker {
             checkArgsUnchecked(call);
             return NativeType.ERROR;
         }
+        recordGenericUse(decl, args, subscript.span);
         ClassType classType = new ClassType(decl, args);
         subscript.applicationType = classType;
         ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, classType);
@@ -1651,6 +1667,7 @@ public final class TypeChecker {
             checkArgsUnchecked(call);
             return NativeType.ERROR;
         }
+        recordGenericUse(func, args, subscript.span);
         Map<TypeParameterType, Type> map = Substitution.forFunction(func, args);
         checkComparableArguments(func, map, subscript.span);
         Type returnType = Substitution.apply(func.returnType, map);
@@ -2364,9 +2381,12 @@ public final class TypeChecker {
         }
         if (keyType.nonNull() == NativeType.FLOAT || keyType.nonNull() == NativeType.FLOAT32) {
             diagnostics.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE,
-                    "Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality",
-                    module.uri, lit.span).withHint("Use an explicit quantized Int key or Decimal key."));
+                    TypeRefResolver.FLOAT_MAP_KEY, module.uri, lit.span).withHint(FLOAT_MAP_KEY_HINT));
             keyType = NativeType.ERROR;
+        } else if (probing == 0) {
+            // A key typed by a type parameter is checked for each use of the
+            // generic code with type arguments.
+            genericUses.key(keyType, module, lit.span);
         }
         lit.mutable = mutable;
         return new MapType(keyType, valueType, mutable);
@@ -2974,6 +2994,12 @@ public final class TypeChecker {
         TypeArgumentInference.Solution solution;
         List<Type> arguments;
         boolean valid;
+        /**
+         * Every type argument was inferred, but the declaration rejects them
+         * the way it rejects written ones; that rejection is reported at the
+         * call, now or on an earlier check of the same call.
+         */
+        boolean rejected;
     }
 
     /** Whether an expression's type follows from where it goes: a literal, a lambda, a match or an if. */
@@ -3050,6 +3076,7 @@ public final class TypeChecker {
                 inference.valid = true;
                 return inference;
             }
+            inference.rejected = true;
         }
         // Inferred arguments that are invalid like written ones count as unknown.
         List<Type> partial = new ArrayList<>();
@@ -3144,6 +3171,7 @@ public final class TypeChecker {
         if (inference.valid) {
             resolved.typeArgs = inference.arguments;
             resolved.substitution = map;
+            recordGenericUse(func, inference.arguments, call.span);
         }
         if (stopAfterInference(inference, errors, call.span)) {
             return returnType;
@@ -3191,6 +3219,7 @@ public final class TypeChecker {
             resolved.typeArgs = inference.arguments;
             resolved.substitution = Substitution.forClass(classType);
             resolved.instantiatedType = classType;
+            recordGenericUse(decl, inference.arguments, call.span);
         }
         if (stopAfterInference(inference, errors, call.span)) {
             return inference.valid ? classType : NativeType.ERROR;
@@ -3248,6 +3277,7 @@ public final class TypeChecker {
             resolved.typeArgs = inference.arguments;
             resolved.substitution = field.substitution;
             resolved.instantiatedType = field.type;
+            recordGenericUse(decl, inference.arguments, call.span);
         }
         if (stopAfterInference(inference, errors, call.span)) {
             return inference.valid ? field.type : NativeType.ERROR;
@@ -3324,7 +3354,7 @@ public final class TypeChecker {
      * was reported before the call.
      */
     private void requireAnError(Inference inference, int errorsBefore, String name, String form, Span span) {
-        if (inference.valid || diagnostics.errorCount() != errorsBefore) {
+        if (inference.valid || inference.rejected || diagnostics.errorCount() != errorsBefore) {
             return;
         }
         if (!inference.solution.blocked.isEmpty() && errorsBefore > 0) {

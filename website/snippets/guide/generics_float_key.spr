@@ -1,0 +1,6 @@
+generic T:
+    func seen_before(value: T) -> Bool:
+        let seen = {value: true}
+        return value in seen
+
+print(seen_before(0.5))

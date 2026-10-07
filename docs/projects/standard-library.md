@@ -509,7 +509,8 @@ print(dates.plus_days("2026-10-06", 30))                 # 2026-11-05
 
 - `sets.Set[T]` keeps members in insertion order and compares them the way map
   keys are compared, so a `Float` or `Float32` set is rejected as a `Float` map
-  key is; `add` and `remove` report whether anything changed.
+  key is, at the call that makes it, also when generic code passes its own `T`
+  on to `sets.of`; `add` and `remove` report whether anything changed.
   `union`, `intersection` and `difference` return new sets.
 - `random.seeded(seed)` gives the same sequence on every run; `fresh()` does
   not. `next_int(bound)` checks the bound, `shuffled` returns a copy, `choice`

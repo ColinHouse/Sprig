@@ -1,0 +1,10 @@
+# A map literal keyed by a type parameter is a Float map key when the generic
+# function is called with T = Float, so the call is rejected like a written
+# Map[Float, Bool] (#212); with no check, value in seen would find NaN.
+generic T:
+    func seen_before(value: T) -> Bool:
+        let seen = {value: true}
+        return value in seen
+
+let nan: Float = 0.0 / 0.0
+print(seen_before(nan))

@@ -37,6 +37,25 @@ public final class StdLibrary {
         }
     }
 
+    /**
+     * The import a bundled module's file is written with, such as
+     * {@code @std/sets.spr}, or null for any other file and outside the
+     * installed launcher. An {@code @std/} import resolves to a file directly
+     * in the real std directory, so its parent is that directory.
+     */
+    public static String importName(Path file) {
+        try {
+            Path absolute = file.toAbsolutePath().normalize();
+            Path parent = absolute.getParent();
+            if (parent != null && parent.equals(root().toRealPath())) {
+                return "@std/" + absolute.getFileName();
+            }
+        } catch (DepError | IOException e) {
+            // No bundled std in this launch, so no file is one of its modules.
+        }
+        return null;
+    }
+
     /** The bundled module names, as they are imported: @std/text.spr and so on. */
     static java.util.List<String> available(Path base) {
         try (java.util.stream.Stream<Path> files = Files.list(base)) {

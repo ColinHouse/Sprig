@@ -135,7 +135,14 @@ round-trip decimal formatting; it does not round away `0.1 + 0.2` error.
 `Map`/`MutableMap` reject `Float` and `Float32` keys because Java hashing and
 IEEE equality disagree for NaN and signed zero. A `Set` from `@std/sets.spr`
 and `lists.distinct` keep their items as map keys, so they reject `Float` and
-`Float32` items the same way. Distinct lists and variant values compare their
+`Float32` items the same way. The rule holds through generic code: a generic
+function or class that makes a type parameter a map key, written
+(`MutableMap[T, Bool]`) or inferred (a map literal `{value: true}` keyed by
+`T`, or a call such as `sets.of(values)` that passes `T` on), is rejected
+with `T = Float` or `Float32` at the call or construction that gives that
+type argument, with the same `SPR-NUM-CONVERSION`; the hint names the place
+inside the generic code (`Rejected inside 'of' with T = Float, at
+@std/sets.spr:7:33`). Distinct lists and variant values compare their
 floating elements/fields with Sprig equality; structural equality currently
 short-circuits on object identity, so a list containing NaN compares equal to
 itself. List membership and search use the same equality as `==`: `x in xs`,

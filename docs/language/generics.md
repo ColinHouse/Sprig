@@ -197,7 +197,38 @@ Any `requires` clause naming a parameter that is not in scope reports
   `SPR-TYPE-GENERIC-NULLABLE`. The compiler does not flatten `T?` or invent
   `String??`; the declaration already owns the nullable position. This applies
   recursively to written annotations, local/lambda types and nested generic
-  applications, and is independent of declaration order.
+  uses, written or inferred (see below), and is independent of declaration
+  order.
+
+## Checked again with the type arguments
+
+A generic declaration is checked once, with its parameters standing for any
+type. The rules that depend on the actual type are checked again at every use
+with type arguments, written or inferred: the call, the construction or the
+type annotation that gives them. Two things are checked with the arguments
+substituted:
+
+- **What the declaration writes:** its annotations, locals, lambda parameter
+  types and generic applications.
+- **What its body infers:** the key type of a map literal (`{value: true}`
+  keyed by `T`), and the type arguments of the generic calls and
+  constructions it makes (`sets.of(values)` with `values: List[T]`), which are
+  checked the same way with their own arguments, all the way down.
+
+Among these rules are the Map key rule (`Float` and `Float32` are not map
+keys, `SPR-NUM-CONVERSION`; see [numeric semantics](numeric-semantics.md)) and
+the nullability rule above. A failure is reported at the use that gives the
+type argument, with the code and message it has where it arises; the hint
+names the declaration, the arguments and that place, also inside a library:
+
+```text
+SPR-NUM-CONVERSION [TYPE] main.spr:3:9: Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality
+  hint: Rejected inside 'of' with T = Float, at @std/sets.spr:7:33. Use an explicit quantized Int key, or a Decimal key when decimal identity is intended.
+```
+
+An error the generic code has whatever its arguments, such as a map literal
+keyed by a `Float` value inside it, is reported once, where it is written,
+and not again at each use.
 
 ## Generic variants
 

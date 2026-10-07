@@ -116,6 +116,19 @@ generic T:
 
 编译器自己算类型参数时也守同样的规矩。`String?` 传给声明里写成 `T?` 的参数，`T` 就是 `String`，所以 `Box(value=maybe)` 是 `Box[String]`。传给普通的 `T`，`T` 就是 `String?`；但如果声明在别处写了 `T?`，`T` 就是 `String`，这个可能为空的实参会被报出来，和写明 `[String]` 时一样。
 
+## 在你调用的地方再查一遍
+
+泛型函数和类只检查一遍，那时 `T` 代表任意类型。要看具体类型的规矩，会在每次调用或构造时用传进来的类型再查一遍，不管类型参数是写出来的还是编译器算出来的，函数体里怎么用 `T` 也算在内。用 `T` 当键的 map 字面量，或者把 `List[T]` 交给 `sets.of`，都会让 `T` 成为 `Map` 的键，所以传 `Float` 会在你调用的地方报错：
+
+<<< @/snippets/guide/generics_float_key.spr
+
+```text
+SPR-NUM-CONVERSION [TYPE] main.spr:6:7: Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality
+  hint: Rejected inside 'seen_before' with T = Float, at main.spr:3:20. Use an explicit quantized Int key or Decimal key.
+```
+
+hint 会说明这个类型最后落在泛型代码的哪个位置，哪怕那段代码在 `@std/sets.spr` 这样的库里。上面的可空规则也是这样：一个 `String?` 一路传到写了 `T?` 的声明，也在你调用的地方报错。
+
 ## 泛型 variant
 
 variant 也可以是泛型的。有载荷的情况和构造函数一样，从载荷算出类型参数；没有载荷的情况，比如 `Option[Int].None`，要写出来。`match` 的分支里则只写情况的名字：

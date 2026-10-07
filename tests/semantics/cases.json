@@ -889,5 +889,23 @@
     "expected_diagnostic": "SPR-TYPE-MISMATCH",
     "status": "implemented",
     "source": "#187: a task's result cannot be nullable; the mismatch says why and how to keep it non-null"
+  },
+  {
+    "file": "generic_map_key_inferred.spr",
+    "expected_diagnostic": "SPR-NUM-CONVERSION",
+    "status": "implemented",
+    "source": "#212: a map literal keyed by T inside generic code is checked when T = Float"
+  },
+  {
+    "file": "generic_map_key_nested.spr",
+    "expected_diagnostic": "SPR-NUM-CONVERSION",
+    "status": "implemented",
+    "source": "#212: generic code passing T on to sets.of is checked when T = Float"
+  },
+  {
+    "file": "generic_map_key_method.spr",
+    "expected_diagnostic": "SPR-NUM-CONVERSION",
+    "status": "implemented",
+    "source": "#212: a generic class whose method keys a map by T is checked when T = Float32"
   }
 ]
