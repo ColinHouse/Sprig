@@ -83,8 +83,8 @@ def main():
         expected = (ROOT / "tests/concurrent/contract.out").read_text(encoding="utf-8").splitlines()
         assert lines == expected, "\n".join(lines)
         api = command(ROOT, "api", "@std/concurrent.spr", "--json")
-        for name in ("Task", "Scope", "Pool", "Channel", "Counter", "Lock", "Latch", "scope", "spawn", "spawn_on",
-                     "parallel_map", "await_all", "channel"):
+        for name in ("Task", "Job", "Scope", "Pool", "Channel", "Counter", "Lock", "Latch", "scope", "scope_run",
+                     "spawn", "run", "spawn_on", "parallel_map", "await_all", "channel"):
             assert '"name": "' + name + '"' in api or '"name":"' + name + '"' in api, name
         # Every task belongs to a scope: there is no unscoped spawn.
         assert '"name": "spawn"' in api or '"name":"spawn"' in api

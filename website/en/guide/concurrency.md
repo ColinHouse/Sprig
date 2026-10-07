@@ -22,10 +22,31 @@ print(concurrent.scope(count_all))
 - `concurrent.scope(body)` runs `body` with a fresh `Scope` and returns its result. The body is usually a named function passed by reference, since a lambda is one expression.
 - `spawn(s, work)` starts a `fn() -> T` on a virtual thread owned by the scope and returns a `Task[T]`. Type arguments follow the usual rule: `Int` comes from the lambda's result.
 - **Leaving the scope waits for every task**, awaited or not. No task outlives the function that started it.
-- **The first failure cancels its siblings** and is rethrown by `scope()` as an `Error`, so `scope` declares `throws Error`. A failure inside a task is also reported by that task's `await()`; catching it there does not undo the scope's failure. To tolerate a failure, handle it inside the task body, or use `await_or(fallback)` on a body that cannot fail.
+- **The first failure cancels its siblings** and is rethrown by `scope()` as an `Error`, so `scope` declares `throws Error`. A failure inside a task is also reported by that task's `await()`; catching it there does not undo the scope's failure. To tolerate a failure, handle it inside the task body, for example by returning a variant such as `Ok`/`Failed`. `await_or(fallback)` doesn't tolerate anything: it gives the fallback for a failed or cancelled task without a `throws` clause, so one task body can wait on another, but the scope still fails.
 - A task cancelled on purpose (`task.cancel()`, `s.cancel_all()`) is not a failure. Cancellation interrupts the task's thread and takes effect at its blocking points: `sleep`, `await`, a channel `receive`, Java I/O that honors interruption. A loop that never blocks runs to its end.
 - There is no unscoped `spawn`: a task always belongs to the scope it was started in, and starting one after the body returned is an `Error`.
 - A task body is a plain function value, so it captures only `let` bindings and parameters: the data races on locals that other languages have cannot be written. Shared `MutableList`/`MutableMap` values and `var` fields are not protected; see locks and channels below.
+
+## Work with no result: run and scope_run
+
+`Unit` is not a value, so a task that only has an effect can't be a `Task[Unit]`. Use `run` for it, and `scope_run` for a scope body that only coordinates:
+
+```sprig
+import "@std/concurrent.spr" as concurrent
+
+func announce(line: String) -> Unit:
+    print("> " + line)
+
+func announce_all(s: concurrent.Scope) -> Unit throws Error:
+    for line in ["ready", "steady"]:
+        concurrent.run(s, fn() => announce(line))
+
+concurrent.scope_run(announce_all)
+```
+
+- `run(s, work)` starts a `fn() -> Unit` and returns a `Job`. It has the same methods as a task: `await()` waits and reports a failure as an `Error` but returns nothing, and `cancel()` and `is_done()` work as before.
+- `scope_run(body)` is `scope()` for a body that returns nothing, with the same rules: it waits for every task and job, and the first failure cancels the rest and is rethrown.
+- The two announcements may print in either order, since they run at the same time.
 
 ## Many tasks: parallel_map and await_all
 
