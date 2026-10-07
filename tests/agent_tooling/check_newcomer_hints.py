@@ -16,7 +16,11 @@ SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 FAILURES = []
 COUNT = 0
 
-# (name, source, code, text expected in the first diagnostic's message or hint)
+CONTRACT_PAIR = ("class Sink:\n    func write(line: String) -> Unit\nclass Console:\n"
+                 "    func write(line: String) -> Unit:\n        print(line)\nconform Console to Sink\n")
+
+# (name, source, code, text expected in the first diagnostic's message or hint); a source
+# may be a dict of file name to text when the case needs a second module
 CASES = [
     ("else-if", "if true:\n    print(1)\nelse if false:\n    print(2)\n", "SPR-SYNTAX-ERROR", "elif"),
     ("declaration-without-value", "var label: String\nprint(1)\n", "SPR-SYNTAX-ERROR", "needs an initial value"),
@@ -55,6 +59,40 @@ CASES = [
     ("generic-hint-module-type", "import \"@std/lists.spr\" as lists\ngeneric T, U:\n    func g(a: T, b: List[U]) -> Int:\n"
      "        return b.size()\nprint(g(lists.Pair(first=1, second=\"x\"), []))\n",
      "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[lists.Pair[Int, String], Type](...)"),
+    # Contract classes hold three lines for the 0.8 language: never generic, a type and
+    # never a bound, no default methods; and there is no downcast, no type test, no
+    # retroactive and no structural conformance.
+    ("generic-contract", "generic T:\n    class Repository:\n        func find(id: Int) -> T?\nprint(1)\n",
+     "SPR-CLASS-ABSTRACT", "one non-generic contract per element type"),
+    ("generic-class-conform", "class Sink:\n    func write(line: String) -> Unit\ngeneric T:\n    class Box:\n"
+     "        let value: T\n        func write(line: String) -> Unit:\n            print(line)\nconform Box to Sink\n",
+     "SPR-CONFORM-SOURCE", "one non-generic class per element type"),
+    ("contract-as-bound", "class Sink:\n    func write(line: String) -> Unit\ngeneric T:\n"
+     "    func drain(sink: T) -> Unit:\n        requires T: Sink\n        print(1)\nprint(1)\n",
+     "SPR-GENERIC-CONSTRAINT", "Take 'Sink' as the parameter type"),
+    ("class-as-bound", "class Console:\n    func write(line: String) -> Unit:\n        print(line)\ngeneric T:\n"
+     "    func drain(sink: T) -> Unit:\n        requires T: Console\n        print(1)\nprint(1)\n",
+     "SPR-GENERIC-CONSTRAINT", "closed set Equatable and Comparable"),
+    ("contract-default-method", "class Sink:\n    func write(line: String) -> Unit\n"
+     "    func write_all(lines: List[String]) -> Unit:\n        for line in lines:\n            write(line)\nprint(1)\n",
+     "SPR-CLASS-ABSTRACT", "module function that takes the contract"),
+    ("contract-with-field", "class Sink:\n    let name: String\n    func write(line: String) -> Unit\nprint(1)\n",
+     "SPR-CLASS-ABSTRACT", "Move the fields into the classes that conform"),
+    ("contract-downcast", CONTRACT_PAIR + "func use(sink: Sink) -> Unit:\n    let back: Console = sink\n    back.write(\"x\")\nprint(1)\n",
+     "SPR-TYPE-ASSIGN", "no downcast and no type test"),
+    ("contract-type-test", CONTRACT_PAIR + "func use(sink: Sink) -> Unit:\n    match sink:\n        case Console as console:\n"
+     "            console.write(\"x\")\nprint(1)\n", "SPR-MATCH-UNKNOWN-CASE", "A closed set of types is a variant"),
+    ("contract-match-scrutinee", CONTRACT_PAIR + "func use(sink: Sink) -> Unit:\n    match sink:\n        case Sink.Console as console:\n"
+     "            console.write(\"x\")\nprint(1)\n", "SPR-MATCH-SCRUTINEE", "A closed set of types is a variant"),
+    ("contract-structural", "class Sink:\n    func write(line: String) -> Unit\nclass Console:\n"
+     "    func write(line: String) -> Unit:\n        print(line)\nfunc use(sink: Sink) -> Unit:\n    sink.write(\"x\")\nuse(Console())\n",
+     "SPR-TYPE-MISMATCH", "declare 'conform Console to Sink'"),
+    ("contract-conforms-to-contract", "class Flushable:\n    func flush() -> Int\nclass Sink:\n    func write(line: String) -> Unit\n"
+     "    func flush() -> Int\nconform Sink to Flushable\nprint(1)\n", "SPR-CONFORM-SOURCE", "Conform each implementing class"),
+    ("retroactive-conform-imported-name", {"case.spr": "import \"helper.spr\" as helper\nconform helper.Console to helper.Sink\nprint(1)\n",
+     "helper.spr": CONTRACT_PAIR}, "SPR-SYNTAX-ERROR", "no retroactive conformance"),
+    ("retroactive-conform-foreign-class", {"case.spr": "import \"helper.spr\" as helper\nconform Console to helper.Sink\nprint(1)\n",
+     "helper.spr": CONTRACT_PAIR}, "SPR-CONFORM-SOURCE", "no retroactive conformance"),
     ("generic-hint-java-type", "import java.util.ArrayList as ArrayList\ngeneric T, U:\n    func g(a: T, b: List[U]) -> Int:\n"
      "        return b.size()\nlet names = ArrayList[String]()\nprint(g(names, []))\n",
      "SPR-TYPE-GENERIC-ARGS-REQUIRED", "g[ArrayList[String], Type](...)"),
@@ -184,7 +222,8 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         for name, source, code, expected in CASES:
-            (work / "case.spr").write_text(source, encoding="utf-8")
+            for file, text in (source if isinstance(source, dict) else {"case.spr": source}).items():
+                (work / file).write_text(text, encoding="utf-8")
             result = run("check", "case.spr", "--json", cwd=work)
             diagnostics = json.loads(result.stdout)["diagnostics"]
             first = diagnostics[0] if diagnostics else {}

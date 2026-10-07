@@ -761,5 +761,59 @@
     "expected_diagnostic": "SPR-NAME-UNRESOLVED",
     "status": "implemented",
     "source": "#141: compound assignment to an unknown member"
+  },
+  {
+    "file": "contract_generic.spr",
+    "expected_diagnostic": "SPR-CLASS-ABSTRACT",
+    "status": "implemented",
+    "source": "contract guardrails: a contract is never generic"
+  },
+  {
+    "file": "contract_generic_conforming.spr",
+    "expected_diagnostic": "SPR-CONFORM-SOURCE",
+    "status": "implemented",
+    "source": "contract guardrails: a generic class does not conform"
+  },
+  {
+    "file": "contract_as_bound.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "contract guardrails: a contract is a type, never a bound"
+  },
+  {
+    "file": "class_as_bound.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "contract guardrails: capabilities are Equatable and Comparable only"
+  },
+  {
+    "file": "contract_match_scrutinee.spr",
+    "expected_diagnostic": "SPR-MATCH-SCRUTINEE",
+    "status": "implemented",
+    "source": "contract guardrails: no type tests on contract values"
+  },
+  {
+    "file": "contract_type_test.spr",
+    "expected_diagnostic": "SPR-MATCH-UNKNOWN-CASE",
+    "status": "implemented",
+    "source": "contract guardrails: match is for enums and variants"
+  },
+  {
+    "file": "contract_conforms_to_contract.spr",
+    "expected_diagnostic": "SPR-CONFORM-SOURCE",
+    "status": "implemented",
+    "source": "contract guardrails: a contract never conforms to another"
+  },
+  {
+    "file": "contract_retroactive_syntax.spr",
+    "expected_diagnostic": "SPR-SYNTAX-ERROR",
+    "status": "implemented",
+    "source": "contract guardrails: no retroactive conformance (imported class named)"
+  },
+  {
+    "file": "contract_retroactive.spr",
+    "expected_diagnostic": "SPR-CONFORM-SOURCE",
+    "status": "implemented",
+    "source": "contract guardrails: no retroactive conformance (class not declared here)"
   }
 ]

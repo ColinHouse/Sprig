@@ -13,8 +13,13 @@ by the historical design kit in `docs/history/design-kit/`.
   or adapters, protected methods only through the parent view, and no `self`. It declares a foreign
   JVM contract; it does not add inheritance between Sprig classes. Open
   polymorphism inside Sprig is a contract class (methods without bodies) that
-  classes `conform` to; a contract has no fields, no default bodies and is
-  non-generic in v1. Generic methods witness by erasure; boxed
+  classes `conform` to. For the 0.8 language a contract has no fields, is
+  never generic, is a type and never a `requires` bound, and has no default
+  methods; a contract never conforms to another contract, there is no
+  downcast or type test, and conformance is declared in the class's own module
+  (no retroactive or structural conformance). These are decisions with
+  targeted diagnostics, not gaps; a closed set of types is a variant, an open
+  set is a contract. Generic methods witness by erasure; boxed
   `Short`/`Byte`/`Character` parameters are not expressible because of the
   existing interop adapters.
 - Generics accept one or more parameters (`generic K, V:`). Type arguments of

@@ -121,8 +121,10 @@ public final class Explanations {
             case Codes.GENERIC_CONSTRAINT -> {
                 out.put("whyMatters", "Capabilities are closed and checked: a generic function states what it needs, and every call proves it.");
                 out.put("commonCauses", List.of("A requires clause names a capability other than Equatable or Comparable, or is not a leading statement.",
+                        "A requires clause names a contract or class (requires T: Sink): a contract is a type, never a bound on a type parameter, in the 0.8 language.",
                         "A function that requires X: Comparable was called with a type argument that has no ordering, such as Bool, a nullable type or a class."));
                 out.put("safeFixes", List.of("Use requires X: Equatable for value equality and requires X: Comparable for ordering.",
+                        "Take the contract as the parameter type instead of a bounded type parameter: func drain(sink: Sink) -> Unit.",
                         "Call it with Int, Int32, Float, Float32, Decimal, BigInt or String, or pass an explicit comparison function for other types.",
                         "Inside another generic function, declare requires X: Comparable there too."));
                 out.put("relatedCodes", List.of(Codes.GENERIC_ARGS_REQUIRED));
@@ -588,11 +590,12 @@ public final class Explanations {
             }
             case Codes.CONFORM_SOURCE, Codes.CONFORM_TARGET -> {
                 out.put("whyMatters", "conform declares a foreign JVM contract for an existing local class; it adds no methods and performs no adaptation.");
-                out.put("commonCauses", List.of("The left name is not a class declared in this module (imported, dependency or value name).",
-                        "The class is generic.",
+                out.put("commonCauses", List.of("The left name is not a class declared in this module (imported, dependency or value name): there is no retroactive conformance.",
+                        "The class is generic, or is itself a contract: neither conforms in the 0.8 language.",
                         "The target alias is not an imported public Java interface, or the interface is generic, sealed or an annotation.",
                         "A Java class is named without parentheses, an interface with them, the class is final, generic or sealed, or the named fields select no public or protected constructor."));
-                out.put("safeFixes", List.of("Declare conform in the same file as a non-generic class.",
+                out.put("safeFixes", List.of("Declare conform in the same file as a non-generic class with method bodies.",
+                        "For an imported class, write a local class that holds it and forwards the contract's methods, and conform that class.",
                         "Import the target: import java.lang.Runnable as Runnable.",
                         "To extend a Java class, name the fields its constructor takes: conform C to JavaClass(field1, field2).",
                         "For different signatures, write a separate class that composes the original."));
@@ -601,10 +604,13 @@ public final class Explanations {
             case Codes.CLASS_ABSTRACT -> {
                 out.put("whyMatters", "A contract names what a conforming class must provide and nothing else: no state, no default bodies, no instances of its own, so a value of the contract type is always some conforming object.");
                 out.put("commonCauses", List.of("A method header ends at the line break by mistake, which turns the class into a contract.",
-                        "A contract declares let or var fields, or some of its methods have bodies.",
+                        "A contract declares let or var fields, or some of its methods have bodies (there are no default methods).",
+                        "A contract is declared inside a generic block (Repository[T]); a contract is never generic in the 0.8 language.",
                         "Sink() is constructed where a conforming class such as Console() was meant."));
                 out.put("safeFixes", List.of("Give every method a body (end the header with ':') to make an ordinary class.",
                         "Keep only bodiless methods in the contract and move fields and bodies into the classes that 'conform C to Contract'.",
+                        "Write shared behavior as a module function that takes the contract: func log_all(sink: Sink, lines: List[String]) -> Unit.",
+                        "Declare one non-generic contract per element type, or hold a single generic operation as a fn field of a generic class.",
                         "Construct a conforming class and pass it where the contract type is expected."));
                 out.put("relatedCodes", List.of(Codes.CONFORM_MEMBER, Codes.CONFORM_TARGET));
             }
