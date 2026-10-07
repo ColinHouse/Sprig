@@ -23,6 +23,16 @@ CONTRACT_PAIR = ("class Sink:\n    func write(line: String) -> Unit\nclass Conso
 # may be a dict of file name to text when the case needs a second module
 CASES = [
     ("else-if", "if true:\n    print(1)\nelse if false:\n    print(2)\n", "SPR-SYNTAX-ERROR", "elif"),
+    ("explicit-field-type", "class Box:\n    let count = 0\n", "SPR-SYNTAX-ERROR", "explicit types"),
+    # The suggestion keeps the initializer as written and names a literal's type.
+    ("explicit-field-type-string", "class User:\n    var name = \"ada\"  # display name\n", "SPR-SYNTAX-ERROR",
+     "write 'var name: String = \"ada\"'"),
+    ("explicit-field-type-negative", "class Shape:\n    let offset = -1.5\n", "SPR-SYNTAX-ERROR",
+     "write 'let offset: Float = -1.5'"),
+    ("explicit-field-type-expression", "let total = 3\nclass Box:\n    let count = total + 1\n", "SPR-SYNTAX-ERROR",
+     "write 'let count: Type = total + 1'"),
+    ("explicit-field-type-null", "class Box:\n    var label = null\n", "SPR-SYNTAX-ERROR",
+     "write 'var label: Type? = null'"),
     ("declaration-without-value", "var label: String\nprint(1)\n", "SPR-SYNTAX-ERROR", "needs an initial value"),
     ("bare-var", "var count\nprint(1)\n", "SPR-SYNTAX-ERROR", "needs an initial value"),
     ("increment", "var count = 1\ncount++\n", "SPR-SYNTAX-ERROR", "count += 1"),
