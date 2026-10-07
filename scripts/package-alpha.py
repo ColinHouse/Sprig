@@ -121,6 +121,7 @@ def main():
             'NUMERIC_DESIGN_DECISIONS': 'docs/language/numeric-design-decisions.md',
             'GENERICS': 'docs/language/generics.md',
             'INSTALL': 'docs/projects/install.md', 'PROJECTS': 'docs/projects/projects.md',
+            'BUNDLE': 'docs/projects/bundle.md',
             'DEPENDENCIES': 'docs/projects/dependencies.md',
             'STANDARD_LIBRARY': 'docs/projects/standard-library.md',
             'FORMATTER': 'docs/tooling/formatter.md', 'TESTING': 'docs/tooling/testing.md',
@@ -149,6 +150,8 @@ def main():
             content = (ROOT / source).read_text(encoding='utf-8')
             if source == 'docs/jvm/gradle.md':
                 content = content.replace('(typed-boundary-adapters.md)', '(TYPED_BOUNDARY_ADAPTERS.md)')
+            if source == 'docs/projects/projects.md':
+                content = content.replace('(bundle.md)', '(BUNDLE.md)')
             (package / 'docs' / (archive_name + '.md')).write_text(content, encoding='utf-8', newline='\n')
         notes = ROOT / 'docs/releases' / (tag + '.md')
         if notes.is_file():
@@ -163,6 +166,7 @@ def main():
             'docs/language/numeric-semantics.md': 'docs/NUMERIC_SEMANTICS.md',
             'docs/language/generics.md': 'docs/GENERICS.md',
             'docs/projects/install.md': 'docs/INSTALL.md', 'docs/projects/projects.md': 'docs/PROJECTS.md',
+            'docs/projects/bundle.md': 'docs/BUNDLE.md',
             'docs/projects/dependencies.md': 'docs/DEPENDENCIES.md',
             'docs/projects/standard-library.md': 'docs/STANDARD_LIBRARY.md',
             'docs/tooling/testing.md': 'docs/TESTING.md', 'docs/tooling/formatter.md': 'docs/FORMATTER.md',
