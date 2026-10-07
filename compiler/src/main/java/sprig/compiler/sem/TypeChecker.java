@@ -4491,7 +4491,7 @@ public final class TypeChecker {
                 ListType list = (ListType) receiver;
                 Type actual = checkExpr(call.args.get(0).value, list.element);
                 requireAssignable(list.element, actual, call.args.get(0).value.span,
-                        Codes.TYPE_MISMATCH, "element");
+                        Codes.TYPE_MISMATCH, "element", call.args.get(0).value);
                 return NativeType.UNIT;
             }
             case "MutableList.set" -> {
@@ -5892,12 +5892,27 @@ public final class TypeChecker {
     }
 
     private void requireAssignable(Type target, Type actual, Span span, String code, String what) {
-        requireAssignable(target, actual, span, code, what, null);
+        requireAssignable(target, actual, span, code, what, (String) null);
+    }
+
+    private void requireAssignable(Type target, Type actual, Span span, String code, String what, Expr actualExpr) {
+        String nullableHint = null;
+        if (actual != null && actual.isNullable() && actualExpr instanceof Expr.Name name
+                && name.symbol != null && name.symbol.mutable) {
+            nullableHint = name.name + " is a var, which never narrows; copy it into a let (`let word = "
+                    + name.name + "`) and check `word`.";
+        }
+        requireAssignable(target, actual, span, code, what, null, nullableHint);
     }
 
     /** As above; {@code mismatchHint} is the hint of a plain type mismatch that no more specific rule explains. */
     private void requireAssignable(Type target, Type actual, Span span, String code, String what,
                                    String mismatchHint) {
+        requireAssignable(target, actual, span, code, what, mismatchHint, null);
+    }
+
+    private void requireAssignable(Type target, Type actual, Span span, String code, String what,
+                                   String mismatchHint, String nullableHint) {
         if (Semantics.isAssignable(target, actual)) {
             return;
         }
@@ -5910,10 +5925,14 @@ public final class TypeChecker {
             return;
         }
         if (actual != null && actual.isNullable()) {
-            diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
+            Diagnostic diagnostic = Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
                     "Nullable value is not assignable to " + expected + " (" + what
                             + "); check for null first",
-                    module.uri, span).withTypes(expected, got));
+                    module.uri, span).withTypes(expected, got);
+            if (nullableHint != null) {
+                diagnostic = diagnostic.withHint(nullableHint);
+            }
+            diagnostics.add(diagnostic);
             return;
         }
         if (target != null && actual != null && target.nonNull() instanceof ClassType contract && contract.decl.contract
