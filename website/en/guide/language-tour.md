@@ -111,7 +111,7 @@ port must be a number: eighty
 
 - `or_else` returns the value, or the fallback you give it when the value is `null`.
 - `require` returns the value, or throws an `Error` with your message when the value is `null`.
-- Neither needs a type in brackets: like any generic call, it takes the type from the value you pass.
+- Neither needs a type in brackets: like any generic call, it takes the type from the value you pass. (That's newer than v0.7.1-beta.1, where you write `nulls.or_else[Int](...)`.)
 
 ## Errors
 
@@ -126,7 +126,7 @@ port must be a number: eighty
 
 <<< @/snippets/generics.spr
 
-Your own classes, variants and functions can go inside a `generic T:` (or `generic K, V:`) block. A call works out the type arguments from its arguments, so `Box(value=42)` is a `Box[Int]`. When the arguments can't say, as with an empty list, you write them yourself: `lists.first[String]([])`. Generics have no variance. To compare values of a type parameter with `==`, start the function with `requires T: Equatable`; to order them with `<`, use `requires T: Comparable`. The [generics guide](/en/guide/generics) has the details.
+Your own classes, variants and functions can go inside a `generic T:` (or `generic K, V:`) block. A call works out the type arguments from its arguments, so `Box(value=42)` is a `Box[Int]` (newer than v0.7.1-beta.1, which needs `Box[Int](value=42)`). When the arguments can't say, as with an empty list, you write them yourself: `lists.first[String]([])`. Generics have no variance. To compare values of a type parameter with `==`, start the function with `requires T: Equatable`; to order them with `<`, use `requires T: Comparable`. The [generics guide](/en/guide/generics) has the details.
 
 ## Lambdas
 

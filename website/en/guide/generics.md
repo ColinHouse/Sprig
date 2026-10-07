@@ -25,7 +25,7 @@ generic T:
 
 ## Type arguments
 
-Most of the time you don't write them. A call takes its type arguments from the arguments you pass:
+Most of the time you don't write them. A call takes its type arguments from the arguments you pass. This is newer than v0.7.1-beta.1; with that release, you still write them on every call:
 
 ```sprig
 let box = Box(value=42)                    # Box[Int]
