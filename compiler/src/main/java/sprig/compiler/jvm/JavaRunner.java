@@ -21,6 +21,20 @@ public final class JavaRunner {
         public boolean outputWritten;
     }
 
+    /** Asks the program to exit, waits for it, and forces it (and its children) after 5 s. */
+    private static void stop(Process process) {
+        process.destroy();
+        try {
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                for (ProcessHandle child : process.descendants().toList()) child.destroyForcibly();
+                process.destroyForcibly();
+                process.waitFor(5, TimeUnit.SECONDS);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private JavaRunner() {
     }
 
@@ -97,7 +111,9 @@ public final class JavaRunner {
         }
         if (!streamOutput) process.getOutputStream().close();
         Result result = new Result();
-        Thread cleanup = new Thread(process::destroy, "sprig-child-cleanup");
+        // Terminating the CLI terminates the program and waits for it, so a port or
+        // file the program holds is released by the time the CLI has exited.
+        Thread cleanup = new Thread(() -> stop(process), "sprig-child-cleanup");
         Runtime.getRuntime().addShutdownHook(cleanup);
         try {
             if (timeoutMillis <= 0) result.exitCode = process.waitFor();

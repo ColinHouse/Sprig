@@ -15,6 +15,55 @@ def invoke(*args, cwd=ROOT):
                           text=True, capture_output=True)
 
 
+SLOW_EXIT = """import java.lang.InterruptedException as InterruptedException
+import java.lang.Runtime as Runtime
+import java.lang.Thread as Thread
+import java.net.ServerSocket as ServerSocket
+import java.util.concurrent.CountDownLatch as CountDownLatch
+
+func linger() -> Unit:
+    try:
+        Thread.sleep(1500)
+    catch problem: InterruptedException:
+        return
+
+func wait_forever() -> Unit:
+    try:
+        CountDownLatch(1).await()
+    catch problem: InterruptedException:
+        return
+
+let socket = ServerSocket(0)
+let runtime = Runtime.getRuntime()
+if runtime != null:
+    runtime.addShutdownHook(Thread(fn() => linger()))
+print("PORT=" + socket.getLocalPort())
+wait_forever()
+"""
+
+
+def terminating_run_waits_for_the_program(directory):
+    """A terminated `sprig run` exits only after its program has: a program that
+    takes 1.5 s to shut down still holds its port until then, and the CLI used to
+    exit first and leave it behind. Signals and shutdown hooks are POSIX here."""
+    import socket
+    source = directory / "slow_exit.spr"
+    source.write_text(SLOW_EXIT, encoding="utf-8")
+    proc = subprocess.Popen([str(SPRIG), "run", str(source)], cwd=directory, text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    port = None
+    for line in proc.stdout:
+        if line.startswith("PORT="):
+            port = int(line.strip().removeprefix("PORT="))
+            break
+    assert port is not None, "the program never reported its port"
+    proc.terminate()
+    proc.wait(timeout=30)
+    proc.stdout.close()
+    with socket.socket() as probe:
+        assert probe.connect_ex(("127.0.0.1", port)) != 0, "the program outlived the terminated CLI"
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="sprig-cli-contract-") as temp:
         directory = Path(temp)
@@ -177,6 +226,8 @@ def main():
             and printed_uncalled_main_run.stderr == "", (printed_uncalled_main_run.returncode,
                                                            printed_uncalled_main_run.stdout,
                                                            printed_uncalled_main_run.stderr)
+        if os.name != "nt":
+            terminating_run_waits_for_the_program(directory)
         print(f"CLI contract: {len(invalid)} rejected-option cases and end-to-end contracts passed")
 
 
