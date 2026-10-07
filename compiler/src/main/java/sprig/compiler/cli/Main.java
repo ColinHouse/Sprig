@@ -149,8 +149,8 @@ public final class Main {
         out.println("  add --jvm GROUP:ARTIFACT:VERSION [--offline] [--json]");
         out.println("  remove NAME | --jvm GROUP:ARTIFACT [--offline] [--json]");
         out.println("  search [TEXT] [--registry R] [--offline] [--json]   packages the registries list");
-        out.println("  publish --registry DIR (--tag T [--rev SHA]|--branch B|--rev SHA) [--git URL] [--subdir DIR] [--version V] [--description TEXT] [--license SPDX] [--owner HANDLE]... [--json]
-  publish --registry DIR --yank VERSION --reason TEXT [--json]   withdraw a published release");
+        out.println("  publish --registry DIR (--tag T [--rev SHA]|--branch B|--rev SHA) [--git URL] [--subdir DIR] [--version V] [--description TEXT] [--license SPDX] [--owner HANDLE]... [--json]");
+        out.println("  publish --registry DIR --yank VERSION --reason TEXT [--json]   withdraw a published release");
         out.println("  project [--json]                            project discovery and manifest metadata");
         out.println("  deps [--json]                               declared Sprig/JVM dependencies");
         out.println("  upgrade [--check]                           upgrade a managed SDK or inspect available updates");
