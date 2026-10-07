@@ -270,7 +270,7 @@ public final class TypeRefResolver {
                         module.uri, argSpan));
                 return null;
             }
-            if (!representableJavaArgument(arg)) {
+            if (!namesTypeParameter(argRef, typeParams) && !representableJavaArgument(arg)) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
                         "Type '" + arg.display() + "' has no JVM representation as a Java type argument",
                         module.uri, argSpan)
@@ -309,6 +309,22 @@ public final class TypeRefResolver {
             }
         }
         return true;
+    }
+
+    /**
+     * Whether a Java type argument is written as a type parameter of the
+     * enclosing generic declaration, such as the {@code T} of
+     * {@code let inner: HostTask[T]} in {@code @std/concurrent}'s {@code Task[T]}.
+     * When the declaration is used ({@code Task[Outcome]}), any Sprig type may
+     * stand in for it: the Java type stays inside the generic Sprig code, which
+     * was checked against the parameter (#145). A Java type argument written as
+     * a concrete type keeps the representability rule, because Java member
+     * calls on it do not know Sprig subtyping.
+     */
+    private static boolean namesTypeParameter(TypeRef argRef, Map<String, Type> typeParams) {
+        return argRef != null && argRef.functionResult == null && argRef.parts.size() == 1
+                && argRef.args.isEmpty() && !argRef.nullable
+                && typeParams != null && typeParams.containsKey(argRef.parts.get(0));
     }
 
     private boolean representableJavaArgument(Type arg) {
