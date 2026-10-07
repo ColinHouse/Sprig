@@ -34,10 +34,29 @@ public class SprigList<T> implements Iterable<T> {
     }
 
     public boolean contains(Object value) {
-        return items.contains(value);
+        return indexOf(value) >= 0;
     }
 
+    /**
+     * The first position whose element is {@code ==} the value, or -1; {@code
+     * contains}, {@code remove} and {@code in} search the same way. A Float or
+     * Float32 value compares with IEEE equality, as {@code ==} does: NaN is
+     * found nowhere and -0.0 finds 0.0, where {@code Double.equals} would find
+     * a NaN and tell the zeros apart. Every other value compares with equals,
+     * which is what {@code ==} does for it, lists and variants holding floats
+     * included.
+     */
     public long indexOf(Object value) {
+        if (value instanceof Double || value instanceof Float) {
+            int index = 0;
+            for (T item : items) {
+                if (SprigRuntime.equalsValue(value, item)) {
+                    return index;
+                }
+                index++;
+            }
+            return -1;
+        }
         return items.indexOf(value);
     }
 

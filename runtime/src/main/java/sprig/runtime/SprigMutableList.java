@@ -38,8 +38,14 @@ public class SprigMutableList<T> extends SprigList<T> {
         return items.remove(intIndex(index));
     }
 
+    /** Removes the first element {@code ==} the value, found as {@link #indexOf} finds it. */
     public boolean remove(Object value) {
-        return items.remove(value);
+        long index = indexOf(value);
+        if (index < 0) {
+            return false;
+        }
+        items.remove((int) index);
+        return true;
     }
 
     public void clear() {

@@ -129,12 +129,19 @@ isFinite` expose special-value classification. Float printing uses Java's
 round-trip decimal formatting; it does not round away `0.1 + 0.2` error.
 
 `Map`/`MutableMap` reject `Float` and `Float32` keys because Java hashing and
-IEEE equality disagree for NaN and signed zero. Distinct lists and variant
-values compare their floating elements/fields with Sprig equality; structural
-equality currently short-circuits on object identity, so a list containing
-NaN compares equal to itself. Do not use a container containing floats as a
-map key until a dedicated key-equality rule is specified. JVM collection
-objects imported directly are outside this guarantee.
+IEEE equality disagree for NaN and signed zero. A `Set` from `@std/sets.spr`
+and `lists.distinct` keep their items as map keys, so they reject `Float` and
+`Float32` items the same way. Distinct lists and variant values compare their
+floating elements/fields with Sprig equality; structural equality currently
+short-circuits on object identity, so a list containing NaN compares equal to
+itself. List membership and search use the same equality as `==`: `x in xs`,
+`xs.contains(x)`, `xs.indexOf(x)` and `MutableList.remove(x)` find the first
+element that is `==` the value. A `Float` or `Float32` NaN is never found,
+`-0.0` finds `0.0` and `0.0` finds `-0.0`, and a list or variant holding
+floats is found exactly where `==` calls it equal. Do not use a container
+containing floats as a map key until a dedicated key-equality rule is
+specified. JVM collection objects imported directly are outside this
+guarantee.
 
 Floating expressions are emitted in source order. No constant folding or
 fast-math optimizer is present. Exact bitwise reproducibility of every
