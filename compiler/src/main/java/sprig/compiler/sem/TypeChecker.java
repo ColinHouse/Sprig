@@ -2897,6 +2897,8 @@ public final class TypeChecker {
         final Map<Expr, String> units = new java.util.IdentityHashMap<>();
         /** For each argument, where the inferred types its parameter mentions came from. */
         final Map<Expr, String> notes = new java.util.IdentityHashMap<>();
+        /** For each argument, why a nullable type it gave a type parameter was refused. */
+        final Map<Expr, String> nullableNotes = new java.util.IdentityHashMap<>();
         TypeArgumentInference.Solution solution;
         List<Type> arguments;
         boolean valid;
@@ -2964,6 +2966,10 @@ public final class TypeChecker {
             if (note != null) {
                 inference.notes.put(slot.value(), note);
             }
+            String refused = refusedNullable(decl, slot, solution);
+            if (refused != null) {
+                inference.nullableNotes.put(slot.value(), refused);
+            }
         }
         if (solution.complete()) {
             List<Type> checked = typeResolver.checkInferredArguments(module, decl, solution.arguments, span);
@@ -3002,6 +3008,28 @@ public final class TypeChecker {
             parts.add(parameter + " is " + spell(solution.arguments.get(i)) + ", from " + source);
         }
         return parts.isEmpty() ? null : String.join("; ", parts) + ".";
+    }
+
+    /**
+     * Why an argument's nullable type did not become the type argument: the
+     * declaration does not accept a nullable type for that parameter (a
+     * written [X?] is rejected too, for example because the parameter reaches
+     * a Java type argument), so the parameter is the non-null type and the
+     * argument then mismatches. The note says so and how to keep the value
+     * non-null, instead of leaving only "expected fn() -> Int".
+     */
+    private String refusedNullable(Decl decl, GenericSlot slot, TypeArgumentInference.Solution solution) {
+        List<String> parts = new ArrayList<>();
+        for (var entry : solution.refusedNullable.entrySet()) {
+            if (!mentions(slot.declared(), decl, entry.getKey())) {
+                continue;
+            }
+            String written = spell(entry.getValue());
+            parts.add(entry.getKey() + " cannot be " + written + " here: a written [" + written
+                    + "] is rejected as well.");
+        }
+        return parts.isEmpty() ? null : String.join(" ", parts)
+                + " Return a non-null value instead, for example a variant such as Found/Missing, or a List.";
     }
 
     /** Whether a declared parameter or field type names the declaration's type parameter. */
@@ -3314,6 +3342,7 @@ public final class TypeChecker {
             }
             return value.type;
         }
+        int start = diagnostics.all().size();
         Type actual = known != null ? known : checkExpr(value, expected);
         int before = diagnostics.all().size();
         requireAssignable(expected, actual, value.span, Codes.TYPE_MISMATCH, what);
@@ -3323,6 +3352,18 @@ public final class TypeChecker {
             for (int i = before; i < all.size(); i++) {
                 Diagnostic mismatch = all.get(i);
                 mismatch.withHint(mismatch.hint == null ? note : mismatch.hint + " " + note);
+            }
+        }
+        // A refused nullable type explains the lambda's own mismatch too, which
+        // checking the argument reports before the argument mismatch.
+        String refused = inference == null ? null : inference.nullableNotes.get(value);
+        if (refused != null) {
+            List<Diagnostic> all = diagnostics.all();
+            for (int i = start; i < all.size(); i++) {
+                Diagnostic mismatch = all.get(i);
+                if (Codes.TYPE_MISMATCH.equals(mismatch.code) || Codes.TYPE_NULLABLE.equals(mismatch.code)) {
+                    mismatch.withHint(mismatch.hint == null ? refused : mismatch.hint + " " + refused);
+                }
             }
         }
         return actual;
