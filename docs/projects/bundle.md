@@ -58,8 +58,10 @@ program's status. Standard output and error are UTF-8.
    under the user's cache directory (`$XDG_CACHE_HOME` or `~/.cache/sprig/bundles/`,
    `%LOCALAPPDATA%\sprig\bundles\` on Windows), keyed by the bundle's location,
    so copies of a bundle do not share one; without a writable cache the program
-   runs without an archive. JVM logging is off in that mode, so a stale archive
-   is rebuilt silently. A bundle built by a JDK older than 19 gets launchers
+   runs without an archive. In that mode the JVM reports only errors, on
+   standard error, and none about class-data sharing, so a missing or stale
+   archive is rebuilt silently (JDK 26 would otherwise report the archive a first
+   run creates as an error). A bundle built by a JDK older than 19 gets launchers
    without these flags (the `--json` report shows `launcherCdsArchive`).
 
 `runtime/legal/` holds the notices of every module in the image. OpenJDK is

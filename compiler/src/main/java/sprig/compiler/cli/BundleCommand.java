@@ -227,7 +227,9 @@ final class BundleCommand {
         }
         boolean cds = feature >= 19;
         // -XX:+AutoCreateSharedArchive exists since JDK 19; an older runtime image
-        // rejects the option, so the launchers then run without an archive.
+        // rejects the option, so the launchers then run without an archive. The
+        // launchers keep JVM errors on stderr but not class-data-sharing ones:
+        // JDK 26 reports the archive a first run is about to create as an error.
         result.launcherCdsArchive = cds;
         List<String> jlinkCommand = new ArrayList<>(jlinkBase);
         if (cds) jlinkCommand.add("--generate-cds-archive");
@@ -310,7 +312,7 @@ final class BundleCommand {
                 + "CACHE=\"${XDG_CACHE_HOME:-${HOME:-}/.cache}/sprig/bundles/" + name + "-" + stamp + "/$KEY\"\n"
                 + "if [ -n \"${HOME:-}${XDG_CACHE_HOME:-}\" ] && mkdir -p \"$CACHE\" 2>/dev/null; then\n"
                 + "  exec \"$HERE/runtime/bin/java\" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \\\n"
-                + "    -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=$CACHE/app.jsa\" -Xshare:auto -Xlog:disable -Xlog:all=error:stderr \\\n"
+                + "    -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=$CACHE/app.jsa\" -Xshare:auto -Xlog:disable '-Xlog:all=error,cds*=off:stderr' \\\n"
                 + "    -cp \"$HERE/lib/*\" '" + mainClass + "' \"$@\"\n"
                 + "fi\n"
                 + plain;
@@ -330,7 +332,7 @@ final class BundleCommand {
                 + "set \"CACHE=%LOCALAPPDATA%\\sprig\\bundles\\" + name + "-" + stamp + "\\%KEY%\"\r\n"
                 + "if not \"%LOCALAPPDATA%\"==\"\" if not exist \"%CACHE%\" mkdir \"%CACHE%\" >nul 2>&1\r\n"
                 + "if exist \"%CACHE%\" (\r\n"
-                + "  \"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%CACHE%\\app.jsa\" -Xshare:auto -Xlog:disable -Xlog:all=error:stderr -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n"
+                + "  \"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%CACHE%\\app.jsa\" -Xshare:auto -Xlog:disable \"-Xlog:all=error,cds*=off:stderr\" -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n"
                 + ") else (\r\n"
                 + "  " + plain
                 + ")\r\n"
