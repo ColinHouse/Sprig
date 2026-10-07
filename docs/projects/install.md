@@ -91,3 +91,36 @@ the C1 JIT alone finishes it sooner: in local measurements on JDK 17 and 25,
 whole editor session and keeps tiered compilation. Programs started by
 `sprig run` and `sprig test` run in their own JVM with the JDK's defaults.
 JVMs without this HotSpot option, such as OpenJ9, ignore it.
+
+## Runtime classes and compile caches
+
+Every program's classes directory holds the Sprig runtime classes
+(`sprig/runtime/...`) next to the program's own. They are compiled once, not
+once per program: `scripts/build.py` compiles `runtime/src/main/java` into
+`build/runtime-classes`, and the SDK ships that directory as
+`lib/runtime-classes`. Its `sprig-runtime.properties` records the SHA-256 of
+the runtime sources, the Java version that compiled them and the javac options.
+When `run`, `test` or `build` call javac, javac compiles only the program's
+generated Java, with the runtime classes on its classpath, and the runtime
+classes are then copied into the output. The output is the same, file for file
+and byte for byte, as when the runtime sources were compiled with each program.
+
+javac output can differ between Java versions, so the shipped classes serve
+only the Java version that compiled them. With any other JDK, the first command
+that needs javac compiles the runtime once into `~/.sprig/cache/runtime`, keyed
+by the sources' digest, the Java version and the options, and later commands
+reuse it; the 16 most recently used entries are kept. If that directory cannot
+be written, the runtime sources are compiled together with the program. In a
+source checkout the digest is computed from `runtime/src/main/java` on each
+command, so an edited runtime is never run from stale classes: it is compiled
+into `~/.sprig/cache/runtime` until `scripts/build.py` refreshes
+`build/runtime-classes`. An SDK's stamp is trusted instead, because the SDK
+ships the sources and their classes from one build; editing the runtime sources
+inside an installed SDK does not change what `run`, `test` and `build` use.
+
+`run` and `test` also keep each program's compiled classes under
+`~/.sprig/cache/javac` (the newest 64), keyed by the generated Java, the
+compiler and Java versions, the runtime digest and the classpath. `run
+--no-cache` skips that cache for one run and `SPRIG_JAVAC_CACHE=off` turns it
+off. `sprig doctor --json` reports `runtimeClasses`: the shipped directory when
+it serves the running JDK, otherwise `null`.

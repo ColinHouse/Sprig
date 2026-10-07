@@ -730,6 +730,7 @@ public final class Main {
         data.put("javacAvailable", javax.tools.ToolProvider.getSystemJavaCompiler() != null);
         data.put("compilerHome", System.getProperty("sprig.home", "unknown"));
         data.put("runtimeSource", runtimeSourceDir() == null ? null : runtimeSourceDir().toString());
+        data.put("runtimeClasses", shippedRuntimeClasses());
         data.put("antlrAvailable", Main.class.getClassLoader().getResource("org/antlr/v4/runtime/Parser.class") != null);
         data.put("classpath", JvmClasspath.entries().stream().map(Path::toString).toList());
         data.put("compilerClasspath", System.getProperty("java.class.path"));
@@ -908,9 +909,13 @@ public final class Main {
             lineMaps.put(path, output.lineMaps.get(file));
             uris.put(path, output.uris.get(file));
         }
-        List<Path> sources = new ArrayList<>(listJavaFiles(javaDir));
-        sources.addAll(runtimeSources(diagnostics));
-        boolean compiled = JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
+        List<Path> sources = listJavaFiles(javaDir);
+        // The runtime classes are compiled once per SDK and copied into classes/.
+        RuntimeClasses runtime = RuntimeClasses.locate();
+        if (runtime == null) RuntimeClasses.reportMissing(diagnostics);
+        boolean compiled = runtime == null
+                ? JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris)
+                : runtime.compileProgram(classesDir, sources, diagnostics, lineMaps, uris);
         if (!compiled || diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
             return 1;
@@ -1003,19 +1008,21 @@ public final class Main {
                     lineMaps.put(path, output.lineMaps.get(file));
                     uris.put(path, output.uris.get(file));
                 }
-                List<Path> runtime = runtimeSources(diagnostics);
+                RuntimeClasses runtime = RuntimeClasses.locate();
+                if (runtime == null) RuntimeClasses.reportMissing(diagnostics);
                 // The same program compiled before runs from its cached classes;
                 // javac is the larger part of a run's start-up.
-                Path cacheRoot = options.noCache ? null : JavacCache.root();
-                String cacheKey = cacheRoot == null ? null : JavacCache.key(output, runtime);
+                Path cacheRoot = options.noCache || runtime == null ? null : JavacCache.root();
+                String cacheKey = cacheRoot == null ? null : JavacCache.key(output, runtime.digest());
                 Path cached = JavacCache.lookup(cacheRoot, cacheKey);
                 if (cached != null && !options.keep) {
                     classesDir = cached;
                 } else {
                     writeSources(output, javaDir);
-                    List<Path> sources = new ArrayList<>(listJavaFiles(javaDir));
-                    sources.addAll(runtime);
-                    boolean compiled = JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
+                    List<Path> sources = listJavaFiles(javaDir);
+                    boolean compiled = runtime == null
+                            ? JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris)
+                            : runtime.compileProgram(classesDir, sources, diagnostics, lineMaps, uris);
                     if (!compiled || diagnostics.hasErrors()) {
                         report(diagnostics, options.json, "run", 1, null);
                         return 1;
@@ -1852,18 +1859,18 @@ public final class Main {
         }
     }
 
-    static List<Path> runtimeSources(Diagnostics diagnostics) throws IOException {
-        Path dir = runtimeSourceDir();
-        if (dir == null) {
-            diagnostics.error(Codes.JVM_INTERNAL, Phase.JVM,
-                    "Sprig runtime sources not found; set -Dsprig.home or build via scripts/build.sh",
-                    null, null);
-            return List.of();
+    /** The precompiled runtime classes shipped with this compiler that serve this JVM, or null. */
+    private static String shippedRuntimeClasses() {
+        try {
+            RuntimeClasses runtime = RuntimeClasses.locate();
+            Path shipped = runtime == null ? null : runtime.shippedClasses();
+            return shipped == null ? null : shipped.toString();
+        } catch (IOException e) {
+            return null;
         }
-        return listJavaFiles(dir);
     }
 
-    private static Path runtimeSourceDir() {
+    static Path runtimeSourceDir() {
         List<Path> candidates = new ArrayList<>();
         String home = System.getProperty("sprig.home");
         if (home != null) {
