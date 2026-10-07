@@ -5,3 +5,5 @@ queued task cancelled: true
 queued siblings never ran: true 0
 dropped task cancelled: true
 10
+the first failure, not the cancellation: true
+the body's own error is kept: true

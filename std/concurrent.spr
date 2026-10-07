@@ -106,8 +106,7 @@ generic T:
             host.join()
             return result
         catch problem: Error:
-            host.abandon()
-            throw problem
+            throw host.failedWith(problem)
 
 # Starts work on a virtual thread owned by the scope. Ten thousand blocking
 # tasks cost what ten cost; use a pool only to bound CPU-bound work.
@@ -126,8 +125,7 @@ func scope_run(body: fn(Scope) -> Unit throws Error) -> Unit throws Error:
         body(current)
         host.join()
     catch problem: Error:
-        host.abandon()
-        throw problem
+        throw host.failedWith(problem)
 
 # spawn() for work that only has an effect, such as writing a file or sending
 # on a channel. The job belongs to the scope like any task.

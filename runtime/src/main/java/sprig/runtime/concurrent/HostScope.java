@@ -152,6 +152,22 @@ public final class HostScope {
         virtual.shutdown();
     }
 
+    /**
+     * After the body failed with {@code bodyError}: abandons the scope and
+     * returns the error to report. A body that failed only because it awaited
+     * a task that a sibling's failure cancelled reports that first failure,
+     * not the cancellation (#205); any other error of the body is its own.
+     */
+    @NonNull
+    public SprigError failedWith(SprigError bodyError) {
+        abandon();
+        Throwable first = failure.get();
+        if (first != null && bodyError.getCause() instanceof CancellationException) {
+            return HostTask.failure(first);
+        }
+        return bodyError;
+    }
+
     public boolean isOpen() {
         return !closed;
     }
