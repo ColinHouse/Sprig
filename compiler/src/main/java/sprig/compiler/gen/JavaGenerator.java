@@ -947,6 +947,13 @@ public final class JavaGenerator {
                     && !field.substitution.isEmpty() && containsTypeParameter(field.fieldDecl.type)) {
                 oldValue = unboxGeneric(oldValue, field.type);
             }
+            if (field.kind == ResolvedField.Kind.JAVA_FIELD && assign.op.equals("=")
+                    && (field.jvm.field.getType() == int.class || field.jvm.field.getType() == Integer.class)
+                    && assign.value.type == NativeType.INT) {
+                // An Int written to an int/Integer Java field: checked narrowing.
+                w.line(lhs + " = sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(assign.value) + ");");
+                return;
+            }
             w.line(lhs + " = " + assignmentValue(field.type, oldValue, assign) + ";");
             return;
         }
@@ -2138,6 +2145,12 @@ public final class JavaGenerator {
         }
         params.append(')');
         String invoke = "(" + emitExpr(arg) + ").apply(" + names + ")";
+        FunctionType expected = sprig.compiler.sem.JavaTypes.javaCallable(generic, raw, member.bindings);
+        if (expected != null && arg.type != null && arg.type.nonNull() instanceof FunctionType actual
+                && sprig.compiler.sem.TypeChecker.narrowsToInt32(expected.result, actual.result)) {
+            // A Sprig callback returning Int for an int/Integer slot: checked narrowing.
+            invoke = "sprig.runtime.NumericOps.toInt32Exact(" + invoke + ")";
+        }
         String body = sam.getReturnType() == void.class ? "{ " + invoke + "; }" : "{ return " + invoke + "; }";
         return "(" + params + " -> " + body + ")";
     }
@@ -2190,6 +2203,10 @@ public final class JavaGenerator {
         if (arg instanceof Expr.IntLit && (param == short.class || param == Short.class)) return "((short) " + code + ")";
         if (arg instanceof Expr.IntLit && (param == byte.class || param == Byte.class)) return "((byte) " + code + ")";
         if (arg instanceof Expr.FloatLit && (param == float.class || param == Float.class)) return "((float) " + code + ")";
+        if ((param == int.class || param == Integer.class) && base == NativeType.INT) {
+            // Checked narrowing: fails at run time outside the Int32 range.
+            return "sprig.runtime.NumericOps.toInt32Exact(" + code + ")";
+        }
         if (param == Long.class && base == NativeType.INT32) return "((long) " + code + ")";
         if (param == Double.class && base == NativeType.FLOAT32) return "((double) " + code + ")";
         if ((param == char.class || param == Character.class) && base == NativeType.STRING) {

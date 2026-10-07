@@ -62,8 +62,12 @@ results are adapted to nullable Sprig `String` and `Int32` values without
 losing null. A `char` or `Character` parameter accepts only a single UTF-16
 unit Sprig string literal; an arbitrary `String` is rejected because it may
 be empty or longer. Direct writes to Java fields needing these adapters are
-unsupported; use an explicit Java setter. Narrowing and potentially lossy
-numeric conversions require an explicit Sprig operation.
+unsupported; use an explicit Java setter. An `Int` passed to an
+`int`/`Integer` parameter, constructor argument, varargs element, plain field
+write or callback result is narrowed with a run-time range check, and an exact
+`long` overload is still preferred; every other narrowing or potentially lossy
+numeric conversion (`Float` to `float`, `Int` to `short`) requires an explicit
+Sprig operation. See `docs/language/numeric-semantics.md`.
 
 ## Arrays
 
@@ -85,7 +89,9 @@ A parameter whose type is a public functional interface (one abstract method,
 `Object`'s methods excluded, no method type parameters, at most three
 parameters) accepts a Sprig function value (`java-callable-adapter`). The
 expected `fn(...) -> R` is derived from the interface method with the ordinary
-mapping: parameters must match exactly, `void` accepts any result, a wildcard
+mapping: parameters must match exactly, `void` accepts any result, an
+`int`/`Integer` result also takes a lambda returning `Int` (narrowed with a
+run-time range check, as a parameter is), a wildcard
 inside the interface's type arguments reads as its bound (a lambda implementing
 `Consumer<String>` satisfies `Consumer<? super String>`), and type variables are
 bound only through the receiver or explicit `method[Type]` arguments. A value

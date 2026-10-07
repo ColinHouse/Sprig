@@ -51,7 +51,7 @@ In the other direction, an argument you pass to Java can never be `null`, even w
 
 A few things to watch for:
 
-- **Numbers are never narrowed for you.** An integer literal that fits can be passed straight to an `int`, `short` or `byte` parameter. A variable is never narrowed silently, though. To pass an `Int` variable to an `int` parameter, convert it with `toInt32Exact()` first. For `short` and `byte` parameters, only literals work for now, because there's no conversion to those types yet.
+- **`Int` narrows to `int` with a check.** An `Int` passed where Java wants an `int` or `Integer` (a parameter, a constructor argument, a varargs element, a plain field assignment, or the result of a callback such as a comparator) is converted with a range check that fails at run time if the value doesn't fit. An exact `long` overload is still preferred, so `Math.max(a, b)` keeps using the `long` version. An integer literal that fits can also go to a `short` or `byte` parameter, but variables don't narrow to those, and `Float` never narrows to `float`, because that loses precision rather than range; use `toFloat32Exact()`.
 - **A `char` parameter takes a one-character literal.** `char` and `Character` parameters accept only a string literal of exactly one UTF-16 unit. `"a"` works, but `"ab"` doesn't, and neither does `"😀"`, which one Java `char` can't hold. Sprig's own strings count positions in Unicode code points instead (see `sprig help strings`).
 
 ## Catching Java exceptions
@@ -132,7 +132,7 @@ false
 a/b/c
 ```
 
-- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32`, which `a.compareTo(b)` does. A lambda that returns an `Int` is reported with the conversion to write.
+- Parameter types have to match exactly; a `void` method accepts a lambda with any result. `Comparator.compare` returns `int`, so the lambda returns `Int32` (`a.compareTo(b)` does) or an `Int`, which is narrowed with a run-time range check like any other `Int` passed to an `int`.
 - Wildcards inside the interface's type arguments are fine: a lambda implementing `Consumer<String>` is a `Consumer<? super String>`.
 - Type variables are never inferred. `names.forEach` works because `ArrayList[String]` fixes `E`; `stream.map(fn(...) => ...)` needs `stream.map[String](...)` because `R` is the method's own.
 - A function value whose type says `throws Error` can't cross into Java, because Java can't see the clause (`SPR-TYPE-CALLABLE-THROWS`). Handle the error inside a named function and pass a lambda that calls it.

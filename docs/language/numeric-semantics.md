@@ -119,9 +119,19 @@ Java `long`/`Long` maps to `Int`, `int`/`Integer` (also short/byte) to
 `Int32`, `double`/`Double` to `Float`, and `float`/`Float` to `Float32`.
 `BigInteger` and `BigDecimal` remain Java types until explicitly wrapped with
 `BigInt.fromJava` / `Decimal.fromJava`; `.toJava()` unwraps. A literal may
-match an `int`/`float` Java formal only when in range and exactly representable
-under the literal rule. A *variable* cannot silently narrow into a Java
-method formal. Primitive Java results are non-null; reference and boxed
+match an `int`/`short`/`byte`/`float` Java formal only when in range and
+exactly representable under the literal rule. An `Int` *variable* narrows into
+an `int`/`Integer` formal with a run-time range check
+(`NumericOps.toInt32Exact`, reported as `SPR-RUNTIME-EXCEPTION` outside the
+`Int32` range): this covers method and constructor parameters, varargs
+elements, a plain `=` write to a Java field and the result of a Sprig callback
+handed to a Java functional interface such as `Comparator`. Overload
+resolution prefers an exact or widening formal, so `max(long, long)` still
+wins over `max(int, int)` for `Int` arguments and `remove(Object)` is chosen
+over `remove(int)`, as Java does for a `long`; two candidates that both need
+narrowing are ambiguous. `Int` never narrows to `short`/`byte`, and `Float`
+never narrows to `float`, which would lose precision rather than range; those
+conversions stay explicit. Primitive Java results are non-null; reference and boxed
 primitive fields/results are nullable in Sprig and require a null check before
 dereference. Java parameter annotations are not yet interpreted. JVM calls
 are still direct Java calls: Java library arithmetic, unchecked exceptions,

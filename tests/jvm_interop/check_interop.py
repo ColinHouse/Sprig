@@ -141,6 +141,25 @@ public class Plain {
     public Plain() {}
 }
 ''',
+    "Narrow.java": '''package audit;
+public class Narrow {
+    public int count;
+    public Integer boxed;
+    public long wide;
+    public Narrow(int start) { this.count = start; }
+    public static String width(int value) { return "int"; }
+    public static String width(long value) { return "long"; }
+    public static String only(int value) { return "int:" + value; }
+    public static String boxedOnly(Integer value) { return "Integer:" + value; }
+    public static String either(int value) { return "int"; }
+    public static String either(Object value) { return "object"; }
+    public static String pair(int value) { return "int"; }
+    public static String pair(Integer value) { return "Integer"; }
+    public static int total(int... values) { int sum = 0; for (int v : values) sum += v; return sum; }
+    public static int compared(java.util.Comparator<String> comparator) { return comparator.compare("a", "b"); }
+    public static int applied(java.util.function.ToIntFunction<String> f) { return f.applyAsInt("abc"); }
+}
+''',
     "Bounded.java": '''package audit;
 public class Bounded<T extends Number> {
     public Bounded() {}
@@ -533,6 +552,81 @@ print(Interop.accepted(fn(value: String) => fail(value)))
         verify("check-java-callable-throws-rejected",
                throwing.returncode == 1 and throwing_json and throwing_json["code"] == "SPR-TYPE-CALLABLE-THROWS",
                f"exit={throwing.returncode} {throwing.stdout}{throwing.stderr}")
+
+        # ---------------------------------------------- Int to int narrowing
+        _, narrow_run = run_file("narrow.spr", '''import audit.Narrow as Narrow
+let n: Int = 7
+print(Narrow.width(n))
+print(Narrow.only(n))
+print(Narrow.boxedOnly(n))
+print(Narrow.either(n))
+print(Narrow.total(n, n))
+let narrow = Narrow(n)
+print(narrow.count)
+narrow.count = n + 1
+print(narrow.count)
+narrow.boxed = n
+let boxed = narrow.boxed
+if boxed != null:
+    print(boxed)
+narrow.wide = n
+print(narrow.wide)
+print(Narrow.compared(fn(a: String, b: String) => n))
+print(Narrow.applied(fn(text: String) => n + 1))
+''')
+        verify("run-int-narrowing",
+               narrow_run.returncode == 0
+               and narrow_run.stdout == "long\nint:7\nInteger:7\nobject\n14\n7\n8\n7\n7\n7\n8\n",
+               f"exit={narrow_run.returncode} stdout={narrow_run.stdout!r} stderr={narrow_run.stderr!r}")
+        narrow_java = (directory / "narrow-java")
+        narrow_build = call("build", directory / "narrow.spr", "--classpath", cp, "--emit-java-only",
+                            "--out", narrow_java)
+        narrow_sources = "".join(p.read_text(encoding="utf-8") for p in narrow_java.rglob("*.java"))
+        verify("build-int-narrowing-emits-checked-conversion",
+               narrow_build.returncode == 0
+               and narrow_sources.count("sprig.runtime.NumericOps.toInt32Exact(") >= 8,
+               f"exit={narrow_build.returncode} count={narrow_sources.count('toInt32Exact')} {narrow_build.stderr}")
+        for name, source, expected in (
+            ("argument", "let big: Int = 4294967296\nprint(Narrow.only(big))\n", "outside Int32 range"),
+            ("field", "let big: Int = 4294967296\nlet narrow = Narrow(1)\nnarrow.count = big\n", "outside Int32 range"),
+            ("callback", "let big: Int = 4294967296\nprint(Narrow.compared(fn(a: String, b: String) => big))\n",
+             "outside Int32 range"),
+        ):
+            _, overflow = run_file(f"narrow-{name}.spr", "import audit.Narrow as Narrow\n" + source)
+            verify(f"run-int-narrowing-{name}-range-failure",
+                   overflow.returncode != 0 and expected in overflow.stdout + overflow.stderr
+                   and "SPR-RUNTIME-EXCEPTION" in overflow.stdout + overflow.stderr,
+                   f"exit={overflow.returncode} {overflow.stdout}{overflow.stderr}")
+        _, float_narrow = check_file("narrow-float.spr", '''import audit.Narrow as Narrow
+import java.lang.Math as Math
+let f: Float = 0.5
+print(Math.abs(f))
+print(Narrow.width(f))
+''', "--json")
+        float_diag = diagnostic(float_narrow)
+        verify("check-float-never-narrows",
+               float_narrow.returncode == 1 and float_diag and float_diag["code"] == "SPR-JVM-MEMBER"
+               and float_diag["range"]["start"]["line"] == 4
+               and len(body(float_narrow)["diagnostics"]) == 1,
+               f"exit={float_narrow.returncode} {float_narrow.stdout}{float_narrow.stderr}")
+        _, pair = check_file("narrow-pair.spr", '''import audit.Narrow as Narrow
+let n: Int = 7
+print(Narrow.pair(n))
+''', "--json")
+        pair_diag = diagnostic(pair)
+        verify("check-int-narrowing-ambiguity",
+               pair.returncode == 1 and pair_diag and pair_diag["code"] == "SPR-JVM-AMBIGUOUS",
+               f"exit={pair.returncode} {pair.stdout}{pair.stderr}")
+        _, compound = check_file("narrow-compound.spr", '''import audit.Narrow as Narrow
+let n: Int = 7
+let narrow = Narrow(1)
+narrow.count += n
+''', "--json")
+        compound_diag = diagnostic(compound)
+        verify("check-int-narrowing-compound-rejected",
+               compound.returncode == 1 and compound_diag
+               and compound_diag["code"] in ("SPR-TYPE-ASSIGN", "SPR-NUM-CONVERSION"),
+               f"exit={compound.returncode} {compound.stdout}{compound.stderr}")
 
         # ------------------------------------------------- generic behavior
         _, box_run = run_file("box.spr", '''import audit.Box as Box

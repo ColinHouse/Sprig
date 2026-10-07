@@ -86,7 +86,6 @@ NEGATIVE = {
     "bigint_to_int": ("let x: Int = BigInt.fromInt(1)\n", "SPR-NUM-CONVERSION"),
     "inexact_int_literal_to_float": ("let x: Float = 9007199254740993\n", "SPR-NUM-RANGE"),
     "inexact_int_literal_to_float32": ("let x: Float32 = 16777217\n", "SPR-NUM-RANGE"),
-    "jvm_long_to_int": ("import java.lang.Integer as JInteger\nlet x: Int = 4294967296\nprint(JInteger.valueOf(x))\n", "SPR-JVM-MEMBER"),
     "jvm_double_to_float": ("import java.lang.Float as JFloat\nlet x: Float = 0.1\nprint(JFloat.valueOf(x))\n", "SPR-JVM-MEMBER"),
     "float_map_key": ("let m: Map[Float, Int] = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
     "nullable_float_map_key": ("let m: Map[Float?, Int] = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
@@ -116,6 +115,7 @@ RUNTIME_ERRORS = {
     "out_of_range_float_to_int": ("print((1e20).toIntTrunc())\n", "outside Int range"),
     "bigint_to_int_range": ("print(BigInt.parse(\"9223372036854775808\").toIntExact())\n", "outside Int range"),
     "decimal_div_zero": ("print(Decimal.parse(\"1\").divide(Decimal.parse(\"0\"), 2, \"HALF_EVEN\"))\n", "zero"),
+    "jvm_long_to_int": ("import java.lang.Integer as JInteger\nlet x: Int = 4294967296\nprint(JInteger.valueOf(x))\n", "outside Int32 range"),
 }
 
 POSITIVE = {
@@ -129,6 +129,7 @@ POSITIVE = {
     "mixed_float_width": ("let a: Float32 = 0.5\nlet b: Float = 0.25\nprint(a + b)\n", "0.75"),
     "signed_zero": ("print(-0.0 == 0.0)\nprint(1.0 / -0.0)\n", "true\n-Infinity"),
     "list_literal_context": ("let xs: List[Float] = [1, 2]\nprint(xs[0] + xs[1])\n", "3.0"),
+    "jvm_int_narrowing": ("import java.lang.Integer as JInteger\nlet x: Int = 42\nprint(JInteger.valueOf(x))\n", "42"),
 }
 
 with tempfile.TemporaryDirectory(prefix="sprig-numeric-") as work:
