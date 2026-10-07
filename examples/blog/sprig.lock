@@ -1,0 +1,4 @@
+lock-version = 5
+language = "0.8"
+compiler = "0.7.1-beta.1"
+manifest-sha256 = "17e6cb9bf5b7f2604afd238848b8385b8b7aeacf2eaa7a5bb1582c627d70eb00"

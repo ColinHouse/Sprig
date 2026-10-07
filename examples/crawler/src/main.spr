@@ -1,0 +1,15 @@
+# Concurrent crawler: `sprig run -- [pages_dir] [start_page]`.
+import "@std/process.spr" as process
+import "./crawl.spr" as crawl
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var root = "pages"
+    var start = "index.html"
+    if args.size() > 0:
+        root = args[0]
+    if args.size() > 1:
+        start = args[1]
+    print(crawl.render(crawl.crawl(root, start)))
+
+main()
