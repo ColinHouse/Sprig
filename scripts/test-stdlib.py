@@ -172,6 +172,12 @@ def main():
         # rethrows: a throwing lambda makes the helper call throw; the first
         # bad value ends the try block
         '850', '2', '[100, 300, 450]', '850', '100', 'true', 'caught not a number: x',
+        # max, min: null for an empty list, the order of sorted, the first of equal
+        # items (Decimal 2.50 and 2.5 compare equal, as do 1 and 1.0)
+        '9', '2', 'pear', 'apple', 'true', 'NaN', '-0.0', '0.0', '-0.0', '2.50', '1',
+        # max_by, min_by: largest and smallest key, the first of equal keys, one
+        # key call per item, null for an empty list, rethrows
+        'cake water', 'cake tea', 'true', '12', '3', '-0.0', '450', 'caught not a number: x',
     ], repr(lists_result.stdout)
     helpers_result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/helpers.spr')],
                                     cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
@@ -186,6 +192,9 @@ def main():
         # text.is_ascii_digit, then text.is_ascii_letter
         'true', 'true', 'false', 'false', 'false', 'false', 'false',
         'true', 'true', 'false', 'false', 'false', 'false',
+        # text.escape_html: the five special characters, & first so nothing is
+        # escaped twice in one call; an entity in the input is escaped again
+        '&lt;a href=&quot;/q?a=1&amp;b=2&quot;&gt;Tom&#39;s&lt;/a&gt;', '&amp;amp;', '[] [東😀 é\t/=;]',
         # test.equal_int, equal_bool and equal_text report both values
         'sum: expected 4, got 5',
         'flag: expected true, got false',
@@ -205,6 +214,11 @@ def main():
         'caught next_int bound must be positive: 0', 'caught choice needs a non-empty list', '36', 'true',
         # regex
         'true', 'false', '66', 'true', '[66, 99]', 'a-b-c', 'host:ada', '[a, b, c]', 'caught invalid pattern',
+        # regex groups: the first match's groups (null for one that took no part,
+        # [] without groups, null for no match), every match's groups, the crawler's hrefs
+        '[ada, host, null]', '[null, b]', '[]', 'true', '[你好, 😀東]', '[[a, 1], [b, 2]]', '0',
+        'caught invalid pattern', 'caught invalid pattern',
+        'link [guide.html]', 'link [https://sprig.dev]', 'link []',
         # dates
         '2026-10-06', 'false', '2026-11-05', '2025-12-31', '87', '-87', '2', '2026 10 6', '10',
         'caught not a date: yesterday',

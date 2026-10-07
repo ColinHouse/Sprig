@@ -73,6 +73,30 @@ try:
 catch problem: Error:
     print("caught invalid pattern")
 
+# regex groups: groups 1..n of the first match, null for no match, null for a
+# group that took no part; then the groups of every match, in order
+print(regex.find_groups("(\\w+)@(\\w+)(\\.org)?", "mail ada@host and bob@lab.org"))
+print(regex.find_groups("(a)|(b)", "xb"))
+print(regex.find_groups("\\d+", "order 66"))
+print(regex.find_groups("(\\d+)", "none") == null)
+print(regex.find_groups("(\\S+) (\\S+)", "你好 😀東"))
+print(regex.find_all_groups("(\\w)=(\\d)", "a=1, b=2, c=x"))
+print(regex.find_all_groups("(\\d)", "none").size())
+try:
+    print(regex.find_groups("(", "x"))
+catch problem: Error:
+    print("caught invalid pattern")
+try:
+    print(regex.find_all_groups("(", "x"))
+catch problem: Error:
+    print("caught invalid pattern")
+# The crawler's hrefs: the group is the target, with no substring arithmetic.
+let page = "<a href=\"guide.html\">Guide</a> <a href=\"https://sprig.dev\">Site</a> <a href=\"\">Empty</a>"
+for groups in regex.find_all_groups("href=\"([^\"]*)\"", page):
+    let target = groups[0]
+    if target != null:
+        print("link [" + target + "]")
+
 # dates
 print(dates.parse("2026-10-06"))
 print(dates.is_valid("2026-02-30"))

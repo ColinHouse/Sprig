@@ -1,0 +1,10 @@
+import "@std/lists.spr" as lists
+
+class Task:
+    let title: String
+    let done: Bool
+
+let tasks: List[Task] = [Task(title="a", done=false)]
+let last = lists.max_by(tasks, fn(t: Task) => t.done)
+if last != null:
+    print(last.title)

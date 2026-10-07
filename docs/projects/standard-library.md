@@ -30,12 +30,12 @@ directory, with or without a project.
 |---|---|
 | `files` | `read_utf8`, `read_lines`, `write_utf8`, `walk`, `exists`, `is_file`, `is_directory`, `list`, `make_directory`, `join`, `normalize`, `file_name`, `parent`, `absolute`, `copy_file`, `move`, `remove_file`, `atomic_write_utf8`, `temp_file` |
 | `process` | `arguments() -> List[String]`, bounds-checked `argument(Int)`, `environment(String) -> String?`; `exit(Int)`, `print_error(String)`; `run(List[String]) -> ProcessResult throws Error`; `read_line() -> String?`, `read_lines() -> List[String]`, `read_all() -> String` |
-| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `strip_prefix`, `strip_suffix`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter`; `fixed(Float, Int) -> String` |
+| `text` | `join`, `lines`, literal `split`, `trim`, `starts_with`, `ends_with`, `strip_prefix`, `strip_suffix`, `pad_left`, `pad_right`, `is_ascii_digit`, `is_ascii_letter`, `escape_html`; `fixed(Float, Int) -> String` |
 | `math` | `abs`, `min`, `max`, `sign`; `clamp`, `floor_div` and `isqrt` declare checked `Error` for invalid arguments |
-| `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by`; `first`, `last`, `take`, `drop`, `reversed`, `distinct`, `index_of`, `enumerate` returning `List[Indexed[T]]`, `zip` returning `List[Pair[A, B]]` |
+| `lists` | `sorted`, `sort_by`, `group_by` returning `List[Group[K, T]]`, `fold`, `find`, `any`, `all`, `count`, `sum`, `sum_by`, `max`, `min`, `max_by`, `min_by`; `first`, `last`, `take`, `drop`, `reversed`, `distinct`, `index_of`, `enumerate` returning `List[Indexed[T]]`, `zip` returning `List[Pair[A, B]]` |
 | `sets` | `Set[T]` with `add`, `has`, `remove`, `size`, `to_list`; `of`, `union`, `intersection`, `difference` |
 | `random` | `seeded(Int)`/`fresh()` giving a `Random` with `next_int(bound)`, `next_float`, `next_bool`; `shuffled`, `choice`, `uuid` |
-| `regex` | `matches`, `find -> String?`, `find_all`, `replace_all`, `split`, all `throws Error` for an invalid pattern |
+| `regex` | `matches`, `find -> String?`, `find_all`, `find_groups -> List[String?]?`, `find_all_groups`, `replace_all`, `split`, all `throws Error` for an invalid pattern |
 | `dates` | ISO dates as text: `today_utc`, `parse`, `is_valid`, `plus_days`, `days_between`, `day_of_week`, `year`, `month`, `day` |
 | `nulls` | `or_else[T](T?, T) -> T`, `require[T](T?, String) -> T throws Error` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int`; `sleep(Int)`, `monotonic_nanos() -> Int` |
@@ -157,6 +157,20 @@ print(text.pad_left("7", 3, "0"))      # 007
 print(text.is_ascii_digit("2024"))     # true
 ```
 
+`text.escape_html(value)` replaces the five characters HTML treats specially:
+`&` by `&amp;`, `<` by `&lt;`, `>` by `&gt;`, `"` by `&quot;` and `'` by
+`&#39;`. Everything else, non-ASCII text included, is unchanged. An entity
+already in the value is escaped again (`&amp;` becomes `&amp;amp;`), so escape
+a piece of text once, where it goes into the page. The result is safe between
+tags and inside a quoted attribute value; a URL, a script or a style needs its
+own checks. Example:
+
+```sprig
+import "@std/text.spr" as text
+print("<h1>" + text.escape_html("Tom & Jerry's <best>") + "</h1>")
+# <h1>Tom &amp; Jerry&#39;s &lt;best&gt;</h1>
+```
+
 `math` covers exact 64-bit integers only; there are no Float or Decimal
 overloads. `abs`, `min`, `max` and `sign` are total functions. `abs` of the
 minimum `Int` overflows and raises the same checked numeric failure as any
@@ -209,6 +223,15 @@ leaves them out, because its arguments determine them.
   `Int` per item. Both use checked arithmetic, so an overflow fails like any
   other `Int` overflow, and both return 0 for an empty list. Other numeric
   types use `fold`.
+- `max[T](items)` and `min[T](items)` require `T: Comparable` and return the
+  largest or smallest item, or `null` for an empty list, so the result has
+  type `T?`. They use the order of `sorted`: for `Float`, NaN is the largest
+  value and `-0.0` is below `0.0`. Of items that compare equal, such as the
+  `Decimal` values 2.50 and 2.5, the first wins.
+- `max_by[T, K](items, key)` and `min_by[T, K](items, key)` require
+  `K: Comparable` and return the item with the largest or smallest key, or
+  `null` for an empty list. Keys use the order of `sort_by`, `key` runs once
+  per item, and of items with equal keys the first wins.
 
 Every helper that takes a callable is `rethrows`: its parameter is written
 `fn(T) -> K throws Error`, and a call throws exactly what the lambda you pass
@@ -238,6 +261,21 @@ for group in lists.group_by(orders, fn(o: Order) => o.category):
 let large = lists.find(orders, fn(o: Order) => o.cents > 400)
 if large != null:
     print(large.item)
+
+let priciest = lists.max_by(orders, fn(o: Order) => o.cents)
+if priciest != null:
+    print(priciest.item)
+```
+
+An empty list has no largest item, so `max` pairs with `nulls.or_else` when
+a default makes sense:
+
+```sprig
+import "@std/lists.spr" as lists
+import "@std/nulls.spr" as nulls
+
+func next_id(ids: List[Int]) -> Int:
+    return nulls.or_else(lists.max(ids), 0) + 1
 ```
 
 ## Command-line programs: input, errors and exit status
@@ -452,6 +490,7 @@ print(seen.has("apple"))                                 # true
 let dice = random.seeded(42)
 print(dice.next_int(6) >= 0)                             # true
 print(regex.find_all("\\d+", "order 66 of 99"))           # [66, 99]
+print(regex.find_groups("(\\w+)@(\\w+)", "to ada@host"))  # [ada, host]
 print(dates.plus_days("2026-10-06", 30))                 # 2026-11-05
 ```
 
@@ -465,6 +504,11 @@ print(dates.plus_days("2026-10-06", 30))                 # 2026-11-05
 - `regex` uses Java's pattern and replacement syntax (`$1` for a group). An
   invalid pattern is an `Error` with Java's message; `find` returns `null` for
   no match and `split` drops a trailing empty piece, as Java does.
+  `find_groups` returns the capture groups 1 to n of the first match,
+  numbered by their opening parentheses, or `null` when nothing matches. A
+  group that took no part in the match, such as the unused side of
+  `(a)|(b)`, is `null`, so the type is `List[String?]?`. `find_all_groups`
+  returns those lists for every match, in order.
 - `dates` has no date type: a date is ISO text such as `2026-10-06`, checked by
   every function. `day_of_week` is 1 for Monday through 7 for Sunday, and
   `days_between` is negative when the end comes first.

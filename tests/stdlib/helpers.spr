@@ -46,6 +46,10 @@ print(text.is_ascii_letter("a_b"))
 print(text.is_ascii_letter("é"))
 print(text.is_ascii_letter("@") or text.is_ascii_letter("[") or text.is_ascii_letter("`") or text.is_ascii_letter("{"))
 
+print(text.escape_html("<a href=\"/q?a=1&b=2\">Tom's</a>"))
+print(text.escape_html("&amp;"))
+print("[" + text.escape_html("") + "] [" + text.escape_html("東😀 é\t/=;") + "]")
+
 test.equal_int(2 + 2, 4, "sum")
 test.equal_bool("a" < "b", true, "order")
 test.equal_text("same", "same", "text")

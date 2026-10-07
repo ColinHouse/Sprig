@@ -37,13 +37,18 @@ print(lists.sort_by[Order, Int](empty, fn(o: Order) => o.cents).size())
 print(lists.group_by[Order, String](empty, fn(o: Order) => o.category).size())
 print(lists.fold[Int, Int]([1, 2, 3], 10, fn(total: Int, x: Int) => total + x))
 
-# Counts how often a test ran, to show where a search stops.
+# Counts how often a test or a key ran, to show where a search stops and how
+# often a key is computed.
 class Probe:
     var calls: Int = 0
 
     func over(limit: Int, value: Int) -> Bool:
         calls += 1
         return value > limit
+
+    func key(value: Int) -> Int:
+        calls += 1
+        return value
 
 let cheap = lists.find[Order](orders, fn(o: Order) => o.cents < 250)
 if cheap != null:
@@ -98,5 +103,41 @@ try:
     print(lists.find[String](prices, fn(p: String) => cents_of(p) < 200))
     print(lists.any[String](["1", "x"], fn(p: String) => cents_of(p) > 0))
     print(lists.all[String](["1", "x"], fn(p: String) => cents_of(p) > 0))
+catch problem: Error:
+    print("caught " + problem)
+
+# max and min: null for an empty list, the order of sorted (NaN is the largest
+# Float, -0.0 is below 0.0), and the first of several equal items
+print(lists.max([3, 9, 2, 9]))
+print(lists.min([3, 9, 2, 9]))
+print(lists.max(names))
+print(lists.min(names))
+print(lists.max(none) == null and lists.min(none) == null)
+print(lists.max(floats))
+print(lists.min(floats))
+print(lists.max([0.0, -0.0]))
+print(lists.min([0.0, -0.0]))
+let amounts = [Decimal.parse("2.50"), Decimal.parse("1"), Decimal.parse("2.5"), Decimal.parse("1.0")]
+print(lists.max(amounts))
+print(lists.min(amounts))
+
+# max_by and min_by: the item with the largest or smallest key; of equal keys
+# the first wins; one key per item; null for an empty list; rethrows
+let priciest = lists.max_by(orders, fn(o: Order) => o.cents)
+let cheapest = lists.min_by(orders, fn(o: Order) => o.cents)
+if priciest != null and cheapest != null:
+    print(priciest.item + " " + cheapest.item)
+let food = lists.max_by(orders, fn(o: Order) => o.category)
+let drink = lists.min_by(orders, fn(o: Order) => o.category)
+if food != null and drink != null:
+    print(food.item + " " + drink.item)
+print(lists.max_by(empty, fn(o: Order) => o.cents) == null and lists.min_by(empty, fn(o: Order) => o.cents) == null)
+let keyed = Probe()
+print(lists.max_by([4, 12, 9], fn(n: Int) => keyed.key(n)))
+print(keyed.calls)
+print(lists.min_by(floats, fn(x: Float) => x))
+try:
+    print(lists.max_by(prices, fn(p: String) => cents_of(p)))
+    print(lists.min_by(["1", "x", "2"], fn(p: String) => cents_of(p)))
 catch problem: Error:
     print("caught " + problem)
