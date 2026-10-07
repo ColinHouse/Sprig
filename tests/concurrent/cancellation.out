@@ -1,0 +1,7 @@
+await reports the failure: true
+scope reports the failure: true
+queued task cancelled: true
+10
+queued siblings never ran: true 0
+dropped task cancelled: true
+10

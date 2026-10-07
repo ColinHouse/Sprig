@@ -148,7 +148,8 @@ class Pool:
     func shutdown() -> Unit:
         inner.shutdown()
 
-    # Stops accepting tasks and interrupts the running ones.
+    # Stops accepting tasks and interrupts the running ones; tasks still queued
+    # are cancelled and never run.
     func shutdown_now() -> Unit:
         inner.shutdownNow()
 
