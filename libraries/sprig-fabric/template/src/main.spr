@@ -23,23 +23,20 @@ func new_counter() -> Counter:
 
 # A Minecraft item written in Sprig. The class extends Item: the object the
 # game registers is the object Sprig mutates, `use` overrides Item.use, and
-# `parent.use(...)` runs the inherited implementation. Registration stays in
-# Java (SprigItems), because Registry.register's generic bound is outside
-# Sprig's interop profile.
+# `parent.use(...)` runs the inherited implementation. Minecraft declares its
+# nullability (JSpecify, @NullMarked on every package), so Component.literal
+# and Item.use are plain values here and need no null check. Registration
+# stays in Java (SprigItems), because Registry.register's generic bound is
+# outside Sprig's interop profile.
 class Wand:
     let properties: Properties
     var uses: Int = 0
 
-    func use(level: Level, player: Player, hand: InteractionHand) -> InteractionResult throws Error:
+    func use(level: Level, player: Player, hand: InteractionHand) -> InteractionResult:
         uses += 1
         if not level.isClientSide():
-            let message = Component.literal("Sprig wand used " + uses + " times")
-            if message != null:
-                player.sendSystemMessage(message)
-        let result = parent.use(level, player, hand)
-        if result == null:
-            throw Error("Item.use returned null")
-        return result
+            player.sendSystemMessage(Component.literal("Sprig wand used " + uses + " times"))
+        return parent.use(level, player, hand)
 
 conform Wand to Item(properties) as parent
 
