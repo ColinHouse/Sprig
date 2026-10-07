@@ -629,5 +629,35 @@
     "expected_diagnostic": "SPR-TYPE-ASSIGN",
     "status": "implemented",
     "source": "a failing top-level initializer no longer stops the module's check"
+  },
+  {
+    "file": "error_class_catch_unreachable.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "error classes: conform C to Error(message)"
+  },
+  {
+    "file": "error_class_unhandled.spr",
+    "expected_diagnostic": "SPR-FLOW-THROWS",
+    "status": "implemented",
+    "source": "error classes: conform C to Error(message)"
+  },
+  {
+    "file": "throw_plain_class.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "error classes: conform C to Error(message)"
+  },
+  {
+    "file": "list_to_mutable_rejected.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "read-only views: a MutableList is a List, not the reverse"
+  },
+  {
+    "file": "nested_list_mutability_invariant.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "read-only views: element types stay invariant"
   }
 ]

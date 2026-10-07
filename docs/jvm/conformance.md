@@ -164,6 +164,41 @@ class, and `C`'s own API is unchanged.
   constructor expressions are rejected. Loom's remapping covers the generated Java like any Java source of
   a mod, because it is compiled in the same source set.
 
+## Error classes
+
+The one class target that needs no import is `Error`. A class with a
+`message: String` field that conforms to `Error(message)` is an **error
+class**: its generated class extends `sprig.runtime.SprigError`, so it is an
+error type everywhere Sprig asks for one.
+
+```sprig
+class NotFound:
+    let message: String
+    let sku: String
+conform NotFound to Error(message)
+
+func load(sku: String) -> Int throws NotFound:
+    throw NotFound(message="no item " + sku, sku=sku)
+
+try:
+    print(load("ZZ"))
+catch problem: NotFound:
+    print(problem.sku)
+```
+
+- `throws NotFound` declares it; a caller that declares or catches `Error`
+  covers it, since the class is assignable to `Error`.
+- `catch problem: NotFound` narrows to the class, so its fields are readable;
+  a catch of the class after a catch of `Error` is unreachable
+  (`SPR-FLOW-THROWS`).
+- `print(problem)` and `"failed: " + problem` show the message, as for an
+  `Error`, and `problem.message` is the field.
+- A lambda that throws an error class has the function type `... throws Error`;
+  function types never name a narrower error.
+- The other `conform ... (fields)` rules apply: one superclass, the named
+  fields in the superclass constructor's order (`message`, or `message` and a
+  Java `Throwable` cause), no generic class.
+
 ## Foreign boundary
 
 Java framework callers can pass `null` for reference parameters. A witness

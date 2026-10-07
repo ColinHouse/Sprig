@@ -69,7 +69,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 
 - `List[T]` and `Map[K, V]` are read-only; to change a collection, use `MutableList[T]` or `MutableMap[K, V]`. Modifying a read-only collection is rejected with `SPR-COLLECTION-IMMUTABLE`.
 - `toMutableList()`, `toList()`, `toMutableMap()` and `toMap()` copy the collection (the outer layer only), so the original stays as it was.
-- A list declared with `let` and no type is a `MutableList`, which you can't pass where a `List` is expected. For a read-only list, write `let xs: List[Int] = [1, 2]`. A literal written directly as an argument is fine.
+- A list declared with `let` and no type is a `MutableList`. It can be passed where a `List` is expected: the function sees the same list read-only, so a later `append` through the mutable name is visible to it, and `toList()` takes a snapshot when you need one. A `List` never becomes a `MutableList` without `toMutableList()`.
 - Looking up a key in a `Map` gives you a nullable value: `null` when the key isn't there.
 - Indexing, `in`, `get`, `set`, `append`, `sort` and the lambda-taking methods `map`, `filter` and `forEach` all work.
 - Floating-point numbers can't be `Map` keys, because `NaN` and signed zero don't behave consistently under equality and hashing.
@@ -132,6 +132,9 @@ port must be a number: eighty
 - The caller has two options: handle the error with `try` / `catch` (optionally with `finally`), or add `throws` to its own signature. Doing neither is rejected with `SPR-FLOW-THROWS`.
 - An `Error` has a `message` field. `print(problem)`, `"failed: " + problem` and `problem.toString()` show that same message.
 - Java checked exceptions are caught the same way: name the imported Java exception class after `catch`. Such an exception shows Java's text, class name first, and its `message` is a `String?`, because Java's `getMessage()` may return `null`.
+- Your own error types are error classes: a class with a `message: String` field plus `conform NotFound to Error(message)`. Throw it, declare it with `throws NotFound`, and catch it by name to read its fields, or as `Error` to catch every kind at once. A catch of the class after a catch of `Error` is unreachable and reported.
+
+<<< @/snippets/error_classes.spr
 
 ## Generics
 

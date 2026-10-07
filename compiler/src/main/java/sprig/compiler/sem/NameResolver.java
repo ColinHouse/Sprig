@@ -417,13 +417,9 @@ public final class NameResolver {
         }
         func.returnType = typeResolver.resolveReturn(module, func.returnTypeRef, func.typeParamTypes);
         for (TypeRef ref : func.throwsRefs) {
-            Type type = typeResolver.resolve(module, ref, func.typeParamTypes);
-            if (!Semantics.isErrorType(type)) {
-                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
-                        "throws requires an error type (Error or an imported Throwable)",
-                        module.uri, ref.span).withTypes("Error or imported Throwable", type.display()));
-            }
-            func.throwsTypes.add(type);
+            // Whether the type is an error type is checked by the type checker,
+            // once conformance has recorded which classes extend Error.
+            func.throwsTypes.add(typeResolver.resolve(module, ref, func.typeParamTypes));
         }
         if (func.rethrows && func.params.stream().noneMatch(param -> param.type instanceof FunctionType fn && fn.throwsAny())) {
             diagnostics.add(Diagnostic.error(Codes.FLOW_RETHROWS, Phase.FLOW,

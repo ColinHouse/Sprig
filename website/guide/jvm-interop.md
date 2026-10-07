@@ -91,7 +91,7 @@ Java 的 `List`、`Map` 不会自动变成 Sprig 的集合，Sprig 的集合也�
 
 - 类型参数会完整保留，`List[Map[String, Int32]]`、`Host.method[String](value)` 这样的写法都可以，经由父类或接口传下来的类型参数也能识别。
 - 返回值照样被当作可能为 `null`，所以 `ArrayList[String]` 的 `get` 返回 `String?`。
-- 泛型方法的类型参数不会推断，要自己写出来。
+- 泛型方法自己的类型参数，只要实参能把每一个都唯一确定，就会自动推断（`Collections.sort(names)`、`List.of(1, 2, 3)`）；只出现在返回值里的，或者只能靠 lambda 确定的，要自己写出来（`Collectors.toList[Int]()`）。
 - 没有类型参数的原始类型（raw type）不能当作带参数的类型使用。`ArrayList[String]` 可以当 `List[String]` 用，`ArrayList[Int32]` 不行。
 - 通配符会保留边界：`List<? extends Number>` 的结果读出来是 `Number?`，`List<? extends Number>` 形参可以接收 `ArrayList[Int]`，而任何会穿过 `? extends` 写入的成员（比如 `add`）都会被拒绝。泛型数组（`T[]`）不支持，用 `sprig api` 查询时会看到对应的原因代码。
 
@@ -134,7 +134,7 @@ a/b/c
 
 - 参数类型必须完全一致；方法返回 `void` 时，lambda 返回什么都可以。`Comparator.compare` 返回 `int`，所以 lambda 返回 `Int32`（`a.compareTo(b)` 正好是）或者 `Int` 都可以；返回 `Int` 时会像传给 `int` 参数一样做运行时范围检查。
 - 接口类型参数里的通配符没关系：实现了 `Consumer<String>` 的 lambda 就是一个 `Consumer<? super String>`。
-- 类型变量从不推断。`names.forEach` 能用是因为 `ArrayList[String]` 定下了 `E`；`stream.map(fn(...) => ...)` 得写成 `stream.map[String](...)`，因为 `R` 是方法自己的类型变量。
+- 方法自己的类型变量只从普通实参推断，不从 lambda 推断。`names.forEach` 能用是因为 `ArrayList[String]` 定下了 `E`；`stream.map(fn(...) => ...)` 得写成 `stream.map[String](...)`，因为只有 lambda 才能说明 `R` 是什么，它是方法自己的类型变量。
 - 类型里带 `throws Error` 的函数值不能传给 Java，因为 Java 看不到这个子句（`SPR-TYPE-CALLABLE-THROWS`）。把错误在具名函数里处理掉，再传一个调用它的 lambda。
 
 变长参数（`String...`）接收末尾的零个或多个实参，编译器把它们打包成数组；如果传的正好是那个类的 Java 数组（不透明值），就原样传过去。固定参数个数的重载优先。`Path.of("etc", "sprig")`、`Files.exists(path)`、`String.format(...)`、`String.join(...)` 都是这样用的。只有元素是类型变量的变长参数（`T...`，比如 `Arrays.asList`）仍然不支持。
@@ -161,7 +161,7 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 - **数组语法**：没有数组字面量、数组类型标注、下标和遍历，数组只能原样传递。
 - **通配符语法**：带通配符类型的值可以持有和传递，但不能在 Sprig 的声明里写通配符，也不能穿过 `? extends` 往里加元素。像 Brigadier 这样层层嵌套的 builder API 可能仍然需要一个简单的 Java 适配层，见 [Fabric 模组](/guide/fabric)。
 - **元素是类型变量的变长参数**（`T...`）：没有可以打包的元素类。
-- **Java 泛型推断**：Java 方法和 Java 泛型类型的类型参数要自己写，也没有协变和逆变。Sprig 自己的泛型调用会算出类型参数，见[泛型](/guide/generics)。
+- **从返回值或 lambda 推断 Java 泛型**：方法的类型参数能由实参唯一确定时会推断（`Collections.sort(names)`、`List.of(1, 2, 3)`、`Objects.requireNonNullElse(a, b)`）；只出现在返回值里的，或者只能靠 lambda 确定的，要自己写（`Collectors.toList[Int]()`、`stream.map[String](...)`）。Java 泛型类型始终要写类型参数，也没有协变和逆变。`T extends Comparable<? super T>` 这样的单个递归边界会按实参检查；交集边界（`Collections.max`）仍然不支持。
 - **没有注解的库**：什么都不标的库还是按 Sprig 的保守规则，引用结果一律 `T?`；只有注解（运行时可见的或从 class 文件读到的）和 `@NullMarked` 这类默认声明才会改变它。
 - **Java 内部的计算**：Java 方法里发生的 `int` 溢出，不会触发 Sprig 的数值错误。
 

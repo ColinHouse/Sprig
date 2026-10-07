@@ -326,6 +326,17 @@ public final class TypeChecker {
     private final Set<Stmt.Requires> leadingRequirements = new HashSet<>();
 
     private void checkFunction(Decl.Func func, Decl.ClassDecl owner) {
+        for (int i = 0; i < func.throwsTypes.size() && i < func.throwsRefs.size(); i++) {
+            Type declared = func.throwsTypes.get(i);
+            if (declared != null && declared != NativeType.ERROR && !Semantics.isErrorType(declared)) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
+                        "throws requires an error type (Error, a class that conforms to Error, or an imported Throwable)",
+                        module.uri, func.throwsRefs.get(i).span)
+                        .withTypes("Error, an error class or an imported Throwable", declared.display())
+                        .withHint("Declare an error class with its fields and 'conform " + declared.display()
+                                + " to Error(message)', or throw Error(\"text\")."));
+            }
+        }
         leadingRequirements.clear();
         func.equatableParams.clear();
         func.comparableParams.clear();
@@ -386,7 +397,9 @@ public final class TypeChecker {
             if (!Semantics.isErrorType(type)) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
                         "throw requires an error value", module.uri, thr.span)
-                        .withTypes("Error or imported Throwable", type.display()));
+                        .withTypes("Error, an error class or imported Throwable", type.display())
+                        .withHint("Throw Error(\"text\"), or make the class an error class with "
+                                + "'conform " + type.display() + " to Error(message)' (its message field is the text)."));
             } else {
                 requireHandled(List.of(type), thr.span);
             }
@@ -730,7 +743,7 @@ public final class TypeChecker {
             if (type != NativeType.ERROR && !Semantics.isErrorType(type)) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
                         "catch requires an error type", module.uri, clause.typeRef.span)
-                        .withTypes("Error or imported Throwable", type.display()));
+                        .withTypes("Error, an error class or imported Throwable", type.display()));
                 type = NativeType.ERROR;
             }
             clause.caughtType = type;
@@ -2268,9 +2281,12 @@ public final class TypeChecker {
         // catch would no longer see it.
         List<Type> thrown = new ArrayList<>();
         for (Type effect : effects) {
-            if (Semantics.isSprigError(effect)) {
-                if (!thrown.contains(effect)) {
-                    thrown.add(effect);
+            if (Semantics.isSprigError(effect) || Semantics.isErrorClass(effect)) {
+                // An error class is an Error at the boundary: a function type
+                // declares throws Error and nothing more specific.
+                Type asError = Semantics.isSprigError(effect) ? effect : new JavaType(SprigError.class);
+                if (!thrown.contains(asError)) {
+                    thrown.add(asError);
                 }
             } else if (Semantics.isJvmChecked(effect)) {
                 diagnostics.add(Diagnostic.error(Codes.FLOW_THROWS, Phase.FLOW,
@@ -4497,6 +4513,7 @@ public final class TypeChecker {
         boolean ambiguous = false;
         boolean bestExpanded = false;
         Map<TypeVariable<?>, Type> bestBindings = Map.of();
+        List<Type> bestMethodArgs = null;
         // Fixed-arity candidates first; the varargs expanded form only when none applies.
         for (int pass = 0; pass < 2 && best == null; pass++) {
             boolean expand = pass == 1;
@@ -4510,17 +4527,25 @@ public final class TypeChecker {
                 }
                 if (JvmMetadata.unsupportedReason(method) != null) continue;
                 int methodVariables = method.getTypeParameters().length;
+                List<Type> methodArgs = explicitMethodArgs;
                 if (methodVariables > 0) {
-                    if (explicitMethodArgs == null) continue; // explicit decisions, no inference
-                    if (explicitMethodArgs.size() != methodVariables) continue;
-                    if (!JavaTypes.boundsSatisfied(method, explicitMethodArgs)) continue;
+                    if (methodArgs == null) {
+                        // Written arguments decide; without them the type variables
+                        // are inferred only when the arguments fix every one of them
+                        // exactly, and the bounds are checked as for written ones.
+                        methodArgs = inferMethodTypeArguments(method, argTypes,
+                                hierarchy.getOrDefault(method.getDeclaringClass(), Map.of()), expand);
+                        if (methodArgs == null) continue;
+                    }
+                    if (methodArgs.size() != methodVariables) continue;
+                    if (!typeArgumentsSatisfyBounds(method, methodArgs)) continue;
                 }
                 Map<TypeVariable<?>, Type> bindings = new java.util.IdentityHashMap<>(
                         hierarchy.getOrDefault(method.getDeclaringClass(), Map.of()));
                 if (methodVariables > 0) {
                     TypeVariable<?>[] variables = method.getTypeParameters();
                     for (int i = 0; i < variables.length; i++) {
-                        bindings.put(variables[i], explicitMethodArgs.get(i));
+                        bindings.put(variables[i], methodArgs.get(i));
                     }
                 }
                 boolean bound = receiverBound || methodVariables > 0;
@@ -4533,6 +4558,7 @@ public final class TypeChecker {
                     bestScore = score;
                     bestBindings = bindings;
                     bestExpanded = expand;
+                    bestMethodArgs = methodArgs;
                     ambiguous = false;
                 } else if (score == bestScore && !sameSignature(best, method)) {
                     ambiguous = true;
@@ -4605,11 +4631,204 @@ public final class TypeChecker {
             member.returnType = member.returnType.nonNull();
         }
         field.jvm = member;
-        if (call.resolved != null && explicitMethodArgs != null) {
-            call.resolved.typeArgs = explicitMethodArgs;
+        if (call.resolved != null && bestMethodArgs != null) {
+            call.resolved.typeArgs = bestMethodArgs;
         }
         requireHandled(jvmExceptions(best.getExceptionTypes()), call.span);
         return member.returnType;
+    }
+
+    /**
+     * The type arguments of a generic Java method, read off its arguments: a
+     * formal {@code T} takes the argument's type, a formal {@code List<T>} takes
+     * the element type of a Java argument such as {@code ArrayList[String]}, and
+     * a {@code T...} tail takes the type its arguments share. Every type variable
+     * must be fixed, each exactly once or to the same type; a lambda, a Java
+     * callable, {@code null}, a nullable value, a Sprig collection or a raw Java
+     * value says nothing, and a variable that only appears in the result cannot
+     * be inferred (the expected type is never used). Returns null when the
+     * arguments do not decide; the call then needs written arguments.
+     */
+    private static List<Type> inferMethodTypeArguments(Executable executable, List<Type> args,
+                                                       Map<TypeVariable<?>, Type> classBindings, boolean expand) {
+        Class<?>[] raw = executable.getParameterTypes();
+        java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
+        if (expand && (!executable.isVarArgs() || raw.length == 0)) {
+            return null; // the expanded form is only for a varargs candidate
+        }
+        int fixed = expand ? raw.length - 1 : raw.length;
+        if (expand ? args.size() < fixed : args.size() != raw.length) {
+            return null;
+        }
+        Map<TypeVariable<?>, Type> inferred = new java.util.IdentityHashMap<>();
+        for (int i = 0; i < fixed; i++) {
+            if (JavaTypes.isCallableClass(raw[i]) || JavaTypes.functionalFormal(generic[i], raw[i])) {
+                continue; // callables are checked, never used for inference
+            }
+            if (!unifyJavaFormal(generic[i], args.get(i), inferred, classBindings)) {
+                return null;
+            }
+        }
+        if (expand) {
+            java.lang.reflect.Type element = JavaTypes.varargsElementType(executable);
+            for (int i = fixed; i < args.size(); i++) {
+                if (!unifyJavaFormal(element, args.get(i), inferred, classBindings)) {
+                    return null;
+                }
+            }
+        }
+        List<Type> out = new ArrayList<>();
+        for (TypeVariable<?> variable : executable.getTypeParameters()) {
+            Type type = inferred.get(variable);
+            if (type == null) {
+                return null;
+            }
+            out.add(type);
+        }
+        return out;
+    }
+
+    private static boolean unifyJavaFormal(java.lang.reflect.Type formal, Type arg,
+                                           Map<TypeVariable<?>, Type> inferred,
+                                           Map<TypeVariable<?>, Type> classBindings) {
+        if (arg == null || arg == NativeType.ERROR) {
+            return true; // its own error is reported; it says nothing here
+        }
+        if (formal instanceof TypeVariable<?> variable) {
+            if (classBindings.containsKey(variable)) {
+                return true; // the receiver's variable is already known
+            }
+            if (arg.isNullable() || !inferableJavaArgument(arg)) {
+                return false;
+            }
+            Type previous = inferred.putIfAbsent(variable, arg);
+            return previous == null || previous.equals(arg);
+        }
+        if (formal instanceof java.lang.reflect.ParameterizedType applied) {
+            Class<?> rawFormal = JavaTypes.rawClass(applied);
+            if (rawFormal == null || !mentionsTypeVariable(applied)) {
+                return true; // nothing of the method's to learn; the argument check decides
+            }
+            if (arg.isNullable() || !(arg instanceof JavaType javaArg) || !rawFormal.isAssignableFrom(javaArg.clazz)) {
+                return false;
+            }
+            Map<TypeVariable<?>, Type> argBindings =
+                    JavaTypes.hierarchyBindings(javaArg.clazz, javaArg.args).get(rawFormal);
+            TypeVariable<?>[] formalVariables = rawFormal.getTypeParameters();
+            java.lang.reflect.Type[] formalArgs = applied.getActualTypeArguments();
+            for (int i = 0; i < formalVariables.length && i < formalArgs.length; i++) {
+                java.lang.reflect.Type formalArg = formalArgs[i];
+                if (formalArg instanceof java.lang.reflect.WildcardType wildcard) {
+                    java.lang.reflect.Type[] lower = wildcard.getLowerBounds();
+                    java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
+                    formalArg = lower.length == 1 ? lower[0] : upper.length == 1 ? upper[0] : null;
+                    if (formalArg == null || formalArg == Object.class) continue;
+                }
+                if (formalArg instanceof Class<?>) continue;
+                Type bound = argBindings == null ? null : argBindings.get(formalVariables[i]);
+                if (bound == null || bound instanceof sprig.compiler.types.JavaWildcardType) {
+                    return false; // a raw or wildcard argument fixes nothing
+                }
+                if (!unifyJavaFormal(formalArg, bound, inferred, classBindings)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return true; // a class formal is checked by the scoring, not inferred from
+    }
+
+    private static boolean mentionsTypeVariable(java.lang.reflect.Type type) {
+        if (type instanceof TypeVariable<?>) return true;
+        if (type instanceof java.lang.reflect.ParameterizedType applied) {
+            for (java.lang.reflect.Type argument : applied.getActualTypeArguments()) {
+                if (mentionsTypeVariable(argument)) return true;
+            }
+        }
+        if (type instanceof java.lang.reflect.WildcardType wildcard) {
+            for (java.lang.reflect.Type bound : wildcard.getLowerBounds()) if (mentionsTypeVariable(bound)) return true;
+            for (java.lang.reflect.Type bound : wildcard.getUpperBounds()) if (mentionsTypeVariable(bound)) return true;
+        }
+        return false;
+    }
+
+    /** Argument types that can stand as a Java type argument: scalars, String and nominal reference types. */
+    private static boolean inferableJavaArgument(Type type) {
+        if (type == NativeType.INT || type == NativeType.INT32 || type == NativeType.FLOAT
+                || type == NativeType.FLOAT32 || type == NativeType.BOOL || type == NativeType.STRING
+                || type == NativeType.DECIMAL || type == NativeType.BIGINT) {
+            return true;
+        }
+        if (type instanceof JavaType javaType) {
+            for (Type argument : javaType.args) {
+                if (argument instanceof sprig.compiler.types.JavaWildcardType || !inferableJavaArgument(argument)) {
+                    return false;
+                }
+            }
+            return !javaType.clazz.isArray();
+        }
+        return type instanceof ClassType || type instanceof EnumType || type instanceof VariantType;
+    }
+
+    /**
+     * Whether written or inferred type arguments satisfy every bound of the
+     * method's type parameters: a class or interface bound by assignability of
+     * the boxed class, and a parameterized bound such as
+     * {@code T extends Comparable<? super T>} by the argument's own view of that
+     * supertype ({@code String} is {@code Comparable<String>}).
+     */
+    private static boolean typeArgumentsSatisfyBounds(Executable executable, List<Type> arguments) {
+        TypeVariable<?>[] variables = executable.getTypeParameters();
+        if (arguments.size() != variables.length) {
+            return false;
+        }
+        Map<TypeVariable<?>, Type> byVariable = new java.util.IdentityHashMap<>();
+        for (int i = 0; i < variables.length; i++) {
+            byVariable.put(variables[i], arguments.get(i));
+        }
+        for (int i = 0; i < variables.length; i++) {
+            Type argument = arguments.get(i);
+            Class<?> erased = JavaTypes.boxedFor(argument);
+            for (java.lang.reflect.Type bound : variables[i].getBounds()) {
+                if (bound == Object.class) continue;
+                if (erased == null || erased == Object.class) return false;
+                if (bound instanceof Class<?> clazz) {
+                    if (!clazz.isAssignableFrom(erased)) return false;
+                    continue;
+                }
+                if (!(bound instanceof java.lang.reflect.ParameterizedType applied)) return false;
+                Class<?> rawBound = JavaTypes.rawClass(applied);
+                if (rawBound == null || !rawBound.isAssignableFrom(erased)) return false;
+                Map<TypeVariable<?>, Type> view = JavaTypes.hierarchyBindings(erased,
+                        argument instanceof JavaType javaType ? javaType.args : List.of()).get(rawBound);
+                TypeVariable<?>[] boundVariables = rawBound.getTypeParameters();
+                java.lang.reflect.Type[] boundArgs = applied.getActualTypeArguments();
+                for (int k = 0; k < boundVariables.length && k < boundArgs.length; k++) {
+                    java.lang.reflect.Type boundArg = boundArgs[k];
+                    boolean lower = false;
+                    if (boundArg instanceof java.lang.reflect.WildcardType wildcard) {
+                        if (wildcard.getLowerBounds().length == 1) {
+                            boundArg = wildcard.getLowerBounds()[0];
+                            lower = true;
+                        } else if (wildcard.getUpperBounds().length == 1) {
+                            boundArg = wildcard.getUpperBounds()[0];
+                        } else continue;
+                        if (boundArg == Object.class) continue;
+                    }
+                    Type required = boundArg instanceof TypeVariable<?> variable ? byVariable.get(variable)
+                            : boundArg instanceof Class<?> clazz ? JavaTypes.map(clazz) : null;
+                    Type actual = view == null ? null : view.get(boundVariables[k]);
+                    if (required == null || actual == null) return false;
+                    // Comparable<? super T> with T = Long: Long is Comparable<Long>, and a
+                    // supertype view would do; Comparable<T> needs the same type.
+                    boolean fits = actual.equals(required)
+                            || JavaTypes.boxedFor(actual) == JavaTypes.boxedFor(required)
+                            || (lower && Semantics.isAssignable(actual, required));
+                    if (!fits) return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -5050,7 +5269,7 @@ public final class TypeChecker {
                     } else if (support.reasonCodes().contains("generic-bound-unsupported")) {
                         reason = "recursive or intersection bound";
                     } else if (support.reasonCodes().contains("explicit-type-arguments-required")) {
-                        reason = "explicit type arguments required";
+                        reason = "type arguments not inferable from the arguments; write them, as in name[Type](...)";
                     } else {
                         Map<TypeVariable<?>, Type> bindings =
                                 hierarchy.getOrDefault(candidate.getDeclaringClass(), Map.of());

@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Runtime representation of Sprig's {@code MutableList[T]}. Distinct from
- * {@link SprigList} at the Sprig type level; the Java inheritance below is an
- * implementation detail (the Sprig checker rejects implicit mutable/immutable
- * conversion, so a {@code MutableList} value never silently flows into a
- * {@code List} variable).
+ * Runtime representation of Sprig's {@code MutableList[T]}. A MutableList is
+ * accepted where a {@code List} is expected as the same list seen read-only,
+ * which this inheritance carries without a copy; the reverse direction and
+ * mutation through a {@code List} are rejected by the checker.
  */
 public class SprigMutableList<T> extends SprigList<T> {
     public SprigMutableList(List<T> items) {

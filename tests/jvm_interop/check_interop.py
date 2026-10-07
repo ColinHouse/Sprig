@@ -398,7 +398,7 @@ def main():
         catalog = body(call("capabilities", "--json"))
         expected = {"sourceArrays": False, "jvmArrayPassThrough": True,
                     "jvmByteArrayHelpers": True, "jvmConcreteGenerics": True,
-                    "jvmCollectionAdapters": True, "jvmGenericInference": False,
+                    "jvmCollectionAdapters": True, "jvmGenericInference": True,
                     "jvmWildcards": True, "jvmVarargs": True, "jvmFunctionalInterfaces": True}
         verify("capabilities-interop-fields",
                catalog and all(catalog.get(key) == value for key, value in expected.items()),
@@ -450,8 +450,13 @@ def main():
                and "explicit-type-arguments-required" in identity_api.get("interopReasonCodes", []),
                str(identity_api))
 
+        pick_api = members.get("pick", {})
+        verify("api-recursive-bound-usable",
+               pick_api.get("usableFromSprig")
+               and "generic-bound-recursive" in pick_api.get("interopReasonCodes", [])
+               and any("checked at each call" in note for note in pick_api.get("interopNotes", [])),
+               str(pick_api))
         unsupported = {
-            "pick": "generic-bound-unsupported",
             "genericArray": "generic-array-unsupported",
         }
         wildcard_api = members.get("wildcardResult", {})
@@ -863,8 +868,37 @@ if repeated != null:
         verify("run-explicit-generic", explicit.returncode == 0 and explicit.stdout == "exact\n3\n",
                f"exit={explicit.returncode} stdout={explicit.stdout!r} stderr={explicit.stderr!r}")
 
-        _, missing_args = check_file("missing-args.spr", '''import audit.Interop as Interop
-print(Interop.identity("x"))
+        # Method type arguments are inferred when the arguments fix every type
+        # variable exactly: identity(T) from its argument, pick(T, T) from two
+        # arguments of one type (its recursive bound T extends Comparable<T> is
+        # checked on the inferred String), List.of from its fixed-arity overloads,
+        # and Collections.sort(List<T>) from the element type of an ArrayList[String].
+        _, inferred = run_file("inferred.spr", '''import audit.Interop as Interop
+import java.util.List as JList
+import java.util.ArrayList as ArrayList
+import java.util.Collections as Collections
+
+let same = Interop.identity("x")
+if same != null:
+    print(same)
+print(Interop.pick("b", "a"))
+print(Interop.pick[String]("a", "b"))
+let numbers = JList.of(1, 2, 3)
+if numbers != null:
+    print(numbers.size())
+let names = ArrayList[String]()
+names.add("pear")
+names.add("apple")
+Collections.sort(names)
+print(names)
+''')
+        verify("run-inferred-generic", inferred.returncode == 0 and inferred.stdout == "x\na\na\n3\n[apple, pear]\n",
+               f"exit={inferred.returncode} stdout={inferred.stdout!r} stderr={inferred.stderr!r}")
+
+        # A type variable that only the result mentions, or that two arguments fix
+        # differently, is not inferred: the call still needs written arguments.
+        _, missing_args = check_file("missing-args.spr", '''import java.util.Collections as Collections
+let empty = Collections.emptyList()
 ''', "--json")
         missing_json = diagnostic(missing_args)
         missing_reasons = [c.get("rejectedBecause") for c in
@@ -872,19 +906,25 @@ print(Interop.identity("x"))
         verify("check-missing-type-args",
                missing_args.returncode == 1 and missing_json
                and missing_json["code"] == "SPR-JVM-MEMBER"
-               and "explicit type arguments required" in missing_reasons,
+               and any(reason and "not inferable" in reason for reason in missing_reasons),
                f"exit={missing_args.returncode} {missing_args.stdout}{missing_args.stderr}")
+        _, disagree = check_file("disagree.spr", '''import audit.Interop as Interop
+print(Interop.pick("a", 1))
+''', "--json")
+        disagree_json = diagnostic(disagree)
+        verify("check-inference-disagreement",
+               disagree.returncode == 1 and disagree_json and disagree_json["code"] == "SPR-JVM-MEMBER",
+               f"exit={disagree.returncode} {disagree.stdout}{disagree.stderr}")
 
+        # A recursive bound rejects a type argument that does not satisfy it.
         _, bounded = check_file("bounded.spr", '''import audit.Interop as Interop
-print(Interop.pick[String]("a", "b"))
+import java.lang.Object as JObject
+print(Interop.pick[JObject]("a", "b"))
 ''', "--json")
         bounded_json = diagnostic(bounded)
-        bounded_reasons = [c.get("rejectedBecause") for c in
-                           (bounded_json or {}).get("data", {}).get("candidates", [])]
         verify("check-bounded-rejected",
-               bounded.returncode == 1 and bounded_json
-               and any("recursive or intersection bound" in reason for reason in bounded_reasons),
-               f"exit={bounded.returncode} reasons={bounded_reasons} json={bounded_json is not None}")
+               bounded.returncode == 1 and bounded_json and bounded_json["code"] == "SPR-JVM-MEMBER",
+               f"exit={bounded.returncode} {bounded.stdout}{bounded.stderr}")
 
         _, generic_array = check_file("generic-array.spr", '''import audit.Interop as Interop
 print(Interop.genericArray[String]("x"))

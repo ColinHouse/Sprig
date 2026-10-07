@@ -25,6 +25,19 @@ public final class Semantics {
         if (target.equals(source)) {
             return true;
         }
+        // A MutableList is a List that can also be changed, so it goes where a
+        // List is expected: the callee sees the same list read-only (no copy; a
+        // later change through the mutable name is visible, toList() snapshots).
+        // Element types stay invariant, and a List never becomes a MutableList.
+        if (target instanceof ListType targetList && source instanceof ListType sourceList
+                && !targetList.mutable && sourceList.mutable && targetList.element.equals(sourceList.element)) {
+            return true;
+        }
+        if (target instanceof MapType targetMap && source instanceof MapType sourceMap
+                && !targetMap.mutable && sourceMap.mutable && targetMap.key.equals(sourceMap.key)
+                && targetMap.value.equals(sourceMap.value)) {
+            return true;
+        }
         if (target instanceof FunctionType targetFunction && source instanceof FunctionType sourceFunction) {
             // Parameters and results are invariant. A value that throws less
             // than the target declares is accepted; never the other way round.
@@ -123,7 +136,11 @@ public final class Semantics {
                 || type == NativeType.STRING || type == NativeType.DECIMAL || type == NativeType.BIGINT;
     }
 
-    /** Error values: the built-in Error type or an imported Throwable class. */
+    /**
+     * Error values: the built-in Error type, an imported Throwable class, or a
+     * Sprig class that extends Error through {@code conform C to Error(message)}
+     * (an error class: its generated class extends sprig.runtime.SprigError).
+     */
     public static boolean isErrorType(Type type) {
         if (type == NativeType.ERROR) {
             return true;
@@ -131,7 +148,14 @@ public final class Semantics {
         if (type instanceof JavaType javaType) {
             return Throwable.class.isAssignableFrom(javaType.clazz);
         }
-        return false;
+        return isErrorClass(type);
+    }
+
+    /** A Sprig class whose generated class extends a Throwable, declared with {@code conform C to Error(...)}. */
+    public static boolean isErrorClass(Type type) {
+        return type instanceof sprig.compiler.types.ClassType classType
+                && classType.decl.superclass != null
+                && Throwable.class.isAssignableFrom(classType.decl.superclass);
     }
 
     /** The built-in Error type (sprig.runtime.SprigError), the only error a callable may declare. */

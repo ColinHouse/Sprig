@@ -54,7 +54,10 @@ every branch that exits before the first one that can complete count. A name
 declared `T?` may be compared with `null` again while it is narrowed; the check
 is redundant and accepted. Only `let` bindings narrow; copy a `var` into a `let`
 to check it.
-`List[T]`/`Map[K,V]` are read-only; mutable counterparts are separate.
+`List[T]`/`Map[K,V]` are read-only; `MutableList`/`MutableMap` can change. A
+mutable collection goes where the read-only type is expected, as the same
+collection seen read-only (no copy; `toList()`/`toMap()` snapshot). The reverse
+needs `toMutableList()`, and element types stay invariant.
 `==`/`!=` compare numbers, `Bool`, `String`, enums, variants, lists and maps by
 value, and class objects by identity: two objects whose fields match are still
 two objects, so compare the fields you mean (`a.id == b.id`). Nullable
@@ -66,6 +69,10 @@ value is a `MutableList[Int]`. Binary operands evaluate left to right, each exac
 once, so `needle in haystack` evaluates `needle` first. Map indexing reads
 return `V?`; `m[key] += x` requires an existing `key` and raises a catchable
 `Error` when it is missing.
+Errors are `Error("text")` or an error class: a class with a `message: String`
+field plus `conform NotFound to Error(message)`. It is thrown, declared with
+`throws NotFound`, caught by name or as `Error`, and shows its message like an
+`Error`; a lambda that throws one has `throws Error`.
 `Int` is checked signed 64-bit, `Int32` checked signed 32-bit, `Float` is IEEE
 binary64, and `Float32` binary32. No implicit lossy numeric conversion occurs.
 See `sprig help numerics` for syntax and `NUMERIC_SEMANTICS.md` for details.

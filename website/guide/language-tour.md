@@ -69,7 +69,7 @@
 
 - `List[T]` 和 `Map[K, V]` 是只读的，要修改就用 `MutableList[T]` 和 `MutableMap[K, V]`。对只读集合做修改会报 `SPR-COLLECTION-IMMUTABLE`。
 - `toMutableList()`、`toList()`、`toMutableMap()`、`toMap()` 都会复制出一个新的集合（只复制外面这一层），原来的集合不受影响。
-- 用 `let` 声明列表时如果不写类型，得到的是 `MutableList`，不能直接传给参数类型为 `List` 的函数。要只读列表，就写成 `let xs: List[Int] = [1, 2]`。把字面量直接写在参数位置则没有问题。
+- 用 `let` 声明列表时如果不写类型，得到的是 `MutableList`。它可以直接传给参数类型为 `List` 的函数：函数看到的是同一个列表的只读视角，所以之后通过可变名字 `append` 的元素它也看得到；需要快照就调用 `toList()`。反过来 `List` 不会自动变成 `MutableList`，要用 `toMutableList()`。
 - 按键从 `Map` 里取值，得到的是可空类型，键不存在时是 `null`。
 - 支持下标、`in`、`get`、`set`、`append`、`sort`，以及 `map`、`filter`、`forEach` 这几个接收 lambda 的方法。
 - `Map` 的键不能是浮点数，因为 `NaN` 和正负零在相等比较和哈希上对不上。
@@ -132,6 +132,9 @@ port must be a number: eighty
 - 调用它的地方二选一：用 `try` / `catch` 处理（可以再加 `finally`），或者在自己的签名里也写上 `throws`。两样都不做，会报 `SPR-FLOW-THROWS`。
 - `Error` 有一个 `message` 字段。`print(problem)`、`"failed: " + problem` 和 `problem.toString()` 显示的也都是这条消息。
 - Java 的受检异常也能这样捕获，`catch` 后面写导入的 Java 异常类就行。这类异常按 Java 的格式显示，类名在前；它的 `message` 是 `String?`，因为 Java 的 `getMessage()` 可能返回 `null`。
+- 自己的错误类型叫错误类：一个带 `message: String` 字段的类，再加一句 `conform NotFound to Error(message)`。它可以抛出、在签名里写 `throws NotFound`、按名字捕获来读它的字段，也可以用 `catch problem: Error:` 一次接住所有种类。写在 `catch Error` 之后的 `catch NotFound` 永远跑不到，编译器会报出来。
+
+<<< @/snippets/error_classes.spr
 
 ## 泛型
 

@@ -1,0 +1,23 @@
+# An error class: a class with a message field that conforms to Error.
+class NotFound:
+    let message: String
+    let sku: String
+conform NotFound to Error(message)
+
+func stock(sku: String) -> Int throws NotFound:
+    if sku == "A1":
+        return 7
+    throw NotFound(message="no item " + sku, sku=sku)
+
+func describe(sku: String) -> String:
+    try:
+        return "stock " + stock(sku)
+    catch problem: NotFound:
+        return "missing sku " + problem.sku
+
+print(describe("A1"))
+print(describe("ZZ"))
+try:
+    print(stock("QQ"))
+catch problem: Error:
+    print("as Error: " + problem.message)

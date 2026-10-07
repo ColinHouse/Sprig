@@ -1,0 +1,5 @@
+# Only Error, an error class or an imported Throwable can be thrown.
+class Plain:
+    let code: Int
+func h() -> Unit throws Error:
+    throw Plain(code=1)

@@ -53,6 +53,7 @@ Inside a project, `check`, `run` and `build` don't need a file name; they use th
 
 - **`check --syntax-only`**: `check` never generates code anyway; this option makes it faster still by checking only tokens, indentation and syntax.
 - **`run --keep`**: keeps the generated Java files so you can look at them.
+- **`run --no-cache`**: compiles with javac even when the same program ran before. By default `run` and `test` keep the compiled classes of each program under `~/.sprig/cache/javac` (the newest 64), keyed by the generated Java, the compiler version, the runtime sources and the classpath, so running an unchanged program again skips javac and starts in well under a second instead of about two. `SPRIG_JAVAC_CACHE=off` turns the cache off; a directory path moves it.
 - **`run --stacktrace`**: when your program fails with an uncaught error, Sprig reports `SPR-RUNTIME-ERROR` or `SPR-RUNTIME-EXCEPTION` and points at the line in your source. Add this option when you also want the full JVM stack trace.
 - **`build -d <dir>`**: `build` writes to `sprig-build/` by default, and `-d` picks another directory. If the check fails, no class files are written.
 - **`build --emit-java-only`**: runs the static checks and generates Java without calling javac. With `--json`, the result includes `javaSources`, `mainClass` and `javacInvoked: false`.

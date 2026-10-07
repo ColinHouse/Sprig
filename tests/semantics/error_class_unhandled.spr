@@ -1,0 +1,8 @@
+# An error class is checked like Error: declare it or handle it.
+class NotFound:
+    let message: String
+conform NotFound to Error(message)
+func f() -> Unit throws NotFound:
+    throw NotFound(message="x")
+func g() -> Unit:
+    f()
