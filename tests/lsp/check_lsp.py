@@ -97,6 +97,23 @@ CLIENT_CAPABILITIES = {"textDocument": {
     "codeAction": {"codeActionLiteralSupport": {"codeActionKind": {"valueSet": ["quickfix"]}},
                    "isPreferredSupport": True}}}
 
+IF_EXPRESSIONS = '''func describe(value: Int?, limit: Int) -> String:
+    let doubled = limit * 2
+    return if value == null:
+        "none"
+    elif value != null and value > doubled:
+        "big " + (value - doubled)
+    else:
+        "small " + doubled
+
+let total = 3
+let label = if total > 2:
+    describe(total, total)
+else:
+    "few"
+print(label)
+'''
+
 
 def check(name, ok, detail=""):
     global COUNT
@@ -516,6 +533,51 @@ def check_workspace(directory):
     check("exit-without-shutdown", unclean.stop(shutdown=False) == 1)
 
 
+def check_if_expressions(directory):
+    """Names in if-expression conditions and branches: hover sees the if statement's narrowing, rename reaches them all."""
+    path = directory / "choose.spr"
+    path.write_text(IF_EXPRESSIONS, encoding="utf-8")
+    client = Client(directory)
+    try:
+        initialize(client, directory)
+        client.open(path, IF_EXPRESSIONS)
+        check("if-expression-clean", client.wait_diagnostics(path) == [])
+        narrowed = hover_text(client, path, 5, position(IF_EXPRESSIONS, 5, "value"))
+        check("if-expression-hover-narrowed", "value: Int?" in narrowed and "Here: `Int`" in narrowed, narrowed)
+        condition = hover_text(client, path, 2, position(IF_EXPRESSIONS, 2, "value"))
+        check("if-expression-hover-condition", "value: Int?" in condition and "Here:" not in condition, condition)
+        # An elif sees only its own condition: not the earlier one false, but the left side of its 'and'.
+        elif_condition = hover_text(client, path, 4, position(IF_EXPRESSIONS, 4, "value"))
+        check("if-expression-hover-elif-condition", "Here:" not in elif_condition, elif_condition)
+        right_side = hover_text(client, path, 4, position(IF_EXPRESSIONS, 4, "value", 1))
+        check("if-expression-hover-elif-and", "Here: `Int`" in right_side, right_side)
+        references = client.at("textDocument/references", path, 1, position(IF_EXPRESSIONS, 1, "doubled"),
+                               context={"includeDeclaration": True})["result"]
+        places = sorted((r["range"]["start"]["line"], r["range"]["start"]["character"]) for r in references)
+        check("if-expression-references", places == [(1, 8), (4, 35), (5, 26), (7, 19)], places)
+        renamed = client.at("textDocument/rename", path, 0, position(IF_EXPRESSIONS, 0, "value"),
+                            newName="amount")["result"]["changes"][uri(path)]
+        places = sorted((e["range"]["start"]["line"], e["range"]["start"]["character"]) for e in renamed)
+        check("if-expression-rename", places == [(0, 14), (2, 14), (4, 9), (4, 27), (5, 18)]
+              and all(e["newText"] == "amount" for e in renamed), renamed)
+        capture = client.at("textDocument/rename", path, 1, position(IF_EXPRESSIONS, 1, "doubled"), newName="value")
+        check("if-expression-rename-refuses-capture", capture.get("error", {}).get("code") == -32803, capture)
+        symbols = client.request("textDocument/documentSymbol", {"textDocument": {"uri": uri(path)}})["result"]
+        check("if-expression-symbols", [s["name"] for s in symbols] == ["describe", "total", "label"], symbols)
+        formatting = {"textDocument": {"uri": uri(path)}, "options": {"tabSize": 4, "insertSpaces": True}}
+        check("if-expression-formatting-canonical", client.request("textDocument/formatting", formatting)["result"] == [])
+        # A missing else shows in the editor as `sprig check` reports it.
+        client.change(path, IF_EXPRESSIONS.replace('else:\n    "few"\n', ''), 2)
+        errors = client.wait_diagnostics(path, lambda d: d != [])
+        check("if-expression-missing-else", len(errors) == 1 and errors[0]["code"] == "SPR-SYNTAX-ERROR"
+              and "needs an else branch" in errors[0]["message"]
+              and errors[0]["range"]["start"] == {"line": 10, "character": 12}, errors)
+        check("if-expression-shutdown", client.stop() == 0, "".join(client.stderr))
+    finally:
+        if client.proc.poll() is None:
+            client.proc.kill()
+
+
 def check_line_endings(directory):
     """Editors on Windows keep CRLF documents and send VS Code's URI spelling."""
     client = Client(directory)
@@ -744,6 +806,9 @@ def main():
         workspace = Path(temp).resolve() / "workspace"
         workspace.mkdir()
         check_workspace(workspace)
+        conditionals = Path(temp).resolve() / "if expressions"
+        conditionals.mkdir()
+        check_if_expressions(conditionals)
         line_endings = Path(temp).resolve() / "line endings"
         line_endings.mkdir()
         check_line_endings(line_endings)

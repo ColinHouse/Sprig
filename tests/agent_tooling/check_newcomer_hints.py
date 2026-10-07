@@ -99,6 +99,18 @@ CASES = [
     ("c-style-if", "let s = \"ab\"\nif (s.length() < 3) print(s)\n", "SPR-SYNTAX-ERROR", "header ends with ':'"),
     ("one-line-if", "func f() -> Bool:\n    if true: return false\n    return true\n", "SPR-SYNTAX-ERROR", "no one-line if"),
     ("dot-dot-range", "for i in 0..3:\n    print(i)\n", "SPR-SYNTAX-ERROR", "range(start, stop)"),
+    ("python-conditional-expression", "let n = 3\nlet size = \"big\" if n > 9 else \"small\"\n", "SPR-SYNTAX-ERROR",
+     "if expression"),
+    ("c-conditional-operator", "let n = 3\nlet size = n > 9 ? \"big\" : \"small\"\n", "SPR-SYNTAX-ERROR", "if expression"),
+    ("if-expression-without-else", "let n = 3\nlet size = if n > 9:\n    \"big\"\nprint(size)\n", "SPR-SYNTAX-ERROR",
+     "needs an else branch"),
+    ("match-case-guard", "variant Shape:\n    Circle(radius: Float)\n    Square(side: Float)\nlet s = Shape.Square(side=1.0)\n"
+     "match s:\n    case Shape.Circle as c if c.radius > 1.0:\n        print(1)\n    case Shape.Circle:\n        print(2)\n"
+     "    case Shape.Square:\n        print(3)\n", "SPR-SYNTAX-ERROR", "inside the case's body"),
+    ("for-filter", "let items = [1, -2, 3]\nfor x in items if x > 0:\n    print(x)\n", "SPR-SYNTAX-ERROR",
+     "inside the loop body"),
+    ("if-after-block-header", "let n = 3\nwhile n > 5: if n > 0:\n    print(n)\n", "SPR-SYNTAX-ERROR",
+     "no one-line if or loop"),
     ("assignment-in-condition", "var line = \"a\"\nwhile (line = \"b\"):\n    print(1)\n", "SPR-SYNTAX-ERROR", "Compare with '=='"),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
@@ -125,6 +137,13 @@ CASES = [
 UNTARGETED = [
     ("incomplete-initializer", "let x = 1 +\nprint(x)\n", "needs an initial value"),
     ("missing-colon", "if true\n    print(1)\n", "elif"),
+    ("safe-call-is-not-a-conditional", "let s: String? = \"a\"\nif s?.length() == 1:\n    print(1)\n", "if expression"),
+    # An 'if' only starts an if expression where an expression is expected, and the
+    # Python hint needs an 'else' later on the line.
+    ("else-colon-if", "let n = 3\nif n > 1:\n    print(1)\nelse: if n > 0:\n    print(2)\n", "if expression"),
+    ("if-as-class-name", "class if Counter:\n    var ticks: Int = 0\n", "if-expression"),
+    ("if-as-binding-name", "let if box: Int = 1\n", "if expression"),
+    ("statement-modifier-without-else", "let n = 3\nprint(n) if n > 2\n", "value if condition else other"),
 ]
 
 # Programs that must keep compiling without any diagnostic: the hints never fire on valid code.
@@ -138,6 +157,7 @@ VALID = [
     ("not-equal", "print(1 != 2)\n"),
     ("main-called", "func main() -> Unit:\n    print(\"hi\")\n\nmain()\n"),
     ("inferred-type-arguments", "import \"@std/lists.spr\" as lists\nprint(lists.sorted([3, 1, 2]))\n"),
+    ("if-expression", "let n = 3\nlet size = if n > 9:\n    \"big\"\nelse:\n    \"small\"\nprint(size)\n"),
 ]
 
 
@@ -284,7 +304,8 @@ def main():
               "25C is warm\n-3C is freezing\n7C is cool\nreadings: 3\n", executed.stdout + executed.stderr)
         rules = " ".join(language["rules"])
         check("help-language-rules", all(part in rules for part in
-              ("elif", "initial value", "main is not called", "@std/process.spr", "no braces")), rules)
+              ("elif", "initial value", "main is not called", "@std/process.spr", "no braces",
+               "if also chooses a value")), rules)
         check("help-language-builtins", language.get("methods", {}).get("built-in functions") == ["print", "range", "assert"],
               json.dumps(language.get("methods")))
 

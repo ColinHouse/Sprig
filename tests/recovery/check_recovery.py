@@ -54,6 +54,25 @@ INCOMPLETE = [
     "let m = {\"a\":\n",
     "import\n",
     "func f() -> Int:\n    return\n    +\n",
+    "let x = if\n",
+    "let x = if true\n",
+    "let x = if true:\n",
+    "let x = if true:\n    1\n",
+    "let x = if true:\n    1\nelif\n",
+    "let x = if true:\n    1\nelse\n",
+    "let x = if true:\n    1\nelse:\n",
+    "let x = if true:\n    if false:\n        1\nelse:\n",
+    "func f() -> Int:\n    return if true:\n",
+    "let x = 1 + if\n",
+    "print(if true:\n",
+    "func f() -> Unit:\n    let y = if true: 1 else: 2\n    print(y)\nfunc g() -> Int:\n    return 1\n",
+    "func f() -> Int:\n    return if true:\n    1\n    else:\n    2\nfunc g() -> Int:\n",
+    "let x = if true:\n    y = 1\nelse:\n",
+    "match x:\n    case A as a if\n",
+    "match x:\n    case A as a if a > 1:\n",
+    "for x in xs if\n",
+    "let x = n?\n",
+    "conform A ot\n",
 ]
 
 # The five files behind the original 403-prefix fuzz in the acceptance report.
@@ -71,6 +90,7 @@ EXTRA_FUZZ_FILES = [
     "website/snippets/tutorial/numeric_science.spr",
     "tests/runtime/08_errors.spr",
     "tests/runtime/15_jvm_interop.spr",
+    "tests/runtime/39_if_expressions.spr",
 ]
 
 passed = 0

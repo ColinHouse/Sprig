@@ -53,7 +53,7 @@ def main():
         record("check JSON envelope", True)
     except ValueError as error:
         record("check JSON envelope", False, str(error))
-    suites = ["tests/formatter/check_formatter.py", "tests/reexports/check_reexports.py", "tests/match_expression/check_match_expression.py", "scripts/check_cases.py", "tests/numeric/check_numeric.py",
+    suites = ["tests/formatter/check_formatter.py", "tests/reexports/check_reexports.py", "tests/match_expression/check_match_expression.py", "tests/if_expression/check_if_expression.py", "scripts/check_cases.py", "tests/numeric/check_numeric.py",
               "tests/runtime/check_strings.py", "tests/runtime/check_runtime_diagnostics.py",
               "tests/jvm_interop/check_interop.py",
               "tests/gradle/check_gradle_plugin.py",

@@ -1,0 +1,10 @@
+# Only the else of an if without elif sees the if condition false; after an
+# elif, the else still sees name as String?.
+func greet(name: String?, formal: Bool) -> String:
+    return if name == null:
+        "Hello"
+    elif formal:
+        "Good day"
+    else:
+        "Hi " + name
+print(greet("Ada", false))

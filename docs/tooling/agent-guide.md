@@ -50,7 +50,9 @@ stable diagnostic, so prefer it over guessing when `check` reports a code. Every
 Top-level statements execute; a named `main` function is not invoked
 automatically. Sprig classes and variant cases use named constructors; ordinary functions and
 Java methods use positional arguments. `match` supports exhaustive statements and value expressions; expression
-branches contain exactly one expression. A Java reference result is nullable until checked. `List` and
+branches contain exactly one expression. `if`/`elif`/`else` is a value expression in the same positions, with a
+required `else` and one expression per branch; an `if` at the start of a statement is the `if` statement. A Java
+reference result is nullable until checked. `List` and
 `MutableList` differ. Integer `/` is rejected; use `divTrunc` when truncation is
 intended. No implicit mixed numeric promotion is performed. Sprig has no `Char`
 type: a String element is a non-null `String`, and `length`, indexing, `charAt`,

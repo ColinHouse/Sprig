@@ -17,6 +17,7 @@ checking, `javac` success, runtime behavior — and are never conflated.
 | `correctness` + `review_cases` | Java nullability/effects, `Unit`, generic arity, inferred-case `match`, JSON CLI results | `python3 correctness/check_correctness.py` |
 | `recovery` | structured diagnostics for incomplete input and truncation prefixes | `python3 recovery/check_recovery.py` |
 | `formatter`, `reexports`, `match_expression` | the #34 features, including byte-level and mutation checks | the sibling `check_*.py` suites |
+| `if_expression` | `if` as an expression: evaluation order, typing, narrowing and targeted syntax errors | `check_if_expression.py` |
 | `adversarial/v08`, `adversarial/regressions` | independent attacks on generics, naming, layout, JVM metadata, installer and SDK composition | `check_generics.py`, `check_projects.py` and the seven `regressions/check_*.py` suites |
 | `callables`, `bootstrap` | Sprig/JVM callable bridges and the stage-1 frontend probe | `check_callables.py`, `check_probe.py` |
 | `cli_contract`, `cli_library` | rejected CLI options and the Sprig-written CLI library | `check_cli_contract.py`, `check_cli_library.py` |

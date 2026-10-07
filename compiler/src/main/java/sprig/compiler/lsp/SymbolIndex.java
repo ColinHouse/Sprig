@@ -477,6 +477,12 @@ final class SymbolIndex {
                 }
             } else if (expr instanceof Expr.Match match) {
                 match(match.cases);
+            } else if (expr instanceof Expr.If ifExpr) {
+                for (int i = 0; i < ifExpr.conditions.size(); i++) {
+                    expr(ifExpr.conditions.get(i));
+                    expr(ifExpr.values.get(i));
+                }
+                expr(ifExpr.elseValue);
             } else if (expr instanceof Expr.Lambda lambda) {
                 String outer = container;
                 for (Decl.Param param : lambda.params) {

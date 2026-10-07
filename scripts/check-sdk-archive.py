@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix="sprig SDK smoke with spaces ") as temp:
     assert (sdk / "legal/resolver/LICENSE").is_file()
     assert (sdk / "legal/resolver/NOTICE").is_file()
     for name in ("README.md", "INSTALL.md", "AGENT_GUIDE.md", f"RELEASE_NOTES-v{version}.md",
-                 "docs/QUICK_REFERENCE.md", "docs/GENERICS.md",
+                 "docs/QUICK_REFERENCE.md", "docs/IF_EXPRESSIONS.md", "docs/GENERICS.md",
                  "docs/PROJECTS.md", "docs/DEPENDENCIES.md",
                  "docs/FEATURE_STATUS_IMPLEMENTED.md", "docs/JVM_INTEROP.md",
                  "docs/GRADLE_INTEGRATION.md", "docs/TYPED_BOUNDARY_ADAPTERS.md",

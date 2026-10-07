@@ -1,0 +1,5 @@
+# An if expression always produces a value, so its else branch is required.
+let count = 3
+let label = if count > 1:
+    "many"
+print(label)

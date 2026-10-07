@@ -14,8 +14,11 @@ MUTATIONS=[
      'code.append(temp).append(" = ").append(emitExpr(match.scrutinee)).append("; ");\n        boolean concrete = match.matchedType instanceof VariantCaseType;',
      'tests/match_expression/check_match_expression.py'),
     ('branch-result-check','compiler/src/main/java/sprig/compiler/sem/TypeChecker.java',
-     'requireAssignable(candidate[0],actual,value.span,Codes.MATCH_RESULT,"match branch result");',
+     'requireAssignable(candidate, actual, value.span, code, role, mismatchHint.apply(candidate, actual));',
      '/* deliberately accept incompatible branch */','tests/match_expression/check_match_expression.py'),
+    ('if-branch-conversion','compiler/src/main/java/sprig/compiler/gen/JavaGenerator.java',
+     'return "((" + resultJava + ") (" + convertedExpression(value, resultType) + "))";',
+     'return "(" + emitExpr(value) + ")";','tests/if_expression/check_if_expression.py'),
 ]
 def build():
     result=subprocess.run([sys.executable,'scripts/build.py'],cwd=ROOT,capture_output=True,text=True)

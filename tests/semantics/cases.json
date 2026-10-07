@@ -557,5 +557,47 @@
     "expected_diagnostic": "SPR-TYPE-NULLABLE",
     "status": "implemented",
     "source": "v0.7.1 Error text review: Java getMessage() may be null"
+  },
+  {
+    "file": "if_expression_condition.spr",
+    "expected_diagnostic": "SPR-TYPE-CONDITION",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_branch_mismatch.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_missing_else.spr",
+    "expected_diagnostic": "SPR-SYNTAX-ERROR",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_unit_branch.spr",
+    "expected_diagnostic": "SPR-TYPE-UNIT",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_only_null.spr",
+    "expected_diagnostic": "SPR-TYPE-INFER",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_elif_narrowing.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "if expressions"
+  },
+  {
+    "file": "if_expression_else_after_elif.spr",
+    "expected_diagnostic": "SPR-TYPE-NULLABLE",
+    "status": "implemented",
+    "source": "if expressions"
   }
 ]

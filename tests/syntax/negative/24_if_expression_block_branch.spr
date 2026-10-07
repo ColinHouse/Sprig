@@ -1,0 +1,6 @@
+let count = 3
+let label = if count > 1:
+    let many = "many"
+    many
+else:
+    "few"
