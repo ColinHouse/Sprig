@@ -1,7 +1,0 @@
-Hey! This PR fixes #148.
-
-I added a check in ParserFrontend.java (foreignSyntax) to intercept the ASSIGN token inside a FieldDeclarationContext. When someone forgets to explicitly type a class field, it now returns the user-friendly hint instead of the raw ANTLR syntax error.
-
-I also added the regression test case to check_newcomer_hints.py to ensure it triggers correctly.
-
-Let me know if you need me to change anything. Thanks!

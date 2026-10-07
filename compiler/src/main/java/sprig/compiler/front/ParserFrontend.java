@@ -19,6 +19,7 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.IntervalSet;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
@@ -672,8 +673,12 @@ public final class ParserFrontend {
             String name = previous == SprigLexer.IDENT ? stream.get(index - 1).getText() : "name";
             String keyword = index > 1 && (beforePrevious == SprigLexer.VAR || beforePrevious == SprigLexer.LET)
                     ? stream.get(index - 2).getText() : "let";
-            return "Fields have explicit types; write '" + keyword + " " + name + ": Int = 0'\n"
-                    + "For other types, write '" + keyword + " " + name + ": Type = value'.";
+            String fieldType = literalType(stream, index);
+            String value = initializer(stream, index);
+            return "Fields have explicit types; write '" + keyword + " " + name + ": "
+                    + (fieldType != null ? fieldType : value.equals("null") ? "Type?" : "Type") + " = " + value + "'\n"
+                    + (fieldType == null ? "Replace Type with the field's type. " : "")
+                    + "Local variables infer their type, but a field's type is written even when it has an initializer.";
         }
         int lineFirst = lineStart(stream, index);
         int first = stream.get(lineFirst).getType();
@@ -845,6 +850,50 @@ public final class ParserFrontend {
             }
         }
         return false;
+    }
+
+    /** The initializer after a field's '=' as written, or "value" when it spans lines or is long. */
+    private static String initializer(TokenStream stream, int assign) {
+        int last = assign;
+        while (last + 1 < stream.size() && !endsLine(stream.get(last + 1).getType())) {
+            last++;
+        }
+        if (last == assign) {
+            return "value";
+        }
+        Token first = stream.get(assign + 1);
+        String text = first.getInputStream().getText(Interval.of(first.getStartIndex(), stream.get(last).getStopIndex()));
+        return text.length() > 60 || text.contains("\n") || text.contains("\r") ? "value" : text;
+    }
+
+    /** The type a local variable would infer for a literal initializer (0, -1.5, "a", true), else null. */
+    private static String literalType(TokenStream stream, int assign) {
+        int first = assign + 1;
+        if (first < stream.size() && stream.get(first).getType() == SprigLexer.MINUS) {
+            first++;
+        }
+        if (first >= stream.size() || first + 1 < stream.size() && !endsLine(stream.get(first + 1).getType())) {
+            return null;
+        }
+        int literal = stream.get(first).getType();
+        boolean negated = first > assign + 1;
+        if (literal == SprigLexer.INT) {
+            return "Int";
+        }
+        if (literal == SprigLexer.FLOAT) {
+            return "Float";
+        }
+        if (negated) {
+            return null;
+        }
+        if (literal == SprigLexer.STRING) {
+            return "String";
+        }
+        return literal == SprigLexer.TRUE || literal == SprigLexer.FALSE ? "Bool" : null;
+    }
+
+    private static boolean endsLine(int type) {
+        return type == SprigLexer.NEWLINE || type == SprigLexer.INDENT || type == SprigLexer.DEDENT || type == Token.EOF;
     }
 
     /** Whether a token of the given type appears on the line before the token at index. */
