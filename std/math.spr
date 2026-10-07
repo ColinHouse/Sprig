@@ -1,19 +1,25 @@
 # Exact 64-bit integer arithmetic helpers. No Float/Decimal overloads exist.
+
+# The value without its sign. The most negative Int has no positive
+# counterpart, so abs of it is an overflow error.
 func abs(value: Int) -> Int:
     if value < 0:
         return 0 - value
     return value
 
+# The smaller of the two values.
 func min(left: Int, right: Int) -> Int:
     if left < right:
         return left
     return right
 
+# The larger of the two values.
 func max(left: Int, right: Int) -> Int:
     if left > right:
         return left
     return right
 
+# -1 for a negative value, 0 for zero and 1 for a positive value.
 func sign(value: Int) -> Int:
     if value < 0:
         return 0 - 1
@@ -21,6 +27,8 @@ func sign(value: Int) -> Int:
         return 1
     return 0
 
+# The value limited to the range low to high, inclusive. Throws Error when
+# low is greater than high.
 func clamp(value: Int, low: Int, high: Int) -> Int throws Error:
     if low > high:
         throw Error("clamp lower bound must not exceed upper bound")

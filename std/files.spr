@@ -6,12 +6,17 @@ import sprig.runtime.host.HostFiles as HostFiles
 import java.io.IOException as IOException
 import "@std/text.spr" as text
 
+# Internal: turns a host IOException into the "cannot <action>: <reason>"
+# Error the IO functions below throw; callers use read_utf8 and the others.
 func failure(action: String, problem: IOException) -> Error:
     let reason = HostFiles.reason(problem)
     if reason != null:
         return Error("cannot " + action + ": " + reason)
     return Error("cannot " + action)
 
+# The whole file decoded as UTF-8, line endings kept; a symbolic link is
+# followed. An Error when there is no such file, the path is a directory or
+# the bytes are not valid UTF-8.
 func read_utf8(path: String) -> String throws Error:
     try:
         let value = HostFiles.readUtf8(path)
@@ -21,21 +26,32 @@ func read_utf8(path: String) -> String throws Error:
         throw failure("read " + path, problem)
     throw Error("host read_utf8 returned null")
 
+# Writes the text as UTF-8, creating the file or replacing its content in
+# place, so a reader can see it half written (see atomic_write_utf8). An Error
+# when the parent directory does not exist or the path is a directory.
 func write_utf8(path: String, value: String) -> Unit throws Error:
     try:
         HostFiles.writeUtf8(path, value)
     catch problem: IOException:
         throw failure("write " + path, problem)
 
+# True when anything is at the path: a file, a directory or a symbolic link.
+# Links are not followed, so a link whose target is missing still counts.
 func exists(path: String) -> Bool:
     return HostFiles.exists(path)
 
+# True for a directory. Symbolic links are not followed, so a link to a
+# directory is false, as is a missing path.
 func is_directory(path: String) -> Bool:
     return HostFiles.isDirectory(path)
 
+# True for a regular file. Symbolic links are not followed, so a link to a
+# file is false, as are directories and missing paths.
 func is_file(path: String) -> Bool:
     return HostFiles.isRegularFile(path)
 
+# Creates the directory and any missing parents; an existing directory is
+# left as it is. An Error when the path or one of its parents is a file.
 func make_directory(path: String) -> Unit throws Error:
     try:
         HostFiles.makeDirectory(path)
@@ -50,51 +66,74 @@ func join(base: String, child: String) -> String throws Error:
         return value
     throw Error("host join returned null")
 
+# The path with "." segments and "name/.." pairs removed, worked out from the
+# text alone: nothing on disk is checked. A leading ".." stays, and "a/.."
+# becomes "".
 func normalize(path: String) -> String throws Error:
     let value = HostFiles.normalize(path)
     if value != null:
         return value
     throw Error("host normalize returned null")
 
+# The last name in the path as written: notes.txt for data/notes.txt, ".." for
+# a/.. (nothing is normalized). A root such as / has no name: an Error.
 func file_name(path: String) -> String throws Error:
     let value = HostFiles.fileName(path)
     if value != null:
         return value
-    throw Error("host file_name returned null")
+    throw Error("cannot take the file name of " + path + ": a root has none")
 
+# The lexical parent after normalizing, relative paths staying relative: data
+# for data/notes.txt, / for /a. Null when the normalized path is a single name
+# (notes.txt, a/b/..) or a root.
 func parent(path: String) -> String?:
     return HostFiles.parent(path)
 
+# The path resolved against the working directory and normalized. It need not
+# exist: nothing on disk is checked and symbolic links are not resolved.
 func absolute(path: String) -> String throws Error:
     let value = HostFiles.absolute(path)
     if value != null:
         return value
     throw Error("host absolute returned null")
 
+# Copies one regular file to a new path; it never overwrites. An Error when
+# the source is missing, a directory or a symbolic link, when the target
+# exists, or when the target's parent directory does not exist.
 func copy_file(source: String, target: String) -> Unit throws Error:
     try:
         HostFiles.copyFile(source, target)
     catch problem: IOException:
         throw failure("copy " + source + " to " + target, problem)
 
+# Moves one regular file to a new path; it never overwrites. An Error for the
+# same reasons as copy_file: a missing, directory or symbolic-link source, an
+# existing target, or a target whose parent directory does not exist.
 func move(source: String, target: String) -> Unit throws Error:
     try:
         HostFiles.move(source, target)
     catch problem: IOException:
         throw failure("move " + source + " to " + target, problem)
 
+# Deletes one regular file permanently. An Error when there is no such file,
+# or when the path is a directory or a symbolic link, which are left alone.
 func remove_file(path: String) -> Unit throws Error:
     try:
         HostFiles.removeFile(path)
     catch problem: IOException:
         throw failure("remove " + path, problem)
 
+# Like write_utf8, but via a temporary sibling renamed over the target,
+# atomically where the filesystem allows; no fsync. On POSIX the new file
+# is owner-only (rw-------), and a symbolic link at the path is replaced.
 func atomic_write_utf8(path: String, value: String) -> Unit throws Error:
     try:
         HostFiles.atomicWriteUtf8(path, value)
     catch problem: IOException:
         throw failure("write " + path, problem)
 
+# Creates a new empty file in the operating system's temporary directory and
+# returns its absolute path. It is not removed automatically; use remove_file.
 func temp_file() -> String throws Error:
     try:
         let value = HostFiles.tempFile()

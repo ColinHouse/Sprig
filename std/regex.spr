@@ -5,6 +5,9 @@ import "@std/jvm.spr" as jvm
 import java.util.regex.Pattern as Pattern
 import java.util.regex.PatternSyntaxException as PatternSyntaxException
 
+# Internal: the java.util.regex.Pattern behind the functions below, with a bad
+# pattern turned into an Error; callers use matches, find, find_all,
+# replace_all and split.
 func compiled(pattern: String) -> Pattern throws Error:
     try:
         let value = Pattern.compile(pattern)

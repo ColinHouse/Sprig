@@ -7,6 +7,8 @@ import java.util.List as JavaList
 import java.util.Map as JavaMap
 import sprig.runtime.jvm.HostCollections as HostCollections
 
+# An immutable Sprig list of the Java list's items in order, copied now, so
+# later changes to the Java list do not show. A null item is an Error.
 generic T:
     func list_snapshot(source: JavaList[T]) -> List[T] throws Error:
         let snapshot = HostCollections.listSnapshot[T](source)
@@ -14,6 +16,8 @@ generic T:
             return snapshot
         throw Error("java.util.List snapshot unexpectedly returned null")
 
+# An immutable Sprig map of the Java map's entries in its iteration order,
+# copied now. A null key or value is an Error.
 generic K, V:
     func map_snapshot(source: JavaMap[K, V]) -> Map[K, V] throws Error:
         let snapshot = HostCollections.mapSnapshot[K, V](source)
@@ -21,6 +25,8 @@ generic K, V:
             return snapshot
         throw Error("java.util.Map snapshot unexpectedly returned null")
 
+# A new mutable java.util.ArrayList with the items in order, for a Java API;
+# changing it leaves the Sprig list as it was.
 generic T:
     func list_copy(values: List[T]) -> JavaList[T] throws Error:
         let copy = HostCollections.listCopy[T](values)
@@ -28,6 +34,8 @@ generic T:
             return copy
         throw Error("java.util.ArrayList copy unexpectedly returned null")
 
+# A new mutable java.util.LinkedHashMap with the entries in the map's order;
+# changing it leaves the Sprig map as it was.
 generic K, V:
     func map_copy(values: Map[K, V]) -> JavaMap[K, V] throws Error:
         let copy = HostCollections.mapCopy[K, V](values)

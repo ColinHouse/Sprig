@@ -1,6 +1,8 @@
 import java.math.BigDecimal as BigDecimal
 import java.math.RoundingMode as RoundingMode
 # String position operations use Unicode code points; Java char interop remains UTF-16.
+
+# The values with the separator between each pair; an empty list gives "".
 func join(values: List[String], separator: String) -> String:
     var output = ""
     var index: Int = 0
@@ -11,16 +13,23 @@ func join(values: List[String], separator: String) -> String:
         index += 1
     return output
 
+# True when the value begins with the prefix. Case-sensitive; an empty prefix
+# always matches.
 func starts_with(value: String, prefix: String) -> Bool:
     if prefix.length() > value.length():
         return false
     return value.substring(0, prefix.length()) == prefix
 
+# True when the value ends with the suffix. Case-sensitive; an empty suffix
+# always matches.
 func ends_with(value: String, suffix: String) -> Bool:
     if suffix.length() > value.length():
         return false
     return value.substring(value.length() - suffix.length(), value.length()) == suffix
 
+# The parts between occurrences of the literal separator, empty parts kept:
+# split("a,,b", ",") is ["a", "", "b"] and split("", ",") is [""]. An empty
+# separator throws Error.
 func split(value: String, separator: String) -> List[String] throws Error:
     if separator.length() == 0:
         throw Error("split separator must not be empty")
@@ -37,6 +46,8 @@ func split(value: String, separator: String) -> List[String] throws Error:
     output.append(value.substring(start, value.length()))
     return output.toList()
 
+# The lines without their endings, split at LF or CRLF (a lone CR is kept).
+# A final line ending leaves a last "" item, and "" gives [""].
 func lines(value: String) -> List[String]:
     let output: MutableList[String] = []
     var start: Int = 0
@@ -52,6 +63,8 @@ func lines(value: String) -> List[String]:
     output.append(value.substring(start, value.length()))
     return output.toList()
 
+# The value without leading and trailing ASCII spaces, tabs, CR and LF; other
+# whitespace, such as a no-break space, is kept.
 func trim(value: String) -> String:
     var start: Int = 0
     var end = value.length()
@@ -70,6 +83,8 @@ func pad_left(value: String, width: Int, fill: String) -> String:
     let missing = width - value.length()
     return fill.repeat(missing.divTrunc(fill.length()) + 1).substring(0, missing) + value
 
+# Like pad_left, but the fill goes after the value: pad_right("ab", 5, "xy")
+# is "abxyx". A value already that long, or an empty fill, comes back unchanged.
 func pad_right(value: String, width: Int, fill: String) -> String:
     if width <= value.length() or fill.length() == 0:
         return value

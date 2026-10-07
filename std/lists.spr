@@ -5,6 +5,7 @@
 # makes a call that needs 'throws Error' or try/catch.
 import sprig.runtime.host.HostOrder as HostOrder
 
+# One group from group_by: a key and the items with that key, in input order.
 generic K, T:
     class Group:
         let key: K
@@ -80,6 +81,8 @@ generic T, K:
             position += 1
         return groups.toList()
 
+# Combines the items from left to right, starting from initial: for [a, b] the
+# result is step(step(initial, a), b). An empty list gives initial.
 generic T, A:
     func fold(items: List[T], initial: A, step: fn(A, T) -> A throws Error) -> A rethrows:
         var result = initial
@@ -95,8 +98,8 @@ generic T:
                 return item
         return null
 
-# any and all stop at the first item that decides the answer. For an empty
-# list any is false and all is true.
+# True when the test accepts some item; stops at the first item it accepts.
+# An empty list gives false.
 generic T:
     func any(items: List[T], accept: fn(T) -> Bool throws Error) -> Bool rethrows:
         for item in items:
@@ -104,6 +107,8 @@ generic T:
                 return true
         return false
 
+# True when the test accepts every item; stops at the first item it rejects.
+# An empty list gives true.
 generic T:
     func all(items: List[T], accept: fn(T) -> Bool throws Error) -> Bool rethrows:
         for item in items:
@@ -111,6 +116,7 @@ generic T:
                 return false
         return true
 
+# The number of items the test accepts.
 generic T:
     func count(items: List[T], accept: fn(T) -> Bool throws Error) -> Int rethrows:
         var total = 0
@@ -127,6 +133,8 @@ func sum(values: List[Int]) -> Int:
         total += value
     return total
 
+# The sum of amount(item) over the items, 0 for an empty list; checked, so an
+# overflow fails like any other Int overflow.
 generic T:
     func sum_by(items: List[T], amount: fn(T) -> Int throws Error) -> Int rethrows:
         var total = 0
@@ -154,13 +162,14 @@ generic A, B:
         let first: A
         let second: B
 
-# The first or last item, or null for an empty list.
+# The first item, or null for an empty list.
 generic T:
     func first(items: List[T]) -> T?:
         if items.size() == 0:
             return null
         return items.get(0)
 
+# The last item, or null for an empty list.
 generic T:
     func last(items: List[T]) -> T?:
         if items.size() == 0:
@@ -191,6 +200,7 @@ generic T:
             index += 1
         return out.toList()
 
+# The items in reverse order, as a new list.
 generic T:
     func reversed(items: List[T]) -> List[T]:
         let out: MutableList[T] = []
@@ -223,6 +233,7 @@ generic T:
             index += 1
         return -1
 
+# Every item with its index, counting from 0, in list order.
 generic T:
     func enumerate(items: List[T]) -> List[Indexed[T]]:
         let out: MutableList[Indexed[T]] = []

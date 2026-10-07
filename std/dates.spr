@@ -6,6 +6,8 @@ import java.time.ZoneOffset as ZoneOffset
 import java.time.format.DateTimeParseException as DateTimeParseException
 import java.time.temporal.ChronoUnit as ChronoUnit
 
+# Internal: the java.time.LocalDate the functions below work on, or the Error
+# "not a date: <text>"; callers use parse or is_valid.
 func parsed(text: String) -> LocalDate throws Error:
     try:
         let value = LocalDate.parse(text)
@@ -15,6 +17,8 @@ func parsed(text: String) -> LocalDate throws Error:
         throw Error("not a date: " + text)
     throw Error("host returned no date")
 
+# Internal: the ISO text of a LocalDate, which is how the functions below
+# return a date; callers use parse, plus_days or today_utc.
 func text_of(value: LocalDate?) -> String throws Error:
     if value != null:
         let text = value.toString()
@@ -33,6 +37,8 @@ func today_utc() -> String throws Error:
 func parse(text: String) -> String throws Error:
     return text_of(parsed(text))
 
+# True when the text is a real calendar date in ISO form such as 2026-10-06;
+# 2026-02-30, 2026-1-5 and a date with a time are false.
 func is_valid(text: String) -> Bool:
     try:
         parsed(text)
@@ -58,11 +64,14 @@ func day_of_week(date: String) -> Int throws Error:
         return day.getValue()
     throw Error("host returned no weekday")
 
+# The date's year, such as 2026; an Error when the text is not a valid date.
 func year(date: String) -> Int throws Error:
     return parsed(date).getYear()
 
+# The month from 1 (January) to 12 (December); an Error for an invalid date.
 func month(date: String) -> Int throws Error:
     return parsed(date).getMonthValue()
 
+# The day of the month, from 1 to 31; an Error for an invalid date.
 func day(date: String) -> Int throws Error:
     return parsed(date).getDayOfMonth()

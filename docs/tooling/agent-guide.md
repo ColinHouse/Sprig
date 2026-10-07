@@ -15,6 +15,8 @@ bin/sprig help generics --json
 bin/sprig help projects --json
 bin/sprig help dependencies --json
 bin/sprig help upgrade --json
+bin/sprig help agents --json
+bin/sprig help api --json
 bin/sprig api java.time.LocalDate --json
 bin/sprig api src/main.spr --json
 bin/sprig api @pkg/module.spr --member Type.member --json
@@ -163,6 +165,15 @@ Declaration facades use `export alias.Symbol` after imports and before other
 code. Query `sprig api module.spr --json` for exported signatures, origins and
 `doc`, the `#` comment written directly above a declaration or member.
 No wildcard, renaming or implicit reexport exists. See docs/language/module-reexports.md.
+
+Every declaration and method of `@std` and the bundled packages has a `doc`
+that states its result, what throws `Error`, when it returns `null` and its
+edge cases; `tests/agent_tooling/check_api_docs.py` keeps it that way. A `doc`
+that starts with `Internal:` marks a helper the module needs but callers should
+not use: Sprig has no private declarations, so that label is the boundary.
+`sprig help api --json` summarizes what `api` reports for modules and Java
+classes; behaviour that spans several declarations stays in the topic guides,
+`docs/projects/standard-library.md` and each package README.
 
 `sprig fmt file.spr` (or a project directory) writes canonical,
 comment-preserving source and fails without rewriting malformed input;

@@ -13,6 +13,7 @@ generic T:
             members.set(value, true)
             return true
 
+        # True when the value is a member; a map lookup, not a scan.
         func has(value: T) -> Bool:
             return members.containsKey(value)
 
@@ -23,6 +24,7 @@ generic T:
             members.remove(value)
             return true
 
+        # The number of members.
         func size() -> Int:
             return members.size()
 
@@ -30,6 +32,8 @@ generic T:
         func to_list() -> List[T]:
             return members.keys()
 
+# A new set of the values, in order of first occurrence; a repeated value is
+# kept once. For an empty set write the type: sets.of[String]([]).
 generic T:
     func of(values: List[T]) -> Set[T]:
         let set = Set[T]()

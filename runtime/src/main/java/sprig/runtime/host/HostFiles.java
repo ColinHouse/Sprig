@@ -74,7 +74,11 @@ public final class HostFiles {
     }
     public static String join(String base, String child) { return Path.of(base).resolve(child).normalize().toString(); }
     public static String normalize(String path) { return Path.of(path).normalize().toString(); }
-    public static String fileName(String path) { return Path.of(path).getFileName().toString(); }
+    /** The last name of the path, or null for a root such as / that has none. */
+    public static String fileName(String path) {
+        Path name = Path.of(path).getFileName();
+        return name == null ? null : name.toString();
+    }
 
     /** Lexical parent after normalization; a leaf or filesystem root has no parent. */
     public static String parent(String path) {
