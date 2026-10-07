@@ -1,0 +1,11 @@
+class Sink:
+    func write(line: String) -> Unit
+
+generic T:
+    class Box:
+        let value: T
+        func write(line: String) -> Unit:
+            print(line)
+
+conform Box to Sink
+print("x")

@@ -374,6 +374,19 @@ public final class NameResolver {
             }
             if (anyAbstract) {
                 classDecl.contract = true;
+                if (!classDecl.typeParams.isEmpty()) {
+                    // A contract is a type and never generic in the 0.8 language:
+                    // no Repository[T], no bounds, no associated types.
+                    String element = classDecl.typeParams.get(0);
+                    Decl.Func first = classDecl.methods.get(0);
+                    diagnostics.add(Diagnostic.error(Codes.CLASS_ABSTRACT, Phase.NAME,
+                            "Contract class '" + classDecl.name + "' is generic ('" + String.join(", ", classDecl.typeParams)
+                                    + "'); a contract is never generic in the 0.8 language",
+                            module.uri, classDecl.span)
+                            .withHint("Declare one non-generic contract per element type (class Int" + classDecl.name
+                                    + " with " + element + " written as Int), or keep a generic class that holds the single operation as a "
+                                    + "fn field (let " + first.name + ": fn(...) -> ...) instead of a contract."));
+                }
                 if (!classDecl.fields.isEmpty()) {
                     diagnostics.add(Diagnostic.error(Codes.CLASS_ABSTRACT, Phase.NAME,
                             "Contract class '" + classDecl.name + "' declares fields; a class whose methods have "
@@ -387,8 +400,10 @@ public final class NameResolver {
                     diagnostics.add(Diagnostic.error(Codes.CLASS_ABSTRACT, Phase.NAME,
                             "Contract class '" + classDecl.name + "' mixes methods with and without a body",
                             module.uri, concrete.span)
-                            .withHint("A contract has no default implementations: remove the body of '" + concrete.name
-                                    + "' and implement it in each conforming class, or give every method a body."));
+                            .withHint("A contract has no default methods: remove the body of '" + concrete.name
+                                    + "' and write the shared behavior as a module function that takes the contract, "
+                                    + "for example func " + concrete.name + "(target: " + classDecl.name
+                                    + ", ...) -> Unit; or give every method a body to make an ordinary class."));
                 }
             }
         } else if (decl instanceof Decl.EnumDecl enumDecl) {
@@ -601,7 +616,10 @@ public final class NameResolver {
             for (Stmt.Match.Branch branch : match.branches) {
                 if (branch.caseTypeRef.parts.isEmpty()) {
                     diagnostics.add(Diagnostic.error(Codes.MATCH_UNKNOWN_CASE, Phase.TYPE,
-                            "Match case must be written as Type.Case", module.uri, branch.caseTypeRef.span));
+                            "Match case must be written as Type.Case", module.uri, branch.caseTypeRef.span)
+                            .withHint("match is for enums and variants; there are no type tests on class or contract values. "
+                                    + "A closed set of types is a variant (declare one with a case per type and match on it); "
+                                    + "an open set is a contract (call its methods instead of testing the type)."));
                 } else {
                     // The branch names the declaration; explicit generic
                     // arguments are not needed (the scrutinee supplies them).
