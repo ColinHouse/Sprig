@@ -1,0 +1,13 @@
+func size_label(n: Int) -> String:
+    return if n > 1:
+        "big"
+    else:
+        "small"
+
+print([1, 2, 3].map(size_label))
+
+let parity = fn(n: Int) => if n % 2 == 0:
+    "even"
+else:
+    "odd"
+print([1, 2, 3].map(parity))

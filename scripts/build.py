@@ -17,6 +17,27 @@ def run(*args, cwd=ROOT):
     subprocess.run([str(arg) for arg in args], cwd=cwd, check=True)
 
 
+def runtime_digest(source_dir):
+    """The runtime digest RuntimeClasses records: every .java file's relative path, length and bytes, in path order."""
+    digest = hashlib.sha256()
+    files = sorted((path.relative_to(source_dir).as_posix(), path)
+                   for path in Path(source_dir).rglob('*.java') if path.is_file())
+    for name, path in files:
+        data = path.read_bytes()
+        digest.update(f'{name}\0{len(data)}\0'.encode('utf-8'))
+        digest.update(data)
+    return digest.hexdigest()
+
+
+def read_runtime_stamp(directory):
+    """The key=value lines of a runtime-classes directory's stamp, or {} without one."""
+    stamp = Path(directory) / 'sprig-runtime.properties'
+    if not stamp.is_file() or not (Path(directory) / 'classes').is_dir():
+        return {}
+    return dict(line.split('=', 1) for line in stamp.read_text(encoding='utf-8').splitlines()
+                if '=' in line and not line.startswith('#'))
+
+
 def write_launchers(home, packaged=False):
     """Both launchers locate their home from their own path, including spaces."""
     bindir = home / 'bin'
@@ -65,6 +86,7 @@ def main():
     for directory in ('gen', 'classes'):
         shutil.rmtree(build / directory, ignore_errors=True)
         (build / directory).mkdir(parents=True)
+    shutil.rmtree(build / 'runtime-classes', ignore_errors=True)
     (build / 'sprig-compiler.jar').unlink(missing_ok=True)
     print('Generating ANTLR parser...', flush=True)
     run('java', '-jar', antlr, '-Dlanguage=Java', '-visitor', '-no-listener', '-package', 'sprig.compiler.parser', '-o', build / 'gen', 'SprigLexer.g4', cwd=ROOT / 'grammar')
@@ -90,6 +112,12 @@ def main():
         catalog = '\n'.join('releaseStatus=prerelease; ' + tag if line.startswith('releaseStatus=') else line for line in catalog.splitlines()) + '\n'
         catalog_file.write_text(catalog, encoding='utf-8')
     run('jar', '--create', '--file', build / 'sprig-compiler.jar', '-C', build / 'classes', '.')
+    # Every program's output carries the runtime classes. They are compiled
+    # once here, by the compiler's own javac invocation, and copied into each
+    # program's output; the SDK ships them as lib/runtime-classes.
+    print('Compiling runtime classes...', flush=True)
+    run('java', '-cp', os.pathsep.join(str(file) for file in [build / 'sprig-compiler.jar', antlr, *resolver]),
+        'sprig.compiler.cli.RuntimeClasses', ROOT / 'runtime/src/main/java', build / 'runtime-classes')
     write_launchers(ROOT)
     cli = ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig')
     run(cli, 'version')

@@ -46,9 +46,15 @@ public class SprigMutableList<T> extends SprigList<T> {
         items.clear();
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    /**
+     * Ascending and stable in compareTo order, which sort() has always used:
+     * UTF-16 code units for String (as {@code <}), and for Float/Float32 the
+     * JDK's compare, so -0.0 before 0.0 and NaN last. A null comparator sorts
+     * by exactly those compareTo calls (ComparableTimSort is TimSort without
+     * the Comparator indirection).
+     */
     public void sortInPlace() {
-        items.sort((a, b) -> ((Comparable) a).compareTo(b));
+        items.sort(null);
     }
 
     @Override

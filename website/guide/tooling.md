@@ -14,6 +14,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 | `sprig run [文件] [-- 参数]` | 检查、编译并运行，`--` 后面的内容会传给程序 |
 | `sprig test [路径]` | 运行项目测试，可以用 `--filter` 按名字筛选 |
 | `sprig build [文件]` | 生成 Java 源码和 class 文件 |
+| `sprig build --bundle [--archive]` | 打出一个自带 Java 运行时的目录，没装 JDK 的机器也能运行，见下面 |
 | `sprig fmt <文件或目录>` | 格式化代码，加 `--check` 只检查、不修改 |
 
 项目和依赖：
@@ -25,6 +26,8 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 | `sprig add`、`sprig remove` | 添加、删除依赖，见[项目](/guide/projects) |
 | `sprig project` | 查看项目信息 |
 | `sprig deps` | 列出声明的依赖 |
+| `sprig search [文本]` | 列出注册表里的包 |
+| `sprig publish --registry 目录 ...` | 在本地注册表目录里写入发布条目，见[项目](/guide/projects) |
 
 查资料：
 
@@ -53,10 +56,11 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 
 - **`check --syntax-only`**：`check` 本来就不生成代码；加上这个选项更快，只检查词法、缩进和语法。
 - **`run --keep`**：保留生成的 Java 文件，方便查看。
-- **`run --no-cache`**：即使同一个程序之前跑过，也重新调用 javac。默认情况下 `run` 和 `test` 会把每个程序编译出的 class 文件留在 `~/.sprig/cache/javac` 下（保留最近的 64 个），键由生成的 Java、编译器版本、运行时源码和 classpath 决定，所以再次运行没改过的程序会跳过 javac，启动时间从大约 2 秒降到不足 1 秒。设置 `SPRIG_JAVAC_CACHE=off` 关闭缓存，设成一个目录路径则换个位置。
+- **`run --no-cache`**：即使同一个程序之前跑过，也重新调用 javac。默认情况下 `run` 和 `test` 会把每个程序编译出的 class 文件留在 `~/.sprig/cache/javac` 下（保留最近的 64 个），键由生成的 Java、编译器和 Java 版本、运行时和 classpath 决定，所以再次运行没改过的程序会跳过 javac。真要调用 javac 时，它也只编译你的程序：运行时已经随 SDK 编译好，直接复制到你的 class 文件旁边。如果你用的 JDK 和构建 SDK 的不是同一个版本，第一次运行会把运行时编译一次，放进 `~/.sprig/cache/runtime`。设置 `SPRIG_JAVAC_CACHE=off` 关闭程序的缓存，设成一个目录路径则换个位置。
 - **`run --stacktrace`**：程序运行时出了没被捕获的错误，Sprig 会报 `SPR-RUNTIME-ERROR` 或 `SPR-RUNTIME-EXCEPTION`，并指出是源码的哪一行。需要完整的 JVM 堆栈时，加上这个选项。
 - **`build -d <目录>`**：`build` 默认输出到 `sprig-build/`，`-d` 可以换个目录。检查没通过时不会生成 class 文件。
 - **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。
+- **`build --bundle`**：在 `build` 的输出目录里再写一个 `<名字>/` 目录（名字是 `--bin`、项目名或文件名），交给没装 Java 的人也能运行：`bin/<名字>` 是 POSIX sh 启动器，`bin/<名字>.cmd` 是 Windows 启动器；`lib/` 里是程序的 jar、Sprig 运行时和锁文件里的全部 jar（Maven 依赖也在，按坐标命名）；`runtime/` 是用 jlink 从这些 jar 实际用到的模块做出来的 Java 运行时镜像，`runtime/legal/` 里的 JDK 许可声明原样保留（OpenJDK 的 GPLv2 + Classpath Exception 允许连同声明一起分发）。启动器在你当前的目录里运行程序，原样转发参数和退出码，并把程序自己的类做成 class-data-sharing 归档放在用户缓存目录里，第二次启动更快。打包时不会运行你的程序。**镜像只能在构建它的操作系统和 CPU 架构上运行**，命令输出会写明是哪个平台；要给别的平台就在那个平台上构建。加 `--archive` 会在旁边再写一个 `<名字>.zip`，解压后启动器照样可执行。需要完整的 JDK（有 `jdeps`、`jlink` 和 `jmods/`）：缺工具报 `SPR-BUNDLE-TOOLS`，`jdeps` 分析失败报 `SPR-BUNDLE-JDEPS`，没有 `jmods/` 或 jlink 失败报 `SPR-BUNDLE-LAYOUT`，每个都带修法。详见 [bundle 说明（英文）](/en/reference/projects/bundle)。
 
 每个错误码的含义都可以用 `sprig explain` 查，完整列表见[错误码（英文）](/en/reference/tooling/diagnostic-codes)。
 
@@ -147,7 +151,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 `sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是 v0.6.0-beta.1 新加的。
 
-它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。快速修复比 v0.7.1-beta.1 新，要等下一个版本。
+它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。快速修复比 v0.7.1-beta.1 新。
 
 编辑器怎么配置、每项功能的细节，见[语言服务器参考（英文）](/en/reference/tooling/lsp)。
 
@@ -155,7 +159,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 下面这些都还在计划中，目前没有实现：
 
-- 包的发布和模块仓库
+- 中心托管的包仓库（带账号和上传）：现在的注册表是 Git 或本地目录里的索引，发布靠向 `registry/` 开 pull request，见[项目](/guide/projects)
 - 增量检查
 
 早期的设计提案见 [Agent 工具协议（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md)。它只是历史提案，不代表现状。`sprig api` 能查到什么、查不到什么，见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。

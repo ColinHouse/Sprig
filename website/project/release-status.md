@@ -6,7 +6,7 @@
 |---|---|
 | 编译器 | `0.7.1-beta.1` |
 | 语言版本 | `0.8-dev` |
-| 运行环境 | JDK 21 或更新的版本（SDK 不附带 JDK）；已发布的 v0.7.1-beta.1 仍接受 JDK 17 |
+| 运行环境 | 已发布的 v0.7.1-beta.1 接受 JDK 17 或更新的版本（SDK 不附带 JDK）；`main` 上的源码和下一个版本要求 JDK 21 |
 | 许可证 | Apache-2.0 |
 | 平台 | 正式支持 Linux 和 macOS；Windows 是实验性预览 |
 
@@ -42,7 +42,7 @@ v0.7.1-beta.1 修好了一次评测用真实程序和 Java 对照在 v0.7.0-beta
 
 ## 发布之后的改动
 
-网站按仓库 `main` 分支上的源码来写，源码可能比这个版本新。页面上介绍比 v0.7.1-beta.1 更新的内容时，会专门注明。目前这样的内容是语言服务器的快速修复，以及泛型调用根据你传的参数算出类型参数。
+网站按仓库 `main` 分支上的源码来写，源码可能比这个版本新。页面上介绍比 v0.7.1-beta.1 更新的内容时，会专门注明。目前这样的内容有：语言服务器的快速修复；泛型调用根据你传的参数算出类型参数；`if` 表达式；`elif` 和 `else` 知道前面的条件为假；错误类（`conform E to Error(message)`）；`MutableList` 可以直接当 `List` 用；契约类（`conform C to Contract`）；单行类 `class Pair(first: Int, second: Int)`；不加括号就是函数值的具名函数、模块函数和方法；`@std/concurrent` 的结构化 scope 和虚拟线程；经 pull request 发布到 `registry/` 的包；以及最低 JDK 21。下一个版本的说明草稿见 [v0.8.0-beta.1（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md)。
 
 ## 怎么验证的
 

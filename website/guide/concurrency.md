@@ -22,10 +22,31 @@ print(concurrent.scope(count_all))
 - `concurrent.scope(body)` 新建一个 `Scope`，把它交给 `body` 运行，返回 `body` 的结果。`body` 通常是按名字传入的具名函数，因为 lambda 只能写一个表达式。
 - `spawn(s, work)` 在这个作用域拥有的一条虚拟线程上运行 `fn() -> T`，返回 `Task[T]`。类型参数按通常的规则推断：这里从 lambda 的结果得到 `Int`。
 - **离开作用域时会等所有任务结束**，不管有没有 `await`。没有任务能活过启动它的那个函数。
-- **第一个失败会取消其他兄弟任务**，并由 `scope()` 作为 `Error` 重新抛出，所以 `scope` 声明了 `throws Error`。任务里的失败也会由那个任务的 `await()` 报出来；在那里接住它并不能撤销作用域的失败。要容忍某个任务失败，就在任务体里处理掉，或者对一个不会失败的任务体用 `await_or(fallback)`。
+- **第一个失败会取消其他兄弟任务**，并由 `scope()` 作为 `Error` 重新抛出，所以 `scope` 声明了 `throws Error`。任务里的失败也会由那个任务的 `await()` 报出来；在那里接住它并不能撤销作用域的失败。要容忍某个任务失败，就在任务体里处理掉，比如返回 `Ok`/`Failed` 这样的 variant。`await_or(fallback)` 并不会容忍失败：任务失败或被取消时它给出兜底值，而且没有 `throws` 子句，所以一个任务体可以用它等另一个任务，但作用域照样会失败。
 - 主动取消的任务（`task.cancel()`、`s.cancel_all()`）不算失败。取消会中断任务的线程，在阻塞点生效：`sleep`、`await`、通道的 `receive`、尊重中断的 Java I/O。一个从不阻塞的循环会跑到头。
 - 没有不属于作用域的 `spawn`：任务永远属于启动它的那个作用域，body 返回之后再启动任务会报 `Error`。
 - 任务体是普通的函数值，只能捕获 `let` 绑定和参数，所以其他语言里那种对局部变量的数据竞争在 Sprig 里写不出来。共享的 `MutableList`、`MutableMap` 和 `var` 字段不受保护，见下面的锁和通道。
+
+## 没有结果的任务：run 和 scope_run
+
+`Unit` 不是值，所以只有副作用的任务不能写成 `Task[Unit]`。这种任务用 `run`；只负责调度、不返回结果的作用域体用 `scope_run`：
+
+```sprig
+import "@std/concurrent.spr" as concurrent
+
+func announce(line: String) -> Unit:
+    print("> " + line)
+
+func announce_all(s: concurrent.Scope) -> Unit throws Error:
+    for line in ["ready", "steady"]:
+        concurrent.run(s, fn() => announce(line))
+
+concurrent.scope_run(announce_all)
+```
+
+- `run(s, work)` 启动一个 `fn() -> Unit`，返回 `Job`。它的方法和任务一样：`await()` 等它结束，失败时报 `Error`，只是不返回值；`cancel()`、`is_done()` 也照常可用。
+- `scope_run(body)` 就是给"不返回值的 body"用的 `scope()`，规则完全相同：等所有任务和 job 结束，第一个失败会取消其余的并重新抛出。
+- 两条输出的先后顺序不固定，因为它们是同时运行的。
 
 ## 一批任务：parallel_map 和 await_all
 
@@ -74,8 +95,10 @@ func consume(s: concurrent.Scope) -> Int throws Error:
 print(concurrent.scope(consume))
 ```
 
+`next` 是 `var`，所以 `while next != null` 不会把它收窄。先复制到 `let word`，再检查 `word`；通过检查后，循环体里才能把它当作非空字符串使用。
+
 - `channel[T](capacity)` 是有界队列。`send` 在队列满时阻塞；`receive()` 在队列空时阻塞，通道关闭且取空后返回 `null`。通道里不放 `null`，所以 `null` 只有"结束"这一个意思。
-- `try_send` 和 `receive_within(millis)` 不阻塞。
+- `try_send` 不阻塞，满了或关闭了返回 `false`；`receive_within(millis)` 最多等 `millis` 毫秒，超时返回 `null`（用 `is_closed()` 区分超时和关闭）。
 - 往关闭的通道 `send` 会在运行时以 `Error` 失败。`send` 没有 `throws` 子句，这样任务体里才能调用它；失败由那个任务的 `await()` 和作用域报出来。
 
 ## 计数器、锁和门闩

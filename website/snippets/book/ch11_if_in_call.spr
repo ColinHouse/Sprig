@@ -1,0 +1,5 @@
+let labels = [1, 2, 3].map(fn(n: Int) => if n > 1:
+    "big"
+else:
+    "small")
+print(labels)

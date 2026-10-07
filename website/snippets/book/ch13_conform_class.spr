@@ -1,0 +1,21 @@
+import java.util.Random as Random
+
+# Counting 继承 java.util.Random：字段 seed 传给 Random(long) 构造器，
+# 覆盖 protected 的 next(bits)，用父类视图 parent 调用被覆盖的实现。
+class Counting:
+    let seed: Int
+    var calls: Int = 0
+
+    func next(bits: Int32) -> Int32:
+        calls += 1
+        return parent.next(bits)
+
+conform Counting to Random(seed) as parent
+
+let rng = Counting(seed=42)
+print(rng.nextInt(100))
+print(rng.nextInt(100))
+print(rng.calls)
+let plain: Random = rng
+print(plain.nextInt(100))
+print(rng.calls)

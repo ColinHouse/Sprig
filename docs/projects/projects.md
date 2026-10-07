@@ -45,4 +45,6 @@ Project check/build/run requires a current generated `sprig.lock`; run
 `sprig resolve` after manual manifest changes, or use `sprig add`/`sprig remove`
 to edit a dependency and resolve the lock immediately. Local source edits do
 not stale a lock.
-See `DEPENDENCIES.md` before declaring a dependency.
+See [dependencies](dependencies.md) before declaring a dependency, and
+[bundles](bundle.md) for `sprig build --bundle`, which packages a program with
+its own Java runtime for a machine that has no JDK.

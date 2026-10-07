@@ -156,12 +156,28 @@ CASES = [
     ("if-after-block-header", "let n = 3\nwhile n > 5: if n > 0:\n    print(n)\n", "SPR-SYNTAX-ERROR",
      "no one-line if or loop"),
     ("assignment-in-condition", "var line = \"a\"\nwhile (line = \"b\"):\n    print(1)\n", "SPR-SYNTAX-ERROR", "Compare with '=='"),
+    ("unexpected-indent", "let x = 1\n    let y = 2\nprint(x)\n", "SPR-SYNTAX-ERROR",
+     "Unexpected indentation: this line is indented but the previous line does not open a block"),
+    ("missing-else-body", "func f(n: Int) -> Int:\n    if n > 0:\n        return 1\n    else:\n    return 2\nprint(f(1))\n",
+     "SPR-SYNTAX-ERROR", "Expected an indented block after 'else:'"),
+    ("unterminated-string", 'let s = "abc\nprint(s)\n', "SPR-LEX-STRING", "Unterminated string literal"),
+    ("unterminated-triple-string", 'let s = """abc\nprint(s)\n', "SPR-LEX-STRING", "Unterminated string literal"),
+    ("field-without-type", "class Box:\n    let count = 0\nprint(Box().count)\n",
+     "SPR-SYNTAX-ERROR", "Fields have explicit types"),
+    ("nullable-task-result", "import \"@std/concurrent.spr\" as concurrent\nfunc maybe() -> Int?:\n    return null\n"
+     "func body(s: concurrent.Scope) -> Int? throws Error:\n    return concurrent.spawn(s, fn() => maybe()).await()\n"
+     "print(concurrent.scope(body))\n", "SPR-TYPE-MISMATCH", "T cannot be Int? here: a written [Int?] is rejected as well."),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
      "sum.toFloat() / count.toFloat()"),
-    ("nullable-operand", "let n = \"3\".toIntOrNull()\nprint(n + 1)\n", "SPR-NUM-MIXED", "check it first with 'if n != null:'"),
+    ("nullable-operand", "let n = \"3\".toIntOrNull()\nprint(n + 1)\n", "SPR-TYPE-NULLABLE", "check it first with 'if n != null:'"),
     ("nullable-ordering", "let n = \"3\".toIntOrNull()\nif n > 2:\n    print(1)\n", "SPR-TYPE-OPERAND", "'if n != null:'"),
-    ("nullable-var", "var v = \"3\".toIntOrNull()\nprint(v + 1)\n", "SPR-NUM-MIXED", "a var never narrows"),
+    ("nullable-var", "var v = \"3\".toIntOrNull()\nprint(v + 1)\n", "SPR-TYPE-NULLABLE", "a var never narrows"),
+    ("nullable-var-in-while-element", "import \"@std/concurrent.spr\" as concurrent\n"
+     "let words = concurrent.channel[String](4)\nwords.send(\"a\")\nwords.close()\n"
+     "let seen: MutableList[String] = []\nvar next = words.receive()\nwhile next != null:\n"
+     "    seen.append(next)\n    next = words.receive()\n",
+     "SPR-TYPE-NULLABLE", "next is a var, which never narrows; copy it into a let (`let word = next`) and check `word`"),
     ("module-member", "import \"@std/text.spr\" as text\nprint(text.format(\"a\"))\n", "SPR-NAME-UNRESOLVED",
      "Module 'text' has: join"),
     ("read-only-list", "let words: MutableList[String] = \"a b\".split(\" \")\n", "SPR-TYPE-ASSIGN", "toMutableList()"),
@@ -301,6 +317,49 @@ def main():
         (work / "case.spr").write_text("func main():\n    print(1)\n    print(2)\nprint(3)\n", encoding="utf-8")
         data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
         check("no-layout-cascade", len(data) == 1 and "<INDENT>" not in json.dumps(data), json.dumps(data))
+
+        # Layout failures use Sprig wording and do not cascade into synthetic token names or EOF.
+        for name, source, expected in (
+            ("unexpected-indent", "let x = 1\n    let y = 2\nprint(x)\n",
+             "Unexpected indentation: this line is indented but the previous line does not open a block"),
+            ("missing-else-body", "func f(n: Int) -> Int:\n    if n > 0:\n        return 1\n    else:\n    return 2\nprint(f(1))\n",
+             "Expected an indented block after 'else:'"),
+            ("missing-if-body", "func f(n: Int) -> Int:\n    if n > 0:\n    return 1\n    return 2\nprint(f(1))\n",
+             "Expected an indented block after 'if ...:'"),
+            ("missing-while-body-at-end", "while true:\n", "Expected an indented block after 'while ...:'"),
+        ):
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            rendered = json.dumps(data)
+            check("layout-wording-" + name, len(data) == 1 and expected in data[0].get("message", "")
+                  and not any(token in rendered for token in ("<INDENT>", "<DEDENT>", "DEDENT", "<EOF>")), rendered)
+
+        # Unterminated quotes are one string diagnostic spanning the malformed line.
+        for name, source, start_column, end_column in (
+            ("unterminated-string", 'let s = "abc\nprint(s)\n', 8, 12),
+            ("unterminated-triple-string", 'let s = """abc\nprint(s)\n', 10, 14),
+        ):
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            diagnostics = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            first = diagnostics[0] if diagnostics else {}
+            start = first.get("range", {}).get("start", {})
+            end = first.get("range", {}).get("end", {})
+            check("unterminated-string-range-" + name,
+                  len(diagnostics) == 1 and first.get("code") == "SPR-LEX-STRING"
+                  and first.get("message") == "Unterminated string literal"
+                  and start == {"line": 0, "character": start_column}
+                  and end == {"line": 0, "character": end_column}, json.dumps(diagnostics))
+
+        # Source text quoted in a parser message keeps its spelling: only ANTLR's own
+        # layout-token names are replaced, never an identifier that contains one.
+        for name, source, quoted in (
+            ("identifier-with-indent", "let MAX_INDENT = 4\nprint(1 MAX_INDENT)\n", "'MAX_INDENT'"),
+            ("identifier-with-eof", "let readEOF = 4\nlet z = readEOF readEOF\n", "'readEOF'"),
+        ):
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            check("layout-wording-keeps-" + name, len(data) == 1 and quoted in data[0].get("message", ""),
+                  json.dumps(data))
 
         # One error per line: ANTLR's follow-on errors on a broken line are not repeated.
         (work / "case.spr").write_text("print(1 2 3 4)\nlet y = = 2\n", encoding="utf-8")

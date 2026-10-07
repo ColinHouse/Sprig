@@ -1,0 +1,170 @@
+empty codeAt(-1): index -1, code point length 0
+empty codeAt(n): index 0, code point length 0
+empty [n]: index 0, code point length 0
+empty charAt(n): index 0, code point length 0
+empty substring(n + 1): index 1, code point length 0
+empty substring(-1): index -1, code point length 0
+empty substring(0, n + 1): begin 0, end 1, code point length 0
+empty substring(-1, 0): begin -1, end 0, code point length 0
+empty whole true empty true
+empty codeAt(n) again: index 0, code point length 0
+one ASCII codeAt(-1): index -1, code point length 1
+one ASCII codeAt(n): index 1, code point length 1
+one ASCII [n]: index 1, code point length 1
+one ASCII charAt(n): index 1, code point length 1
+one ASCII substring(n + 1): index 2, code point length 1
+one ASCII substring(-1): index -1, code point length 1
+one ASCII substring(0, n + 1): begin 0, end 2, code point length 1
+one ASCII substring(-1, 0): begin -1, end 0, code point length 1
+one ASCII substring(1, 0): begin 1, end 0, code point length 1
+one ASCII first 65 last 65 length 1
+one ASCII whole true empty true
+one ASCII codeAt(n) again: index 1, code point length 1
+one emoji codeAt(-1): index -1, code point length 1
+one emoji codeAt(n): index 1, code point length 1
+one emoji [n]: index 1, code point length 1
+one emoji charAt(n): index 1, code point length 1
+one emoji substring(n + 1): index 2, code point length 1
+one emoji substring(-1): index -1, code point length 1
+one emoji substring(0, n + 1): begin 0, end 2, code point length 1
+one emoji substring(-1, 0): begin -1, end 0, code point length 1
+one emoji substring(1, 0): begin 1, end 0, code point length 1
+one emoji first 128512 last 128512 length 1
+one emoji whole true empty true
+one emoji codeAt(n) again: index 1, code point length 1
+short BMP codeAt(-1): index -1, code point length 6
+short BMP codeAt(n): index 6, code point length 6
+short BMP [n]: index 6, code point length 6
+short BMP charAt(n): index 6, code point length 6
+short BMP substring(n + 1): index 7, code point length 6
+short BMP substring(-1): index -1, code point length 6
+short BMP substring(0, n + 1): begin 0, end 7, code point length 6
+short BMP substring(-1, 0): begin -1, end 0, code point length 6
+short BMP substring(1, 0): begin 1, end 0, code point length 6
+short BMP first 26481 last 54620 length 6
+short BMP whole true empty true
+short BMP codeAt(n) again: index 6, code point length 6
+short mixed codeAt(-1): index -1, code point length 13
+short mixed codeAt(n): index 13, code point length 13
+short mixed [n]: index 13, code point length 13
+short mixed charAt(n): index 13, code point length 13
+short mixed substring(n + 1): index 14, code point length 13
+short mixed substring(-1): index -1, code point length 13
+short mixed substring(0, n + 1): begin 0, end 14, code point length 13
+short mixed substring(-1, 0): begin -1, end 0, code point length 13
+short mixed substring(1, 0): begin 1, end 0, code point length 13
+short mixed first 65 last 776 length 13
+short mixed whole true empty true
+short mixed codeAt(n) again: index 13, code point length 13
+CJK 31 units codeAt(-1): index -1, code point length 31
+CJK 31 units codeAt(n): index 31, code point length 31
+CJK 31 units [n]: index 31, code point length 31
+CJK 31 units charAt(n): index 31, code point length 31
+CJK 31 units substring(n + 1): index 32, code point length 31
+CJK 31 units substring(-1): index -1, code point length 31
+CJK 31 units substring(0, n + 1): begin 0, end 32, code point length 31
+CJK 31 units substring(-1, 0): begin -1, end 0, code point length 31
+CJK 31 units substring(1, 0): begin 1, end 0, code point length 31
+CJK 31 units first 25935 last 30340 length 31
+CJK 31 units whole true empty true
+CJK 31 units codeAt(n) again: index 31, code point length 31
+CJK 32 units codeAt(-1): index -1, code point length 32
+CJK 32 units codeAt(n): index 32, code point length 32
+CJK 32 units [n]: index 32, code point length 32
+CJK 32 units charAt(n): index 32, code point length 32
+CJK 32 units substring(n + 1): index 33, code point length 32
+CJK 32 units substring(-1): index -1, code point length 32
+CJK 32 units substring(0, n + 1): begin 0, end 33, code point length 32
+CJK 32 units substring(-1, 0): begin -1, end 0, code point length 32
+CJK 32 units substring(1, 0): begin 1, end 0, code point length 32
+CJK 32 units first 25935 last 54620 length 32
+CJK 32 units whole true empty true
+CJK 32 units codeAt(n) again: index 32, code point length 32
+emoji 31 units codeAt(-1): index -1, code point length 16
+emoji 31 units codeAt(n): index 16, code point length 16
+emoji 31 units [n]: index 16, code point length 16
+emoji 31 units charAt(n): index 16, code point length 16
+emoji 31 units substring(n + 1): index 17, code point length 16
+emoji 31 units substring(-1): index -1, code point length 16
+emoji 31 units substring(0, n + 1): begin 0, end 17, code point length 16
+emoji 31 units substring(-1, 0): begin -1, end 0, code point length 16
+emoji 31 units substring(1, 0): begin 1, end 0, code point length 16
+emoji 31 units first 128512 last 97 length 16
+emoji 31 units whole true empty true
+emoji 31 units codeAt(n) again: index 16, code point length 16
+emoji 32 units codeAt(-1): index -1, code point length 16
+emoji 32 units codeAt(n): index 16, code point length 16
+emoji 32 units [n]: index 16, code point length 16
+emoji 32 units charAt(n): index 16, code point length 16
+emoji 32 units substring(n + 1): index 17, code point length 16
+emoji 32 units substring(-1): index -1, code point length 16
+emoji 32 units substring(0, n + 1): begin 0, end 17, code point length 16
+emoji 32 units substring(-1, 0): begin -1, end 0, code point length 16
+emoji 32 units substring(1, 0): begin 1, end 0, code point length 16
+emoji 32 units first 128512 last 128077 length 16
+emoji 32 units whole true empty true
+emoji 32 units codeAt(n) again: index 16, code point length 16
+long BMP codeAt(-1): index -1, code point length 80
+long BMP codeAt(n): index 80, code point length 80
+long BMP [n]: index 80, code point length 80
+long BMP charAt(n): index 80, code point length 80
+long BMP substring(n + 1): index 81, code point length 80
+long BMP substring(-1): index -1, code point length 80
+long BMP substring(0, n + 1): begin 0, end 81, code point length 80
+long BMP substring(-1, 0): begin -1, end 0, code point length 80
+long BMP substring(1, 0): begin 1, end 0, code point length 80
+long BMP first 26481 last 97 length 80
+long BMP whole true empty true
+long BMP codeAt(n) again: index 80, code point length 80
+long mixed codeAt(-1): index -1, code point length 78
+long mixed codeAt(n): index 78, code point length 78
+long mixed [n]: index 78, code point length 78
+long mixed charAt(n): index 78, code point length 78
+long mixed substring(n + 1): index 79, code point length 78
+long mixed substring(-1): index -1, code point length 78
+long mixed substring(0, n + 1): begin 0, end 79, code point length 78
+long mixed substring(-1, 0): begin -1, end 0, code point length 78
+long mixed substring(1, 0): begin 1, end 0, code point length 78
+long mixed first 65 last 776 length 78
+long mixed whole true empty true
+long mixed codeAt(n) again: index 78, code point length 78
+long Latin-1 codeAt(-1): index -1, code point length 40
+long Latin-1 codeAt(n): index 40, code point length 40
+long Latin-1 [n]: index 40, code point length 40
+long Latin-1 charAt(n): index 40, code point length 40
+long Latin-1 substring(n + 1): index 41, code point length 40
+long Latin-1 substring(-1): index -1, code point length 40
+long Latin-1 substring(0, n + 1): begin 0, end 41, code point length 40
+long Latin-1 substring(-1, 0): begin -1, end 0, code point length 40
+long Latin-1 substring(1, 0): begin 1, end 0, code point length 40
+long Latin-1 first 99 last 241 length 40
+long Latin-1 whole true empty true
+long Latin-1 codeAt(n) again: index 40, code point length 40
+unpaired surrogates codeAt(-1): index -1, code point length 42
+unpaired surrogates codeAt(n): index 42, code point length 42
+unpaired surrogates [n]: index 42, code point length 42
+unpaired surrogates charAt(n): index 42, code point length 42
+unpaired surrogates substring(n + 1): index 43, code point length 42
+unpaired surrogates substring(-1): index -1, code point length 42
+unpaired surrogates substring(0, n + 1): begin 0, end 43, code point length 42
+unpaired surrogates substring(-1, 0): begin -1, end 0, code point length 42
+unpaired surrogates substring(1, 0): begin 1, end 0, code point length 42
+unpaired surrogates first 55357 last 56832 length 42
+unpaired surrogates whole true empty true
+unpaired surrogates codeAt(n) again: index 42, code point length 42
+single texts checked, mismatches 0
+alternating mismatches 0
+twins equal true, mismatches 0
+cold mixed 9 74 2 67 4 69 0 78 -1 true true true
+cold BMP -1 -1 0 70 4 74 0 80 -1 true true true
+78 80
+warm mixed 9 74 2 67 4 69 0 78 -1 true true true
+26481
+warm BMP -1 -1 0 70 4 74 0 80 -1 true true true
+1
+128512
+true
+81
+128512
+true
+41

@@ -10,6 +10,7 @@ Blocks are defined by indentation, as in Python:
 
 - Indent with spaces only; a tab is rejected with `SPR-LEX-TAB`. Keep the indentation within a block consistent; how many spaces you use is up to you.
 - The first line of code in a file starts in column 1.
+- A line indented where no block starts, or a header such as `else:` or `if count > 0:` with nothing indented under it, gets an error that names the problem.
 - Inside parentheses, brackets and braces you can break lines freely, so long calls and literals can span several lines.
 - `#` starts a comment.
 
@@ -71,7 +72,7 @@ Exhaustive matching pays off when code changes. Add a case to a variant, and eve
 - The `else` branch is required; leave it out and you get "An if expression needs an else branch", while the rest of the file is still checked and the editor keeps working until you add it. When there's no value to produce, write an ordinary `if` statement: an `if` at the start of a statement is always the `if` statement.
 - All branches share one type: the type the position expects, as in `let ratio: Float = if ...`, or else the type of the first branch that isn't `null`. A `null` branch makes the result nullable.
 - There's no `a if c else b` as in Python and no `c ? a : b` as in C; the compiler points you to the `if` expression instead.
-- Line breaks are ignored inside parentheses, so an `if` expression can't go straight into a call. Bind it to a `let` first and pass the name. The details are in [if expressions](/en/reference/language/if-expressions).
+- Line breaks are ignored inside parentheses, so an `if` expression can't go straight into a call, not even in a lambda's body there. Bind it, or the lambda that holds it, to a `let` first and pass the name, or pass a named function. The details are in [if expressions](/en/reference/language/if-expressions).
 
 ## Collections
 
@@ -115,7 +116,7 @@ true
 - `elif` and `else` know the earlier conditions were false: after `if x == null:`, an `elif flag:` branch and the `else` both treat `x` as present, with no second check. Writing `x != null` again there is accepted; it is just redundant.
 - Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present. An `if/elif` chain whose earlier branches all return works the same way.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
-- A check on a `var` field stops counting once a function is called in between, because the call might have changed the field.
+- A `var` local or a class field never narrows, whether or not a function is called in between: copy it into a `let` (`let current = name`) and check that.
 - Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).
 
 When all you want is a fallback value or an error, `@std/nulls` (new in v0.6.0-beta.1) saves the `if`:
@@ -221,6 +222,7 @@ $[1].id: expected integer, found string
 
 ## A few smaller features
 
+- String literals must close on the same line. A missing closing quote or a newline inside a string reports `SPR-LEX-STRING` on the unterminated literal.
 - `sprig fmt` formats code in one standard style. It keeps your comments and has no options. See [formatter](/en/reference/tooling/formatter).
 - A module can re-export an imported declaration with `export alias.Symbol`, but that can't be used to get around a dependency's exports. There's no `export *`. See [re-exports](/en/reference/language/module-reexports).
 - An expression `match` allows one expression per branch; for several lines, use a statement `match`. See [match expressions](/en/reference/language/match-expressions).

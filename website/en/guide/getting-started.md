@@ -71,7 +71,7 @@ For editing, there's a [VS Code extension](/en/guide/editor) (a local preview fo
 
 ## Windows and building from source
 
-Windows support is still experimental, and the install script only covers Linux and macOS. The release ZIP includes a Windows launcher, `bin\sprig.cmd`: check the ZIP's SHA-256, unpack it and run that launcher (see [installing on Windows](/en/reference/projects/install#windows)). You can also build from source with Git, JDK 17+ and Python 3.12+; you don't need Bash or Maven. In PowerShell:
+Windows support is still experimental, and the install script only covers Linux and macOS. The release ZIP includes a Windows launcher, `bin\sprig.cmd`: check the ZIP's SHA-256, unpack it and run that launcher (see [installing on Windows](/en/reference/projects/install#windows)). You can also build from source with Git, JDK 21+ and Python 3.12+; you don't need Bash or Maven. In PowerShell:
 
 ```powershell
 git clone https://github.com/ColinHouse/Sprig.git

@@ -1,0 +1,15 @@
+import "@std/test.spr" as test
+import "../src/post.spr" as post
+
+func parses_front_matter() -> Unit throws Error:
+    let p = post.parse_post("2024-01-02-a-day.md", "title: A day\ndate: 2024-01-02\n\nfirst line\nsecond line\n\nnext para\n")
+    test.equal_text(p.title, "A day", "title")
+    test.equal_text(p.date, "2024-01-02", "date")
+    test.equal_text(p.slug, "2024-01-02-a-day", "slug")
+    test.equal_int(p.paragraphs.size(), 2, "paragraph count")
+    test.equal_text(p.paragraphs[0], "first line second line", "joined paragraph")
+
+test.check("parses front matter and paragraphs", parses_front_matter)
+test.check_error("rejects a post without a title", fn() => post.parse_post("x.md", "date: 2024-01-01\n\nbody\n"))
+test.check_error("rejects a malformed date", fn() => post.parse_post("x.md", "title: t\ndate: 24-1-1\n\nbody\n"))
+test.finish()

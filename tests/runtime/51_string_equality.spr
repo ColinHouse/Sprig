@@ -1,0 +1,76 @@
+# == and != on String and String? compare contents. Two Strings compare
+# directly and a String? side may be null; either way the left operand is
+# evaluated before the right one, each exactly once, and a failing left
+# operand leaves the right one unevaluated.
+import java.lang.System as System
+
+let order: MutableList[String] = []
+
+func note(label: String, value: String) -> String:
+    order.append(label)
+    return value
+
+func maybe_note(label: String, value: String?) -> String?:
+    order.append(label)
+    return value
+
+func fail() -> String throws Error:
+    throw Error("left failed")
+
+# String and String
+let joined = "a" + "b"
+print("ab" == joined)
+print("ab" != joined)
+print(joined == "ac")
+print("é" == "e" + String.fromCode(769))
+print("" == "".substring(0))
+
+# String? on either side, null or not
+let present: String? = "x"
+let absent: String? = null
+print(present == "x")
+print("x" == present)
+print(present != "x")
+print(absent == "x")
+print("x" != absent)
+print(absent == absent)
+print(present == absent)
+print(absent != present)
+if present != null:
+    print(present == "x")
+let lookup: Map[String, String] = {"k": "v"}
+print(lookup.get("k") == "v")
+print(lookup.get("missing") == "v")
+print(System.getProperty("sprig.test.no.such.property") == "v")
+
+# Elements of iteration and indexing compare with literals
+var vowels = 0
+for c in "Sprig 東京 😀 aeiou":
+    if c == "a" or c == "e" or c == "i" or c == "o" or c == "u":
+        vowels += 1
+    if c == "東" or c == "😀":
+        vowels += 10
+print(vowels)
+print("😀x"[0] == "😀" and "😀x"[1] != "😀")
+
+# Evaluation order: left before right, each once
+print(note("a", "x") == note("b", "x"))
+print(note("c", "x") != note("d", "y"))
+print(maybe_note("e", null) == note("f", "x"))
+print(note("g", "x") == maybe_note("h", null))
+print(maybe_note("i", null) != maybe_note("j", null))
+print(note("k", "x") == "y" and note("l", "z") == "z")
+print(order)
+try:
+    print(fail() == note("never", "x"))
+catch problem: Error:
+    print(problem.message)
+print(order.size())
+
+# A generic Equatable parameter instantiated with String
+generic T:
+    func same(a: T, b: T) -> Bool:
+        requires T: Equatable
+        return a == b
+print(same[String]("q", "q"))
+print(same[String]("q", "r"))

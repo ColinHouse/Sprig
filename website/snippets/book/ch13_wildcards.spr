@@ -1,0 +1,16 @@
+import java.util.ArrayList as ArrayList
+import java.util.List as List
+import java.util.Collections as Collections
+
+let numbers = ArrayList[Int]()
+numbers.add(3)
+numbers.add(1)
+let frozen = List.copyOf[Int](numbers)
+if frozen != null:
+    print(frozen)
+let kind = numbers.getClass()
+if kind != null:
+    print(kind.getSimpleName())
+let view = Collections.unmodifiableList[Int](numbers)
+if view != null:
+    print(view.get(0))

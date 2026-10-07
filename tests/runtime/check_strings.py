@@ -52,6 +52,16 @@ RUNTIME_ERRORS = {
     "int32 conversion": ('print("abc"[3000000000])\n', "outside Int32 range"),
     "fromCode negative": ("print(String.fromCode(-1))\n", "IllegalArgumentException"),
     "fromCode beyond max": ("print(String.fromCode(1114112))\n", "IllegalArgumentException"),
+    # Texts of 32 UTF-16 units or more keep their count between calls; the
+    # errors are the same, before and after the text was indexed.
+    "long index equals length": ('let text = "東京😀".repeat(20)\nprint(text[60])\n',
+                                 "String index 60 is out of bounds; the string has 60 code points"),
+    "long codeAt after indexing": ('let text = "東京の空".repeat(10)\nprint(text.codeAt(39))\nprint(text.codeAt(40))\n',
+                                   "String index 40 is out of bounds; the string has 40 code points"),
+    "long substring end past end": ('let text = "A😀東".repeat(20)\nprint(text[0])\nprint(text.substring(59, 61))\n',
+                                    "String slice [59, 61) is out of bounds; the string has 60 code points"),
+    "long substring negative": ('print("東".repeat(40).substring(-1))\n',
+                                "String index -1 is out of bounds; the string has 40 code points"),
 }
 
 POSITIVE = {
@@ -67,6 +77,14 @@ POSITIVE = {
     "substring start only": ('print("A😀東".substring(2))\n', "東"),
     "fromCode supplementary": ("print(String.fromCode(128512))\n", "😀"),
     "split empty separator": ('let parts = "😀".split("")\nprint(parts.size())\nprint(parts[0])\n', "2\n😀"),
+    "long supplementary positions": ('let text = "東京😀".repeat(20)\nprint(text.length())\nprint(text.codeAt(59))\n'
+                                     'print(text[58])\nprint(text.substring(57, 59))\nprint(text.lastIndexOf("😀"))\n',
+                                     "60\n128512\n京\n東京\n59"),
+    "long BMP positions": ('let text = "東京の空".repeat(10)\nprint(text.indexOf("空"))\nprint(text.length())\n'
+                           'print(text.codeAt(39))\nprint(text.charAt(38))\nprint(text.lastIndexOf("東京"))\n',
+                           "3\n40\n31354\nの\n36"),
+    "long alternating texts": ('let a = "東京の空".repeat(10)\nlet b = "A😀".repeat(20)\nvar out = ""\n'
+                               'for i in range(3):\n    out += a[i] + b[i + 37]\nprint(out)\n', "東😀京Aの😀"),
 }
 
 with tempfile.TemporaryDirectory(prefix="sprig-strings-") as work:
@@ -97,6 +115,20 @@ with tempfile.TemporaryDirectory(prefix="sprig-strings-") as work:
         result = call("check", path)
         verify(f"{name} rejected", result.returncode != 0 and "SPR-JVM-MEMBER" in result.stdout + result.stderr,
                f"exit={result.returncode} {result.stdout}{result.stderr}")
+
+    # The runtime's String positions under concurrency: virtual threads index a
+    # shared pool of texts at random against an oracle from String.codePoints().
+    probe_classes = directory / "probe"
+    compiled = subprocess.run(["javac", "--release", "21", "-encoding", "UTF-8", "-d", str(probe_classes),
+                               str(ROOT / "runtime/src/main/java/sprig/runtime/StringOps.java"),
+                               str(HERE / "StringOpsProbe.java")],
+                              text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+    verify("StringOps probe compiles", compiled.returncode == 0, compiled.stdout)
+    if compiled.returncode == 0:
+        probe = subprocess.run(["java", "-Dfile.encoding=UTF-8", "-cp", str(probe_classes), "StringOpsProbe"],
+                               text=True, encoding="utf-8", errors="replace",
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+        verify("StringOps concurrent probe", probe.returncode == 0 and " 0 failures" in probe.stdout, probe.stdout)
 
 print(f"String code-point semantics: {passed} checks passed, {len(failed)} failed")
 for name in failed:

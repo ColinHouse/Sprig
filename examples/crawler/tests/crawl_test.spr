@@ -1,0 +1,39 @@
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "../src/crawl.spr" as crawl
+
+func write(root: String, name: String, body: String) -> Unit throws Error:
+    files.write_utf8(files.join(root, name), body)
+
+func crawls_reachable_pages() -> Unit throws Error:
+    let root = test.temp_dir()
+    write(root, "index.html", "<a href=\"b.html\">b</a> <a href=\"c.html\">c</a> one two")
+    write(root, "b.html", "<a href=\"index.html\">back</a> <a href=\"d.html\">d</a> three")
+    write(root, "c.html", "four five six <a href=\"gone.html\">gone</a>")
+    write(root, "d.html", "seven")
+    write(root, "orphan.html", "never counted")
+    let report = crawl.crawl(root, "index.html")
+    test.equal(report.pages.map(fn(p: crawl.Page) => p.name), ["b.html", "c.html", "d.html", "index.html"], "pages sorted by name")
+    test.equal(report.pages.map(fn(p: crawl.Page) => p.words), [3, 4, 1, 4], "word counts")
+    test.equal_int(report.total_words, 12, "total")
+    test.equal_int(report.rounds, 3, "three rounds: index, b+c, d")
+    test.equal_int(report.failures.size(), 1, "one broken link")
+    assert(report.failures[0].startsWith("gone.html: "), "failure names the page")
+    test.equal_int(report.events.size(), 5, "one event per fetch attempt")
+
+func deterministic_output() -> Unit throws Error:
+    let root = test.temp_dir()
+    for index in range(40):
+        write(root, "p" + index + ".html", "<a href=\"index.html\">home</a> w" + index)
+    var body = ""
+    for index in range(40):
+        body += "<a href=\"p" + index + ".html\">x</a> "
+    write(root, "index.html", body)
+    let first = crawl.render(crawl.crawl(root, "index.html"))
+    let second = crawl.render(crawl.crawl(root, "index.html"))
+    test.equal_text(first, second, "two runs render the same report")
+    assert(first.contains("pages 41, words 120, rounds 2"), "summary line: " + first)
+
+test.check("crawls reachable pages in rounds", crawls_reachable_pages)
+test.check("output is deterministic across runs", deterministic_output)
+test.finish()

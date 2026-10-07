@@ -71,7 +71,7 @@ sprig run
 
 ## Windows 和从源码构建
 
-Windows 目前还是实验性支持，安装脚本只适用于 Linux 和 macOS。发布的 ZIP 里带有 Windows 启动器 `bin\sprig.cmd`：先核对 ZIP 的 SHA-256，解压后运行这个启动器即可（见 [Windows 安装说明（英文）](/en/reference/projects/install#windows)）。也可以从源码构建，需要 Git、JDK 17+ 和 Python 3.12+，不需要 Bash 或 Maven。在 PowerShell 里：
+Windows 目前还是实验性支持，安装脚本只适用于 Linux 和 macOS。发布的 ZIP 里带有 Windows 启动器 `bin\sprig.cmd`：先核对 ZIP 的 SHA-256，解压后运行这个启动器即可（见 [Windows 安装说明（英文）](/en/reference/projects/install#windows)）。也可以从源码构建，需要 Git、JDK 21+ 和 Python 3.12+，不需要 Bash 或 Maven。在 PowerShell 里：
 
 ```powershell
 git clone https://github.com/ColinHouse/Sprig.git

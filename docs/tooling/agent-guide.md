@@ -70,7 +70,7 @@ paths resolve against cwd and follow locked entries. Inspect
 `checkedExceptions` before writing a call. `usableFromSprig` means the compiler
 can bind and emit the JVM signature; it does not promise generic element
 safety. `interopLevel` is `direct`, `concrete-generic`, `opaque-array`,
-`adaptable`, `sprig-callable`, `erased-generic`, or `unsupported`; reason codes
+`adaptable`, `sprig-callable`, `java-callable`, `erased-generic`, or `unsupported`; reason codes
 are stable ids (`varargs-expansion`, `wildcard-bounds`,
 `raw-generic-boundary`, `explicit-type-arguments-required`,
 `generic-wrapper-unsupported`, ...) and

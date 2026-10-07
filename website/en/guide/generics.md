@@ -131,7 +131,7 @@ The `match` still has to be exhaustive. Add a case to `Option` later, and every 
 
 ## When brackets mean indexing
 
-`values[index]` is still indexing, not a type argument. The compiler decides by the name in front of the brackets: if it names a generic declaration, the brackets hold type arguments; otherwise they're an index. Indexing and then calling the result (`handler[0](arg)`) isn't supported.
+`values[index]` is still indexing, not a type argument. The compiler decides by the name in front of the brackets: if it names a generic declaration, the brackets hold type arguments; otherwise they're an index. `handlers[0](arg)`, indexing and then calling the result, works too.
 
 ## What it compiles to
 

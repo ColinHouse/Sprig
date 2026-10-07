@@ -1,0 +1,17 @@
+import "@std/test.spr" as test
+import "../src/post.spr" as post
+
+func escapes_and_marks_up() -> Unit throws Error:
+    test.equal_text(post.escape_html("<a & 'b'>"), "&lt;a &amp; &#39;b&#39;&gt;", "escape")
+    test.equal_text(post.render_inline("say **hi** to `x<y`"), "say <strong>hi</strong> to <code>x&lt;y</code>", "inline markup")
+
+func index_is_newest_first() -> Unit throws Error:
+    let a = post.Post(slug="a", title="Old", date="2023-01-01", paragraphs=[])
+    let b = post.Post(slug="b", title="New", date="2024-06-01", paragraphs=[])
+    let html = post.render_index("Site", [a, b])
+    assert(html.indexOf("New") < html.indexOf("Old"), "newest first")
+    assert(html.contains("2 post(s)"), "count")
+
+test.check("escapes html and renders inline markup", escapes_and_marks_up)
+test.check("index lists newest first", index_is_newest_first)
+test.finish()

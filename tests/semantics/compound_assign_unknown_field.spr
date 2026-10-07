@@ -1,0 +1,5 @@
+class Point:
+    let x: Int
+let a = Point(x=1)
+a.y += 1
+print(a)
