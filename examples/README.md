@@ -32,7 +32,7 @@ used by examples are in [`libraries/`](../libraries/).
 - [blog](blog/README.md) — static blog generator: posts with front matter to
   HTML pages and an index, exit codes for bad input (`@std/files`, `@std/text`).
 - [todo](todo/README.md) — todo list stored in SQLite behind a small HTTP API;
-  its tests drive the live server with `curl`.
+  its test drives the live server over HTTP.
 - [tasks](tasks/README.md) — todo CLI with subcommands over a JSON file
   (`sprig-cli`, `@std/json_codec`).
 - [crawler](crawler/README.md) — concurrent crawler over local pages with

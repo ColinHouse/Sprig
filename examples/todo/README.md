@@ -9,7 +9,7 @@ sprig resolve                   # downloads sqlite-jdbc once
 sprig check
 sprig run                       # todos.sqlite, port 8080
 sprig run -- /tmp/t.sqlite 9000 # explicit database and port
-sprig test                      # store_test (SQLite), api_curl_test (real HTTP via curl)
+sprig test                      # store_test (SQLite), api_http_test (real HTTP requests through sprig-http)
 ```
 
 Routes:
@@ -29,5 +29,5 @@ curl -s -X DELETE localhost:8080/todos/1
 ```
 
 Modules: `src/store.spr` (SQL), `src/api.spr` (routes and JSON),
-`src/main.spr` (arguments, server start). `tests/api_curl_test.spr` starts the
-app on port 0 in-process and drives it with `curl` through `test.run_process`.
+`src/main.spr` (arguments, server start). `tests/api_http_test.spr` starts the
+app on port 0 in-process and drives it with real HTTP requests through `sprig-http`.

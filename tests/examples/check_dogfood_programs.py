@@ -3,7 +3,8 @@
 
 Each program is copied with the libraries it depends on, resolved, checked,
 run once as its README says, and its own `sprig test` suite is run; the blog
-output and the CLI's JSON file are checked as a user would see them."""
+output and the CLI's JSON file are checked as a user would see them. The todo
+test makes real HTTP requests through sprig-http, so no curl is needed."""
 import json
 import os
 from pathlib import Path
@@ -37,7 +38,7 @@ def sprig(cwd, *args, timeout=600):
 def main():
     with tempfile.TemporaryDirectory(prefix="sprig dogfood ") as temporary:
         work = Path(temporary)
-        for library in ("sprig-sqlite", "sprig-web", "sprig-cli"):
+        for library in ("sprig-sqlite", "sprig-web", "sprig-http", "sprig-cli"):
             shutil.copytree(ROOT / "libraries" / library, work / "libraries" / library,
                             ignore=shutil.ignore_patterns("sprig.lock", "sprig-build"))
         for program in PROGRAMS:
@@ -68,14 +69,18 @@ def main():
               f"exit={failed.returncode} {failed.stdout[-300:]} {failed.stderr[-300:]}")
 
         tasks = work / "examples" / "tasks"
-        store = work / "tasks 清单.json"
-        added = sprig(tasks, "run", "--offline", "--", "--file", str(store), "add", "Buy", "milk 牛奶")
+        # java.exe reads its command line in the ANSI code page (a documented limit), so
+        # the Windows lane keeps the path and the title ASCII; Linux and macOS carry UTF-8.
+        windows = os.name == "nt"
+        store = work / ("tasks list.json" if windows else "tasks 清单.json")
+        title = "milk" if windows else "milk 牛奶"
+        added = sprig(tasks, "run", "--offline", "--", "--file", str(store), "add", "Buy", title)
         listed = sprig(tasks, "run", "--offline", "--", "--file", str(store), "list")
         done = sprig(tasks, "run", "--offline", "--", "--file", str(store), "done", "1")
         listed_all = sprig(tasks, "run", "--offline", "--", "--file", str(store), "list", "--all")
         check("tasks-cli-round-trip", added.returncode == 0 and listed.returncode == 0 and done.returncode == 0
-              and "Buy milk 牛奶" in listed.stdout and store.is_file()
-              and listed_all.returncode == 0 and "Buy milk 牛奶" in listed_all.stdout,
+              and "Buy " + title in listed.stdout and store.is_file()
+              and listed_all.returncode == 0 and "Buy " + title in listed_all.stdout,
               f"{added.returncode} {added.stdout[-200:]} {listed.stdout[-200:]} {done.stdout[-200:]} {added.stderr[-200:]}")
         usage = sprig(tasks, "run", "--offline", "--", "frobnicate")
         check("tasks-unknown-command-fails", usage.returncode != 0, usage.stdout[-200:])

@@ -10,3 +10,7 @@ path = "../../libraries/sprig-sqlite"
 [[dependency]]
 name = "web"
 path = "../../libraries/sprig-web"
+
+[[dependency]]
+name = "http"
+path = "../../libraries/sprig-http"
