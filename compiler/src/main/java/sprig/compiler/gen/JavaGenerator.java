@@ -2362,7 +2362,8 @@ public final class JavaGenerator {
         String code = emitExpr(arg);
         Type type = arg.type;
         Type base = type == null ? null : type.nonNull();
-        if (arg instanceof Expr.IntLit && (param == int.class || param == Integer.class)) return "((int) " + code + ")";
+        if (arg instanceof Expr.IntLit literal && (param == int.class || param == Integer.class)
+                && literal.value.bitLength() < 32) return "((int) " + code + ")";
         if (arg instanceof Expr.IntLit && (param == short.class || param == Short.class)) return "((short) " + code + ")";
         if (arg instanceof Expr.IntLit && (param == byte.class || param == Byte.class)) return "((byte) " + code + ")";
         if (arg instanceof Expr.FloatLit && (param == float.class || param == Float.class)) return "((float) " + code + ")";

@@ -91,6 +91,10 @@ NEGATIVE = {
     "nullable_float_map_key": ("let m: Map[Float?, Int] = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
     "float_map_key_inferred": ("let m = {0.0: 1}\n", "SPR-NUM-CONVERSION"),
     "list_element_inexact": ("let xs: List[Float] = [9007199254740993]\n", "SPR-NUM-RANGE"),
+    "jvm_int_literal_out_of_range": (
+        "import java.lang.Integer as JInteger\nprint(JInteger.toBinaryString(4294967296))\n", "SPR-JVM-MEMBER"),
+    "jvm_short_literal_out_of_range": (
+        "import java.lang.Short as JShort\nprint(JShort.valueOf(40000))\n", "SPR-JVM-MEMBER"),
 }
 
 RUNTIME_ERRORS = {

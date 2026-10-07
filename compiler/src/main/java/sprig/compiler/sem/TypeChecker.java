@@ -5372,6 +5372,20 @@ public final class TypeChecker {
      * {@code long} is the only primitive integer target for Int, and
      * {@code double} the only primitive floating target for Float.
      */
+    /** The largest integer literal an int, short or byte formal accepts, or null for other formals. */
+    private static BigInteger narrowFormalMax(Class<?> param) {
+        if (param == int.class || param == Integer.class) return BigInteger.valueOf(Integer.MAX_VALUE);
+        if (param == short.class || param == Short.class) return BigInteger.valueOf(Short.MAX_VALUE);
+        if (param == byte.class || param == Byte.class) return BigInteger.valueOf(Byte.MAX_VALUE);
+        return null;
+    }
+
+    private static boolean literalOutsideFormal(Class<?> param, Expr expr) {
+        if (!(expr instanceof Expr.IntLit literal)) return false;
+        BigInteger max = narrowFormalMax(param);
+        return max != null && literal.value.compareTo(max) > 0;
+    }
+
     private static int scoreArgument(Class<?> param, Type arg, Expr expr) {
         // Java formals carry no nullability contract, including Object.
         if (arg.isNullable()) {
@@ -5380,13 +5394,13 @@ public final class TypeChecker {
         Type base = arg.nonNull();
         if (base == NativeType.INT) {
             if (expr instanceof Expr.IntLit literal) {
-                BigInteger max = param == int.class || param == Integer.class
-                        ? BigInteger.valueOf(Integer.MAX_VALUE)
-                        : param == short.class || param == Short.class
-                        ? BigInteger.valueOf(Short.MAX_VALUE)
-                        : param == byte.class || param == Byte.class
-                        ? BigInteger.valueOf(Byte.MAX_VALUE) : null;
-                if (max != null && literal.value.compareTo(max) <= 0) return 2;
+                BigInteger max = narrowFormalMax(param);
+                if (max != null) {
+                    // A literal matches a narrower formal only when it fits;
+                    // one that does not never reaches the checked narrowing
+                    // below, which would let the generator truncate it.
+                    return literal.value.compareTo(max) <= 0 ? 2 : -1;
+                }
             }
             if (param == long.class) {
                 return 3;
@@ -5559,6 +5573,11 @@ public final class TypeChecker {
                             }
                             if (JavaTypes.capturedWrite(candidate.getGenericParameterTypes()[i], bindings)) {
                                 reason = "argument " + (i + 1) + " would write through a '? extends' wildcard of the receiver; no type can be passed in";
+                                break;
+                            }
+                            if (literalOutsideFormal(params[i], call.args.get(i).value)) {
+                                reason = "integer literal " + ((Expr.IntLit) call.args.get(i).value).sourceText
+                                        + " is outside the " + params[i].getSimpleName() + " range of argument " + (i + 1);
                                 break;
                             }
                             if (scoreJvmArgument(candidate, i, argumentTypes.get(i), call.args.get(i).value) < 0) {
