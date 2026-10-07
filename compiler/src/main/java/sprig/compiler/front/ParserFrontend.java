@@ -735,6 +735,11 @@ public final class ParserFrontend {
         if (within(parser, SprigParser.CatchClauseContext.class)) {
             return "This catch clause is not written the Sprig way\n" + Newcomer.CATCH;
         }
+        if (type == SprigLexer.ASSIGN && previous == SprigLexer.IDENT
+                && within(parser, SprigParser.FieldDeclarationContext.class)) {
+            return "Fields have explicit types\n"
+                    + "Write 'let count: Int = 0'; a field's type is required even when it has an initializer.";
+        }
         // Python's f"..." (or F, fr, rf): a one-letter prefix glued to the string.
         if (type == SprigLexer.STRING && previous == SprigLexer.IDENT) {
             Token prefix = stream.get(index - 1);
