@@ -3,6 +3,7 @@
 import argparse
 import os
 from pathlib import Path
+import stat
 import subprocess
 import tempfile
 
@@ -67,6 +68,60 @@ def check_process_io(launcher):
     assert code == 0 and envelope['programOutput'].replace('\r\n', '\n') == '0\n0\n', (code, out, err)
     assert 'programErrorOutput' not in envelope, envelope
 
+def check_atomic_write(launcher):
+    """atomic_write_utf8 keeps the permissions of the file it replaces, gives a new file the
+    permissions write_utf8 gives it (the umask's), and writes through a symbolic link: the
+    link stays and its target is replaced atomically (#209). Windows has no POSIX permissions
+    and needs privileges for links, so there only the written text is checked."""
+    posix = os.name != 'nt'
+    with tempfile.TemporaryDirectory(prefix='sprig std atomic ') as work:
+        root = Path(work)
+        real = root / 'real'
+        real.mkdir()
+        plain, fresh = root / 'plain.txt', root / 'fresh.txt'
+        kept = {}   # a file the write replaces -> the permissions it must keep
+        links = {}  # a link the write goes through -> the file it must reach
+        if posix:
+            for path, mode in ((root / 'shared.txt', 0o664), (root / 'private.txt', 0o600),
+                               (root / 'script.sh', 0o755), (real / 'target.txt', 0o644),
+                               (real / 'chained.txt', 0o604)):
+                path.write_text('old', encoding='utf-8')
+                path.chmod(mode)
+                kept[path] = mode
+            (root / 'link.txt').symlink_to(Path('real') / 'target.txt')
+            links[root / 'link.txt'] = real / 'target.txt'
+            (real / 'middle.txt').symlink_to('chained.txt')
+            (root / 'chain.txt').symlink_to(Path('real') / 'middle.txt')
+            links[root / 'chain.txt'] = real / 'chained.txt'
+            (root / 'dangling.txt').symlink_to(Path('real') / 'missing.txt')
+            links[root / 'dangling.txt'] = real / 'missing.txt'
+        paths = [plain, fresh] + [path for path in kept if path.parent == root] + list(links)
+        # A umask that no default shares: a new file gets rw-r----- (0640), so it can be told
+        # apart from both rw------- and rw-r--r--, and a kept 0664 or 0604 cannot come from it.
+        result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/atomic_write.spr'), '--', *map(str, paths)],
+                                cwd=ROOT, text=True, encoding='utf-8', capture_output=True,
+                                preexec_fn=(lambda: os.umask(0o027)) if posix else None)
+        assert result.returncode == 0 and result.stdout == '', (result.stdout, result.stderr)
+        for path in [plain, fresh, *kept, *links.values()]:
+            assert path.read_text(encoding='utf-8') == 'written ✓', path
+        leftovers = [path.name for path in root.rglob('*') if path.name.endswith('.tmp')]
+        assert leftovers == [], leftovers
+        if not posix:
+            return
+
+        def mode(path):
+            return stat.S_IMODE(os.lstat(path).st_mode)
+        assert mode(plain) == 0o640, oct(mode(plain))
+        assert mode(fresh) == mode(plain), oct(mode(fresh))
+        for path, expected in kept.items():
+            assert not path.is_symlink() and mode(path) == expected, (path, oct(mode(path)))
+        for link, reached in links.items():
+            assert link.is_symlink() and reached.is_file() and not reached.is_symlink(), (link, reached)
+        assert os.readlink(root / 'link.txt') == str(Path('real') / 'target.txt')
+        assert (real / 'middle.txt').is_symlink()
+        # A dangling link's target is created as a new file, as write_utf8 creates it.
+        assert mode(real / 'missing.txt') == 0o640, oct(mode(real / 'missing.txt'))
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--launcher', type=Path, default=ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig'))
@@ -111,6 +166,7 @@ def main():
             'file name of root: cannot take the file name of /: a root has none',
             '2',
         ], repr(errors.stdout)
+    check_atomic_write(launcher)
     result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json.spr')], cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
     expected = '{"ok":true,"nested":[null,12.50,"a\\nb",{"x":-2e3}]}\n"你好"\nrejected trailing comma\nrejected duplicate key\nrejected leading zero\nrejected trailing text\n'
     assert result.returncode == 0, result.stderr

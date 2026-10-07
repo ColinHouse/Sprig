@@ -1,0 +1,16 @@
+# Writes "written ✓" to every path given after --: the first with write_utf8,
+# the others with atomic_write_utf8. scripts/test-stdlib.py prepares the files
+# and links, then checks their text, permissions and links from outside.
+import "@std/files.spr" as files
+import "@std/process.spr" as process
+
+var first = true
+for path in process.arguments():
+    try:
+        if first:
+            files.write_utf8(path, "written ✓")
+        else:
+            files.atomic_write_utf8(path, "written ✓")
+    catch problem: Error:
+        print(problem.message)
+    first = false

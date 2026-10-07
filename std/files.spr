@@ -124,8 +124,11 @@ func remove_file(path: String) -> Unit throws Error:
         throw failure("remove " + path, problem)
 
 # Like write_utf8, but via a temporary sibling renamed over the target,
-# atomically where the filesystem allows; no fsync. On POSIX the new file
-# is owner-only (rw-------), and a symbolic link at the path is replaced.
+# atomically where the filesystem allows; no fsync. A symbolic link at the
+# path is followed, as write_utf8 follows it: the file it leads to is
+# replaced and the link stays. A replaced file keeps its permissions where
+# the filesystem has POSIX ones, and a new file gets what write_utf8 would
+# give it; either way the file then belongs to the user who wrote it.
 func atomic_write_utf8(path: String, value: String) -> Unit throws Error:
     try:
         HostFiles.atomicWriteUtf8(path, value)

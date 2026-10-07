@@ -103,7 +103,13 @@ symbolic links. `atomic_write_utf8` writes and closes a temporary sibling before
 replacing the target. It requests an atomic same-filesystem replacement; if the
 provider reports atomic moves are unsupported, it falls back to a regular
 replacement move, which is not crash-atomic. Temporary files are removed after
-success or failure. No API here promises fsync or crash durability. `temp_file`
+success or failure. No API here promises fsync or crash durability. Like
+`write_utf8`, `atomic_write_utf8` follows a symbolic link at the path: the
+temporary file is a sibling of the file the link leads to, that file is
+replaced and the link stays. A replaced file keeps its POSIX permissions where
+the filesystem supports them, and a new file gets the permissions `write_utf8`
+would create it with (`rw-rw-rw-` less the process umask). Either way the file
+then belongs to the user who wrote it. `temp_file`
 creates an empty file in the operating system temporary directory; callers can
 remove it with `remove_file`.
 
