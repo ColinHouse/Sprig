@@ -670,8 +670,10 @@ public final class ParserFrontend {
         }
         if (type == SprigLexer.ASSIGN && within(parser, SprigParser.FieldDeclarationContext.class)) {
             String name = previous == SprigLexer.IDENT ? stream.get(index - 1).getText() : "name";
-            return "Fields have explicit types; write 'let " + name + ": Int = 0'\n"
-                    + "For other types, write 'let " + name + ": Type = value'.";
+            String keyword = index > 1 && (beforePrevious == SprigLexer.VAR || beforePrevious == SprigLexer.LET)
+                    ? stream.get(index - 2).getText() : "let";
+            return "Fields have explicit types; write '" + keyword + " " + name + ": Int = 0'\n"
+                    + "For other types, write '" + keyword + " " + name + ": Type = value'.";
         }
         int lineFirst = lineStart(stream, index);
         int first = stream.get(lineFirst).getType();
