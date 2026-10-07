@@ -109,7 +109,8 @@ change touches, as applicable:
   credentials or personal configuration.
 - `sprig api`, `capabilities`, `doctor`, `lsp` and topic help are available;
   query `capabilities --json` for the checkout's dependency and feature
-  support. Publishing/registry remains future work.
+  support. Packages are published through pull requests to `registry/`, validated
+  by `.github/workflows/registry.yml` (`scripts/internal/check-registry-index.py`).
 - This milestone does not authorize grammar, type, numeric, nullability,
   generic or effect redesign. Open a `design-required` issue with a motivating
   program before changing those contracts.

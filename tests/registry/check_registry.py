@@ -2,6 +2,8 @@
 """Package registries: search, add from an index, publish into one, and the failure codes."""
 import json
 import os
+import shutil
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -128,11 +130,126 @@ def main():
         check("publish-appends-release", published.returncode == 0 and body(published)["package"]["latest"] == "1.2.0"
               and 'version = "1.2.0"' in entry and 'description = "Doubling and tripling"' in entry
               and f'git = "{url}"' in entry, published.stdout + published.stderr + entry)
+        rev_120 = subprocess.run(["git", "-C", str(repo), "rev-parse", "v1.2.0^{commit}"], capture_output=True, text=True,
+                                 env=GIT_ENV).stdout.strip()
+        check("publish-records-the-commit", f'rev = "{rev_120}"' in entry and body(published)["package"]["releases"][-1]["rev"] == rev_120, entry)
         again = sprig(repo, "publish", "--registry", str(registry), "--tag", "v1.2.0", "--version", "1.2.0", "--json", env=env)
-        check("publish-same-version-replaces", again.returncode == 0 and body(again)["replacedVersion"] is True
+        check("publish-same-version-rejected", again.returncode == 1 and body(again)["diagnostics"][0]["code"] == "SPR-DEP-REGISTRY"
+              and "already published" in body(again)["diagnostics"][0]["message"]
               and (registry / "packages" / "mathlib.toml").read_text(encoding="utf-8").count('version = "1.2.0"') == 1, again.stdout)
         latest = sprig(app, "search", "mathlib", "--json", env=env)
         check("search-sees-published", body(latest)["packages"][0]["latest"] == "1.2.0", latest.stdout)
+
+        # Versions order by SemVer, not by list position; a pre-release sorts before its release.
+        (registry / "packages" / "mathlib.toml").write_text(
+            (registry / "packages" / "mathlib.toml").read_text(encoding="utf-8")
+            + '\n[[release]]\nversion = "1.10.0-beta.1"\ntag = "v1.1.0"\n\n[[release]]\nversion = "1.2.1"\ntag = "v1.2.0"\n',
+            encoding="utf-8")
+        ordered = sprig(app, "search", "mathlib", "--json", env=env)
+        check("latest-by-semver", body(ordered)["packages"][0]["latest"] == "1.10.0-beta.1", ordered.stdout)
+        bad_version = base / "badreg"
+        (bad_version / "packages").mkdir(parents=True)
+        (bad_version / "packages" / "odd.toml").write_text(f'[package]\nname = "odd"\ngit = "{url}"\n\n[[release]]\nversion = "1.0"\ntag = "v1.0.0"\n',
+                                                           encoding="utf-8")
+        (app / "sprig.toml").write_text('[project]\nname = "app"\n\n[[registry]]\nname = "local"\npath = "../registry"\n\n'
+                                        '[[registry]]\nname = "bad"\npath = "../badreg"\n', encoding="utf-8")
+        not_semver = sprig(app, "search", "--registry", "bad", "--json", env=env)
+        check("non-semver-version-rejected", not_semver.returncode == 1 and "SemVer" in body(not_semver)["diagnostics"][0]["message"],
+              not_semver.stdout)
+        (bad_version / "packages" / "odd.toml").unlink()
+        (bad_version / "packages" / "Bad_Name.toml").write_text(f'[package]\nname = "Bad_Name"\ngit = "{url}"\n', encoding="utf-8")
+        bad_name = sprig(app, "search", "--registry", "bad", "--json", env=env)
+        check("package-name-rule", bad_name.returncode == 1 and "lowercase" in body(bad_name)["diagnostics"][0]["hint"], bad_name.stdout)
+        (bad_version / "packages" / "Bad_Name.toml").unlink()
+        (app / "sprig.toml").write_text('[project]\nname = "app"\n\n[[registry]]\nname = "local"\npath = "../registry"\n', encoding="utf-8")
+
+        # Yanking: never chosen for a new dependency, refused by version, still resolvable from a lock.
+        (app / "src" / "main.spr").write_text('import "@mathlib/math.spr" as math\nprint(math.thrice(14))\n', encoding="utf-8")
+        pinned_latest = sprig(app, "add", "mathlib", "--version", "1.2.1", "--json", env=env)
+        check("add-before-yank", pinned_latest.returncode == 0, pinned_latest.stdout + pinned_latest.stderr)
+        yanked = sprig(repo, "publish", "--registry", str(registry), "--yank", "1.2.1", "--reason", "built from the wrong commit", "--json", env=env)
+        entry = (registry / "packages" / "mathlib.toml").read_text(encoding="utf-8")
+        check("publish-yank", yanked.returncode == 0 and body(yanked)["yanked"] is True and 'yanked = "true"' in entry
+              and 'reason = "built from the wrong commit"' in entry, yanked.stdout + yanked.stderr + entry)
+        still_runs = sprig(app, "run", "--offline", env=env)
+        check("locked-yanked-release-still-resolves", still_runs.returncode == 0 and still_runs.stdout.strip() == "42",
+              still_runs.stdout + still_runs.stderr)
+        sprig(app, "remove", "mathlib", "--json", env=env)
+        refused = sprig(app, "add", "mathlib", "--version", "1.2.1", "--json", env=env)
+        check("add-yanked-version-refused", refused.returncode == 1 and "yanked" in body(refused)["diagnostics"][0]["message"], refused.stdout)
+        skipped = sprig(app, "search", "mathlib", "--json", env=env)
+        check("latest-skips-yanked", body(skipped)["packages"][0]["latest"] == "1.10.0-beta.1", skipped.stdout)
+        no_yank_target = sprig(repo, "publish", "--registry", str(registry), "--yank", "9.9.9", "--reason", "x", "--json", env=env)
+        check("yank-unknown-version", no_yank_target.returncode == 1, no_yank_target.stdout)
+
+        # A moved tag is detected: the index recorded the commit v1.2.0 pointed at.
+        git(repo, "tag", "-f", "v1.2.0", "v1.0.0")
+        moved = sprig(app, "add", "mathlib", "--version", "1.2.0", "--json", env=env)
+        check("moved-tag-refused", moved.returncode == 1 and "now points at" in body(moved)["diagnostics"][0]["message"], moved.stdout)
+        git(repo, "tag", "-f", "v1.2.0", rev_120)
+        restored = sprig(app, "add", "mathlib", "--version", "1.2.0", "--json", env=env)
+        check("pinned-tag-accepted", restored.returncode == 0, restored.stdout + restored.stderr)
+        sprig(app, "remove", "mathlib", "--json", env=env)
+
+        # A strict registry (the default one's rules): tags pinned to a commit, license and owners.
+        strict = base / "strict"
+        (strict / "packages").mkdir(parents=True)
+        (strict / "registry.toml").write_text('[registry]\nname = "strict"\nstrict = "true"\n', encoding="utf-8")
+        (strict / "packages" / "mathlib.toml").write_text(
+            f'[package]\nname = "mathlib"\ngit = "{url}"\n\n[[release]]\nversion = "1.0.0"\nbranch = "main"\n', encoding="utf-8")
+        (app / "sprig.toml").write_text('[project]\nname = "app"\n\n[[registry]]\nname = "strict"\npath = "../strict"\n', encoding="utf-8")
+        branch_in_strict = sprig(app, "search", "--json", env=env)
+        check("strict-rejects-branch-release", branch_in_strict.returncode == 1
+              and "license" in body(branch_in_strict)["diagnostics"][0]["message"] + body(branch_in_strict)["diagnostics"][0]["message"],
+              branch_in_strict.stdout)
+        (strict / "packages" / "mathlib.toml").unlink()
+        unlicensed = sprig(repo, "publish", "--registry", str(strict), "--git", url, "--tag", "v1.0.0", "--version", "1.0.0", "--json", env=env)
+        check("strict-publish-needs-license-and-owner", unlicensed.returncode == 1
+              and body(unlicensed)["diagnostics"][0]["code"] == "SPR-DEP-REGISTRY", unlicensed.stdout)
+        licensed = sprig(repo, "publish", "--registry", str(strict), "--git", url, "--tag", "v1.0.0", "--version", "1.0.0",
+                         "--license", "Apache-2.0", "--owner", "octocat", "--json", env=env)
+        strict_entry = (strict / "packages" / "mathlib.toml").read_text(encoding="utf-8")
+        check("strict-publish-records-license-owner-rev", licensed.returncode == 0 and 'license = "Apache-2.0"' in strict_entry
+              and 'owners = ["octocat"]' in strict_entry and 'rev = "' in strict_entry, licensed.stdout + licensed.stderr + strict_entry)
+        branch_publish = sprig(repo, "publish", "--registry", str(strict), "--branch", "main", "--version", "1.0.1", "--json", env=env)
+        check("strict-publish-rejects-branch", branch_publish.returncode == 1, branch_publish.stdout)
+
+        # The index validator: valid index, then the immutability rules against a git base.
+        index_repo = base / "index"
+        shutil.copytree(strict, index_repo)
+        subprocess.run(["git", "init", "--quiet", str(index_repo)], check=True, env=GIT_ENV)
+        git(index_repo, "add", ".")
+        git(index_repo, "commit", "--quiet", "-m", "index")
+        validator = ROOT / "scripts" / "internal" / "check-registry-index.py"
+        valid = subprocess.run([sys.executable, str(validator), "--root", str(index_repo), "--json"], capture_output=True, text=True)
+        check("validator-accepts-valid-index", valid.returncode == 0 and body(valid)["problems"] == [], valid.stdout + valid.stderr)
+        # Fetch the published release at its tag and run the SDK on it.
+        fetched = subprocess.run([sys.executable, str(validator), "--root", str(index_repo), "--fetch", "--sprig", str(SPRIG), "--json"],
+                                 capture_output=True, text=True, env=env)
+        check("validator-fetches-and-checks", fetched.returncode == 0 and any("resolve/check passed" in n for n in body(fetched)["notes"]),
+              fetched.stdout + fetched.stderr)
+        # Mutating a published release is rejected against the base; yanking is accepted.
+        text = (index_repo / "packages" / "mathlib.toml").read_text(encoding="utf-8")
+        (index_repo / "packages" / "mathlib.toml").write_text(text.replace(f'rev = "', 'rev = "0000000000000000000000000000000000000000"\n#'), encoding="utf-8")
+        git(index_repo, "add", ".")
+        git(index_repo, "commit", "--quiet", "-m", "move")
+        base_rev = subprocess.run(["git", "-C", str(index_repo), "rev-parse", "HEAD~1"], capture_output=True, text=True, env=GIT_ENV).stdout.strip()
+        mutated = subprocess.run([sys.executable, str(validator), "--root", str(index_repo), "--base", base_rev, "--json"],
+                                 capture_output=True, text=True, cwd=index_repo)
+        check("validator-rejects-changed-rev", mutated.returncode == 1 and any("immutable" in p for p in body(mutated)["problems"]),
+              mutated.stdout + mutated.stderr)
+        git(index_repo, "reset", "--quiet", "--hard", "HEAD~1")
+        (index_repo / "packages" / "mathlib.toml").write_text(text + 'yanked = "true"\nreason = "superseded"\n', encoding="utf-8")
+        git(index_repo, "add", ".")
+        git(index_repo, "commit", "--quiet", "-m", "yank")
+        yank_ok = subprocess.run([sys.executable, str(validator), "--root", str(index_repo), "--base", "HEAD~1", "--author", "octocat", "--json"],
+                                 capture_output=True, text=True, cwd=index_repo)
+        check("validator-accepts-yank-by-owner", yank_ok.returncode == 0 and body(yank_ok)["problems"] == [], yank_ok.stdout + yank_ok.stderr)
+        stranger = subprocess.run([sys.executable, str(validator), "--root", str(index_repo), "--base", "HEAD~1", "--author", "someone",
+                                   "--require-owner", "--json"], capture_output=True, text=True, cwd=index_repo)
+        check("validator-flags-non-owner", stranger.returncode == 1 and any("maintainer approval" in p for p in body(stranger)["problems"]),
+              stranger.stdout + stranger.stderr)
+        (app / "sprig.toml").write_text('[project]\nname = "app"\n\n[[registry]]\nname = "local"\npath = "../registry"\n', encoding="utf-8")
         no_ref = sprig(repo, "publish", "--registry", str(registry), "--json", env=env)
         check("publish-needs-ref", no_ref.returncode == 2 and body(no_ref)["diagnostics"][0]["code"] == "SPR-CLI-OPTION", no_ref.stdout)
         fresh = base / "fresh"

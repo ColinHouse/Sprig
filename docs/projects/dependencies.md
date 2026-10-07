@@ -115,15 +115,22 @@ package:
 name = "json-codec"
 description = "Path-aware JSON decoding and encoding over @std/json"
 git = "https://github.com/ColinHouse/Sprig.git"
+license = "Apache-2.0"
+owners = ["ColinHouse"]
 subdir = "libraries/sprig-json-codec"
 
 [[release]]
 version = "0.7.1-beta.1"
 tag = "v0.7.1-beta.1"
+rev = "b7fe68eb1cc98cb018f1d07e472d69d73acf4328"
 ```
 
-Each release names one Git ref (`tag`, `branch` or a full `rev`); the last
-release listed is the newest. A project declares the registries it uses with
+Each release is a SemVer version (`MAJOR.MINOR.PATCH`, optional `-pre` and
+`+build`) with one Git ref: a `tag`, usually with the full commit `rev` it
+pointed at when it was published, a `branch`, or a bare `rev`. The newest
+release is chosen by SemVer order, not by list position. A release may carry
+`yanked = "true"` and a `reason`: it is never chosen for a new dependency, and a
+lock that already pins it still resolves. A project declares the registries it uses with
 `[[registry]]` tables, each a local `path` or a Git `url` (with an optional
 `branch`, default `main`, and `subdir`):
 
@@ -139,7 +146,44 @@ subdir = "registry"
 ```
 
 Without any `[[registry]]`, the default registry is the `registry/` directory
-of the Sprig repository, which lists the first-party libraries.
+of the Sprig repository, which lists the first-party libraries. An index whose
+`registry.toml` says `moved_to = "URL"` (with an optional `moved_to_subdir`) is
+followed once, so an index can move without breaking older SDKs.
+
+### The default registry's rules
+
+The repository's `registry/registry.toml` declares `strict = "true"`; a strict
+index enforces, both in the compiler and in the `Registry` workflow that runs on
+every pull request to `registry/`:
+
+1. **Names.** Lowercase letters, digits and hyphens, starting with a letter.
+   `std`, `sprig` and the repository's own names are reserved.
+2. **Releases are immutable.** `sprig publish --tag T` records the commit the
+   tag points at. A published version never changes its ref or `rev` and is
+   never deleted; a broken release gets `yanked = "true"` with a reason
+   (`sprig publish --yank V --reason TEXT`). Publishing a version that is
+   already listed is an error.
+3. **Tags only.** A `branch` is mutable, so the default registry rejects it.
+   Path and private registries still accept it.
+4. **Versions** are SemVer; the newest is chosen by SemVer order.
+5. **License.** `license = "SPDX-ID"` is required (`--license`, or `[project]
+   license` in the package's `sprig.toml`).
+6. **Owners.** `owners = ["github-handle", ...]` is recorded at the first
+   publish (`--owner`). A later change to the entry comes from an owner; another
+   author's pull request is flagged and needs the maintainer approval that
+   `CODEOWNERS` already requires for `registry/`.
+
+Publishing a package means opening a pull request against `ColinHouse/Sprig`
+that changes only `registry/packages/NAME.toml`
+(`?template=registry_submission.md` on the new pull request URL loads the
+checklist). The workflow parses every entry, diffs the changed entries against
+the base branch for rules 2 and 6, clones each new release at its tag, checks
+that the tag still points at the recorded commit, and runs `sprig resolve`,
+`sprig check` and, when the package has tests, `sprig test` with the current
+SDK. A pull request that does not touch `registry/` passes the workflow at
+once, and a registry-only pull request passes the compiler matrix at once, so
+every required check reports. `python3 scripts/internal/check-registry-index.py
+[--base REF] [--fetch]` runs the same validation locally.
 
 - `sprig search [TEXT] [--registry R] [--offline] [--json]` lists the packages
   the registries know (name, latest version, source, description), filtered by
@@ -149,13 +193,18 @@ of the Sprig repository, which lists the first-party libraries.
   `branch` or `rev`, and `subdir`. The manifest then carries the full source,
   the lock pins the commit, and `check`/`build`/`run` never consult the
   registry again. `--version` picks a listed release; `--registry` chooses when
-  several registries list the name.
-- `sprig publish --registry DIR (--tag T | --branch B | --rev SHA) [--git URL]
-  [--subdir DIR] [--version V] [--description TEXT]` writes or updates the
-  current package's `packages/NAME.toml` in a local registry directory (a
-  declared `path` registry by name, or any directory). Committing and pushing
-  the index is the publisher's step; a Git registry is published through a
-  local clone of it. Publishing the same version again replaces that release.
+  several registries list the name. A yanked release is skipped as the latest
+  and refused by version; a tag that no longer points at the recorded `rev` is
+  refused (`SPR-DEP-REGISTRY`), since a published release is immutable.
+- `sprig publish --registry DIR (--tag T [--rev SHA] | --branch B | --rev SHA)
+  [--git URL] [--subdir DIR] [--version V] [--description TEXT] [--license SPDX]
+  [--owner HANDLE]...` writes the current package's `packages/NAME.toml` in a
+  local registry directory (a declared `path` registry by name, or any
+  directory) and records the commit a `--tag` points at (from the package's own
+  checkout, or from the remote). The command stops at the entry: it prints the
+  pull request step, and a Git registry is published through a local clone of
+  it. A version that is already listed is an error; `--yank VERSION --reason
+  TEXT` withdraws a release instead.
 
 A Git registry is read at `add`/`search` time (its branch tip is pinned under
 `~/.sprig/registry` so `--offline` reuses it); an unlisted package or version,
