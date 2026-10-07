@@ -123,7 +123,9 @@ and `newText` replacing exactly that range. Applying an edit moves the program
 past the diagnostic; whether it is what the author meant (adding `throws Error`
 to a function, say) is still theirs to judge. Edits exist today for a missing
 `@std` import, an undeclared `throws`, positional constructor arguments, a
-generic call whose arguments imply its type arguments, and `else if`.
+generic call whose arguments imply its type arguments, and `else if`. In an
+editor, `sprig lsp` offers the same edits as quick fixes; see
+[language server](lsp.md#quick-fixes).
 
 `machineApplicable` is true only for a correction that is semantics-preserving
 and unambiguous. When it is false, treat `repair.kind` as a strategy, not a

@@ -55,6 +55,7 @@ public final class LanguageServer {
 
     private static final int REQUEST_FAILED = -32803;
     private static final int INVALID_PARAMS = -32602;
+    private static final String QUICK_FIX = "quickfix";
 
     private static final class Document {
         final String uri;
@@ -93,6 +94,8 @@ public final class LanguageServer {
     private boolean initialized;
     private boolean shutdown;
     private boolean prepareRename;
+    /** Whether the client takes CodeAction literals; a quick fix is an edit, which a bare Command cannot carry. */
+    private boolean codeActionLiterals;
     private Integer exitCode;
 
     private LanguageServer(Transport transport, List<String> classpath) {
@@ -256,6 +259,8 @@ public final class LanguageServer {
                 return prepareRename(params);
             case "textDocument/rename":
                 return rename(params);
+            case "textDocument/codeAction":
+                return codeActions(params);
             default:
                 if (request) {
                     throw new RequestFailure(-32601, "Unsupported method: " + method);
@@ -306,9 +311,9 @@ public final class LanguageServer {
 
     private Map<String, Object> initialize(Map<String, Object> params) {
         initialized = true;
-        Map<String, Object> rename = Json.object(Json.object(Json.object(params, "capabilities"), "textDocument"),
-                "rename");
-        prepareRename = Json.bool(rename, "prepareSupport");
+        Map<String, Object> textDocument = Json.object(Json.object(params, "capabilities"), "textDocument");
+        prepareRename = Json.bool(Json.object(textDocument, "rename"), "prepareSupport");
+        codeActionLiterals = Json.object(Json.object(textDocument, "codeAction"), "codeActionLiteralSupport") != null;
         Map<String, Object> sync = new LinkedHashMap<>();
         sync.put("openClose", true);
         sync.put("change", 1);
@@ -323,6 +328,9 @@ public final class LanguageServer {
         capabilities.put("completionProvider", Map.of("triggerCharacters", List.of("."), "resolveProvider", false));
         capabilities.put("documentFormattingProvider", true);
         capabilities.put("renameProvider", prepareRename ? Map.of("prepareProvider", true) : true);
+        if (codeActionLiterals) {
+            capabilities.put("codeActionProvider", Map.of("codeActionKinds", List.of(QUICK_FIX)));
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("capabilities", capabilities);
         result.put("serverInfo", Map.of("name", "sprig", "version", Catalog.COMPILER_VERSION));
@@ -478,46 +486,50 @@ public final class LanguageServer {
 
     private List<Map<String, Object>> diagnostics(Document document, Analysis analysis) {
         List<Map<String, Object>> out = new ArrayList<>();
-        Module main = analysis.module(document.path);
-        TextLines lines = analysis.text(document.path);
         for (Diagnostic diagnostic : analysis.diagnostics) {
-            Path path = pathOf(diagnostic.uri);
-            String message = message(diagnostic);
-            List<Map<String, Object>> related = new ArrayList<>();
-            Map<String, Object> range;
-            if (document.path.equals(path)) {
-                range = lines.range(diagnostic.span);
-                for (Diagnostic.Related item : diagnostic.related) {
-                    if (item.span != null) {
-                        related.add(related(document.uri, lines.range(item.span), item.message));
-                    }
-                }
-            } else {
-                // Reported elsewhere (an imported module or the manifest): show it on
-                // the import that leads there, or on the first line.
-                range = lines.range(importLeadingTo(main, path));
-                if (path != null) {
-                    message = path.getFileName() + (diagnostic.span == null ? "" : ":" + diagnostic.span.display())
-                            + ": " + message;
-                    related.add(related(uriOf(path), analysis.text(path).range(diagnostic.span), diagnostic.message));
-                }
-            }
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("range", range);
-            item.put("severity", diagnostic.isError() ? 1 : 2);
-            item.put("code", diagnostic.code);
-            item.put("source", "sprig");
-            item.put("message", message);
-            if (!related.isEmpty()) {
-                item.put("relatedInformation", related);
-            }
-            if (diagnostic.relatedHelp != null) {
-                // The `sprig help` topic, as `relatedHelp` in `sprig check --json`.
-                item.put("data", Map.of("relatedHelp", diagnostic.relatedHelp));
-            }
-            out.add(item);
+            out.add(published(document, analysis, diagnostic));
         }
         return out;
+    }
+
+    /** One compiler diagnostic as an LSP diagnostic of this document, the form it is published in. */
+    private Map<String, Object> published(Document document, Analysis analysis, Diagnostic diagnostic) {
+        TextLines lines = analysis.text(document.path);
+        Path path = pathOf(diagnostic.uri);
+        String message = message(diagnostic);
+        List<Map<String, Object>> related = new ArrayList<>();
+        Map<String, Object> range;
+        if (document.path.equals(path)) {
+            range = lines.range(diagnostic.span);
+            for (Diagnostic.Related item : diagnostic.related) {
+                if (item.span != null) {
+                    related.add(related(document.uri, lines.range(item.span), item.message));
+                }
+            }
+        } else {
+            // Reported elsewhere (an imported module or the manifest): show it on
+            // the import that leads there, or on the first line.
+            range = lines.range(importLeadingTo(analysis.module(document.path), path));
+            if (path != null) {
+                message = path.getFileName() + (diagnostic.span == null ? "" : ":" + diagnostic.span.display())
+                        + ": " + message;
+                related.add(related(uriOf(path), analysis.text(path).range(diagnostic.span), diagnostic.message));
+            }
+        }
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("range", range);
+        item.put("severity", diagnostic.isError() ? 1 : 2);
+        item.put("code", diagnostic.code);
+        item.put("source", "sprig");
+        item.put("message", message);
+        if (!related.isEmpty()) {
+            item.put("relatedInformation", related);
+        }
+        if (diagnostic.relatedHelp != null) {
+            // The `sprig help` topic, as `relatedHelp` in `sprig check --json`.
+            item.put("data", Map.of("relatedHelp", diagnostic.relatedHelp));
+        }
+        return item;
     }
 
     private static String message(Diagnostic diagnostic) {
@@ -761,6 +773,95 @@ public final class LanguageServer {
         edit.put("range", document.lines.fullRange());
         edit.put("newText", crlf ? formatted.replace("\n", "\r\n") : formatted);
         return List.of(edit);
+    }
+
+    /**
+     * Quick fixes: one action per suggested edit of each diagnostic of this
+     * document that overlaps the requested range. Diagnostics and edits come
+     * from this server's own check of the current text; the diagnostics a
+     * client sends in the request context are never used.
+     */
+    private List<Map<String, Object>> codeActions(Map<String, Object> params) {
+        Document document = document(params);
+        if (document == null) {
+            return null;
+        }
+        Map<String, Object> context = Json.object(params, "context");
+        List<Object> only = context == null ? null : Json.array(context.get("only"));
+        // `only` names the kinds the client will show; the empty kind contains every kind.
+        if (!codeActionLiterals || (only != null && !only.contains(QUICK_FIX) && !only.contains(""))) {
+            return List.of();
+        }
+        Map<String, Object> range = Json.object(params, "range");
+        Map<String, Object> from = Json.object(range, "start");
+        Map<String, Object> to = Json.object(range, "end");
+        if (compare(from, to) > 0) {
+            Map<String, Object> swap = from;
+            from = to;
+            to = swap;
+        }
+        Analysis analysis = analysis(document);
+        TextLines lines = analysis.text(document.path);
+        boolean crlf = lines.text.contains("\r\n");
+        List<Map<String, Object>> actions = new ArrayList<>();
+        for (Diagnostic diagnostic : analysis.diagnostics) {
+            // A diagnostic of an imported file is shown on an import here, but its edits are for that file.
+            if (diagnostic.suggestedEdits.isEmpty() || !document.path.equals(pathOf(diagnostic.uri))) {
+                continue;
+            }
+            Map<String, Object> item = published(document, analysis, diagnostic);
+            Map<String, Object> at = Json.object(item, "range");
+            if (compare(Json.object(at, "start"), to) > 0 || compare(from, Json.object(at, "end")) > 0) {
+                continue;
+            }
+            List<Map<String, Object>> fixes = new ArrayList<>();
+            for (Map<String, Object> edit : diagnostic.suggestedEdits) {
+                Map<String, Object> change = textEdit(edit, lines, crlf);
+                String title = Json.string(edit, "description");
+                if (change == null || title == null) {
+                    continue;
+                }
+                Map<String, Object> action = new LinkedHashMap<>();
+                action.put("title", title);
+                action.put("kind", QUICK_FIX);
+                action.put("diagnostics", List.of(item));
+                action.put("edit", Map.of("changes", Map.of(document.uri, List.of(change))));
+                fixes.add(action);
+            }
+            for (Map<String, Object> fix : fixes) {
+                fix.put("isPreferred", fixes.size() == 1);
+            }
+            actions.addAll(fixes);
+        }
+        return actions;
+    }
+
+    /**
+     * A suggested edit as an LSP text edit. Its range counts code points, like
+     * every compiler range, and becomes UTF-16 here; inserted line breaks
+     * follow the document's line endings, as formatting does.
+     */
+    private static Map<String, Object> textEdit(Map<String, Object> edit, TextLines lines, boolean crlf) {
+        Map<String, Object> range = Json.object(edit, "range");
+        Map<String, Object> start = Json.object(range, "start");
+        Map<String, Object> end = Json.object(range, "end");
+        String newText = Json.string(edit, "newText");
+        if (start == null || end == null || newText == null) {
+            return null;
+        }
+        Map<String, Object> converted = new LinkedHashMap<>();
+        converted.put("start", lines.position(Json.integer(start, "line", 0), Json.integer(start, "character", 0)));
+        converted.put("end", lines.position(Json.integer(end, "line", 0), Json.integer(end, "character", 0)));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("range", converted);
+        out.put("newText", crlf ? newText.replace("\r\n", "\n").replace("\n", "\r\n") : newText);
+        return out;
+    }
+
+    /** Orders two LSP positions by line, then character. */
+    private static int compare(Map<String, Object> a, Map<String, Object> b) {
+        int line = Integer.compare(Json.integer(a, "line", 0), Json.integer(b, "line", 0));
+        return line != 0 ? line : Integer.compare(Json.integer(a, "character", 0), Json.integer(b, "character", 0));
     }
 
     private Map<String, Object> prepareRename(Map<String, Object> params) {

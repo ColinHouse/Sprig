@@ -1,4 +1,4 @@
-# Known limitations — v0.7.0-beta.1
+# Known limitations — v0.7.1-beta.1
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the historical design kit in `docs/history/design-kit/`.
@@ -39,12 +39,13 @@ by the historical design kit in `docs/history/design-kit/`.
   streaming, async requests or a stable package registry. The ecosystem remains
   intentionally small and experimental.
   Debugger integration and incremental compilation are absent. `sprig lsp`
-  serves diagnostics, hover, navigation, completion, formatting and local
-  rename over the Language Server Protocol; it re-checks the whole program on
-  each change and renames only locals and parameters (see
-  [language server](../tooling/lsp.md)). The VS Code extension uses it when the
-  compiler provides it, and runs checks, programs, tests and Java viewing as
-  CLI commands; see `editors/vscode/README.md`.
+  serves diagnostics, hover, navigation, completion, formatting, local
+  rename and quick fixes over the Language Server Protocol; it re-checks the
+  whole program on each change, renames only locals and parameters, and has
+  no code actions besides those quick fixes, which apply a diagnostic's
+  suggested edit (see [language server](../tooling/lsp.md)). The VS Code
+  extension uses it when the compiler provides it, and runs checks, programs,
+  tests and Java viewing as CLI commands; see `editors/vscode/README.md`.
 - JVM interop covers common imported classes, constructors, fields, method
   calls, overloads, and checked exceptions. Java arrays cross the boundary as
   opaque values (no source array syntax). A varargs parameter takes the
@@ -134,7 +135,7 @@ by the historical design kit in `docs/history/design-kit/`.
   is UTF-8 as on Linux and macOS. `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig targets v0.7.0-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
+- Sprig targets v0.7.1-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
   not a production stability or numerical correctness guarantee.
 
 ## Callable boundary
