@@ -60,7 +60,7 @@ public final class AstBuilder {
             } else if (child instanceof SprigParser.ConformDefinitionContext ctx) {
                 module.decls.add(buildConform(ctx));
             } else if (child instanceof SprigParser.FunctionDefinitionContext ctx) {
-                module.decls.add(buildFunction(ctx));
+                module.decls.add(requireBody(buildFunction(ctx)));
             } else if (child instanceof SprigParser.StatementContext ctx) {
                 module.topStatements.add(buildStatement(ctx));
             }
@@ -76,7 +76,7 @@ public final class AstBuilder {
         } else if (body.variantDefinition() != null) {
             decl = buildVariant(body.variantDefinition());
         } else {
-            decl = buildFunction(body.functionDefinition());
+            decl = requireBody(buildFunction(body.functionDefinition()));
         }
         for (TerminalNode parameter : ctx.typeParameterList().IDENT()) {
             decl.typeParams.add(parameter.getText());
@@ -135,6 +135,18 @@ public final class AstBuilder {
         return decl;
     }
 
+    /** Only a method of a contract class ends at the line break; a function anywhere else has a body. */
+    private Decl.Func requireBody(Decl.Func func) {
+        if (func.abstractMethod) {
+            diagnostics.add(Diagnostic.error(Codes.SYNTAX_ERROR, Phase.SYNTAX,
+                    "Function '" + func.name + "' has no body", uri, func.span)
+                    .withHint("End the header with ':' and indent the body on the following lines. Only a method "
+                            + "inside a class may stop at the line break: every such method makes the class a "
+                            + "contract that other classes conform to."));
+        }
+        return func;
+    }
+
     private Decl buildConform(SprigParser.ConformDefinitionContext ctx) {
         List<String> superArguments = null;
         List<Span> superArgumentSpans = new ArrayList<>();
@@ -147,9 +159,11 @@ public final class AstBuilder {
         }
         // IDENT(0) is the class, IDENT(1) the target; the contextual "to" sits
         // inside toClause and the super arguments inside their own rule.
-        TerminalNode alias = ctx.AS() != null ? ctx.IDENT(2) : null;
-        Decl.Conform decl = new Decl.Conform(ctx.IDENT(0).getText(), ctx.IDENT(1).getText(),
+        boolean qualified = ctx.DOT() != null; // conform C to alias.Contract
+        TerminalNode alias = ctx.AS() != null ? ctx.IDENT(qualified ? 3 : 2) : null;
+        Decl.Conform decl = new Decl.Conform(ctx.IDENT(0).getText(), ctx.IDENT(qualified ? 2 : 1).getText(),
                 superArguments, alias == null ? null : alias.getText());
+        decl.targetModuleAlias = qualified ? ctx.IDENT(1).getText() : null;
         decl.superArgumentSpans.addAll(superArgumentSpans);
         if (alias != null) {
             decl.parentAliasSpan = span(alias);
@@ -215,7 +229,8 @@ public final class AstBuilder {
             throwsRefs.add(buildTypeRef(ref));
         }
         Decl.Func func = new Decl.Func(ctx.IDENT().getText(), params, buildReturnTypeRef(ctx.returnTypeRef()),
-                throwsRefs, buildSuite(ctx.suite()));
+                throwsRefs, ctx.suite() == null ? List.of() : buildSuite(ctx.suite()));
+        func.abstractMethod = ctx.suite() == null;
         func.rethrows = ctx.RETHROWS() != null;
         func.span = span(ctx);
         func.nameSpan = span(ctx.IDENT());

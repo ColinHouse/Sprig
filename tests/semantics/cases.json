@@ -659,5 +659,95 @@
     "expected_diagnostic": "SPR-TYPE-ASSIGN",
     "status": "implemented",
     "source": "read-only views: element types stay invariant"
+  },
+  {
+    "file": "contract_constructed.spr",
+    "expected_diagnostic": "SPR-CLASS-ABSTRACT",
+    "status": "implemented",
+    "source": "contract classes: a contract cannot be constructed"
+  },
+  {
+    "file": "contract_with_fields.spr",
+    "expected_diagnostic": "SPR-CLASS-ABSTRACT",
+    "status": "implemented",
+    "source": "contract classes: no fields"
+  },
+  {
+    "file": "contract_mixed_bodies.spr",
+    "expected_diagnostic": "SPR-CLASS-ABSTRACT",
+    "status": "implemented",
+    "source": "contract classes: no default bodies"
+  },
+  {
+    "file": "contract_missing_method.spr",
+    "expected_diagnostic": "SPR-CONFORM-MEMBER",
+    "status": "implemented",
+    "source": "contract classes: every method is required"
+  },
+  {
+    "file": "contract_wrong_signature.spr",
+    "expected_diagnostic": "SPR-CONFORM-MEMBER",
+    "status": "implemented",
+    "source": "contract classes: exact parameter and result types"
+  },
+  {
+    "file": "contract_more_throws.spr",
+    "expected_diagnostic": "SPR-CONFORM-EFFECTS",
+    "status": "implemented",
+    "source": "contract classes: a conforming method throws no more than the contract"
+  },
+  {
+    "file": "contract_not_conformed.spr",
+    "expected_diagnostic": "SPR-TYPE-MISMATCH",
+    "status": "implemented",
+    "source": "contract classes: a class is a contract only after conform"
+  },
+  {
+    "file": "conform_to_plain_class.spr",
+    "expected_diagnostic": "SPR-CONFORM-TARGET",
+    "status": "implemented",
+    "source": "contract classes: only a contract (or Java type) is a conform target"
+  },
+  {
+    "file": "contract_no_downcast.spr",
+    "expected_diagnostic": "SPR-TYPE-ASSIGN",
+    "status": "implemented",
+    "source": "contract classes: no conversion back to the class"
+  },
+  {
+    "file": "fnref_print_without_context.spr",
+    "expected_diagnostic": "SPR-TYPE-NOT-CALLABLE",
+    "status": "implemented",
+    "source": "function references: print as a value needs the parameter type from its use"
+  },
+  {
+    "file": "fnref_generic_needs_args.spr",
+    "expected_diagnostic": "SPR-TYPE-GENERIC-ARGS-REQUIRED",
+    "status": "implemented",
+    "source": "function references: a generic function writes its type arguments"
+  },
+  {
+    "file": "fnref_four_params.spr",
+    "expected_diagnostic": "SPR-TYPE-FUNCTION-ARITY",
+    "status": "implemented",
+    "source": "function references: at most three parameters, like lambdas"
+  },
+  {
+    "file": "fnref_jvm_method.spr",
+    "expected_diagnostic": "SPR-TYPE-NOT-CALLABLE",
+    "status": "implemented",
+    "source": "function references: Java and built-in methods are called, not referenced"
+  },
+  {
+    "file": "function_values_not_comparable.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "function references: function values are not compared"
+  },
+  {
+    "file": "fnref_builtin_range.spr",
+    "expected_diagnostic": "SPR-TYPE-NOT-CALLABLE",
+    "status": "implemented",
+    "source": "function references: only print among the built-ins is a value"
   }
 ]

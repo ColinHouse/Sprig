@@ -123,6 +123,7 @@ public final class SprigApi {
             for (Decl.Field field : clazz.fields) fields.add(field(source, field));
             List<Map<String, Object>> methods = new ArrayList<>();
             for (Decl.Func method : clazz.methods) methods.add(function(source, method));
+            if (clazz.contract) item.put("contract", true);
             item.put("fields", fields);
             item.put("methods", methods);
         } else if (decl instanceof Decl.EnumDecl enums) {

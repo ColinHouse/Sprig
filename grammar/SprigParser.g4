@@ -14,7 +14,9 @@ program
 // Declares a foreign JVM nominal contract: the Sprig class already specified
 // by the left name satisfies the imported Java interface named on the right.
 // 'to' stays a contextual word so existing identifiers named to keep working.
-conformDefinition: CONFORM IDENT toClause IDENT superArguments? (AS IDENT)?;
+// The target is an imported Java type, Error, a contract class of this module,
+// or alias.Contract from an imported Sprig module.
+conformDefinition: CONFORM IDENT toClause IDENT (DOT IDENT)? superArguments? (AS IDENT)?;
 toClause: {"to".equals(_input.LT(1).getText())}? IDENT;
 // Fields handed to the Java superclass constructor; names only, no expressions.
 superArguments: LPAREN (IDENT (COMMA IDENT)*)? RPAREN;
@@ -67,9 +69,13 @@ variantCase
 variantFields: variantField (COMMA variantField)* COMMA?;
 variantField: IDENT COLON typeRef;
 
+// A function has a body after ':'. Inside a class, a method may end at the
+// line break instead: a class whose methods all have no body is a contract
+// (an interface) that other classes conform to; the AST builder rejects a
+// bodiless function anywhere else.
 functionDefinition
     : FUNC IDENT LPAREN parameters? RPAREN ARROW returnTypeRef
-      (THROWS typeRef (COMMA typeRef)* | RETHROWS)? COLON suite
+      (THROWS typeRef (COMMA typeRef)* | RETHROWS)? (COLON suite | NEWLINE)
     ;
 parameters: parameter (COMMA parameter)* COMMA?;
 parameter: IDENT COLON typeRef;

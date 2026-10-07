@@ -1,0 +1,3 @@
+import java.util.ArrayList as ArrayList
+let names = ArrayList[String]()
+let add = names.add

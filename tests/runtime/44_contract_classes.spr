@@ -1,0 +1,79 @@
+# A class whose methods have no body is a contract. Classes conform to it with
+# conform C to Contract (every method matched exactly); a value of the contract
+# type is any conforming object, seen through the contract's methods only.
+class Sink:
+    func write(line: String) -> Unit
+    func flush() -> Int
+
+class Console:
+    var written: Int = 0
+
+    func write(line: String) -> Unit:
+        written += 1
+        print("console: " + line)
+
+    func flush() -> Int:
+        return written
+conform Console to Sink
+
+class Memory:
+    let lines: MutableList[String] = []
+
+    func write(line: String) -> Unit:
+        lines.append(line)
+
+    func flush() -> Int:
+        return lines.size()
+
+    func dump() -> String:
+        return lines.toString()
+conform Memory to Sink
+
+class Parser:
+    func parse(text: String) -> Int throws Error
+
+class Strict:
+    func parse(text: String) -> Int throws Error:
+        let value = text.toIntOrNull()
+        if value == null:
+            throw Error("not a number: " + text)
+        return value
+conform Strict to Parser
+
+class Lenient:
+    # Throwing less than the contract declares is allowed.
+    func parse(text: String) -> Int:
+        let value = text.toIntOrNull()
+        if value == null:
+            return 0
+        return value
+conform Lenient to Parser
+
+func log_all(lines: List[String], sink: Sink) -> Int:
+    for line in lines:
+        sink.write(line)
+    return sink.flush()
+
+func parse_all(parser: Parser, inputs: List[String]) -> Int throws Error:
+    var total = 0
+    for input in inputs:
+        total += parser.parse(input)
+    return total
+
+let console = Console()
+let memory = Memory()
+print(log_all(["a", "b"], console))
+let sinks: List[Sink] = [console, memory]
+for sink in sinks:
+    print(log_all(["c"], sink))
+let chosen: Sink = memory
+print(chosen.flush())
+print(chosen == memory)
+print(memory.dump())
+let none: Sink? = null
+print(none == null)
+print(parse_all(Lenient(), ["1", "x", "3"]))
+try:
+    print(parse_all(Strict(), ["1", "x", "3"]))
+catch problem: Error:
+    print(problem.message)

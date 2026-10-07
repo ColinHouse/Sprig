@@ -91,6 +91,7 @@ public final class CodeDocs {
             Map.entry(Codes.FLOW_THROWS_UNUSED, "A function declares a checked Java exception that its body can never throw."),
             Map.entry(Codes.CONFORM_SOURCE, "The conform source must be a non-generic Sprig class declared in this module."),
             Map.entry(Codes.CONFORM_TARGET, "The conform target must be an imported public, non-generic, non-sealed Java interface, or with parentheses a public, non-final, non-generic Java class whose constructor the named fields select."),
+            Map.entry(Codes.CLASS_ABSTRACT, "A contract class (a class whose methods have no body) declares fields, mixes methods with and without a body, or is constructed; a contract is implemented by classes that conform to it."),
             Map.entry(Codes.CONFORM_MEMBER, "A class method does not exactly match the Java method it witnesses or overrides, or a required abstract method is missing."),
             Map.entry(Codes.CONFORM_OVERLOAD, "The Java interface requires overloaded abstract methods, which Sprig classes cannot represent."),
             Map.entry(Codes.CONFORM_EFFECTS, "A witness method declares checked exceptions the Java interface method does not permit."),

@@ -1,0 +1,34 @@
+# A contract: a class whose methods have no body. Classes conform to it.
+class Sink:
+    func write(line: String) -> Unit
+    func flush() -> Int
+
+class Console:
+    var written: Int = 0
+
+    func write(line: String) -> Unit:
+        written += 1
+        print("console: " + line)
+
+    func flush() -> Int:
+        return written
+conform Console to Sink
+
+class Memory:
+    let lines: MutableList[String] = []
+
+    func write(line: String) -> Unit:
+        lines.append(line)
+
+    func flush() -> Int:
+        return lines.size()
+conform Memory to Sink
+
+# The caller sees only the contract; any conforming object will do.
+func log_all(lines: List[String], sink: Sink) -> Int:
+    for line in lines:
+        sink.write(line)
+    return sink.flush()
+
+print(log_all(["a", "b"], Console()))
+print(log_all(["c"], Memory()))

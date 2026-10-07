@@ -11,8 +11,10 @@ by the historical design kit in `docs/history/design-kit/`.
   exact shape, `NAME.m(...)` calling the inherited implementation); a
   non-generic source class, no overloaded abstract methods, no method renaming
   or adapters, protected methods only through the parent view, and no `self`. It declares a foreign
-  JVM contract; it does not add inheritance between Sprig classes or interfaces
-  to the language. Generic methods witness by erasure; boxed
+  JVM contract; it does not add inheritance between Sprig classes. Open
+  polymorphism inside Sprig is a contract class (methods without bodies) that
+  classes `conform` to; a contract has no fields, no default bodies and is
+  non-generic in v1. Generic methods witness by erasure; boxed
   `Short`/`Byte`/`Character` parameters are not expressible because of the
   existing interop adapters.
 - Generics accept one or more parameters (`generic K, V:`). Type arguments of

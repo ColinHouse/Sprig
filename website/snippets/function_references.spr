@@ -1,0 +1,24 @@
+import "@std/lists.spr" as lists
+
+func shout(text: String) -> String:
+    return text.toUpperCase() + "!"
+
+class Counter:
+    var count: Int = 0
+
+    func bump(by: Int) -> Int:
+        count += by
+        return count
+
+let words = ["pear", "fig"]
+print(words.map(shout))               # a named function as a value
+let total: fn(List[Int]) -> Int = lists.sum
+print(total([1, 2, 3]))               # a module function as a value
+let counter = Counter()
+let bump = counter.bump               # a method reference: the receiver is fixed now
+print(bump(2))
+print(bump(3))
+print(counter.count)
+words.forEach(print)                  # print where a fn(String) -> Unit is expected
+let flip = lists.reversed[String]     # a generic function writes its type arguments
+print(flip(words))

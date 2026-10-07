@@ -569,7 +569,49 @@ public final class JavaGenerator {
         return type == NativeType.INT || type == NativeType.FLOAT || type == NativeType.BOOL;
     }
 
+    /** A contract class is a Java interface: one abstract method per bodiless Sprig method. */
+    private void generateContract(Decl decl, Decl.ClassDecl classDecl) {
+        JavaWriter w = writer(classDecl.span);
+        w.line("package " + PACKAGE + ";");
+        w.blank();
+        w.line("// Sprig contract " + commentText(currentModule.name) + ":" + classDecl.span.display());
+        w.map(classDecl.span);
+        w.open("public interface " + simpleName(typeNames.get(decl)));
+        for (Decl.Func method : classDecl.methods) {
+            resetLocals();
+            currentClassDecl = classDecl;
+            w.map(method.span);
+            StringBuilder sig = new StringBuilder();
+            sig.append(method.returnType == NativeType.UNIT ? "void" : javaType(method.returnType));
+            sig.append(' ').append(methodName(method)).append('(');
+            for (int i = 0; i < method.params.size(); i++) {
+                if (i > 0) {
+                    sig.append(", ");
+                }
+                Decl.Param param = method.params.get(i);
+                sig.append(javaType(param.type)).append(' ').append(localName(param.symbol));
+            }
+            sig.append(')');
+            List<String> throwsClauses = new ArrayList<>();
+            for (Type thrown : method.throwsTypes) {
+                if (Semantics.isJvmChecked(thrown) && thrown instanceof JavaType javaType) {
+                    throwsClauses.add(sourceName(javaType.clazz));
+                }
+            }
+            if (!throwsClauses.isEmpty()) {
+                sig.append(" throws ").append(String.join(", ", throwsClauses));
+            }
+            w.line(sig.append(';').toString());
+        }
+        w.close();
+        emitFile(PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java", w);
+    }
+
     private void generateClass(Decl decl, Decl.ClassDecl classDecl) {
+        if (classDecl.contract) {
+            generateContract(decl, classDecl);
+            return;
+        }
         JavaWriter w = writer(classDecl.span);
         w.line("package " + PACKAGE + ";");
         w.blank();
@@ -580,8 +622,11 @@ public final class JavaGenerator {
         if (classDecl.superclass != null) {
             header.append(" extends ").append(sourceName(classDecl.superclass));
         }
-        if (!classDecl.conformedInterfaces.isEmpty()) {
+        if (!classDecl.conformedInterfaces.isEmpty() || !classDecl.conformedContracts.isEmpty()) {
             List<String> interfaces = new ArrayList<>();
+            for (Decl.ClassDecl contract : classDecl.conformedContracts) {
+                interfaces.add(simpleName(typeNames.get(contract)));
+            }
             for (Class<?> iface : classDecl.conformedInterfaces) {
                 interfaces.add(sourceName(iface));
             }
@@ -1188,6 +1233,9 @@ public final class JavaGenerator {
     }
 
     private String emitExpr(Expr expr) {
+        if (expr.rewritten != null) {
+            return emitExpr(expr.rewritten);
+        }
         if (expr.type == NativeType.ERROR) {
             return unchecked(expr);
         }
@@ -1635,6 +1683,13 @@ public final class JavaGenerator {
         }
         sb.append("    }\n").append('}');
         lambdaDepth--;
+        if (lambda.boundReceiver != null) {
+            // A method reference evaluates its receiver once, here, and the
+            // function value reads the bound copy.
+            return "sprig.runtime.SprigRuntime.bind(" + emitExpr(lambda.boundReceiver) + ", ("
+                    + boxedJavaType(lambda.receiverSymbol.type) + " " + localName(lambda.receiverSymbol) + ") -> "
+                    + sb + ")";
+        }
         return sb.toString();
     }
 

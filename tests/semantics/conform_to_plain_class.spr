@@ -1,0 +1,7 @@
+class Plain:
+    func f() -> Unit:
+        pass
+class Other:
+    func f() -> Unit:
+        pass
+conform Other to Plain

@@ -53,6 +53,8 @@ public abstract class Decl extends Node {
          */
         public boolean rethrows;
         public ClassDecl owner; // non-null for methods
+        /** Declared without a body: a requirement of a contract class. */
+        public boolean abstractMethod;
         /** True when this method witnesses a declared foreign conformance. */
         public boolean foreignBoundary;
         /**
@@ -108,6 +110,14 @@ public abstract class Decl extends Node {
         public final List<Field> fields;
         public final List<Func> methods;
         public final java.util.Map<String, Type> typeParamTypes = new java.util.LinkedHashMap<>();
+        /**
+         * A contract: every method has no body and there are no fields. It is
+         * generated as a Java interface, cannot be constructed, and classes
+         * conform to it with {@code conform C to Contract}.
+         */
+        public boolean contract;
+        /** Verified Sprig contracts this class conforms to; emitted in its interface list. */
+        public final java.util.Set<ClassDecl> conformedContracts = new java.util.LinkedHashSet<>();
         /** Verified foreign JVM interfaces emitted in this class's interface list. */
         public final java.util.Set<Class<?>> conformedInterfaces = new java.util.LinkedHashSet<>();
         /** Verified Java superclass from {@code conform C to J(...)}, or null. */
@@ -159,8 +169,12 @@ public abstract class Decl extends Node {
         /** The parent view name from {@code as NAME}, or null. */
         public final String parentAlias;
         public Span parentAliasSpan;
+        /** Module alias before the target name ({@code conform C to shapes.Drawable}), or null. */
+        public String targetModuleAlias;
         public ClassDecl source;
         public Class<?> target;
+        /** A Sprig contract class as the target; then {@link #target} is null. */
+        public ClassDecl contractTarget;
 
         public Conform(String sourceName, String targetAlias, List<String> superArguments, String parentAlias) {
             super(sourceName + " to " + targetAlias);

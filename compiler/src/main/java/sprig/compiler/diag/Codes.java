@@ -108,6 +108,9 @@ public final class Codes {
     public static final String FLOW_CATCH_NEVER_THROWN = "SPR-FLOW-CATCH-NEVER-THROWN";
     public static final String FLOW_THROWS_UNUSED = "SPR-FLOW-THROWS-UNUSED";
 
+    // CLASS (contract classes)
+    public static final String CLASS_ABSTRACT = "SPR-CLASS-ABSTRACT";
+
     // CONFORM (foreign JVM nominal contract)
     public static final String CONFORM_SOURCE = "SPR-CONFORM-SOURCE";
     public static final String CONFORM_TARGET = "SPR-CONFORM-TARGET";

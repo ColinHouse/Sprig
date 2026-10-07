@@ -1,0 +1,6 @@
+class Sink:
+    func write(line: String) -> Unit
+class Console:
+    func write(line: String) -> Unit throws Error:
+        throw Error("x")
+conform Console to Sink

@@ -1,0 +1,3 @@
+class Sink:
+    let name: String
+    func write(line: String) -> Unit

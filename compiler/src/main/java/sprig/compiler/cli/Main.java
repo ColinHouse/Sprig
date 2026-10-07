@@ -521,7 +521,8 @@ public final class Main {
         }
         System.out.println("declarations:");
         for (Map<String, Object> declaration : (List<Map<String, Object>>) data.get("declarations")) {
-            System.out.println("  " + declaration.get("kind") + " " + declaration.get("name"));
+            System.out.println("  " + (Boolean.TRUE.equals(declaration.get("contract")) ? "contract " : "")
+                    + declaration.get("kind") + " " + declaration.get("name"));
             printDoc(declaration.get("doc"), "    ");
             if (declaration.get("fields") instanceof List<?> fields) {
                 for (Object field : fields) {

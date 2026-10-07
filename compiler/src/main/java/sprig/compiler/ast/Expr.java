@@ -11,6 +11,11 @@ import sprig.compiler.types.Type;
 /** Expressions. The checker stores the static {@link #type} on every node. */
 public abstract class Expr extends Node {
     public Type type;
+    /**
+     * A function reference ({@code inc}, {@code module.f}, {@code obj.method}, {@code print})
+     * used as a value is checked and generated as this lambda, built by the checker.
+     */
+    public Expr rewritten;
 
     public static final class IntLit extends Expr {
         public final java.math.BigInteger value;
@@ -236,6 +241,13 @@ public abstract class Expr extends Node {
     public static final class Lambda extends Expr {
         public final List<Decl.Param> params;
         public final Expr body;
+        /**
+         * For a method reference whose receiver is not an immutable name: the
+         * receiver expression, evaluated once when the value is created and
+         * bound to {@link #receiverSymbol}, which the body reads.
+         */
+        public Expr boundReceiver;
+        public Symbol receiverSymbol;
 
         public Lambda(List<Decl.Param> params, Expr body) {
             this.params = List.copyOf(params);

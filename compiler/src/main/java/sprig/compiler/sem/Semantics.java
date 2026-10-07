@@ -109,6 +109,14 @@ public final class Semantics {
             }
             return false;
         }
+        // A class goes where a contract it conforms to is expected: the same
+        // object, seen through the contract's methods. Never the reverse.
+        if (target instanceof sprig.compiler.types.ClassType targetClass
+                && source instanceof sprig.compiler.types.ClassType sourceClass
+                && targetClass.decl.contract && targetClass.args.isEmpty()
+                && sourceClass.decl.conformedContracts.contains(targetClass.decl)) {
+            return true;
+        }
         if (target instanceof ListType list && source instanceof JavaType javaSource) {
             Class<?> expected = list.mutable ? sprig.runtime.SprigMutableList.class : sprig.runtime.SprigList.class;
             if (javaSource.clazz == expected) {

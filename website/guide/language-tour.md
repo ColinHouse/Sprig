@@ -36,6 +36,9 @@
 
 - 字段用 `let`（创建后不能改）或 `var`（可以改）声明，可以带默认值。
 - 只有 `let` 字段、没有方法的小类可以写成一行：`class Position(x: Int, y: Int)`。它和块写法是同一种类；要 `var` 字段、默认值或方法，就用块写法。
+- 方法**没有函数体**的类是契约（contract）。另一个类写 `conform Console to Sink`，就必须有契约里的每个方法、类型完全一致；之后 `Console` 的值可以放在任何要 `Sink` 的地方，通过契约的方法使用。契约没有字段、没有默认实现、不能构造，也不能反向转换。例子：
+
+<<< @/snippets/contracts.spr
 - 创建对象时必须写字段名：`Hero(name="Ada", health=80)`。少写、写错名字、重复写，都会编译报错。
 - 方法里直接写字段名就能访问当前对象的字段，不用加前缀。
 - 参数和局部变量不能和字段同名。
@@ -150,6 +153,9 @@ port must be a number: eighty
 - lambda 是一个表达式：`fn(x: Int) => x * 2`。
 - 参数 0 到 3 个，函数体只能是一个表达式。函数体里可以调用会抛出 `Error` 的函数，这时 lambda 的类型会带上这一点（见下面的「函数类型」）。
 - lambda 不能捕获 `var` 局部变量，否则报 `SPR-TYPE-CAPTURE`。先把值复制到一个 `let` 里再用。
+- 具名函数、模块函数和方法不加括号就是函数值：`items.map(shout)`、`lists.sum`、`counter.bump`。它的类型就是转发它的 lambda 的类型，会不会抛 `Error` 也一样。方法引用在创建时就把接收者算好，之后接收者变量再变也不影响。泛型函数要写出类型参数：`identity[Int]`。`print` 只在要 `fn(T) -> Unit` 的地方可以当值用，比如 `items.forEach(print)`。Java 方法和内置方法仍然要写 lambda。函数值不能用 `==` 比较。
+
+<<< @/snippets/function_references.spr
 
 ## 函数类型
 
@@ -218,7 +224,7 @@ $[1].id: expected integer, found string
 下面这些目前都还没有：
 
 - 从期望的类型推断类型参数，以及协变和逆变
-- 继承和接口
+- 继承（开放多态用契约类，见[类](#类)）
 - `%=`
 - 元组和解构
 - 字符串插值：`"${name}"` 只是普通文本。拼接用 `+`：两边放什么值都可以，`"count " + count` 不用写 `toString()`，显示效果和 `print` 一样。`null`、可能为 `null` 的值（比如 `Int?`）和返回 `Unit` 的调用不能拼。运算从左到右，所以 `1 + 2 + " items"` 是 `3 items`。

@@ -68,6 +68,10 @@ public final class ConformanceChecker {
             return;
         }
         Decl.ClassDecl classDecl = conform.source;
+        if (conform.contractTarget != null) {
+            checkContract(module, conform, classDecl, conform.contractTarget);
+            return;
+        }
         Class<?> target = conform.target;
         if (conform.classTarget()) {
             checkClass(module, conform, classDecl, target);
@@ -552,6 +556,45 @@ public final class ConformanceChecker {
     }
 
     private boolean target(Module module, Decl.Conform conform) {
+        // A Sprig contract class: this module's, or alias.Contract from an imported module.
+        Symbol sprigType = null;
+        if (conform.targetModuleAlias != null) {
+            Symbol imported = module.scope.importAliases.get(conform.targetModuleAlias);
+            if (imported == null || imported.kind != Symbol.Kind.MODULE || imported.module == null) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                        "conform target '" + conform.targetModuleAlias + "." + conform.targetAlias
+                                + "' needs an imported Sprig module named '" + conform.targetModuleAlias + "'",
+                        module.uri, conform.span)
+                        .withHint("Import the module that declares the contract: import \"./shapes.spr\" as "
+                                + conform.targetModuleAlias + "."));
+                return false;
+            }
+            sprigType = imported.module.scope.types.get(conform.targetAlias);
+            if (sprigType == null) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                        "Module '" + conform.targetModuleAlias + "' declares no type '" + conform.targetAlias + "'",
+                        module.uri, conform.span));
+                return false;
+            }
+        } else {
+            Symbol local = module.scope.types.get(conform.targetAlias);
+            if (local != null && local.kind == Symbol.Kind.CLASS) sprigType = local;
+        }
+        if (sprigType != null) {
+            if (sprigType.kind == Symbol.Kind.CLASS && sprigType.decl instanceof Decl.ClassDecl contract
+                    && contract.contract) {
+                conform.contractTarget = contract;
+                return true;
+            }
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                    "conform target '" + conform.targetAlias + "' is a Sprig "
+                            + sprigType.kind.name().toLowerCase() + " with method bodies, not a contract",
+                    module.uri, conform.span)
+                    .withHint("A contract is a class whose methods have no body, for example 'class Sink:' with "
+                            + "'    func write(line: String) -> Unit' and nothing below it; conform to that, "
+                            + "or to an imported Java interface."));
+            return false;
+        }
         Symbol imported = module.scope.importAliases.get(conform.targetAlias);
         Class<?> target = null;
         if (imported != null && imported.kind == Symbol.Kind.JAVA_TYPE && imported.javaClass != null) {
@@ -607,6 +650,134 @@ public final class ConformanceChecker {
         }
         conform.target = target;
         return true;
+    }
+
+    /**
+     * {@code conform C to Contract}: C has every method of the contract with the
+     * same parameter types, result type and throws clause. Nothing is adapted;
+     * the generated class implements the contract's interface.
+     */
+    private void checkContract(Module module, Decl.Conform conform, Decl.ClassDecl classDecl,
+            Decl.ClassDecl contract) {
+        String name = (conform.targetModuleAlias == null ? "" : conform.targetModuleAlias + ".") + contract.name;
+        if (conform.classTarget()) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                    "Contract '" + name + "' takes no constructor fields; write conform " + classDecl.name
+                            + " to " + name + " without parentheses",
+                    module.uri, conform.span));
+            return;
+        }
+        if (conform.parentAlias != null) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_PARENT, Phase.TYPE,
+                    "'as " + conform.parentAlias + "' names an inherited implementation, which the contract '"
+                            + name + "' does not provide",
+                    module.uri, conform.parentAliasSpan != null ? conform.parentAliasSpan : conform.span)
+                    .withHint("A contract has no method bodies to inherit; remove 'as " + conform.parentAlias + "'."));
+            return;
+        }
+        if (classDecl.contract) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_SOURCE, Phase.TYPE,
+                    "Contract class '" + classDecl.name + "' cannot conform to '" + name
+                            + "'; only a class with method bodies conforms",
+                    module.uri, conform.span)
+                    .withHint("Conform each implementing class to both contracts instead."));
+            return;
+        }
+        if (!contract.typeParams.isEmpty() || !classDecl.typeParams.isEmpty()) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                    "Generic contracts and generic conforming classes are rejected in v1 ('" + classDecl.name
+                            + "' to '" + name + "')",
+                    module.uri, conform.span));
+            return;
+        }
+        if (classDecl.conformedContracts.contains(contract)) {
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_TARGET, Phase.TYPE,
+                    "Class '" + classDecl.name + "' already conforms to " + name, module.uri, conform.span)
+                    .withHint("Keep one conform declaration per contract."));
+            return;
+        }
+        boolean ok = true;
+        for (Decl.Func required : contract.methods) {
+            Decl.Func method = null;
+            for (Decl.Func candidate : classDecl.methods) {
+                if (candidate.name.equals(required.name)) {
+                    method = candidate;
+                    break;
+                }
+            }
+            if (method == null) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                        "Class '" + classDecl.name + "' has no method '" + required.name + "' required by " + name,
+                        module.uri, classDecl.span)
+                        .withHint("Add '" + signature(required) + ":' with a body to " + classDecl.name + "."));
+                ok = false;
+                continue;
+            }
+            if (method.abstractMethod) {
+                ok = false;
+                continue; // the class is a contract; reported above
+            }
+            String expected = signature(required);
+            if (method.params.size() != required.params.size()) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                        "Method '" + method.name + "' takes " + method.params.size() + " parameter(s), but " + name
+                                + "." + required.name + " requires " + required.params.size(),
+                        module.uri, method.span)
+                        .withTypes(expected, signature(method)).withHint("Match the contract exactly: " + expected + "."));
+                ok = false;
+                continue;
+            }
+            boolean same = true;
+            for (int i = 0; i < method.params.size(); i++) {
+                Type want = required.params.get(i).type;
+                Type have = method.params.get(i).type;
+                if (want != null && have != null && !want.equals(have)) same = false;
+            }
+            if (required.returnType != null && method.returnType != null && !required.returnType.equals(method.returnType)) {
+                same = false;
+            }
+            if (!same) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_MEMBER, Phase.TYPE,
+                        "Method '" + method.name + "' does not match " + name + "." + required.name,
+                        module.uri, method.span)
+                        .withTypes(expected, signature(method))
+                        .withHint("Parameter and result types must be the same as the contract's: " + expected + "."));
+                ok = false;
+                continue;
+            }
+            if (method.rethrows != required.rethrows || !required.throwsTypes.containsAll(method.throwsTypes)) {
+                diagnostics.add(Diagnostic.error(Codes.CONFORM_EFFECTS, Phase.TYPE,
+                        "Method '" + method.name + "' throws more than " + name + "." + required.name + " allows",
+                        module.uri, method.span)
+                        .withTypes(expected, signature(method))
+                        .withHint("A conforming method may throw what the contract declares, or less; handle the rest inside it."));
+                ok = false;
+            }
+        }
+        if (ok) {
+            classDecl.conformedContracts.add(contract);
+        }
+    }
+
+    private static String signature(Decl.Func func) {
+        StringBuilder sb = new StringBuilder("func ").append(func.name).append('(');
+        for (int i = 0; i < func.params.size(); i++) {
+            if (i > 0) sb.append(", ");
+            Decl.Param param = func.params.get(i);
+            sb.append(param.name).append(": ").append(param.type == null ? "?" : param.type.display());
+        }
+        sb.append(") -> ").append(func.returnType == null ? "?" : func.returnType.display());
+        if (func.rethrows) {
+            sb.append(" rethrows");
+        } else if (!func.throwsTypes.isEmpty()) {
+            sb.append(" throws ");
+            for (int i = 0; i < func.throwsTypes.size(); i++) {
+                if (i > 0) sb.append(", ");
+                Type thrown = func.throwsTypes.get(i);
+                sb.append(Semantics.isSprigError(thrown) ? "Error" : thrown.display());
+            }
+        }
+        return sb.toString();
     }
 
     private boolean rejectTarget(Module module, Decl.Conform conform, Class<?> target, String because) {

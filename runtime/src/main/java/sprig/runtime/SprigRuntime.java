@@ -81,6 +81,11 @@ public final class SprigRuntime {
     }
 
     /** Sprig {@code print}: one line, Sprig value formatting. */
+    /** Evaluates {@code value} once and hands it to {@code body}: the receiver of a method reference. */
+    public static <T, R> R bind(T value, java.util.function.Function<T, R> body) {
+        return body.apply(value);
+    }
+
     public static void print(Object value) {
         System.out.println(format(value));
     }

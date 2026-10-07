@@ -1,0 +1,3 @@
+func wide(a: Int, b: Int, c: Int, d: Int) -> Int:
+    return a + b + c + d
+let f = wide
