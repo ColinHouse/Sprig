@@ -4,16 +4,21 @@ import sprig.runtime.sqlite.Parameters as HostParameters
 import sprig.runtime.sqlite.Rows as HostRows
 import sprig.runtime.sqlite.Batch as HostBatch
 
+# A value for a ? placeholder, bound in list order: Integer (64-bit), Text,
+# Boolean (stored as 0 or 1) or Null (SQL NULL, unlike "" and 0).
 variant Parameter:
     Integer(value: Int)
     Text(value: String)
     Boolean(value: Bool)
     Null
 
+# One SQL statement and the values for its ? placeholders, for Database.batch.
 class Statement:
     let sql: String
     let parameters: List[Parameter]
 
+# Internal: copies parameters into the JDBC host's builder; Database.execute,
+# query and batch bind them for you.
 func bind(values: List[Parameter]) -> HostParameters:
     let result = HostParameters()
     for value in values:
@@ -28,39 +33,63 @@ func bind(values: List[Parameter]) -> HostParameters:
                 result.nil()
     return result
 
+# A query result copied into memory (at most 10,000 rows); it holds no
+# connection. Rows count from 0, and column labels match ignoring case.
 class Rows:
     let host: HostRows
 
+    # How many rows the query returned.
     func size() -> Int:
         return host.size()
 
+    # True when the value is SQL NULL. An unknown column or out-of-range row
+    # still throws Error, although the signature declares no throws.
     func is_null(row: Int, column: String) -> Bool:
         return host.isNull(row, column)
 
+    # The value, which must be a non-null INTEGER. Throws Error for NULL, any
+    # other kind of value (REAL and TEXT are not converted), an unknown column
+    # or a bad row.
     func integer(row: Int, column: String) -> Int throws Error:
         return host.integer(row, column)
 
+    # The value, which must be non-null TEXT. Throws Error for NULL, any other
+    # kind of value (numbers are not converted), an unknown column or a bad row.
     func text(row: Int, column: String) -> String throws Error:
         let value = host.text(row, column)
         if value != null:
             return value
         throw Error("SQLite text unexpectedly returned null")
 
+    # An INTEGER 0 or 1 as false or true. Throws Error for any other value,
+    # NULL, an unknown column or a bad row.
     func boolean(row: Int, column: String) -> Bool throws Error:
         return host.bool(row, column)
 
+# A SQLite database file; get one from open(path). Each call opens its own
+# connection (foreign keys on), so no transaction spans calls. Bad SQL, a
+# wrong ? count or BEGIN/COMMIT-style SQL throws Error.
 class Database:
     let path: String
 
+    # Runs the first statement in sql and returns how many rows it changed. A
+    # statement that returns rows, such as SELECT or INSERT ... RETURNING,
+    # throws Error; use query for those.
     func execute(sql: String, parameters: List[Parameter]) -> Int throws Error:
         return HostDatabase(path).execute(sql, bind(parameters))
 
+    # Runs the first statement in sql, a SELECT or INSERT ... RETURNING (whose
+    # write then commits), into Rows. Throws Error and rolls back for a BLOB
+    # value, a repeated column label (alias it) or over 10,000 rows.
     func query(sql: String, parameters: List[Parameter]) -> Rows throws Error:
         let value = HostDatabase(path).query(sql, bind(parameters))
         if value != null:
             return Rows(host=value)
         throw Error("SQLite query unexpectedly returned null")
 
+    # Runs the first statement of each sql in order, in one transaction: all
+    # commit, or on Error all roll back. Returns the summed change counts, where
+    # a schema statement after a write repeats that write's count.
     func batch(statements: List[Statement]) -> Int throws Error:
         let batch = HostBatch()
         for statement in statements:
@@ -75,6 +104,9 @@ class Database:
             batch.add(statement.sql, bind(statement.parameters))
         return HostDatabase(path).batch(batch)
 
+# Opens the SQLite file at path, creating it when missing, and checks that it
+# connects. Throws Error for a blank path, ":memory:", a file: URI or a file
+# that cannot be opened, such as one in a directory that does not exist.
 func open(path: String) -> Database throws Error:
     HostDatabase(path).initialize()
     return Database(path=path)

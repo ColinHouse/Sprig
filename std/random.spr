@@ -4,19 +4,24 @@
 import java.util.Random as JavaRandom
 import java.util.UUID as UUID
 
+# A pseudo-random source: seeded(seed) repeats its sequence on every run,
+# fresh() does not. Not for secrets.
 class Random:
     let source: JavaRandom
 
     # 0 <= result < bound; the bound must be positive.
+    # Each of those values is equally likely; a bound of 0 or less is an Error.
     func next_int(bound: Int) -> Int throws Error:
         if bound <= 0:
             throw Error("next_int bound must be positive: " + bound)
         return source.nextLong(bound)
 
     # 0.0 <= result < 1.0
+    # Uniformly distributed over [0.0, 1.0): it can be 0.0, never 1.0.
     func next_float() -> Float:
         return source.nextDouble()
 
+    # true or false, each equally likely.
     func next_bool() -> Bool:
         return source.nextBoolean()
 
@@ -24,6 +29,8 @@ class Random:
 func seeded(seed: Int) -> Random:
     return Random(source=JavaRandom(seed))
 
+# A Random seeded differently on every call, so its sequence differs from run
+# to run; use seeded(seed) to repeat one.
 func fresh() -> Random:
     return Random(source=JavaRandom())
 

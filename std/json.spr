@@ -1,6 +1,9 @@
 # Closed recursive JSON. Numbers retain exact validated lexemes, never Float.
 import sprig.runtime.host.HostText as HostText
 
+# A JSON value. Number holds the number's exact text, such as 12.50 or -2e3,
+# never a Float; Object holds its members in order, and keys must be unique.
+# stringify checks both for a hand-built value.
 variant Value:
     Null
     Boolean(value: Bool)
@@ -15,6 +18,8 @@ variant Lookup:
     Found(value: Value)
     NotObject
 
+# One key and its value in a JSON Object. A key may appear once per object:
+# parse, stringify and find_member reject a repeated one.
 class Member:
     let key: String
     let value: Value
@@ -43,34 +48,47 @@ func find_member(value: Value, key: String) -> Lookup throws Error:
                     result = Lookup.Found(value=member.value)
             return result
 
+# Internal: the single UTF-16 code unit a hex string such as "000c" names, for
+# the parser's \b and \f escapes; callers use parse.
 func unicode_unit(hex: String) -> String throws Error:
     let value = HostText.unicodeUnit(hex)
     if value != null:
         return value
     throw Error("host unicode conversion returned null")
 
+# Internal: whether a one-character string is an ASCII digit, for the parser;
+# callers use text.is_ascii_digit.
 func digit(ch: String) -> Bool:
     return ch >= "0" and ch <= "9"
 
+# Internal: whether a one-character string is a hex digit (0-9, a-f, A-F), for
+# the parser's \u escapes; callers use parse.
 func hex_digit(ch: String) -> Bool:
     return digit(ch) or (ch >= "a" and ch <= "f") or (ch >= "A" and ch <= "F")
 
+# Internal: the cursor parse reads with, a source text and a code point offset;
+# stringify also uses it to check Number text. Callers use parse.
 class Reader:
     let source: String
     var offset: Int = 0
 
+    # Internal: always throws Error("JSON at code point offset N: message").
     func fail(message: String) -> Unit throws Error:
         throw Error("JSON at code point offset " + offset.toString() + ": " + message)
 
+    # Internal: the code point at the offset as a string, or "" at the end.
     func current() -> String:
         if offset >= source.length():
             return ""
         return source.charAt(offset)
 
+    # Internal: skips spaces, tabs, carriage returns and line feeds.
     func whitespace() -> Unit:
         while current() == " " or current() == "\t" or current() == "\r" or current() == "\n":
             offset += 1
 
+    # Internal: consumes the token at the offset, or fails with
+    # "expected <token>".
     func expect(token: String) -> Unit throws Error:
         if source.substring(offset, source.length()).length() < token.length():
             fail("expected " + token)
@@ -78,6 +96,9 @@ class Reader:
             fail("expected " + token)
         offset += token.length()
 
+    # Internal: reads the quoted JSON string at the offset and returns its
+    # decoded text; a missing quote, a raw control character or an invalid
+    # escape is an Error.
     func string_value() -> String throws Error:
         expect("\"")
         var value = ""
@@ -124,6 +145,8 @@ class Reader:
         offset += 1
         return value
 
+    # Internal: reads the JSON number at the offset and returns its exact text,
+    # failing on a leading zero or missing digits; what follows is not checked.
     func number_value() -> String throws Error:
         let start = offset
         if current() == "-":
@@ -153,6 +176,8 @@ class Reader:
                 offset += 1
         return source.substring(start, offset)
 
+    # Internal: skips whitespace and reads one JSON value; depth counts the
+    # enclosing arrays and objects, and more than 128 is an Error.
     func value(depth: Int) -> Value throws Error:
         if depth > 128:
             fail("nesting exceeds 128")
@@ -178,6 +203,8 @@ class Reader:
         fail("expected JSON value")
         return Value.Null
 
+    # Internal: reads the "[...]" array at the offset, its items one level
+    # deeper; a trailing comma is an Error.
     func array(depth: Int) -> Value throws Error:
         expect("[")
         whitespace()
@@ -192,6 +219,8 @@ class Reader:
         expect("]")
         return Value.Array(values=values.toList())
 
+    # Internal: reads the "{...}" object at the offset, its values one level
+    # deeper; a duplicate key or a trailing comma is an Error.
     func object(depth: Int) -> Value throws Error:
         expect("{")
         whitespace()
@@ -215,6 +244,9 @@ class Reader:
         expect("}")
         return Value.Object(members=members.toList())
 
+# The JSON value the text holds, with optional whitespace around it. Invalid
+# JSON, text after the value, a duplicate key or nesting deeper than 128 is an
+# Error naming the code point offset. Numbers keep their exact text.
 func parse(source: String) -> Value throws Error:
     let reader = Reader(source=source)
     let value = reader.value(0)
@@ -223,6 +255,9 @@ func parse(source: String) -> Value throws Error:
         reader.fail("trailing text")
     return value
 
+# The text as a JSON string literal in double quotes. " and \ are escaped, line
+# feed, carriage return and tab become \n, \r and \t, and other control
+# characters \u00xx; everything else, non-ASCII included, is kept as it is.
 func quote(value: String) -> String throws Error:
     var result = "\""
     var index: Int = 0
@@ -247,6 +282,8 @@ func quote(value: String) -> String throws Error:
         index += 1
     return result + "\""
 
+# Internal: stringify's recursive step, where depth counts the enclosing arrays
+# and objects; callers use stringify.
 func render(value: Value, depth: Int) -> String throws Error:
     if depth > 128:
         throw Error("JSON nesting exceeds 128")
@@ -284,5 +321,8 @@ func render(value: Value, depth: Int) -> String throws Error:
                 separator = ","
             return result + "}"
 
+# Compact JSON text for the value, with no spaces and members in their stored
+# order. An Error for a Number whose text is not a valid JSON number, a
+# duplicate key in an Object, or nesting deeper than 128.
 func stringify(value: Value) -> String throws Error:
     return render(value, 0)

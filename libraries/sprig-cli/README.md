@@ -9,10 +9,12 @@ name = "cli"
 path = "../../libraries/sprig-cli"
 ```
 
-Define `OptionSpec(name, short_name, kind, description)` values and pass them,
-with `std.process.arguments()`, to `cli.parse(arguments, specs)`. A parsed
-result exposes `value(name) -> String?`, `flag(name) -> Bool`, and
-`positionals() -> List[String]`. The closed `OptionValue` variant distinguishes
+Define `OptionSpec(name, short_name, kind, description)` values, where `kind` is
+`OptionKind.FLAG` or `OptionKind.VALUE`, and pass them, with
+`std.process.arguments()`, to `cli.parse(arguments, specs)`. A parsed result
+exposes the methods `value(name) -> String? throws Error` and
+`flag(name) -> Bool throws Error` and the field `positionals: List[String]`.
+The closed `OptionValue` variant distinguishes
 flags from values. Long flags (`--verbose`), short flags (`-v`), separate and
 equals values (`--output path`, `--output=path`), positionals, and `--` are
 supported. Duplicate, unknown, missing, and malformed arguments fail with an

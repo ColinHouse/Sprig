@@ -1,6 +1,8 @@
 import sprig.runtime.host.HostProcess as HostProcess
 import sprig.runtime.host.HostSystem as HostSystem
 
+# The command-line arguments in order: with sprig run, the ones after `--`.
+# The list is empty when there are none.
 func arguments() -> List[String] throws Error:
     let values: MutableList[String] = []
     var index: Int = 0
@@ -9,6 +11,8 @@ func arguments() -> List[String] throws Error:
         index += 1
     return values.toList()
 
+# The command-line argument at index, counting from 0 as in arguments(). An
+# index outside 0..count-1, where count is arguments().size(), throws Error.
 func argument(index: Int) -> String throws Error:
     if index < 0 or index >= HostSystem.argumentCount():
         throw Error("argument index out of bounds: " + index.toString())
@@ -17,6 +21,8 @@ func argument(index: Int) -> String throws Error:
         return value
     throw Error("host argument returned null")
 
+# The value of the environment variable, or null when it is not set. A
+# variable set to the empty string gives "", not null.
 func environment(name: String) -> String?:
     return HostSystem.environment(name)
 

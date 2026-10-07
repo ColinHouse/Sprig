@@ -47,6 +47,7 @@
       "serial": "reads and writes tests/acceptance/results/ inside the repository after run_acceptance"
     },
     "tests/agent_tooling/check_tooling.py": {},
+    "tests/agent_tooling/check_api_docs.py": {},
     "tests/agent_tooling/check_diagnostics.py": {},
     "tests/agent_tooling/check_newcomer_hints.py": {},
     "tests/lsp/check_lsp.py": {},
@@ -236,7 +237,8 @@
         "tests/agent_tooling/check_sprig_api.py",
         "tests/cli_contract/check_cli_contract.py",
         "scripts/check_cases.py",
-        "tests/docs/check_doc_roles.py"
+        "tests/docs/check_doc_roles.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {
@@ -287,7 +289,8 @@
         "tests/concurrent/check_concurrent.py",
         "tests/json_codec/check_json_codec.py",
         "tests/release_hardening/check_hardening.py",
-        "tests/agent_tooling/check_newcomer_hints.py"
+        "tests/agent_tooling/check_newcomer_hints.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {
@@ -298,7 +301,8 @@
         "tests/web/check_web.py",
         "tests/sqlite/check_sqlite.py",
         "tests/dogfood/check_installed_sdk.py",
-        "tests/examples/check_dogfood_programs.py"
+        "tests/examples/check_dogfood_programs.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {
@@ -306,7 +310,8 @@
         "libraries/sprig-http/**"
       ],
       "gates": [
-        "tests/http/check_http.py"
+        "tests/http/check_http.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {
@@ -316,7 +321,8 @@
       "gates": [
         "tests/sqlite/check_sqlite.py",
         "tests/sqlite/check_migrations.py",
-        "tests/dogfood/check_installed_sdk.py"
+        "tests/dogfood/check_installed_sdk.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {
@@ -326,7 +332,8 @@
       "gates": [
         "tests/cli_library/check_cli_library.py",
         "tests/examples/check_task_tracker.py",
-        "tests/examples/check_dogfood_programs.py"
+        "tests/examples/check_dogfood_programs.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {
@@ -335,7 +342,8 @@
       ],
       "gates": [
         "tests/json_codec/check_json_codec.py",
-        "tests/examples/check_task_tracker.py"
+        "tests/examples/check_task_tracker.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     },
     {

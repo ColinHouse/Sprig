@@ -3,21 +3,31 @@ import java.lang.System as System
 import java.lang.Thread as Thread
 import sprig.runtime.host.HostSystem as HostSystem
 
+# Wall-clock milliseconds since 1970-01-01T00:00:00Z. It jumps when the system
+# clock is changed; measure elapsed time with monotonic_nanos.
 func epoch_millis() -> Int:
     return HostSystem.epochMillis()
 
+# The current instant as ISO-8601 UTC text, such as 2026-10-08T09:15:30.123456Z.
+# The number of fraction digits varies (0, 3, 6 or 9).
 func utc_now() -> String throws Error:
     let value = HostSystem.utcNow()
     if value != null:
         return value
     throw Error("host utc_now returned null")
 
+# The instant that many milliseconds from 1970-01-01T00:00:00Z as ISO-8601 UTC
+# text: 0 gives 1970-01-01T00:00:00Z and 1500 gives 1970-01-01T00:00:01.500Z.
+# Negative values go back in time; every Int is accepted.
 func format_utc(epoch_millis: Int) -> String throws Error:
     let value = HostSystem.formatUtc(epoch_millis)
     if value != null:
         return value
     throw Error("host format_utc returned null")
 
+# Epoch milliseconds for ISO-8601 text with seconds and a Z or numeric offset,
+# such as 2026-10-08T17:15:30+08:00; a sub-millisecond fraction rounds down.
+# Anything else, including an impossible date, is an Error.
 func parse_utc(value: String) -> Int throws Error:
     return HostSystem.parseUtc(value)
 

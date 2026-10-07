@@ -108,6 +108,7 @@ def main():
             'list missing: cannot list data/missing: no such directory',
             'list file: cannot list data/ok.txt: it is not a directory',
             'walk missing: cannot list data/missing: no such directory',
+            'file name of root: cannot take the file name of /: a root has none',
             '2',
         ], repr(errors.stdout)
     result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json.spr')], cwd=ROOT, text=True, encoding='utf-8', capture_output=True)

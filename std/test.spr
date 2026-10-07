@@ -5,6 +5,9 @@ import sprig.runtime.test.HostTest as HostTest
 
 export process.ProcessResult
 
+# The fresh directory sprig test creates for this test file and deletes when
+# the test ends; every call returns the same path. Outside sprig test (no
+# SPRIG_TEST_TMPDIR directory) it is an Error.
 func temp_dir() -> String throws Error:
     let location = HostTest.tempDir()
     if location != null:
@@ -16,8 +19,13 @@ func run_process(command: List[String]) -> process.ProcessResult throws Error:
     return process.run(command)
 
 # Cases run as they are declared, so a failing case does not stop the ones
-# after it. These are the program's tally; finish() reports it.
+# after it. The two counters below are the program's tally; finish() reports it.
+
+# Internal: passed checks so far, counted by check and check_error for
+# finish(); test code calls finish() rather than reading it.
 var passed_cases = 0
+# Internal: failed checks so far, counted by check and check_error for
+# finish(); test code calls finish() rather than reading it.
 var failed_cases = 0
 
 # Runs one named check now. It passes when the body returns and fails when the
@@ -58,6 +66,8 @@ func equal_int(actual: Int, expected: Int, what: String) -> Unit throws Error:
     if actual != expected:
         throw Error(what + ": expected " + expected + ", got " + actual)
 
+# Like equal_int for Bool: nothing happens when the values are equal, otherwise
+# it throws an Error such as `done: expected true, got false`.
 func equal_bool(actual: Bool, expected: Bool, what: String) -> Unit throws Error:
     if actual != expected:
         throw Error(what + ": expected " + expected + ", got " + actual)
@@ -78,6 +88,8 @@ generic T:
         if actual != expected:
             throw Error(what + ": expected " + shown[T](expected) + ", got " + shown[T](actual))
 
+# Internal: the text print shows for a value, for equal's failure message;
+# callers use value.toString(), which gives the same text.
 generic T:
     func shown(value: T) -> String:
         let text = SprigRuntime.str(value)

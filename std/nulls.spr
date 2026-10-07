@@ -9,6 +9,8 @@ generic T:
             return value
         return fallback
 
+# The value, or an Error with exactly that message when it is null. An uncaught
+# one is reported at the throw inside nulls.spr, so name the missing value.
 generic T:
     func require(value: T?, message: String) -> T throws Error:
         if value != null:
