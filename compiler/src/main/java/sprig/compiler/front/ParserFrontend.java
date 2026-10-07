@@ -47,7 +47,8 @@ public final class ParserFrontend {
                         new Span(line - 1, charPositionInLine, line - 1, charPositionInLine + 1, -1, -1)));
             }
         });
-        CommonTokenStream tokens = new CommonTokenStream(new LayoutTokenSource(lexer, diagnostics, uri));
+        LayoutTokenSource layout = new LayoutTokenSource(lexer, diagnostics, uri);
+        CommonTokenStream tokens = new CommonTokenStream(layout);
         SprigParser parser = new SprigParser(tokens);
         parser.setErrorHandler(new IfBranchErrorStrategy());
         boolean[] reported = {false};
@@ -64,6 +65,11 @@ public final class ParserFrontend {
             @Override
             public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line,
                                     int charPositionInLine, String msg, RecognitionException e) {
+                // The lexer already identifies the unclosed opener. Parser recovery over
+                // the swallowed physical newlines would only cascade on each remaining line.
+                if (layout.hasUnclosedGrouping()) {
+                    return;
+                }
                 // An INDENT or DEDENT that only fails because an earlier error broke the
                 // block structure says nothing new, and reads like an indentation mistake.
                 if (reported[0] && offendingSymbol instanceof Token layout
