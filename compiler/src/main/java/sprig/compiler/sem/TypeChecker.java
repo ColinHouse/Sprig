@@ -27,6 +27,7 @@ import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
 import sprig.compiler.jvm.JvmMetadata;
+import sprig.compiler.jvm.JvmNullability;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.FunctionType;
@@ -3205,6 +3206,9 @@ public final class TypeChecker {
                         .getOrDefault(javaField.getDeclaringClass(), Map.of());
                 member.bindings = fieldBindings;
                 member.returnType = JavaTypes.mapValue(javaField.getGenericType(), javaField.getType(), fieldBindings);
+                if (member.returnType.isNullable() && JvmNullability.fieldNonNull(javaField)) {
+                    member.returnType = member.returnType.nonNull(); // declared non-null by annotation
+                }
                 field.jvm = member;
                 field.type = member.returnType;
                 return field;
@@ -3971,6 +3975,11 @@ public final class TypeChecker {
                 && best.getReturnType() == String.class) {
             member.returnType = NativeType.STRING;
         }
+        if (member.returnType.isNullable() && JvmNullability.returnsNonNull(best)) {
+            // Declared non-null by a run-time visible annotation, or by a
+            // NullMarked-style default on the class or package.
+            member.returnType = member.returnType.nonNull();
+        }
         field.jvm = member;
         if (call.resolved != null && explicitMethodArgs != null) {
             call.resolved.typeArgs = explicitMethodArgs;
@@ -4055,6 +4064,7 @@ public final class TypeChecker {
      */
     private static int scoreExecutable(Executable executable, List<Type> args, List<Expr.Arg> writtenArgs,
                                        Map<TypeVariable<?>, Type> bindings, boolean bound, boolean expand) {
+        args = acceptNullableParameters(executable, args, expand);
         if (!expand) {
             return bound ? scoreBoundCandidate(executable, args, writtenArgs, bindings)
                     : scoreCandidate(executable, args, writtenArgs);
@@ -4154,6 +4164,42 @@ public final class TypeChecker {
             score += next;
         }
         return score;
+    }
+
+    /**
+     * A {@code T?} or {@code null} argument for a parameter annotated nullable
+     * scores as its non-null type when the value crosses without conversion
+     * (an {@code Int?} is already a {@code Long}; one that would need
+     * narrowing or widening stays rejected). The trailing arguments of an
+     * expanded varargs call are left alone.
+     */
+    private static List<Type> acceptNullableParameters(Executable executable, List<Type> args, boolean expand) {
+        Class<?>[] params = executable.getParameterTypes();
+        int fixed = expand ? params.length - 1 : params.length;
+        List<Type> out = null;
+        for (int i = 0; i < args.size() && i < fixed; i++) {
+            Type arg = args.get(i);
+            boolean absent = arg == NativeType.NULL;
+            if ((!arg.isNullable() && !absent) || params[i].isPrimitive()
+                    || !JvmNullability.parameterNullable(executable, i)) {
+                continue;
+            }
+            Type accepted;
+            if (absent) {
+                accepted = JavaTypes.mapFormal(executable.getGenericParameterTypes()[i], params[i]);
+            } else {
+                Class<?> image = JavaTypes.boxedFor(arg.nonNull());
+                if (image == null || !params[i].isAssignableFrom(image)) {
+                    continue;
+                }
+                accepted = arg.nonNull();
+            }
+            if (out == null) {
+                out = new ArrayList<>(args);
+            }
+            out.set(i, accepted);
+        }
+        return out == null ? args : out;
     }
 
     /**
@@ -4385,7 +4431,9 @@ public final class TypeChecker {
                         Map<TypeVariable<?>, Type> bindings =
                                 hierarchy.getOrDefault(candidate.getDeclaringClass(), Map.of());
                         for (int i = 0; i < params.length; i++) {
-                            if (argumentTypes.get(i).isNullable()) { reason = "nullable argument " + (i + 1); break; }
+                            if (argumentTypes.get(i).isNullable() && !JvmNullability.parameterNullable(candidate, i)) {
+                                reason = "nullable argument " + (i + 1); break;
+                            }
                             if (JavaTypes.capturedWrite(candidate.getGenericParameterTypes()[i], bindings)) {
                                 reason = "argument " + (i + 1) + " would write through a '? extends' wildcard of the receiver; no type can be passed in";
                                 break;

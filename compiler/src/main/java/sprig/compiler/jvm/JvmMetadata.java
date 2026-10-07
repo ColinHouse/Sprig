@@ -62,7 +62,7 @@ public final class JvmMetadata {
                         .thenComparing(Field::toGenericString))
                 .forEach(field -> fields.add(describe(field)));
         out.put("fields", fields);
-        out.put("nullabilityPolicy", "Java reference results are nullable, except a toString() result; parameters require non-null values unless future metadata proves otherwise");
+        out.put("nullabilityPolicy", "Java reference results are nullable unless a run-time visible annotation declares them non-null (NotNull/NonNull/Nonnull, or NullMarked/NonNullApi/MethodsReturnNonnullByDefault on the class or package) or the method is toString(); parameters require non-null values unless annotated Nullable or CheckForNull; annotations kept only in class files (org.jetbrains.annotations, Android) are not seen");
         out.put("interopLevels", List.of(
                 Map.of("level", "direct", "meaning", "no generic or array shape is involved"),
                 Map.of("level", "concrete-generic", "meaning", "every generic argument is concrete and preserved"),
@@ -85,9 +85,13 @@ public final class JvmMetadata {
         out.put("varargs", executable.isVarArgs());
         out.put("javaParameterTypes", Arrays.stream(executable.getParameterTypes()).map(Class::getTypeName).toList());
         List<String> parameterTypes = new ArrayList<>();
-        for (int i = 0; i < executable.getParameterCount(); i++)
-            parameterTypes.add(formalDisplay(executable.getGenericParameterTypes()[i],
-                    executable.getParameterTypes()[i]));
+        for (int i = 0; i < executable.getParameterCount(); i++) {
+            String formal = formalDisplay(executable.getGenericParameterTypes()[i], executable.getParameterTypes()[i]);
+            if (JvmNullability.parameterNullable(executable, i) && !formal.endsWith("?")) {
+                formal += "?"; // annotated nullable: a T? or null is accepted
+            }
+            parameterTypes.add(formal);
+        }
         out.put("sprigParameterTypes", parameterTypes);
         out.put("genericParameterTypes", Arrays.stream(executable.getGenericParameterTypes())
                 .map(Type::getTypeName).toList());
@@ -103,7 +107,8 @@ public final class JvmMetadata {
             out.put("sprigBoundaryType", sprigReturn);
             out.put("genericReturnType", method.getGenericReturnType().getTypeName());
             out.put("returnTypeShape", JavaTypes.shapeJson(method.getGenericReturnType()));
-            out.put("nullableResult", !textResult && !method.getReturnType().isPrimitive());
+            out.put("nullableResult", !textResult && !method.getReturnType().isPrimitive()
+                    && !JvmNullability.returnsNonNull(method));
         } else {
             out.put("javaReturnType", executable.getDeclaringClass().getTypeName());
             out.put("sprigReturnType", executable.getDeclaringClass().getSimpleName());
@@ -189,12 +194,16 @@ public final class JvmMetadata {
         out.put("name", field.getName());
         out.put("javaSignature", field.toGenericString());
         out.put("javaType", field.getType().getTypeName());
-        out.put("sprigType", JavaTypes.mapValue(field.getGenericType(), field.getType()).display());
-        out.put("sprigBoundaryType", JavaTypes.mapValue(field.getGenericType(), field.getType()).display());
+        sprig.compiler.types.Type fieldType = JavaTypes.mapValue(field.getGenericType(), field.getType());
+        if (fieldType.isNullable() && JvmNullability.fieldNonNull(field)) {
+            fieldType = fieldType.nonNull();
+        }
+        out.put("sprigType", fieldType.display());
+        out.put("sprigBoundaryType", fieldType.display());
         out.put("genericType", field.getGenericType().getTypeName());
         out.put("typeShape", JavaTypes.shapeJson(field.getGenericType()));
         out.put("static", Modifier.isStatic(field.getModifiers()));
-        out.put("nullableResult", !field.getType().isPrimitive());
+        out.put("nullableResult", fieldType.isNullable());
         Support support = support(field);
         out.put("usableFromSprig", support.usable());
         out.put("signatureSupported", support.usable());
@@ -240,8 +249,14 @@ public final class JvmMetadata {
 
     /** The Sprig type of a method's result, the same in every field of the description. */
     private static String sprigReturn(Method method) {
-        return isTextResult(method) ? "String"
-                : JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType()).display();
+        if (isTextResult(method)) {
+            return "String";
+        }
+        sprig.compiler.types.Type result = JavaTypes.mapValue(method.getGenericReturnType(), method.getReturnType());
+        if (result.isNullable() && JvmNullability.returnsNonNull(method)) {
+            result = result.nonNull();
+        }
+        return result.display();
     }
 
     // ------------------------------------------------------------------
