@@ -250,7 +250,9 @@ sprig run app.spr --classpath lib/widget.jar
 Manifest `[[jvm]]` dependencies are resolved by `sprig resolve` using Apache
 Resolver; `api/check/build/run/doctor` automatically use the locked project JARs.
 Repeat `--classpath` or use the platform path separator for additional local
-entries. Relative paths resolve against cwd. JDK/runtime classes, then locked
+entries, or pass `--classpath-file FILE` with one entry per line (blank lines
+and `#` comments ignored), the form build tools use because a long classpath
+does not fit the Windows command line. Relative paths resolve against cwd. JDK/runtime classes, then locked
 JARs in recorded order, then explicit entries: first application entry wins.
 Compiler implementation JARs do not leak into application imports. Missing
 explicit entries raise `SPR-JVM-CLASSPATH`; missing/corrupt locked artifacts

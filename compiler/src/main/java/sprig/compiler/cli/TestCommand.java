@@ -158,6 +158,17 @@ public final class TestCommand {
                         error = "--classpath requires a path or path-separated classpath";
                     else classpath.add(args[++i]);
                 }
+                case "--classpath-file" -> {
+                    if (i + 1 >= args.length || args[i + 1].startsWith("--"))
+                        error = "--classpath-file requires a file with one JAR or directory per line";
+                    else {
+                        try {
+                            classpath.addAll(sprig.compiler.Compiler.readClasspathFile(Path.of(args[++i])));
+                        } catch (IOException e) {
+                            error = e.getMessage();
+                        }
+                    }
+                }
                 default -> {
                     if (args[i].startsWith("-")) error = "Unknown test option: " + args[i];
                     else if (path == null) path = Path.of(args[i]);
