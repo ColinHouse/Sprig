@@ -139,7 +139,16 @@ def main():
             '002_bytes.sql': b'CREATE TABLE bytes (id INTEGER); -- \xff\n',
         }, '002_bytes.sql')
 
-    print('SQLite migrations: order, idempotence, quoted semicolons/triggers, rollback/retry, '
+        # A trailing comment or an empty statement after the last one is not a statement.
+        trailing = project / 'trailing comment'
+        trailing.mkdir()
+        (trailing / '001_trailing.sql').write_text(
+            "CREATE TABLE messages (id INTEGER PRIMARY KEY, message TEXT NOT NULL);\n"
+            "INSERT INTO messages(message) VALUES ('trailing comment ok'); ;\n"
+            "-- a closing note; with a semicolon\n/* and a block comment */\n", encoding='utf-8')
+        trailing_run = run(project, 'run', '--offline', '--', root / 'trailing.sqlite', trailing)
+        assert 'applied=1' in trailing_run.stdout and 'trailing comment ok' in trailing_run.stdout, trailing_run.stdout
+    print('SQLite migrations: order, idempotence, quoted semicolons/triggers, trailing comments, rollback/retry, '
           'whole-directory validation before running and transaction ownership passed')
 
 

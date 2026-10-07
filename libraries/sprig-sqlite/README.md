@@ -37,7 +37,7 @@ locks record canonical paths and must be re-resolved after relocating a checkout
 | `Database.execute(sql, List[Parameter]) -> Int` | One prepared statement; return affected row count |
 | `Database.query(sql, List[Parameter]) -> Rows` | Prepared query with detached snapshot; `INSERT ... RETURNING` is supported |
 | `Database.batch(List[Statement]) -> Int` | One transaction; commit all commands or rollback on failure |
-| `Statement(sql=..., parameters=...)` | Visible SQL and explicit typed parameters |
+| `Statement(sql=..., parameters=...)` | Visible SQL (one statement) and explicit typed parameters |
 | `Parameter.Integer(value=Int)` | Exact signed 64-bit INTEGER |
 | `Parameter.Text(value=String)` | TEXT; quotes, Unicode and SQL-looking input remain data |
 | `Parameter.Boolean(value=Bool)` | INTEGER 0/1 |
@@ -53,6 +53,13 @@ Unknown columns, invalid row indices, wrong kinds, NULL access through a non-nul
 accessor, or incorrect parameter count fail explicitly. Each query is limited to
 10,000 snapshot rows; whole result sets are loaded in memory. There is no cursor API.
 BLOB and Decimal bindings are deliberately absent. INTEGER money uses minor units.
+
+Each SQL string passed to `execute`, `query` or a batch `Statement` holds one
+statement. A trailing `;`, empty statements and comments after it are fine, and
+a semicolon inside quotes, a comment or a trigger body does not count. A second
+statement is an `Error`, and the call changes nothing (a batch rolls back), where
+JDBC would run the first statement and silently ignore the rest. Put a
+multi-statement script in a migration file instead.
 
 Each operation creates a connection, enables foreign keys and a 5-second busy
 timeout, binds parameters, and closes statements/results/connections with Java

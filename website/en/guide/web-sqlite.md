@@ -70,6 +70,7 @@ The [`libraries/sprig-web` README](https://github.com/ColinHouse/Sprig/blob/main
 The SQLite library gets a pinned `org.xerial:sqlite-jdbc:3.46.1.0` from Maven, recorded in the lock file.
 
 - SQL statements are ordinary strings that you write, and they count as trusted application code. Values from users always go in through prepared-statement parameters, which come in four kinds: `Integer`, `Text`, `Boolean` and `Null`. This is not a SQL sandbox.
+- Each SQL string holds one statement. A trailing semicolon or comment is fine; a second statement is an error instead of being silently skipped, so a multi-statement script belongs in a migration file.
 - A query returns a typed snapshot of the results, already disconnected from the database. Connections, statements and result sets are closed when they're done. A single query can return at most 10,000 rows (more is an error), and the whole result is held in memory.
 - `Database.batch` runs a list of statements in one transaction; if any of them fails, all of them are rolled back. When a query (including `INSERT ... RETURNING`) fails, anything it wrote is rolled back too.
 - You can't write transaction statements such as `BEGIN` or `COMMIT` yourself; `batch` manages transactions.

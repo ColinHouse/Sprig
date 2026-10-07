@@ -116,6 +116,12 @@ def main():
         path=work/'demo notes.sqlite'
         assert command(sqlite,'run','--offline','--',path)=='persisted notes=1\n'
         assert command(sqlite,'run','--offline','--',path)=='persisted notes=2\n'
+        # An SQL text with a second statement is an Error instead of half a run.
+        shutil.copy(ROOT/'tests/sqlite/contract.spr',sqlite/'src/contract.spr')
+        lines=command(sqlite,'run','src/contract.spr','--offline','--',work/'contract.sqlite').splitlines()
+        multiple='Error: SQL holds 2 statements; use one statement per SQL text, or a migration for a script'
+        assert lines==['null','not null','Error: Unknown query column: missing','Error: Query row index out of bounds',
+                       multiple,multiple,multiple,'ran 1','ran 2'],lines
         database=work/f'ledger {NON_ASCII}.sqlite';server=None
         try:
             server=Server(ledger,database)

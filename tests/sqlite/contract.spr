@@ -1,0 +1,35 @@
+# The @sqlite contract as Sprig code sees it: errors are checked Errors, and
+# an SQL text holds one statement. check_sqlite.py runs it in the sqlite example.
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/process.spr" as process
+
+func describe(rows: sqlite.Rows, row: Int, column: String) -> String:
+    try:
+        if rows.is_null(row, column):
+            return "null"
+        return "not null"
+    catch problem: Error:
+        return "Error: " + problem.message
+
+func outcome(action: fn() -> Int throws Error) -> String:
+    try:
+        return "ran " + action()
+    catch problem: Error:
+        return "Error: " + problem.message
+
+func main() -> Unit throws Error:
+    let database = sqlite.open(process.arguments().get(0))
+    database.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)", [])
+    database.execute("INSERT INTO items(name) VALUES (?)", [sqlite.Parameter.Null])
+    let rows = database.query("SELECT id, name FROM items", [])
+    print(describe(rows, 0, "name"))
+    print(describe(rows, 0, "ID"))
+    print(describe(rows, 0, "missing"))
+    print(describe(rows, 1, "name"))
+    print(outcome(fn() => database.execute("INSERT INTO items(name) VALUES ('a'); INSERT INTO items(name) VALUES ('b')", [])))
+    print(outcome(fn() => database.query("SELECT COUNT(*) AS n FROM items; DELETE FROM items", []).size()))
+    print(outcome(fn() => database.batch([sqlite.Statement(sql="INSERT INTO items(name) VALUES ('c')", parameters=[]), sqlite.Statement(sql="INSERT INTO items(name) VALUES ('d'); DELETE FROM items", parameters=[])])))
+    print(outcome(fn() => database.execute("INSERT INTO items(name) VALUES ('one; two'); -- a trailing comment", [])))
+    print(outcome(fn() => database.query("SELECT COUNT(*) AS n FROM items;", []).integer(0, "n")))
+
+main()

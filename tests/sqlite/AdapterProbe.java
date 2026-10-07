@@ -52,6 +52,33 @@ public class AdapterProbe {
                   "prefixed transaction control must not commit earlier writes");
             fail(() -> db.execute(prefix + "BEGIN",empty()));
         }
+        // One statement per SQL text: JDBC would run the first and silently drop the rest.
+        fail(() -> db.execute("INSERT INTO items(name) VALUES ('first of two'); INSERT INTO items(name) VALUES ('second of two')", empty()));
+        fail(() -> db.query("SELECT COUNT(*) AS n FROM items; DELETE FROM items", empty()));
+        fail(() -> db.query("INSERT INTO items(name) VALUES ('returning') RETURNING id; DELETE FROM items", empty()));
+        Batch twoInOne = new Batch();
+        twoInOne.add("INSERT INTO items(name) VALUES (?)", first);
+        twoInOne.add("INSERT INTO items(name) VALUES ('a'); INSERT INTO items(name) VALUES ('b')", empty());
+        fail(() -> db.batch(twoInOne));
+        check(db.query("SELECT COUNT(*) AS n FROM items",empty()).integer(0,"n") == 2,
+              "SQL with a second statement must run nothing, in execute, query and batch");
+        try { db.execute("SELECT 1; SELECT 2", empty()); throw new AssertionError("expected SqliteError"); }
+        catch (SqliteError expected) {
+            check(expected.getMessage().contains("2 statements") && expected.getMessage().contains("one statement"),
+                  "multiple-statement message: " + expected.getMessage());
+        }
+        // A trailing semicolon, an empty statement or comments after the one statement are fine,
+        // and so are semicolons inside quotes, comments and a trigger body.
+        db.execute("INSERT INTO items(name) VALUES ('semicolon; inside quotes');", empty());
+        db.execute("INSERT INTO items(name) VALUES ('trailing comments'); ; -- done; really\n/* block; comment */", empty());
+        check(db.query("SELECT COUNT(*) AS n FROM items; -- counted", empty()).integer(0,"n") == 4, "trailing text after one statement");
+        Batch trailing = new Batch(); trailing.add("DELETE FROM items WHERE name = 'trailing comments'; /* gone */", empty());
+        check(db.batch(trailing) == 1, "trailing comment in a batch statement");
+        db.execute("CREATE TABLE audit(name TEXT)", empty());
+        db.execute("CREATE TRIGGER items_audit AFTER INSERT ON items BEGIN INSERT INTO audit(name) VALUES (NEW.name); "
+                + "INSERT INTO audit(name) VALUES (CASE WHEN NEW.name = 'x' THEN 'y; z' ELSE 'w' END); END;", empty());
+        db.execute("DROP TRIGGER items_audit", empty());
+        db.execute("DELETE FROM items WHERE name = 'semicolon; inside quotes'", empty());
         Batch committed = new Batch(); Parameters next = new Parameters(); next.text("committed");
         committed.add("INSERT INTO items(name) VALUES (?)",next); next.text("late mutation ignored");
         check(db.batch(committed) == 1, "snapshot batch parameters");
