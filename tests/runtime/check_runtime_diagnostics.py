@@ -180,6 +180,58 @@ with tempfile.TemporaryDirectory(prefix="sprig-runtime-diag-") as work:
                and diagnostic["range"]["start"]["line"] == module_line,
                f"exit={result.returncode} line={module_line} {diagnostic}")
 
+    # A failure inside an @std function is reported at the program's own line
+    # that called it, not inside the bundled module: the innermost frame in the
+    # program's own modules wins. A lambda the std function calls keeps its own
+    # line, and so does an imported module of the program, as dependency code
+    # does. --stacktrace and JSON point at the same line; the stack stays whole.
+    padding = ["# padding keeps the failing line away from line 1", "", ""]
+    helper = directory / "std-helper.spr"
+    helper.write_text("\n".join(['import "@std/lists.spr" as lists', "", "",
+                                 "func add_all(values: List[Int]) -> Int:",
+                                 "    let copied = values",
+                                 "    return lists.sum(copied)"]) + "\n", encoding="utf-8")
+    std_cases = {
+        "std-counter": (['import "@std/concurrent.spr" as concurrent', *padding,
+                         "let counter = concurrent.counter(9223372036854775806)",
+                         "print(counter.add(1))", "print(counter.add(1))"], None, 7),
+        "std-sum": (['import "@std/lists.spr" as lists', *padding,
+                     "let big: Int = 9223372036854775807", "print(lists.sum([big, 1]))"], None, 6),
+        "std-lambda": (['import "@std/lists.spr" as lists', *padding,
+                        "let big: Int = 9223372036854775807",
+                        "let add = fn(sum: Int, x: Int) => sum + x",
+                        "let total = lists.fold([big, 1], 0, add)", "print(total)"], None, 6),
+        "std-imported": ([f'import "./{helper.name}" as helper', *padding,
+                          "print(helper.add_all([9223372036854775807, 1]))"], helper, 6),
+    }
+    for name, (lines, reported_file, line) in std_cases.items():
+        program = directory / f"{name}.spr"
+        program.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        expected = (reported_file or program).name
+        text = call("run", program)
+        combined = text.stdout + text.stderr
+        verify(f"std frame text {name}", text.returncode == 1
+               and f"{expected}:{line}:" in combined and "Numeric error: Int addition overflow" in combined
+               and "lists.spr" not in combined and "concurrent.spr" not in combined
+               and "sprig-runtime-frame" not in combined, f"exit={text.returncode} {combined!r}")
+        for flags in ((), ("--stacktrace",)):
+            envelope = call("run", program, "--json", *flags)
+            try:
+                diagnostic = json.loads(envelope.stdout)["diagnostics"][0]
+            except (ValueError, KeyError, IndexError):
+                diagnostic = {}
+            verify(f"std frame json {name} {' '.join(flags)}".strip(), envelope.returncode == 1
+                   and diagnostic.get("code") == "SPR-RUNTIME-EXCEPTION"
+                   and diagnostic.get("uri", "").endswith("/" + expected)
+                   and (diagnostic.get("range") or {}).get("start", {}).get("line") == line - 1,
+                   f"exit={envelope.returncode} {diagnostic}")
+    counter_stack = call("run", directory / "std-counter.spr", "--stacktrace")
+    combined = counter_stack.stdout + counter_stack.stderr
+    verify("std frame stacktrace whole", counter_stack.returncode == 1
+           and "at sprig.runtime.NumericOps.add" in combined and "at sprig.user.$Counter.add" in combined
+           and "at sprig.user.$M_std_counter" in combined and "std-counter.spr:7:" in combined,
+           f"exit={counter_stack.returncode} {combined!r}")
+
     # --stacktrace restores the raw JVM frames for debugging without losing the wrapper.
     overflow = directory / "overflow.spr"
     stack = call("run", overflow, "--stacktrace")

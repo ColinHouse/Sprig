@@ -1644,7 +1644,11 @@ public final class Main {
         }
     }
 
-    private record RuntimeFailure(String className, String message, String frameFile, int frameLine) {
+    /** A failure's frames of generated code, innermost first, as generated-Java file and line. */
+    private record RuntimeFailure(String className, String message, List<RuntimeFrame> frames) {
+    }
+
+    private record RuntimeFrame(String file, int line) {
     }
 
     private record RuntimeOrigin(String id, String hint) {
@@ -1673,14 +1677,30 @@ public final class Main {
         RuntimeOrigin origin = runtimeOrigin(failure.className, failure.message);
         String uri = sourceUri;
         Span span = null;
-        if (failure.frameFile != null) {
-            for (Map.Entry<Path, Map<Integer, Span>> entry : lineMaps.entrySet()) {
-                if (!entry.getKey().getFileName().toString().equals(failure.frameFile)) continue;
-                span = JavacRunner.mapBack(entry.getKey(), failure.frameLine, lineMaps);
-                String mapped = uris.get(entry.getKey());
-                if (mapped != null) uri = mapped;
+        // The innermost frame in the program's own modules, dependencies
+        // included: a failure inside an @std function is reported at the line
+        // that called it. Only when every frame is in @std does the innermost
+        // one stand.
+        Path chosen = null;
+        RuntimeFrame chosenFrame = null;
+        for (RuntimeFrame frame : failure.frames) {
+            Path generated = generatedFile(lineMaps, frame.file());
+            if (generated == null) continue;
+            if (chosen == null) {
+                chosen = generated;
+                chosenFrame = frame;
+            }
+            String mapped = uris.get(generated);
+            if (mapped == null || !bundledStd(mapped)) {
+                chosen = generated;
+                chosenFrame = frame;
                 break;
             }
+        }
+        if (chosen != null) {
+            span = JavacRunner.mapBack(chosen, chosenFrame.line(), lineMaps);
+            String mapped = uris.get(chosen);
+            if (mapped != null) uri = mapped;
         }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("exception", failure.className);
@@ -1691,6 +1711,23 @@ public final class Main {
         return Diagnostic.error(code, Phase.RUNTIME, runtimeMessage(failure), uri, span)
                 .withHint(origin.hint() + " Run with --stacktrace to see the JVM stack.")
                 .withData(data);
+    }
+
+    /** The generated Java file a frame names, as a key of the line maps, or null. */
+    private static Path generatedFile(Map<Path, Map<Integer, Span>> lineMaps, String frameFile) {
+        for (Path generated : lineMaps.keySet()) {
+            if (generated.getFileName().toString().equals(frameFile)) return generated;
+        }
+        return null;
+    }
+
+    /** Whether a module URI names a bundled @std module of this installation. */
+    private static boolean bundledStd(String uri) {
+        try {
+            return StdLibrary.importName(Path.of(java.net.URI.create(uri))) != null;
+        } catch (IllegalArgumentException | java.nio.file.FileSystemNotFoundException e) {
+            return false;
+        }
     }
 
     /**
@@ -1706,19 +1743,16 @@ public final class Main {
             String className = colon < 0 ? rest : rest.substring(0, colon).trim();
             if (className.isEmpty()) return null;
             String message = colon < 0 ? null : rest.substring(colon + 2).trim();
-            String frameFile = null;
-            int frameLine = -1;
+            List<RuntimeFrame> frames = new ArrayList<>();
             for (String frameLineText : lines) {
                 if (!frameLineText.startsWith(SprigRuntime.FRAME_PREFIX)) continue;
                 Matcher frame = FRAME_TAIL.matcher(
                         frameLineText.substring(SprigRuntime.FRAME_PREFIX.length()).trim());
                 if (frame.matches()) {
-                    frameFile = frame.group(1);
-                    frameLine = Integer.parseInt(frame.group(2));
+                    frames.add(new RuntimeFrame(frame.group(1), Integer.parseInt(frame.group(2))));
                 }
-                break;
             }
-            return new RuntimeFailure(className, message, frameFile, frameLine);
+            return new RuntimeFailure(className, message, frames);
         }
         boolean jvmFailure = stderr.lines().anyMatch(line -> line.startsWith("Exception in thread ")
                 || line.startsWith("sprig.runtime.SprigError") || line.startsWith("\tat "));
@@ -1736,8 +1770,7 @@ public final class Main {
             message = colon < 0 ? null : trimmed.substring(colon + 2).trim();
             break;
         }
-        String frameFile = null;
-        int frameLine = -1;
+        List<RuntimeFrame> frames = new ArrayList<>();
         for (String line : lines) {
             String trimmed = line.trim();
             int paren = trimmed.lastIndexOf('(');
@@ -1750,11 +1783,9 @@ public final class Main {
             }
             Matcher frame = FRAME_TAIL.matcher(trimmed.substring(paren + 1, close));
             if (!frame.matches()) continue;
-            frameFile = frame.group(1);
-            frameLine = Integer.parseInt(frame.group(2));
-            break;
+            frames.add(new RuntimeFrame(frame.group(1), Integer.parseInt(frame.group(2))));
         }
-        return new RuntimeFailure(className, message, frameFile, frameLine);
+        return new RuntimeFailure(className, message, frames);
     }
 
     private static String runtimeMessage(RuntimeFailure failure) {

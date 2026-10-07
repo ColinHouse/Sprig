@@ -206,7 +206,8 @@ Example: assigning an `Int` variable to `Float` reports
 to choose exact or explicitly lossy conversion. Runtime numeric failures use
 `SprigNumericError` and are reported as `SPR-RUNTIME-EXCEPTION` when uncaught,
 wrapped as `Numeric error: <message>` with the nearest statement range and
-`data.origin="checked-arithmetic"`; `sprig run --stacktrace` restores the raw
-JVM stack. Run
-`python3 tests/numeric/check_numeric.py` or `./scripts/test.sh` from the
-repository root.
+`data.origin="checked-arithmetic"`; a failure inside an `@std` function, such
+as an overflowing `concurrent.Counter.add`, gets the range of the program's
+own line that called it. `sprig run --stacktrace` restores the raw JVM
+stack. Run `python3 tests/numeric/check_numeric.py` or `./scripts/test.sh`
+from the repository root.

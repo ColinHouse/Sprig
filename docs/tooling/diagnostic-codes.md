@@ -69,9 +69,9 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-NUM-CONVERSION | An implicit numeric conversion risks precision or range loss, or a `Float`/`Float32` is a `Map` key, also through generic code (reported at the use that gives the type argument). |
 | SPR-NUM-DIVISION | Integer/BigInt `/` would truncate, or Decimal `/` lacks a rounding policy. |
 | SPR-NUM-MIXED | A numeric operator cannot implicitly mix these numeric families. |
-| SPR-RUNTIME-ERROR | Uncaught Sprig Error value at runtime; the wrapped message, `origin` data and source range are reported. |
+| SPR-RUNTIME-ERROR | Uncaught Sprig Error value at runtime; the wrapped message, `origin` data and source range are reported. The range is the innermost line in the program's own modules: a failure inside an `@std` function points at the line that called it. |
 | SPR-WRAP-CHECK | Generated Java-to-Sprig wrapper source failed Sprig checking or formatting. |
-| SPR-RUNTIME-EXCEPTION | Uncaught JVM exception at runtime, wrapped to a Sprig-level message with a source range; `run --stacktrace` restores the raw JVM stack. |
+| SPR-RUNTIME-EXCEPTION | Uncaught JVM exception at runtime, wrapped to a Sprig-level message with a source range (the innermost line in the program's own modules, as for SPR-RUNTIME-ERROR); `run --stacktrace` restores the raw JVM stack. |
 | SPR-BUNDLE-TOOLS | `sprig build --bundle` needs `jdeps` and `jlink` from a full JDK; the Java installation in use has none (a JRE). |
 | SPR-BUNDLE-JDEPS | `jdeps` could not analyze the bundle's JARs to find the Java modules the program needs. |
 | SPR-BUNDLE-LAYOUT | The Java installation or the classpath has a layout the bundle cannot use: no packaged modules and no linkable runtime for `jlink`, a `jlink` failure, a previous bundle that cannot be removed, or a classpath entry that does not exist. |

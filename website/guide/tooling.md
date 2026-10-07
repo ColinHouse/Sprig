@@ -57,7 +57,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 - **`check --syntax-only`**：`check` 本来就不生成代码；加上这个选项更快，只检查词法、缩进和语法。
 - **`run --keep`**：保留生成的 Java 文件，方便查看。
 - **`run --no-cache`**：即使同一个程序之前跑过，也重新调用 javac。默认情况下 `run` 和 `test` 会把每个程序编译出的 class 文件留在 `~/.sprig/cache/javac` 下（保留最近的 64 个），键由生成的 Java、编译器和 Java 版本、运行时和 classpath 决定，所以再次运行没改过的程序会跳过 javac。真要调用 javac 时，它也只编译你的程序：运行时已经随 SDK 编译好，直接复制到你的 class 文件旁边。如果你用的 JDK 和构建 SDK 的不是同一个版本，第一次运行会把运行时编译一次，放进 `~/.sprig/cache/runtime`。设置 `SPRIG_JAVAC_CACHE=off` 关闭程序的缓存，设成一个目录路径则换个位置。
-- **`run --stacktrace`**：程序运行时出了没被捕获的错误，Sprig 会报 `SPR-RUNTIME-ERROR` 或 `SPR-RUNTIME-EXCEPTION`，并指出是源码的哪一行。需要完整的 JVM 堆栈时，加上这个选项。
+- **`run --stacktrace`**：程序运行时出了没被捕获的错误，Sprig 会报 `SPR-RUNTIME-ERROR` 或 `SPR-RUNTIME-EXCEPTION`，并指出是源码的哪一行；错误出在 `@std` 的函数里时，指的是你调用它的那一行。需要完整的 JVM 堆栈时，加上这个选项。
 - **`build -d <目录>`**：`build` 默认输出到 `sprig-build/`，`-d` 可以换个目录。检查没通过时不会生成 class 文件。
 - **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。
 - **`build --bundle`**：在 `build` 的输出目录里再写一个 `<名字>/` 目录（名字是 `--bin`、项目名或文件名），交给没装 Java 的人也能运行：`bin/<名字>` 是 POSIX sh 启动器，`bin/<名字>.cmd` 是 Windows 启动器；`lib/` 里是程序的 jar、Sprig 运行时和锁文件里的全部 jar（Maven 依赖也在，按坐标命名）；`runtime/` 是用 jlink 从这些 jar 实际用到的模块做出来的 Java 运行时镜像，`runtime/legal/` 里的 JDK 许可声明原样保留（OpenJDK 的 GPLv2 + Classpath Exception 允许连同声明一起分发）。启动器在你当前的目录里运行程序，原样转发参数和退出码，并把程序自己的类做成 class-data-sharing 归档放在用户缓存目录里，第二次启动更快。打包时不会运行你的程序。**镜像只能在构建它的操作系统和 CPU 架构上运行**，命令输出会写明是哪个平台；要给别的平台就在那个平台上构建。加 `--archive` 会在旁边再写一个 `<名字>.zip`，解压后启动器照样可执行。需要完整的 JDK（有 `jdeps`、`jlink` 和 `jmods/`）：缺工具报 `SPR-BUNDLE-TOOLS`，`jdeps` 分析失败报 `SPR-BUNDLE-JDEPS`，没有 `jmods/` 或 jlink 失败报 `SPR-BUNDLE-LAYOUT`，每个都带修法。详见 [bundle 说明（英文）](/en/reference/projects/bundle)。
