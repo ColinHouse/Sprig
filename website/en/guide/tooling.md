@@ -122,7 +122,7 @@ And with `--json` (the real `uri` is a full `file:` path, shortened here):
 }
 ```
 
-Lines and columns in JSON count from 0, so `"line": 5, "character": 11` is line 6, column 12 in the normal output. `relatedHelp` tells you which `sprig help` topic to read. When the hint comes down to one mechanical rewrite, such as a missing `import "@std/files.spr" as files` line or `throws Error` on a function header, `suggestedEdits` holds it as a range plus replacement text, ready to apply.
+Lines and columns in JSON count from 0, so `"line": 5, "character": 11` is line 6, column 12 in the normal output. `relatedHelp` tells you which `sprig help` topic to read. When the hint comes down to one mechanical rewrite, such as a missing `import "@std/files.spr" as files` line or `throws Error` on a function header, `suggestedEdits` holds it as a range plus replacement text, ready to apply. In your editor, the [language server](#language-server) offers the same rewrite as a quick fix.
 
 Exit codes work like this:
 
@@ -146,7 +146,7 @@ The full approach is in [working with AI assistants](/en/guide/agent-workflow).
 
 `sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly, and the [VS Code extension](/en/guide/editor) starts it for you. It's new in v0.6.0-beta.1.
 
-It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, and rename for local variables and parameters. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. While your code doesn't parse, the server answers with nothing rather than a guess.
+It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, rename for local variables and parameters, and quick fixes: when an error's fix is one mechanical rewrite, your editor applies it in one click. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. While your code doesn't parse, the server answers with nothing rather than a guess.
 
 Editor setup and the details of each feature are in the [language server reference](/en/reference/tooling/lsp).
 

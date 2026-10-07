@@ -1,6 +1,9 @@
 package sprig.compiler.diag;
 
-/** Half-open source range; line/character are zero-based for machine output. */
+/**
+ * Half-open source range; line/character are zero-based for machine output.
+ * Columns and offsets count Unicode code points, as the lexer reads the text.
+ */
 public final class Span {
     public final int startLine;
     public final int startColumn;

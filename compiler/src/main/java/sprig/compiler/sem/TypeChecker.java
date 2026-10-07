@@ -2608,14 +2608,19 @@ public final class TypeChecker {
             return null;
         }
         List<String> parts = new ArrayList<>();
+        int length = module.source.codePointCount(0, module.source.length());
         for (int i = 0; i < call.args.size(); i++) {
             Expr.Arg arg = call.args.get(i);
             Span span = arg.value.span;
-            if (arg.name != null || span == null || span.startOffset < 0 || span.endOffset > module.source.length()
+            if (arg.name != null || span == null || span.startOffset < 0 || span.endOffset > length
                     || span.endOffset <= span.startOffset) {
                 return null;
             }
-            parts.add(targets.get(i).name + "=" + module.source.substring(span.startOffset, span.endOffset));
+            // Offsets count code points, as the lexer reads the text; String indexes
+            // count UTF-16 units, which differ after an emoji or another supplementary character.
+            int from = module.source.offsetByCodePoints(0, span.startOffset);
+            int to = module.source.offsetByCodePoints(from, span.endOffset - span.startOffset);
+            parts.add(targets.get(i).name + "=" + module.source.substring(from, to));
         }
         return String.join(", ", parts);
     }

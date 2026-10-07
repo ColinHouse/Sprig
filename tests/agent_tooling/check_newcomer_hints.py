@@ -174,6 +174,9 @@ def main():
              "SPR-FLOW-THROWS", ", Error", 0),
             ("named-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2 + 3)\nprint(p.y)\n",
              "SPR-CALL-NAMED-REQUIRED", "x=1, y=2 + 3", 0),
+            # The arguments are quoted from the source after characters outside the BMP.
+            ("named-constructor-after-emoji", 'class P:\n    let x: Int\n    let y: Int\n'
+             'let total = "😀😀".length() + P(1, 2).x\nprint(total)\n', "SPR-CALL-NAMED-REQUIRED", "x=1, y=2", 0),
             ("generic-type-arguments", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n',
              "SPR-TYPE-GENERIC-ARGS-REQUIRED", "[Int]", 0),
             ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", "elif", 0),

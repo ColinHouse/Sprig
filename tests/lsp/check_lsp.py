@@ -73,6 +73,32 @@ USES_BAD = '''import "./bad.spr" as bad
 print(bad.broken())
 '''
 
+# The compiler's mechanical rewrites, as in tests/agent_tooling/check_newcomer_hints.py:
+# (name, source, code, whether the program checks cleanly once the fix is applied).
+QUICK_FIXES = [
+    ("std-import", 'let text = files.read_utf8("x.txt")\nprint(text.length())\n', "SPR-NAME-UNRESOLVED", False),
+    ("throws-on-header", 'import "@std/process.spr" as process\nfunc count() -> Int:\n'
+     '    return process.read_lines().size()\nprint(count())\n', "SPR-FLOW-THROWS", True),
+    ("throws-added-to-list", 'import java.io.IOException as IOException\nfunc fail() -> Unit throws IOException:\n'
+     '    throw IOException("x")\nfunc parse(text: String) -> Int throws Error:\n    throw Error(text)\n'
+     'func wrap(text: String) -> Int throws IOException:\n    fail()\n    return parse(text)\nprint(wrap("1"))\n',
+     "SPR-FLOW-THROWS", True),
+    ("named-constructor", "class P:\n    let x: Int\n    let y: Int\nlet p = P(1, 2 + 3)\nprint(p.y)\n",
+     "SPR-CALL-NAMED-REQUIRED", True),
+    # After an emoji, compiler columns (code points) and LSP characters (UTF-16 units) differ.
+    ("named-constructor-after-emoji", 'class P:\n    let x: Int\n    let y: Int\n'
+     'let total = "😀😀".length() + P(1, 2).x\nprint(total)\n', "SPR-CALL-NAMED-REQUIRED", True),
+    ("generic-type-arguments", 'import "@std/lists.spr" as lists\nprint(lists.sorted([3, 1, 2]))\n',
+     "SPR-TYPE-GENERIC-ARGS-REQUIRED", True),
+    ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", True),
+]
+
+# What the test client declares: prepared rename and CodeAction literals, as VS Code's client does.
+CLIENT_CAPABILITIES = {"textDocument": {
+    "rename": {"prepareSupport": True},
+    "codeAction": {"codeActionLiteralSupport": {"codeActionKind": {"valueSet": ["quickfix"]}},
+                   "isPreferredSupport": True}}}
+
 
 def check(name, ok, detail=""):
     global COUNT
@@ -169,6 +195,22 @@ class Client:
             self._next(deadline)
         raise TimeoutError("diagnostics for " + str(path))
 
+    def diagnostics_at(self, path, version):
+        """The diagnostics published for one version of a document."""
+        target = uri(path)
+        deadline = time.time() + TIMEOUT
+        while time.time() < deadline:
+            for index, message in enumerate(self.notifications):
+                params = message.get("params") or {}
+                if (message.get("method") == "textDocument/publishDiagnostics" and params["uri"] == target
+                        and params.get("version") == version):
+                    self.notifications = [m for m in self.notifications[:index]
+                                          if not (m.get("method") == "textDocument/publishDiagnostics"
+                                                  and m["params"]["uri"] == target)] + self.notifications[index + 1:]
+                    return params["diagnostics"]
+            self._next(deadline)
+        raise TimeoutError(f"diagnostics for {path} at version {version}")
+
     def open(self, path, text, version=1):
         self.notify("textDocument/didOpen", {"textDocument": {
             "uri": uri(path), "languageId": "sprig", "version": version, "text": text}})
@@ -193,12 +235,48 @@ class Client:
                 self.proc.kill()
 
 
-def initialize(client, root):
-    response = client.request("initialize", {
-        "processId": None, "rootUri": uri(root),
-        "capabilities": {"textDocument": {"rename": {"prepareSupport": True}}}})
+def initialize(client, root, capabilities=CLIENT_CAPABILITIES):
+    response = client.request("initialize", {"processId": None, "rootUri": uri(root), "capabilities": capabilities})
     client.notify("initialized", {})
     return response["result"]
+
+
+def code_actions(client, path, range_, diagnostics, only=None):
+    context = {"diagnostics": diagnostics}
+    if only is not None:
+        context["only"] = only
+    response = client.request("textDocument/codeAction",
+                              {"textDocument": {"uri": uri(path)}, "range": range_, "context": context})
+    if "error" in response:
+        raise AssertionError("textDocument/codeAction failed: " + json.dumps(response["error"]))
+    return response["result"]
+
+
+def utf16_range(text, compiler_range):
+    """A compiler range, whose columns count code points, in LSP's UTF-16 characters."""
+    lines = text.split("\n")
+
+    def convert(point):
+        prefix = lines[point["line"]][:point["character"]]
+        return {"line": point["line"], "character": len(prefix.encode("utf-16-le")) // 2}
+    return {"start": convert(compiler_range["start"]), "end": convert(compiler_range["end"])}
+
+
+def apply_edits(text, edits):
+    """The text after LSP edits (UTF-16 positions), applied last first as an editor does."""
+    lines = text.split("\n")
+
+    def index(point):
+        content, units, column = lines[point["line"]], 0, 0
+        while column < len(content) and units < point["character"]:
+            units += len(content[column].encode("utf-16-le")) // 2
+            column += 1
+        return sum(len(line) + 1 for line in lines[:point["line"]]) + column
+    for edit in sorted(edits, key=lambda e: (e["range"]["start"]["line"], e["range"]["start"]["character"]),
+                       reverse=True):
+        start, end = index(edit["range"]["start"]), index(edit["range"]["end"])
+        text = text[:start] + edit["newText"] + text[end:]
+    return text
 
 
 def position(text, line, needle, occurrence=0, offset=0):
@@ -218,6 +296,17 @@ def completion_labels(client, path, line, character):
 def hover_text(client, path, line, character):
     result = client.at("textDocument/hover", path, line, character)["result"]
     return None if result is None else result["contents"]["value"]
+
+
+def stop_quietly(client):
+    """Ends a server that a failed check left running.
+
+    A live server keeps its working directory locked on Windows, where
+    sprig.cmd's JVM survives killing the launcher alone."""
+    if client.proc.poll() is None:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(client.proc.pid), "/T", "/F"], capture_output=True)
+        client.proc.kill()
 
 
 def check_workspace(directory):
@@ -240,6 +329,7 @@ def check_workspace(directory):
           and capabilities["documentFormattingProvider"]
           and capabilities["completionProvider"]["triggerCharacters"] == ["."]
           and capabilities["renameProvider"] == {"prepareProvider": True}
+          and capabilities["codeActionProvider"] == {"codeActionKinds": ["quickfix"]}
           and capabilities["textDocumentSync"]["change"] == 1, capabilities)
     unknown = client.request("workspace/symbol", {"query": "x"})
     check("unknown-method", unknown.get("error", {}).get("code") == -32601, unknown)
@@ -448,6 +538,17 @@ def check_line_endings(directory):
         diagnostics = client.wait_diagnostics(path, lambda d: d != [])
         check("crlf-diagnostic-position", diagnostics[0]["range"]["start"] == {"line": 1, "character": 13},
               diagnostics)
+        # A quick fix that inserts a line keeps the document's CRLF line endings.
+        unimported = 'let text = files.read_utf8("x.txt")\r\nprint(text.length())\r\n'
+        client.change(path, unimported, 4)
+        unresolved = [d for d in client.diagnostics_at(path, 4) if d["code"] == "SPR-NAME-UNRESOLVED"]
+        actions = code_actions(client, path, unresolved[0]["range"], unresolved) if unresolved else []
+        edits = actions[0]["edit"]["changes"][uri(path)] if len(actions) == 1 else []
+        check("crlf-quick-fix", len(edits) == 1 and edits[0]["newText"] == 'import "@std/files.spr" as files\r\n'
+              and edits[0]["range"]["start"] == {"line": 0, "character": 0}, actions)
+        client.change(path, apply_edits(unimported, edits), 5)
+        remaining = client.diagnostics_at(path, 5)
+        check("crlf-quick-fix-applied", all(d["code"] != "SPR-NAME-UNRESOLVED" for d in remaining), remaining)
         if os.name == "nt":
             # VS Code writes a lowercase drive and an escaped colon; diagnostics
             # must come back under that exact URI.
@@ -468,12 +569,89 @@ def check_line_endings(directory):
                   and published["diagnostics"][0]["code"] == "SPR-TYPE-ASSIGN", published)
         check("crlf-shutdown", client.stop() == 0, "".join(client.stderr))
     finally:
-        # A live server keeps its working directory locked on Windows, where
-        # sprig.cmd's JVM survives killing the launcher alone.
-        if client.proc.poll() is None:
-            if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", str(client.proc.pid), "/T", "/F"], capture_output=True)
-            client.proc.kill()
+        stop_quietly(client)
+
+
+def check_quick_fixes(directory):
+    """Code actions carry the compiler's suggested edits, and applying one removes its diagnostic."""
+    client = Client(directory)
+    plain = None
+    try:
+        capabilities = initialize(client, directory)["capabilities"]
+        check("quick-fix-capability", capabilities.get("codeActionProvider") == {"codeActionKinds": ["quickfix"]},
+              capabilities)
+        fixes = {}
+        for name, source, code, clean in QUICK_FIXES:
+            path = directory / (name + ".spr")
+            path.write_text(source, encoding="utf-8")
+            cli = subprocess.run([str(SPRIG), "check", str(path), "--json"], capture_output=True, text=True,
+                                 encoding="utf-8", cwd=directory)
+            reported = [d for d in json.loads(cli.stdout)["diagnostics"] if d["code"] == code]
+            client.open(path, source)
+            published = [d for d in client.diagnostics_at(path, 1) if d["code"] == code]
+            check("quick-fix-diagnostic-" + name, len(reported) == 1 and len(reported[0]["suggestedEdits"]) == 1
+                  and len(published) == 1, (reported, published))
+            edit = reported[0]["suggestedEdits"][0]
+            # The action is the CLI's edit in LSP positions, for the diagnostic as it was published.
+            actions = code_actions(client, path, published[0]["range"], published)
+            expected = {"title": edit["description"], "kind": "quickfix", "diagnostics": published,
+                        "edit": {"changes": {uri(path): [{"range": utf16_range(source, edit["range"]),
+                                                          "newText": edit["newText"]}]}},
+                        "isPreferred": True}
+            check("quick-fix-" + name, actions == [expected], actions)
+            fixes[name] = actions[0]
+            client.change(path, apply_edits(source, actions[0]["edit"]["changes"][uri(path)]), 2)
+            after = client.diagnostics_at(path, 2)
+            check("quick-fix-applied-" + name, after == [] if clean else all(d["code"] != code for d in after), after)
+            client.notify("textDocument/didClose", {"textDocument": {"uri": uri(path)}})
+
+        # The constructor arguments come after two emoji: UTF-16 characters, and the written text.
+        name = "named-constructor-after-emoji"
+        emoji = next(text for case, text, _, _ in QUICK_FIXES if case == name)
+        edit = fixes[name]["edit"]["changes"][uri(directory / (name + ".spr"))]
+        arguments = {"start": {"line": 3, "character": position(emoji, 3, "1")},
+                     "end": {"line": 3, "character": position(emoji, 3, "2") + 1}}
+        check("quick-fix-utf16-range", edit == [{"range": arguments, "newText": "x=1, y=2"}], edit)
+
+        # The server answers from its own check: the client's diagnostics neither add nor remove fixes.
+        source = next(text for case, text, _, _ in QUICK_FIXES if case == "elif")
+        path = directory / "ranges.spr"
+        client.open(path, source)
+        diagnostic = client.diagnostics_at(path, 1)[0]
+        cursor = diagnostic["range"]["start"]
+        at_cursor = code_actions(client, path, {"start": cursor, "end": cursor}, [])
+        check("quick-fix-at-cursor", [a["title"] for a in at_cursor] == [fixes["elif"]["title"]], at_cursor)
+        first_line = {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 9}}
+        forged = dict(diagnostic, range=first_line, message="forged",
+                      data={"suggestedEdits": [{"range": first_line, "newText": "oops", "description": "forged"}]})
+        check("quick-fix-none-without-diagnostic", code_actions(client, path, first_line, [forged]) == [])
+        check("quick-fix-only-other-kinds",
+              code_actions(client, path, diagnostic["range"], [diagnostic], only=["refactor", "source"]) == [])
+        check("quick-fix-only-quickfix",
+              len(code_actions(client, path, diagnostic["range"], [diagnostic], only=["quickfix"])) == 1)
+
+        # An imported file's error shows on the import, but its fix would edit that file: none here.
+        (directory / "broken.spr").write_text(source, encoding="utf-8")
+        importer = directory / "importer.spr"
+        client.open(importer, 'import "./broken.spr" as broken\n\nprint(1)\n')
+        shown = client.diagnostics_at(importer, 1)
+        check("quick-fix-not-for-imported-file", len(shown) == 1 and shown[0]["code"] == "SPR-SYNTAX-ERROR"
+              and code_actions(client, importer, shown[0]["range"], shown) == [], shown)
+        check("quick-fix-shutdown", client.stop() == 0, "".join(client.stderr))
+
+        # A fix is an edit, which a client without CodeAction literals cannot take.
+        plain = Client(directory)
+        capabilities = initialize(plain, directory, capabilities={})["capabilities"]
+        check("quick-fix-needs-literal-support", "codeActionProvider" not in capabilities, capabilities)
+        plain.open(path, source)
+        plain.diagnostics_at(path, 1)
+        check("quick-fix-none-without-literal-support",
+              code_actions(plain, path, diagnostic["range"], [diagnostic]) == [])
+        check("quick-fix-plain-shutdown", plain.stop() == 0, "".join(plain.stderr))
+    finally:
+        for started in (client, plain):
+            if started is not None:
+                stop_quietly(started)
 
 
 def check_project(directory):
@@ -516,6 +694,9 @@ def main():
         line_endings = Path(temp).resolve() / "line endings"
         line_endings.mkdir()
         check_line_endings(line_endings)
+        quick_fixes = Path(temp).resolve() / "quick fixes"
+        quick_fixes.mkdir()
+        check_quick_fixes(quick_fixes)
         check_project(Path(temp).resolve())
     print(f"language server: {COUNT} passed, 0 failed")
 

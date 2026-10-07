@@ -2,11 +2,11 @@
 
 Language support for [Sprig](https://colinhouse.github.io/Sprig/en/), an
 indentation-based, statically typed language for the JVM. Diagnostics as you
-type, hover, completion, navigation, references, rename and formatting come
-from the Sprig language server, `sprig lsp`, which runs the same parser and type
-checker as `sprig check`. The extension does not implement a second type
-checker. It also runs programs and tests, shows the generated Java, and
-highlights Sprig without any compiler.
+type, quick fixes, hover, completion, navigation, references, rename and
+formatting come from the Sprig language server, `sprig lsp`, which runs the
+same parser and type checker as `sprig check`. The extension does not
+implement a second type checker. It also runs programs and tests, shows the
+generated Java, and highlights Sprig without any compiler.
 
 Extension version **0.3.0** is independent of the compiler version.
 
@@ -60,6 +60,7 @@ the remote host. Browser-only VS Code and virtual file systems are unsupported.
 | Feature | With the language server | Without it |
 |---|---|---|
 | Diagnostics | As you type, for open files. An error inside an imported file shows on the `import` that reaches it | When you save, for the file and its project's entry graph |
+| Quick fixes | When an error's hint is one mechanical rewrite, such as `else if` to `elif` or a missing `@std` import, the lightbulb offers the compiler's edit and applies it in one click | Not available |
 | Hover | Declarations in Sprig syntax with their types, including locals, parameters and narrowed nullable values, plus the comments above them | Java members, module members and your top-level declarations, from the saved file |
 | Completion | After `.`, the members of any value, including locals and parameters; elsewhere, names in scope, imports and keywords | Keywords, declarations and imports; members after `JavaClass.`, `module.`, an enum or variant, or a top-level variable |
 | Go to Definition | Functions, types, cases, fields, parameters and locals, across modules; on an `import`, the imported file | Import paths, `module.member` and declarations in the same file |
@@ -169,7 +170,7 @@ Server**; its own log is the **Sprig Language Server** output.
 
 - The language server re-checks the whole program on each change, renames only
   locals and parameters, and has no workspace symbols, signature help, code
-  actions or semantic highlighting yet.
+  actions other than quick fixes, or semantic highlighting yet.
 - In a multi-root workspace, one language server serves the window, with the
   compiler configured for the Sprig file or folder it started from.
 - Without the language server, the outline, workspace symbols and Go to
