@@ -26,7 +26,7 @@ func query(raw_query: String?, name: String) -> String?:
     catch problem: Error:
         throw BadRequest("Malformed query")
 
-func parse_json(body: String) -> jsonlib.Value:
+func parse_json(body: String) -> jsonlib.Value throws Error:
     try:
         return jsonlib.parse(body)
     catch problem: Error:

@@ -42,9 +42,9 @@ class Rows:
     func size() -> Int:
         return host.size()
 
-    # True when the value is SQL NULL. An unknown column or out-of-range row
-    # still throws Error, although the signature declares no throws.
-    func is_null(row: Int, column: String) -> Bool:
+    # True when the value is SQL NULL. Throws Error for an unknown column or a
+    # bad row.
+    func is_null(row: Int, column: String) -> Bool throws Error:
         return host.isNull(row, column)
 
     # The value, which must be a non-null INTEGER. Throws Error for NULL, any
@@ -67,29 +67,33 @@ class Rows:
         return host.bool(row, column)
 
 # A SQLite database file; get one from open(path). Each call opens its own
-# connection (foreign keys on), so no transaction spans calls. Bad SQL, a
-# wrong ? count or BEGIN/COMMIT-style SQL throws Error.
+# connection (foreign keys on), so no transaction spans calls. Each sql holds
+# one statement: a trailing ";" or comment is fine, and a second statement
+# throws Error and the call changes nothing. Bad SQL, a wrong ? count or
+# BEGIN/COMMIT-style SQL also throws Error.
 class Database:
     let path: String
 
-    # Runs the first statement in sql and returns how many rows it changed. A
-    # statement that returns rows, such as SELECT or INSERT ... RETURNING,
-    # throws Error; use query for those.
+    # Runs sql, one statement (a second one throws Error), and returns how many
+    # rows it changed. A statement that returns rows, such as SELECT or
+    # INSERT ... RETURNING, throws Error; use query for those.
     func execute(sql: String, parameters: List[Parameter]) -> Int throws Error:
         return HostDatabase(path).execute(sql, bind(parameters))
 
-    # Runs the first statement in sql, a SELECT or INSERT ... RETURNING (whose
-    # write then commits), into Rows. Throws Error and rolls back for a BLOB
-    # value, a repeated column label (alias it) or over 10,000 rows.
+    # Runs sql, one SELECT or INSERT ... RETURNING statement (whose write then
+    # commits), into Rows. A second statement throws Error; a BLOB value, a
+    # repeated column label (alias it) or over 10,000 rows throws Error and
+    # rolls back.
     func query(sql: String, parameters: List[Parameter]) -> Rows throws Error:
         let value = HostDatabase(path).query(sql, bind(parameters))
         if value != null:
             return Rows(host=value)
         throw Error("SQLite query unexpectedly returned null")
 
-    # Runs the first statement of each sql in order, in one transaction: all
-    # commit, or on Error all roll back. Returns the summed change counts, where
-    # a schema statement after a write repeats that write's count.
+    # Runs the statements in order, in one transaction: all commit, or on Error
+    # (a second statement in one sql included) all roll back. Returns the summed
+    # change counts, where a schema statement after a write repeats that
+    # write's count.
     func batch(statements: List[Statement]) -> Int throws Error:
         let batch = HostBatch()
         for statement in statements:

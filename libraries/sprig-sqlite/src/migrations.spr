@@ -9,10 +9,24 @@ class Migrations:
     let database: sqlite.Database
     let directory: String
 
-    # Runs each file not yet recorded, with its ledger row in one transaction,
-    # and returns how many ran. A misnamed entry, a repeated NNN, an applied file
-    # after a pending one or failing SQL throws Error; earlier files stay applied.
+    # Checks the whole directory against the ledger, then runs each file not
+    # yet recorded, with its ledger row in one transaction, and returns how
+    # many ran. A misnamed entry, a repeated NNN, an applied file that sorts
+    # after a pending one or an unreadable pending file throws Error before
+    # any file runs. Failing SQL throws Error and rolls back that file; the
+    # files before it stay applied.
     func apply() -> Int throws Error:
+        let paths = files.list(directory)
+        let identifiers: MutableMap[String, Bool] = {}
+        for path in paths:
+            let name = files.file_name(path)
+            if not valid_migration_name(name):
+                throw Error("invalid migration filename: " + name + " (expected NNN_name.sql)")
+            let identifier = name.substring(0, 3)
+            if identifiers.containsKey(identifier):
+                throw Error("duplicate migration sequence: " + identifier)
+            identifiers.set(identifier, true)
+
         database.execute("CREATE TABLE IF NOT EXISTS sprig_schema_migrations (name TEXT PRIMARY KEY NOT NULL)", [])
         let applied_rows = database.query("SELECT name FROM sprig_schema_migrations ORDER BY name", [])
         let applied: MutableMap[String, Bool] = {}
@@ -21,27 +35,24 @@ class Migrations:
             applied.set(applied_rows.text(row, "name"), true)
             row += 1
 
-        let names = files.list(directory)
-        var completed: Int = 0
-        var pending_seen: Bool = false
-        let identifiers: MutableMap[String, Bool] = {}
-        for path in names:
+        # Read every pending file before running the first one, so that an
+        # order or file problem leaves the database as it was.
+        let pending: MutableList[String] = []
+        let scripts: MutableList[String] = []
+        for path in paths:
             let name = files.file_name(path)
-            if not valid_migration_name(name):
-                throw Error("invalid migration filename: " + name + " (expected NNN_name.sql)")
-            let identifier = name.substring(0, 3)
-            if identifiers.containsKey(identifier):
-                throw Error("duplicate migration sequence: " + identifier)
-            identifiers.set(identifier, true)
             if applied.containsKey(name):
-                if pending_seen:
-                    throw Error("migration order changed: an applied migration follows a pending migration")
+                if pending.size() > 0:
+                    throw Error("migration order changed: " + name + " is applied but sorts after pending " + pending.get(0))
             else:
-                pending_seen = true
-                let sql = files.read_utf8(path)
-                database.batch_script(sql, [sqlite.Statement(sql="INSERT INTO sprig_schema_migrations(name) VALUES (?)", parameters=[sqlite.Parameter.Text(value=name)])])
-                completed += 1
-        return completed
+                pending.append(name)
+                scripts.append(files.read_utf8(path))
+
+        var index: Int = 0
+        while index < pending.size():
+            database.batch_script(scripts.get(index), [sqlite.Statement(sql="INSERT INTO sprig_schema_migrations(name) VALUES (?)", parameters=[sqlite.Parameter.Text(value=pending.get(index))])])
+            index += 1
+        return pending.size()
 
 # Internal: apply()'s file-name check: three digits, "_", one or more ASCII
 # letters, digits, "_" or "-", then ".sql". Call Migrations.apply.

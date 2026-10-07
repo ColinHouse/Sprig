@@ -37,22 +37,30 @@ locks record canonical paths and must be re-resolved after relocating a checkout
 | `Database.execute(sql, List[Parameter]) -> Int` | One prepared statement; return affected row count |
 | `Database.query(sql, List[Parameter]) -> Rows` | Prepared query with detached snapshot; `INSERT ... RETURNING` is supported |
 | `Database.batch(List[Statement]) -> Int` | One transaction; commit all commands or rollback on failure |
-| `Statement(sql=..., parameters=...)` | Visible SQL and explicit typed parameters |
+| `Statement(sql=..., parameters=...)` | Visible SQL (one statement) and explicit typed parameters |
 | `Parameter.Integer(value=Int)` | Exact signed 64-bit INTEGER |
 | `Parameter.Text(value=String)` | TEXT; quotes, Unicode and SQL-looking input remain data |
 | `Parameter.Boolean(value=Bool)` | INTEGER 0/1 |
 | `Parameter.Null` | SQL NULL, distinct from empty text and zero |
 | `Rows.size()` | Detached row count |
-| `Rows.is_null(row, column)` | Explicit nullable-result test |
+| `Rows.is_null(row, column)` | Explicit nullable-result test; `throws Error` for an unknown column or row |
 | `Rows.integer(row, column)` | Require non-null SQLite INTEGER; no Float/String coercion |
 | `Rows.text(row, column)` | Require non-null SQLite TEXT |
 | `Rows.boolean(row, column)` | Require integer 0/1 |
 
 Indices are zero-based; column labels are case-insensitive and must be unique.
 Unknown columns, invalid row indices, wrong kinds, NULL access through a non-null
-accessor, or incorrect parameter count fail explicitly. Each query is limited to
+accessor, or incorrect parameter count fail explicitly. Every `Rows` accessor
+except `size()` declares `throws Error`. Each query is limited to
 10,000 snapshot rows; whole result sets are loaded in memory. There is no cursor API.
 BLOB and Decimal bindings are deliberately absent. INTEGER money uses minor units.
+
+Each SQL string passed to `execute`, `query` or a batch `Statement` holds one
+statement. A trailing `;`, empty statements and comments after it are fine, and
+a semicolon inside quotes, a comment or a trigger body does not count. A second
+statement is an `Error`, and the call changes nothing (a batch rolls back), where
+JDBC would run the first statement and silently ignore the rest. Put a
+multi-statement script in a migration file instead.
 
 Each operation creates a connection, enables foreign keys and a 5-second busy
 timeout, binds parameters, and closes statements/results/connections with Java
@@ -89,10 +97,13 @@ Import `@sqlite/migrations.spr` and call
 `Migrations(database=database, directory="migrations").apply()`. Files must be
 named `NNN_description.sql`; they are applied in sorted filename order and
 recorded by name in `sprig_schema_migrations`. Keep applied files immutable.
-The three-digit sequence prefix must be unique; if an applied file sorts after
-a pending file, application stops rather than running migrations out of order.
-Each multi-statement SQL script and its ledger row execute in the same batch
-transaction. A failure rolls both back and can be retried after fixing the
-unapplied migration. The migration directory is trusted project code, and this
-version does not hash applied files to detect edits. See
+The three-digit sequence prefix must be unique, and an applied file must not
+sort after a pending one. Before running anything, `apply()` checks every
+directory entry's name and sequence number, checks the order against the
+ledger and reads every pending file; any problem there is an `Error` and no
+migration runs. Each multi-statement SQL script and its ledger row then
+execute in the same batch transaction. A failing script rolls both back,
+the migrations before it stay applied, and `apply()` can be run again after
+fixing the unapplied migration. The migration directory is trusted project
+code, and this version does not hash applied files to detect edits. See
 [`examples/sqlite_migrations`](../../examples/sqlite_migrations/README.md).

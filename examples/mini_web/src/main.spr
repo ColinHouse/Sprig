@@ -15,10 +15,10 @@ func hello(req: web.Request) -> web.Response:
         return web.text("Hello, " + name + "!", 200)
     return web.text("Missing name", 400)
 
-func echo(req: web.Request) -> web.Response:
+func echo(req: web.Request) -> web.Response throws Error:
     return web.json_response(req.json(), 200)
 
-func fail(req: web.Request) -> web.Response:
+func fail(req: web.Request) -> web.Response throws Error:
     return web.json_response(json.Value.Number(text="broken"), 200)
 
 app.get("/", fn(req: web.Request) => root(req))

@@ -39,7 +39,12 @@ func greet(req: web.Request) -> web.Response:
         return web.text("Hello, " + name, 200).with_header("X-Example", "Sprig")
     return web.text("Missing name", 400)
 
+# Malformed JSON makes req.json() throw; escaping the handler, it becomes 400.
+func echo(req: web.Request) -> web.Response throws Error:
+    return web.json_response(req.json(), 200)
+
 app.get("/hello/{name}", fn(req: web.Request) => greet(req))
+app.post("/echo", fn(req: web.Request) => echo(req))
 app.run(8080)
 ```
 
@@ -51,21 +56,23 @@ helpers are module functions: `web.text(body, status)` and
 |---|---|
 | App | `App(title=..., version="1.0.0", cors_origin="")`; fields shown with defaults are optional constructor fields |
 | Routes | `get`, `post`, `put`, `patch`, `delete(path, handler)`, `route(Route(...))`; registration can throw `Error` |
-| Handler | `fn(Request) -> Response`; synchronous; handle recoverable `Error` inside the handler, because callable types have no throws clause |
+| Handler | `fn(Request) -> Response throws Error`; synchronous; catch an `Error` to choose the response yourself, or declare `throws Error` and let the server answer it (see Errors) |
 | Matching | Registration order wins, exact segments or one `{name}` per segment; decoded segment matching preserves encoded slashes inside a parameter; trailing slash is significant |
 | Request | Read-only `method`, decoded `path`, UTF-8 `body`; `path_param(name)`, `query(name)`, `header(name)` return `String?` |
 | Query | UTF-8 form decoding (`+` is space); first occurrence wins; absent is null, present empty is `""`; embedded `=` preserved |
 | Header | Case-insensitive request lookup via JDK; response `Header(name=..., value=...)` list or `with_header(name,value)` |
-| JSON | `req.json() -> json.Value`; `web.json_response(value,status)` uses existing closed `@std/json` data and exact number lexemes; `@std/json_codec` reads fields with paths and kind checks, as in `codec.required_string(codec.root(req.json()), "name")` |
-| Errors | Malformed JSON/URI/UTF-8 becomes 400; missing route 404; handled application `Error` and unchecked handler errors become a generic 500 without exception details |
+| JSON | `req.json() -> json.Value throws Error`; `web.json_response(value,status) -> Response throws Error` uses existing closed `@std/json` data and exact number lexemes; `@std/json_codec` reads fields with paths and kind checks, as in `codec.required_string(codec.root(req.json()), "name")` |
+| Errors | Malformed URI/UTF-8 becomes 400, and so does the `BadRequest` that `req.json()` throws for a malformed body when it escapes the handler; missing route 404; any other `Error` or unchecked exception that escapes a handler becomes a generic 500 without exception details |
 | CORS | Explicit `cors_origin` adds allow-origin, GET/POST/PUT/PATCH/DELETE/OPTIONS, Content-Type and Vary headers; OPTIONS 204; no credential mode |
 | Response | `Response(status=..., body=..., content_type="text/plain; charset=utf-8", headers=[])`; status 200..599; transport owns framing; 204/304 omit body |
 
-Invalid JSON response values become controlled 500 after the library explicitly
-catches stringify's recoverable Error. Metadata describes schemas; it does **not**
-validate request bodies. The application still inspects closed JSON variants and
-validates its own domain input. Checked JVM/database errors must be caught by the
-handler or its helper, returning a response deliberately.
+`json_response` turns a value that stringify rejects into an `Error` ("cannot write
+the response as JSON: ..."), which becomes a controlled 500 when it escapes the
+handler. Metadata describes schemas; it does **not** validate request bodies. The
+application still inspects closed JSON variants and validates its own domain input.
+A handler catches the errors it answers deliberately, such as a database constraint
+as 400. A checked Java exception never crosses a function value, so a named helper
+catches it.
 
 ## Explicit OpenAPI and Swagger UI
 

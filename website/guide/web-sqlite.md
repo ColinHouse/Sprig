@@ -31,7 +31,7 @@ cd examples/ledger
 
 ## 处理函数就是普通的 Sprig 函数
 
-每个路由的处理函数，类型都是 `fn(web.Request) -> web.Response`。下面这几段摘自 `examples/mini_web/src/main.spr`：
+每个路由的处理函数，类型都是 `fn(web.Request) -> web.Response throws Error`：出了错，可以自己捕获，也可以让它抛出去。下面这几段摘自 `examples/mini_web/src/main.spr`：
 
 ```sprig
 import "@web/web.spr" as web
@@ -50,6 +50,9 @@ func hello(req: web.Request) -> web.Response:
         return web.text("Hello, " + name + "!", 200)
     return web.text("Missing name", 400)
 
+func echo(req: web.Request) -> web.Response throws Error:
+    return web.json_response(req.json(), 200)
+
 app.get("/", fn(req: web.Request) => root(req))
 ```
 
@@ -57,7 +60,8 @@ app.get("/", fn(req: web.Request) => root(req))
 - 响应用模块函数来构造：`web.text(内容, 状态码)` 和 `web.json_response(值, 状态码)`。没有 `Response.text` 这种静态方法的写法。
 - `req.path_param`、`req.query`、`req.header` 都返回 `String?`，所以「没有这个参数」和「参数是空字符串」能区分开。
 - `req.body` 是 UTF-8 文本，`req.json()` 把请求体解析成 JSON 值。要在 JSON 里找字段，用 `json.find_member`，它能区分键不存在、值是 JSON 的 `null`，以及要查的不是对象这几种情况，见[语言速查](/guide/language-tour)。
-- 请求格式不对时返回 400，找不到路由时返回 404，处理函数里出了没处理的错误时，返回一个受控的 500。
+- 请求体不是合法的 JSON 时，`req.json()` 会抛出 `Error`；`web.json_response` 遇到写不成 JSON 的值，也会抛出 `Error`。可以在处理函数里捕获，自己决定返回什么；也可以像上面的 `echo` 一样声明 `throws Error`，交给服务器处理。
+- 请求格式不对时返回 400（`req.json()` 解析失败、处理函数又把错误抛了出去，也是 400），找不到路由时返回 404，处理函数抛出的其他错误，返回一个受控的 500。
 
 ## 接口文档
 
@@ -70,6 +74,7 @@ OpenAPI 文档来自你明确写出的 `Schema`、`FieldSchema`、`QueryParamete
 SQLite 库通过 Maven 拿到固定版本的 `org.xerial:sqlite-jdbc:3.46.1.0`，具体文件记录在锁文件里。
 
 - SQL 语句就是你写的普通字符串，算作可信的应用代码。用户提供的值一律通过预编译语句的参数传进去，参数只有 `Integer`、`Text`、`Boolean`、`Null` 四种。这不是 SQL 沙箱。
+- 每个 SQL 字符串只能写一条语句。末尾带分号或注释没关系；多写一条会直接报错，不会被悄悄跳过。有多条语句的脚本，写成迁移文件。
 - 查询返回的是带类型的结果快照，已经和数据库连接断开。连接、语句和结果集用完都会关闭。单次查询的结果最多 10,000 行，超过会报错；结果会整个读进内存。
 - `Database.batch` 在一个事务里执行一组语句，任何一条失败就全部回滚。查询（包括 `INSERT ... RETURNING`）失败时，它写进去的数据也会回滚。
 - 不支持你自己写 `BEGIN`、`COMMIT` 这类事务语句，事务只由 `batch` 管理。
@@ -80,7 +85,7 @@ SQLite 库通过 Maven 拿到固定版本的 `org.xerial:sqlite-jdbc:3.46.1.0`�
 导入 `@sqlite/migrations.spr`，然后调用 `Migrations(database=database, directory="migrations").apply()`：
 
 - 迁移文件命名为 `NNN_description.sql`，开头的三位编号不能重复。
-- 文件按文件名顺序执行，执行过的文件名记在 `sprig_schema_migrations` 表里。如果一个已经执行过的文件排在某个还没执行的文件后面，迁移会停下来，不会乱序执行。
+- 文件按文件名顺序执行，执行过的文件名记在 `sprig_schema_migrations` 表里。执行任何文件之前，`apply()` 会先拿整个目录和这张表核对：文件名不合规、编号重复，或者已经执行过的文件排在还没执行的文件后面，都会直接报错，一个文件也不执行。
 - 每个文件里的 SQL 和它的执行记录在同一个事务里提交。失败就一起回滚，修好以后可以再次执行。
 - 已经执行过的文件不要再改：目前不会计算文件内容的校验值，改了也发现不了。迁移目录被当作可信的项目代码。
 

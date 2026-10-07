@@ -188,7 +188,7 @@ with tempfile.TemporaryDirectory(prefix="sprig-api-") as temp:
     get = None if app is None else [m for m in app.get("methods", []) if m["name"] == "get"]
     verify("package module target",
            proc.returncode == 0 and web.get("module") == "@web/app.spr"
-           and get and get[0]["parameters"][1]["type"] == "fn(Request) -> Response", f"{proc.stdout}{proc.stderr}")
+           and get and get[0]["parameters"][1]["type"] == "fn(Request) -> Response throws Error", f"{proc.stdout}{proc.stderr}")
 
     proc, cli = result(project, "api", "@cli/cli.spr", "--json")
     verify("second package module", proc.returncode == 0 and declaration(cli, "parse") is not None,

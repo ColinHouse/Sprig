@@ -10,7 +10,7 @@ func todo_json(todo: store.Todo) -> json.Value:
         json.Member(key="done", value=json.Value.Boolean(value=todo.done))
     ])
 
-func error_json(message: String, status: Int) -> web.Response:
+func error_json(message: String, status: Int) -> web.Response throws Error:
     return web.json_response(json.Value.Object(members=[json.Member(key="error", value=json.Value.Text(value=message))]), status)
 
 func id_param(req: web.Request) -> Int?:
@@ -44,14 +44,14 @@ func title_of(body: json.Value) -> String? throws Error:
 class Api:
     let todos: store.Store
 
-    func list(req: web.Request) -> web.Response:
+    func list(req: web.Request) -> web.Response throws Error:
         try:
             let items = todos.all().map(todo_json)
             return web.json_response(json.Value.Array(values=items), 200)
         catch problem: Error:
             return error_json(problem.message, 500)
 
-    func create(req: web.Request) -> web.Response:
+    func create(req: web.Request) -> web.Response throws Error:
         try:
             let title = title_of(req.json())
             if title == null:
@@ -60,7 +60,7 @@ class Api:
         catch problem: Error:
             return error_json(problem.message, 400)
 
-    func done(req: web.Request) -> web.Response:
+    func done(req: web.Request) -> web.Response throws Error:
         let id = id_param(req)
         if id == null:
             return error_json("id must be an integer", 400)
@@ -74,7 +74,7 @@ class Api:
         catch problem: Error:
             return error_json(problem.message, 500)
 
-    func remove(req: web.Request) -> web.Response:
+    func remove(req: web.Request) -> web.Response throws Error:
         let id = id_param(req)
         if id == null:
             return error_json("id must be an integer", 400)
