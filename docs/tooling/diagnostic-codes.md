@@ -71,6 +71,9 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-RUNTIME-ERROR | Uncaught Sprig Error value at runtime; the wrapped message, `origin` data and source range are reported. |
 | SPR-WRAP-CHECK | Generated Java-to-Sprig wrapper source failed Sprig checking or formatting. |
 | SPR-RUNTIME-EXCEPTION | Uncaught JVM exception at runtime, wrapped to a Sprig-level message with a source range; `run --stacktrace` restores the raw JVM stack. |
+| SPR-BUNDLE-TOOLS | `sprig build --bundle` needs `jdeps` and `jlink` from a full JDK; the Java installation in use has none (a JRE). |
+| SPR-BUNDLE-JDEPS | `jdeps` could not analyze the bundle's JARs to find the Java modules the program needs. |
+| SPR-BUNDLE-LAYOUT | The Java installation or the classpath has a layout the bundle cannot use: no `jmods` directory, a `jlink` failure, or a classpath entry that is not a JAR or a class directory. |
 | SPR-PROGRAM-EXIT | The Sprig program exited with a non-zero process status. |
 | SPR-SYNTAX-ERROR | The token sequence does not match the Sprig grammar. |
 | SPR-TYPE-ASSIGN | Assignment value does not match the target type. |

@@ -36,6 +36,7 @@ language = "0.8"
 sprig check                  # 检查入口，以及它导入的所有文件
 sprig run                    # 检查并运行
 sprig build                  # 生成 Java 和 class 文件
+sprig build --bundle         # 再打一个自带 Java 运行时的目录，给没装 JDK 的机器
 sprig test                   # 运行 tests/ 下的测试
 sprig project                # 查看项目信息
 sprig run path/to/file.spr   # 指定了文件，就以你指定的为准

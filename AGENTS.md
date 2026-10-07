@@ -55,6 +55,7 @@ Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work
 | Generic Gradle integration | `python3 tests/gradle/check_gradle_plugin.py` | ordinary Java fixture; no Loom/Minecraft dependencies |
 | Fabric/Loom integration | `python3 tests/fabric/check_template.py` | explicit host-framework integration test; downloads may be needed |
 | Projects/dependencies | `python3 tests/project_deps/check_deps.py` | lock/cache/project behavior |
+| Bundles (`build --bundle`) | `python3 tests/bundle/check_bundle.py` | jlink images and launchers run without a JDK on PATH |
 | Maven graph/cache | `python3 tests/maven/check_resolver.py` | offline effective-model fixtures |
 | Standard modules/showcases | `python3 scripts/test-stdlib.py` / `python3 scripts/test-showcases.py` | real programs on JVM |
 | VS Code editor | `python3 scripts/check-editor.py` | actual TextMate/CLI/JVM and VSIX; host tests run separately |
