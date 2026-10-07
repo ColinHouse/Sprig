@@ -122,7 +122,14 @@ def main():
         check("hello-runs-without-java", result.returncode == 0 and out == "hello, 世界\n" and err == "",
               f"exit={result.returncode} out={out!r} err={err!r}")
         archive_cache = home / ".cache" / "sprig" / "bundles"
-        if not WINDOWS:
+        # -XX:+AutoCreateSharedArchive exists since JDK 19; the report says whether the
+        # launchers use it, and the archive appears only then.
+        feature = int(hello_data["javaVersion"].split(".")[0].split("-")[0])
+        check("launcher-cds-matches-jdk", hello_data["launcherCdsArchive"] == (feature >= 19), hello_data["javaVersion"])
+        launcher_text = launcher_of(hello_bundle, "hello").read_text(encoding="utf-8")
+        check("launcher-flags-match-jdk", ("AutoCreateSharedArchive" in launcher_text) == hello_data["launcherCdsArchive"],
+              launcher_text)
+        if not WINDOWS and hello_data["launcherCdsArchive"]:
             check("cds-archive-created", any(archive_cache.rglob("app.jsa")), list(home.rglob("*")))
         again = run_launcher(launcher_of(hello_bundle, "hello"), [], env, elsewhere)
         check("hello-second-run", again.returncode == 0 and decoded(again)[0] == "hello, 世界\n", decoded(again))

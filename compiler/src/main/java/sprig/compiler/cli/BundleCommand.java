@@ -58,6 +58,7 @@ final class BundleCommand {
         long runtimeBytes;
         long libBytes;
         boolean cdsArchive;
+        boolean launcherCdsArchive;
         String compression;
 
         Map<String, Object> details() {
@@ -69,6 +70,7 @@ final class BundleCommand {
             details.put("runtimeBytes", runtimeBytes);
             details.put("libBytes", libBytes);
             details.put("jlinkCdsArchive", cdsArchive);
+            details.put("launcherCdsArchive", launcherCdsArchive);
             details.put("compression", compression);
             details.put("platform", platform());
             details.put("javaVersion", Runtime.version().toString());
@@ -224,6 +226,9 @@ final class BundleCommand {
             jlinkBase.add("--compress=2");
         }
         boolean cds = feature >= 19;
+        // -XX:+AutoCreateSharedArchive exists since JDK 19; an older runtime image
+        // rejects the option, so the launchers then run without an archive.
+        result.launcherCdsArchive = cds;
         List<String> jlinkCommand = new ArrayList<>(jlinkBase);
         if (cds) jlinkCommand.add("--generate-cds-archive");
         jlinkCommand.add("--output");
@@ -267,9 +272,11 @@ final class BundleCommand {
         String stamp = stamp(mainClass, jars);
         result.unixLauncher = bin.resolve(name);
         result.windowsLauncher = bin.resolve(name + ".cmd");
-        Files.writeString(result.unixLauncher, unixLauncher(name, mainClass, stamp), StandardCharsets.UTF_8);
+        Files.writeString(result.unixLauncher, unixLauncher(name, mainClass, stamp, result.launcherCdsArchive),
+                StandardCharsets.UTF_8);
         setExecutable(result.unixLauncher);
-        Files.write(result.windowsLauncher, windowsLauncher(name, mainClass, stamp).getBytes(StandardCharsets.UTF_8));
+        Files.write(result.windowsLauncher,
+                windowsLauncher(name, mainClass, stamp, result.launcherCdsArchive).getBytes(StandardCharsets.UTF_8));
         Files.writeString(bundleDir.resolve("README.txt"), readme(name, mainClass, result), StandardCharsets.UTF_8);
 
         if (archive) {
@@ -284,16 +291,20 @@ final class BundleCommand {
     // Launchers
     // ------------------------------------------------------------------
 
-    private static String unixLauncher(String name, String mainClass, String stamp) {
+    private static String unixLauncher(String name, String mainClass, String stamp, boolean cdsArchive) {
         // The main class is single-quoted: generated class names contain '$'.
         // The class-data-sharing archive of the program's own classes lives in the
         // user's cache directory, keyed by the bundle's location (the JVM ties an
         // archive to the exact JAR paths), and JDK 19+ creates and refreshes it;
         // JVM logging is off so a stale archive is rebuilt silently. Without a
         // writable cache the program simply runs without an archive.
-        return "#!/bin/sh\n"
+        String plain = "exec \"$HERE/runtime/bin/java\" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \\\n"
+                + "  -cp \"$HERE/lib/*\" '" + mainClass + "' \"$@\"\n";
+        String head = "#!/bin/sh\n"
                 + "set -eu\n"
-                + "HERE=\"$(CDPATH= cd -- \"$(dirname -- \"$0\")/..\" && pwd)\"\n"
+                + "HERE=\"$(CDPATH= cd -- \"$(dirname -- \"$0\")/..\" && pwd)\"\n";
+        if (!cdsArchive) return head + plain;
+        return head
                 + "KEY=; REST=\"$HERE\"\n"
                 + "while :; do case $REST in */*) KEY=\"$KEY${REST%%/*}_\"; REST=${REST#*/};; *) KEY=\"$KEY$REST\"; break;; esac; done\n"
                 + "CACHE=\"${XDG_CACHE_HOME:-${HOME:-}/.cache}/sprig/bundles/" + name + "-" + stamp + "/$KEY\"\n"
@@ -302,16 +313,18 @@ final class BundleCommand {
                 + "    -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=$CACHE/app.jsa\" -Xshare:auto -Xlog:disable -Xlog:all=error:stderr \\\n"
                 + "    -cp \"$HERE/lib/*\" '" + mainClass + "' \"$@\"\n"
                 + "fi\n"
-                + "exec \"$HERE/runtime/bin/java\" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \\\n"
-                + "  -cp \"$HERE/lib/*\" '" + mainClass + "' \"$@\"\n";
+                + plain;
     }
 
-    private static String windowsLauncher(String name, String mainClass, String stamp) {
+    private static String windowsLauncher(String name, String mainClass, String stamp, boolean cdsArchive) {
         // CRLF, delayed expansion off: an inherited delayed-expansion state would
         // strip '!' from forwarded arguments and the bundle path.
-        return "@echo off\r\n"
+        String plain = "\"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n";
+        String head = "@echo off\r\n"
                 + "setlocal DisableDelayedExpansion\r\n"
-                + "for %%I in (\"%~dp0..\") do set \"HERE=%%~fI\"\r\n"
+                + "for %%I in (\"%~dp0..\") do set \"HERE=%%~fI\"\r\n";
+        if (!cdsArchive) return head + plain + "exit /b %errorlevel%\r\n";
+        return head
                 + "set \"KEY=%HERE:\\=_%\"\r\n"
                 + "set \"KEY=%KEY::=%\"\r\n"
                 + "set \"CACHE=%LOCALAPPDATA%\\sprig\\bundles\\" + name + "-" + stamp + "\\%KEY%\"\r\n"
@@ -319,7 +332,7 @@ final class BundleCommand {
                 + "if exist \"%CACHE%\" (\r\n"
                 + "  \"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -XX:+AutoCreateSharedArchive \"-XX:SharedArchiveFile=%CACHE%\\app.jsa\" -Xshare:auto -Xlog:disable -Xlog:all=error:stderr -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n"
                 + ") else (\r\n"
-                + "  \"%HERE%\\runtime\\bin\\java.exe\" -Dfile.encoding=UTF-8 -cp \"%HERE%\\lib\\*\" " + mainClass + " %*\r\n"
+                + "  " + plain
                 + ")\r\n"
                 + "exit /b %errorlevel%\r\n";
     }
@@ -331,7 +344,9 @@ final class BundleCommand {
                 + "lib/      the program (" + name + ".jar, main class " + mainClass + "), the Sprig runtime and the program's JARs\n"
                 + "runtime/  a Java runtime image (jlink) with the modules " + String.join(", ", result.modules) + ";\n"
                 + "          runtime/legal/ holds the JDK's license notices (GPLv2 with the Classpath Exception) and must stay with it\n"
-                + "bin/      the launchers; they keep a class-data-sharing archive under the user's cache directory for faster starts\n";
+                + "bin/      the launchers" + (result.launcherCdsArchive
+                        ? "; they keep a class-data-sharing archive under the user's cache directory for faster starts\n"
+                        : " (built by a JDK older than 19: no class-data-sharing archive of the program)\n");
     }
 
     // ------------------------------------------------------------------

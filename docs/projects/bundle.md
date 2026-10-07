@@ -59,7 +59,8 @@ program's status. Standard output and error are UTF-8.
    `%LOCALAPPDATA%\sprig\bundles\` on Windows), keyed by the bundle's location,
    so copies of a bundle do not share one; without a writable cache the program
    runs without an archive. JVM logging is off in that mode, so a stale archive
-   is rebuilt silently.
+   is rebuilt silently. A bundle built by a JDK older than 19 gets launchers
+   without these flags (the `--json` report shows `launcherCdsArchive`).
 
 `runtime/legal/` holds the notices of every module in the image. OpenJDK is
 licensed under the GPLv2 with the Classpath Exception, which allows
