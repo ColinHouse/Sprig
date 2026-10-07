@@ -668,6 +668,11 @@ public final class ParserFrontend {
             return "Sprig has no '..' range operator\n"
                     + "Write range(start, stop), which stops before stop, for example 'for i in range(0, count):'.";
         }
+        if (type == SprigLexer.ASSIGN && within(parser, SprigParser.FieldDeclarationContext.class)) {
+            String name = previous == SprigLexer.IDENT ? stream.get(index - 1).getText() : "name";
+            return "Fields have explicit types; write 'let " + name + ": Int = 0'\n"
+                    + "For other types, write 'let " + name + ": Type = value'.";
+        }
         int lineFirst = lineStart(stream, index);
         int first = stream.get(lineFirst).getType();
         // class Pair(first: Int, second: Int) takes immutable fields only; a ':' body,
