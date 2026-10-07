@@ -45,8 +45,34 @@ independent grammar tests, executed docs and the VitePress production build,
 and editor tokenization/CLI/package checks. First use downloads pinned tools/libraries.
 Archive smoke, all-OS/JDK CI, checksum and publication gates remain release work.
 
+The workflow rule:
+
+- **While iterating**, run `python3 scripts/test-affected.py` (`--list` shows
+  the selection). It maps the changed paths (merge base with `origin/main`,
+  plus staged, unstaged and untracked files) to gates through
+  `tests/test-map.json`, always adds a smoke set (build plus a handful of
+  goldens), and runs them through the same parallel runner as the full gate.
+  An unmapped path, or a change to the runner, the build or the map, runs
+  everything.
+- **Before opening or updating a PR**, run the full `python3 scripts/test.py`.
+  It is parallel: `--jobs N` (default CPU count capped at 8, `SPRIG_TEST_JOBS`
+  overrides the default, `--jobs 1` is the sequential order for debugging).
+  Each gate prints as one block when it finishes; the final record keeps the
+  map's order, with the ten slowest gates at the end.
+- **CI** keeps running the full gate on every required check.
+
+`tests/test-map.json` is the one inventory of gates. A gate marked `serial`
+names why it cannot share the machine (Gradle's `~/.gradle`, the SDK archive
+under `dist/`, the tracked `sprig.lock` files, the in-tree acceptance results);
+the serial group runs alone after the parallel group. A failure that appears
+only in parallel is a real bug in the test (shared state, a port collision):
+find and fix its cause; never add retries. A new suite is added to the map,
+with a path rule that selects it, and `tests/test_map/check_test_map.py` keeps
+every gate reachable and every named file present.
+
 | Focus | Fast command after build | Evidence |
 |---|---|---|
+| The gates a change affects | `python3 scripts/test-affected.py` | the selected suites below, plus build and smoke goldens |
 | Lexer/layout/parser | `python3 scripts/test-grammar.py` | parser only |
 | Types/flow/diagnostics | `python3 scripts/check_cases.py .` | static checking |
 | Generation/runtime | `python3 tests/correctness/check_correctness.py` | Java/JVM |

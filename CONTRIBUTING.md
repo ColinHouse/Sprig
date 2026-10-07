@@ -28,9 +28,11 @@ understanding the change, tests, licensing and correctness.
    ```
 
    `python3 scripts/verify.py` is equivalent on Linux/macOS. This builds the
-   compiler, runs all compiler/JVM regressions and the independent grammar
-   harness, executes documentation snippets, builds/checks the website, and runs
-   VS Code tokenization/CLI/package checks.
+   compiler, runs all compiler/JVM regressions (in parallel) and the independent
+   grammar harness, executes documentation snippets, builds/checks the website,
+   and runs VS Code tokenization/CLI/package checks. While iterating, run
+   `python3 scripts/test-affected.py` instead, which selects the gates your
+   change touches (see "Focused checks" below).
    First use downloads pinned build libraries and npm dependencies.
 6. Review the diff yourself. Keep regression evidence, remove unrelated
    edits, and explain which commands actually passed.
@@ -55,11 +57,38 @@ Report disagreements with a reproducer. Do not improvise a language feature.
 
 ## Focused checks and release checks
 
-During an edit, use the subsystem commands in `AGENTS.md`; before opening a
-PR, run `verify`. For editor changes, also run `npm run test:host` in
-`editors/vscode/`; see its README for isolated real-host testing. State separately whether evidence is parser acceptance,
-static checking, generated Java compilation, or JVM runtime behavior.
-Never change a golden output or weaken an assertion merely to remove a failure.
+While iterating, run the gates your change affects:
+
+```bash
+python3 scripts/test-affected.py          # --list shows the selection without running
+```
+
+It diffs against the merge base with `origin/main` (plus staged, unstaged and
+untracked files), maps the paths to gates through `tests/test-map.json`, always
+adds a smoke set (the build and a handful of goldens), and runs the selection
+through the same parallel runner as the full gate. A path no rule covers, or a
+change to the runner or the map, runs everything. The subsystem commands in
+`AGENTS.md` remain the way to run one suite by hand.
+
+Before opening or updating a PR, run the full gate, which is parallel:
+
+```bash
+python3 scripts/test.py                   # --jobs N; default CPU count capped at 8
+```
+
+`--jobs 1` keeps the sequential order for debugging; `SPRIG_TEST_JOBS` changes
+the default. Gates that share state (Gradle's cache, the SDK archive under
+`dist/`, the tracked lock files, the acceptance results directory) are marked
+`serial` in the map, with the reason, and run alone after the parallel group.
+A failure that appears only in parallel is a bug in the test (shared state, a
+port collision): fix its cause, never add a retry. CI keeps running the full
+gate on every required check; nothing about required CI changes.
+
+For editor changes, also run `npm run test:host` in `editors/vscode/`; see its
+README for isolated real-host testing. State separately whether evidence is
+parser acceptance, static checking, generated Java compilation, or JVM runtime
+behavior. Never change a golden output or weaken an assertion merely to remove
+a failure.
 
 Release validation additionally packages the SDK, verifies checksums/legal
 notices, extracts and exercises each showcase from the archive, and runs the
