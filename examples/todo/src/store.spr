@@ -1,0 +1,44 @@
+# SQLite-backed todo storage with explicit SQL.
+import "@sqlite/sqlite.spr" as sqlite
+
+class Todo:
+    let id: Int
+    let title: String
+    let done: Bool
+
+class Store:
+    let db: sqlite.Database
+
+    func init_schema() -> Unit throws Error:
+        db.execute("CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0)", [])
+
+    func add(title: String) -> Todo throws Error:
+        if title.trim().length() == 0:
+            throw Error("title must not be empty")
+        let rows = db.query("INSERT INTO todos(title, done) VALUES (?, 0) RETURNING id", [sqlite.Parameter.Text(value=title)])
+        return Todo(id=rows.integer(0, "id"), title=title, done=false)
+
+    func all() -> List[Todo] throws Error:
+        let rows = db.query("SELECT id, title, done FROM todos ORDER BY id", [])
+        let out: MutableList[Todo] = []
+        for index in range(rows.size()):
+            out.append(Todo(id=rows.integer(index, "id"), title=rows.text(index, "title"), done=rows.boolean(index, "done")))
+        return out.toList()
+
+    func find(id: Int) -> Todo? throws Error:
+        let rows = db.query("SELECT id, title, done FROM todos WHERE id = ?", [sqlite.Parameter.Integer(value=id)])
+        if rows.size() == 0:
+            return null
+        return Todo(id=rows.integer(0, "id"), title=rows.text(0, "title"), done=rows.boolean(0, "done"))
+
+    # True when a row changed.
+    func complete(id: Int) -> Bool throws Error:
+        return db.execute("UPDATE todos SET done = 1 WHERE id = ?", [sqlite.Parameter.Integer(value=id)]) == 1
+
+    func remove(id: Int) -> Bool throws Error:
+        return db.execute("DELETE FROM todos WHERE id = ?", [sqlite.Parameter.Integer(value=id)]) == 1
+
+func open_store(path: String) -> Store throws Error:
+    let store = Store(db=sqlite.open(path))
+    store.init_schema()
+    return store

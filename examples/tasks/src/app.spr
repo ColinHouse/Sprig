@@ -1,0 +1,84 @@
+# Subcommand dispatch: tasks [--file F] add TITLE... | list [--all] | done ID | remove ID
+import "@cli/cli.spr" as cli
+import "@std/text.spr" as text
+import "./tasks.spr" as tasks
+
+let PROGRAM = "tasks"
+let SUMMARY = "Keep a todo list in a JSON file.\n\nCommands:\n  add TITLE...   add a task\n  list           show open tasks (--all shows done ones too)\n  done ID        mark a task done\n  remove ID      delete a task"
+
+func specs() -> List[cli.OptionSpec]:
+    return [
+        cli.OptionSpec(name="file", short_name="f", kind=cli.OptionKind.VALUE, description="JSON file (default tasks.json)"),
+        cli.OptionSpec(name="all", short_name="a", kind=cli.OptionKind.FLAG, description="list done tasks as well"),
+        cli.OptionSpec(name="help", short_name="h", kind=cli.OptionKind.FLAG, description="show this help")
+    ]
+
+func usage() -> String:
+    return cli.usage(PROGRAM, SUMMARY, specs())
+
+func parse_id(positionals: List[String]) -> Int throws Error:
+    if positionals.size() < 2:
+        throw Error("missing task id")
+    let id = positionals[1].toIntOrNull()
+    if id == null:
+        throw Error("task id must be an integer, got '" + positionals[1] + "'")
+    return id
+
+# Runs one invocation; returns the process exit status. Output goes through print.
+func run(arguments: List[String]) -> Int:
+    try:
+        let parsed = cli.parse(arguments, specs())
+        if parsed.flag("help"):
+            print(usage())
+            return 0
+        let file = parsed.value("file")
+        let path = if file == null:
+            "tasks.json"
+        else:
+            file
+        let positionals = parsed.positionals
+        if positionals.size() == 0:
+            throw Error("missing command; try --help")
+        let command = positionals[0]
+        let current = tasks.load(path)
+        if command == "add":
+            if positionals.size() < 2:
+                throw Error("add needs a title")
+            let title_words: MutableList[String] = []
+            for index in range(1, positionals.size()):
+                title_words.append(positionals[index])
+            let updated = tasks.add(current, text.join(title_words, " "))
+            tasks.save(path, updated)
+            print("added " + tasks.format(updated[updated.size() - 1]))
+            return 0
+        elif command == "list":
+            let show_all = parsed.flag("all")
+            var shown = 0
+            for task in current:
+                if show_all or not task.done:
+                    print(tasks.format(task))
+                    shown += 1
+            if shown == 0:
+                print("nothing to do")
+            return 0
+        elif command == "done":
+            let id = parse_id(positionals)
+            let updated = tasks.mark_done(current, id)
+            if updated == null:
+                throw Error("no task " + id)
+            tasks.save(path, updated)
+            print("done " + id)
+            return 0
+        elif command == "remove":
+            let id = parse_id(positionals)
+            let updated = tasks.remove(current, id)
+            if updated == null:
+                throw Error("no task " + id)
+            tasks.save(path, updated)
+            print("removed " + id)
+            return 0
+        else:
+            throw Error("unknown command '" + command + "'; try --help")
+    catch problem: Error:
+        print(PROGRAM + ": " + problem.message)
+        return 2

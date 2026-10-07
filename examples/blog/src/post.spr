@@ -1,0 +1,133 @@
+# A blog post parsed from a Markdown-ish file: front-matter lines, then paragraphs.
+import "@std/text.spr" as text
+import "@std/lists.spr" as lists
+
+class Post:
+    let slug: String
+    let title: String
+    let date: String
+    let paragraphs: List[String]
+
+class ParseError:
+    let message: String
+    let file: String
+
+conform ParseError to Error(message)
+
+# Replaces the five HTML special characters.
+func escape_html(value: String) -> String:
+    var out = ""
+    for ch in value:
+        if ch == "&":
+            out += "&amp;"
+        elif ch == "<":
+            out += "&lt;"
+        elif ch == ">":
+            out += "&gt;"
+        elif ch == "\"":
+            out += "&quot;"
+        elif ch == "'":
+            out += "&#39;"
+        else:
+            out += ch
+    return out
+
+# A URL-safe slug from a file name such as "2024-01-05-hello-world.md".
+func slug_of(file_name: String) -> String:
+    let base = text.strip_suffix(text.strip_suffix(file_name, ".md"), ".txt")
+    var out = ""
+    for ch in base.toLowerCase():
+        if text.is_ascii_letter(ch) or text.is_ascii_digit(ch) or ch == "-":
+            out += ch
+        else:
+            out += "-"
+    return out
+
+# Inline markup: **bold** and `code`.
+func render_inline(value: String) -> String:
+    var out = ""
+    var bold = false
+    var code = false
+    var index = 0
+    let escaped = escape_html(value)
+    while index < escaped.length():
+        if not code and index + 1 < escaped.length() and escaped.substring(index, index + 2) == "**":
+            out += if bold:
+                "</strong>"
+            else:
+                "<strong>"
+            bold = not bold
+            index += 2
+        elif escaped[index] == "`":
+            out += if code:
+                "</code>"
+            else:
+                "<code>"
+            code = not code
+            index += 1
+        else:
+            out += escaped[index]
+            index += 1
+    return out
+
+func parse_post(file_name: String, source: String) -> Post throws ParseError:
+    var title: String? = null
+    var date: String? = null
+    let paragraphs: MutableList[String] = []
+    var current: MutableList[String] = []
+    var in_body = false
+    for line in text.lines(source):
+        let trimmed = text.trim(line)
+        if not in_body:
+            if text.starts_with(trimmed, "title:"):
+                title = text.trim(text.strip_prefix(trimmed, "title:"))
+                continue
+            if text.starts_with(trimmed, "date:"):
+                date = text.trim(text.strip_prefix(trimmed, "date:"))
+                continue
+            if trimmed == "" and title == null and date == null:
+                continue
+            in_body = true
+        if trimmed == "":
+            if current.size() > 0:
+                paragraphs.append(text.join(current, " "))
+                current = []
+        else:
+            current.append(trimmed)
+    if current.size() > 0:
+        paragraphs.append(text.join(current, " "))
+    let found_title = title
+    if found_title == null:
+        throw ParseError(message="missing 'title:' line in " + file_name, file=file_name)
+    let found_date = date
+    if found_date == null:
+        throw ParseError(message="missing 'date:' line in " + file_name, file=file_name)
+    if found_date.length() != 10 or found_date[4] != "-" or found_date[7] != "-":
+        throw ParseError(message="date must be YYYY-MM-DD in " + file_name + ", got '" + found_date + "'", file=file_name)
+    return Post(slug=slug_of(file_name), title=found_title, date=found_date, paragraphs=paragraphs.toList())
+
+func page(title: String, body: String) -> String:
+    return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>" + escape_html(title) + "</title>\n<link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n" + body + "</body>\n</html>\n"
+
+func render_post(post: Post) -> String:
+    var body = "<p><a href=\"index.html\">&larr; All posts</a></p>\n"
+    body += "<article>\n<h1>" + escape_html(post.title) + "</h1>\n"
+    body += "<time datetime=\"" + post.date + "\">" + post.date + "</time>\n"
+    for paragraph in post.paragraphs:
+        body += "<p>" + render_inline(paragraph) + "</p>\n"
+    body += "</article>\n"
+    return page(post.title, body)
+
+# Newest first; equal dates keep title order.
+func sort_posts(posts: List[Post]) -> List[Post]:
+    let by_title = lists.sort_by(posts, fn(p: Post) => p.title)
+    return lists.reversed(lists.sort_by(by_title, fn(p: Post) => p.date))
+
+func render_index(site_title: String, posts: List[Post]) -> String:
+    var body = "<h1>" + escape_html(site_title) + "</h1>\n<ul class=\"posts\">\n"
+    for post in sort_posts(posts):
+        body += "<li><time>" + post.date + "</time> <a href=\"" + post.slug + ".html\">" + escape_html(post.title) + "</a></li>\n"
+    body += "</ul>\n<p>" + posts.size() + " post(s)</p>\n"
+    return page(site_title, body)
+
+let STYLE = "body { max-width: 40em; margin: 2em auto; font-family: sans-serif; line-height: 1.5; }\ntime { color: #666; }\ncode { background: #eee; padding: 0 .25em; }\n"

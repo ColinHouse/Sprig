@@ -1,0 +1,12 @@
+[project]
+name = "todo"
+version = "0.1.0"
+language = "0.8"
+
+[[dependency]]
+name = "sqlite"
+path = "../../libraries/sprig-sqlite"
+
+[[dependency]]
+name = "web"
+path = "../../libraries/sprig-web"

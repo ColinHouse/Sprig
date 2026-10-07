@@ -1,0 +1,22 @@
+# Builds the whole site: every posts/*.md becomes site/<slug>.html plus index.html.
+import "@std/files.spr" as files
+import "@std/text.spr" as text
+import "./post.spr" as post
+
+func build_site(posts_dir: String, out_dir: String, site_title: String) -> Int throws Error:
+    if not files.is_directory(posts_dir):
+        throw Error("posts directory not found: " + posts_dir)
+    if not files.exists(out_dir):
+        files.make_directory(out_dir)
+    let posts: MutableList[post.Post] = []
+    # files.list returns absolute paths, so take the file name for the slug.
+    for path in files.list(posts_dir):
+        let name = files.file_name(path)
+        if not (text.ends_with(name, ".md") or text.ends_with(name, ".txt")):
+            continue
+        posts.append(post.parse_post(name, files.read_utf8(path)))
+    for item in posts:
+        files.write_utf8(files.join(out_dir, item.slug + ".html"), post.render_post(item))
+    files.write_utf8(files.join(out_dir, "index.html"), post.render_index(site_title, posts))
+    files.write_utf8(files.join(out_dir, "style.css"), post.STYLE)
+    return posts.size()

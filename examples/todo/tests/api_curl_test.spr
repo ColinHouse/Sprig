@@ -1,0 +1,36 @@
+# Starts the API on an ephemeral port and drives it with curl.
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "@std/json.spr" as json
+import "../src/store.spr" as store
+import "../src/api.spr" as api
+
+func curl(args: List[String]) -> String throws Error:
+    let command: MutableList[String] = ["curl", "-s", "-w", "\n%{http_code}"]
+    for arg in args:
+        command.append(arg)
+    let result = test.run_process(command)
+    if result.exit_code != 0:
+        throw Error("curl failed: " + result.stderr)
+    return result.stdout
+
+func drive() -> Unit throws Error:
+    let app = api.build_app(store.open_store(files.join(test.temp_dir(), "api.sqlite")))
+    app.run(0)
+    let base = "http://127.0.0.1:" + app.port()
+    try:
+        test.equal_text(curl([base + "/todos"]), "[]\n200", "empty list")
+        let created = curl(["-X", "POST", base + "/todos", "-d", "{\"title\":\"write report\"}"])
+        assert(created.endsWith("\n201"), "created status: " + created)
+        assert(created.contains("\"title\":\"write report\""), "created body: " + created)
+        test.equal_text(curl(["-X", "POST", base + "/todos", "-d", "{\"name\":1}"]), "{\"error\":\"body must be an object with a text 'title'\"}\n400", "bad body")
+        test.equal_text(curl(["-X", "POST", base + "/todos", "-d", "not json"]).substring(0, 0), "", "malformed json does not crash")
+        assert(curl(["-X", "POST", base + "/todos/1/done"]).contains("\"done\":true"), "done")
+        test.equal_text(curl(["-X", "POST", base + "/todos/42/done"]), "{\"error\":\"no todo 42\"}\n404", "missing id")
+        test.equal_text(curl(["-X", "DELETE", base + "/todos/1"]), "\n204", "delete")
+        test.equal_text(curl([base + "/todos"]), "[]\n200", "empty again")
+    finally:
+        app.stop()
+
+test.check("serves the todo API over HTTP", drive)
+test.finish()

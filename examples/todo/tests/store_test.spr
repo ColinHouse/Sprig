@@ -1,0 +1,21 @@
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "../src/store.spr" as store
+
+func round_trip() -> Unit throws Error:
+    let todos = store.open_store(files.join(test.temp_dir(), "t.sqlite"))
+    let a = todos.add("milk")
+    let b = todos.add("bread")
+    test.equal_int(todos.all().size(), 2, "two todos")
+    test.equal_bool(todos.complete(a.id), true, "complete existing")
+    test.equal_bool(todos.complete(999), false, "complete missing")
+    let found = todos.find(a.id)
+    if found == null:
+        throw Error("todo " + a.id + " vanished")
+    test.equal_bool(found.done, true, "done flag persisted")
+    test.equal_bool(todos.remove(b.id), true, "remove existing")
+    test.equal_int(todos.all().size(), 1, "one left")
+
+test.check("adds, completes and removes todos", round_trip)
+test.check_error("rejects an empty title", fn() => store.open_store(files.join(test.temp_dir(), "e.sqlite")).add("  "))
+test.finish()

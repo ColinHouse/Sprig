@@ -37,3 +37,4 @@ venv/
 /editors/vscode/.vscode-test/
 !/editors/vscode/.vscode/
 !/editors/vscode/.vscode/*.json
+/examples/blog/site/
