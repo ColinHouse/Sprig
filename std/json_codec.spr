@@ -17,7 +17,8 @@ variant Field:
     Null
     Value(value: json.Value)
 
-# Human JSON kind name used in every error message.
+# Internal: the JSON kind name (object, array, string, number, boolean, null)
+# every error message uses; callers match on json.Value.
 func kind(value: json.Value) -> String:
     match value:
         case json.Value.Null:
@@ -33,6 +34,7 @@ func kind(value: json.Value) -> String:
         case json.Value.Object:
             return "object"
 
+# Internal: parent + "." + name, the path of a field below a reader; callers use Reader.path.
 func child_path(parent: String, name: String) -> String:
     return parent + "." + name
 
@@ -61,6 +63,7 @@ func as_object(reader: Reader) -> Reader throws Error:
         case json.Value.Array as node:
             throw Error(reader.path + ": expected object, found array")
 
+# A reader per element, at path[i]; null or another kind throws Error naming the path.
 func as_array(reader: Reader) -> List[Reader] throws Error:
     match reader.value:
         case json.Value.Array as node:
@@ -81,6 +84,7 @@ func as_array(reader: Reader) -> List[Reader] throws Error:
         case json.Value.Object:
             throw Error(reader.path + ": expected array, found object")
 
+# The reader's string; null or another kind throws Error naming the path.
 func as_string(reader: Reader) -> String throws Error:
     match reader.value:
         case json.Value.Text as node:
@@ -96,6 +100,7 @@ func as_string(reader: Reader) -> String throws Error:
         case json.Value.Object:
             throw Error(reader.path + ": expected string, found object")
 
+# The reader's boolean; null or another kind throws Error naming the path.
 func as_bool(reader: Reader) -> Bool throws Error:
     match reader.value:
         case json.Value.Boolean as node:
@@ -111,7 +116,8 @@ func as_bool(reader: Reader) -> Bool throws Error:
         case json.Value.Object:
             throw Error(reader.path + ": expected boolean, found object")
 
-# Plain JSON integer lexeme: optional '-' then 0 or [1-9][0-9]*.
+# Internal: whether text is a plain JSON integer lexeme, an optional '-' then
+# 0 or [1-9][0-9]*; the Int readers use it.
 func integer_lexeme(text: String) -> Bool:
     if text.length() == 0:
         return false
@@ -130,6 +136,7 @@ func integer_lexeme(text: String) -> Bool:
         index += 1
     return true
 
+# The reader's integer; null, 1.0, 1e3 or anything else throws Error naming the path.
 func as_int(reader: Reader) -> Int throws Error:
     match reader.value:
         case json.Value.Number as node:
@@ -166,7 +173,8 @@ func as_number_text(reader: Reader) -> String throws Error:
         case json.Value.Object:
             throw Error(reader.path + ": expected number, found object")
 
-# JSON number lexeme: -? int ('.' digits)? ([eE] [+-]? digits)?
+# Internal: whether text is a JSON number lexeme,
+# -? int ('.' digits)? ([eE] [+-]? digits)?; the number readers use it.
 func number_lexeme(text: String) -> Bool:
     if text.length() == 0:
         return false
@@ -201,6 +209,7 @@ func number_lexeme(text: String) -> Bool:
             return false
     return index == text.length()
 
+# The reader's number as an exact Decimal; null or another kind throws Error naming the path.
 func as_decimal(reader: Reader) -> Decimal throws Error:
     match reader.value:
         case json.Value.Number as node:
@@ -218,6 +227,7 @@ func as_decimal(reader: Reader) -> Decimal throws Error:
         case json.Value.Object:
             throw Error(reader.path + ": expected decimal, found object")
 
+# The reader's json.Value as it is, of any kind; the same as reader.value.
 func as_value(reader: Reader) -> json.Value:
     return reader.value
 
@@ -265,63 +275,77 @@ func optional_value(reader: Reader, name: String) -> json.Value? throws Error:
         case Field.Value as found:
             return found.value
 
+# The field's string; missing, null or another kind throws Error naming the path.
 func required_string(reader: Reader, name: String) -> String throws Error:
     return as_string(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's boolean; missing, null or another kind throws Error naming the path.
 func required_bool(reader: Reader, name: String) -> Bool throws Error:
     return as_bool(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's integer; missing, null, 1.0, 1e3 or anything else throws Error naming the path.
 func required_int(reader: Reader, name: String) -> Int throws Error:
     return as_int(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's exact Decimal; missing, null or another kind throws Error naming the path.
 func required_decimal(reader: Reader, name: String) -> Decimal throws Error:
     return as_decimal(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's exact number text; missing, null or another kind throws Error naming the path.
 func required_number_text(reader: Reader, name: String) -> String throws Error:
     return as_number_text(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's elements as readers; missing, null or another kind throws Error naming the path.
 func required_array(reader: Reader, name: String) -> List[Reader] throws Error:
     return as_array(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's array of strings; missing, null or another kind throws Error naming the path.
 func required_string_array(reader: Reader, name: String) -> List[String] throws Error:
     let values: MutableList[String] = []
     for item in required_array(reader, name):
         values.append(as_string(item))
     return values.toList()
 
+# The field's object as a reader; missing, null or another kind throws Error naming the path.
 func required_object(reader: Reader, name: String) -> Reader throws Error:
     return as_object(Reader(path=child_path(reader.path, name), value=required_value(reader, name)))
 
+# The field's string; null if missing or null; another kind throws Error naming the path.
 func optional_string(reader: Reader, name: String) -> String? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
     return as_string(Reader(path=child_path(reader.path, name), value=value))
 
+# The field's boolean; null if missing or null; another kind throws Error naming the path.
 func optional_bool(reader: Reader, name: String) -> Bool? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
     return as_bool(Reader(path=child_path(reader.path, name), value=value))
 
+# The field's integer; null if missing or null; 1.0, 1e3 or anything else throws Error naming the path.
 func optional_int(reader: Reader, name: String) -> Int? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
     return as_int(Reader(path=child_path(reader.path, name), value=value))
 
+# The field's exact Decimal; null if missing or null; another kind throws Error naming the path.
 func optional_decimal(reader: Reader, name: String) -> Decimal? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
     return as_decimal(Reader(path=child_path(reader.path, name), value=value))
 
+# The field's elements as readers; null if missing or null; another kind throws Error naming the path.
 func optional_array(reader: Reader, name: String) -> List[Reader]? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
     return as_array(Reader(path=child_path(reader.path, name), value=value))
 
+# The field's array of strings; null if missing or null; another kind throws Error naming the path.
 func optional_string_array(reader: Reader, name: String) -> List[String]? throws Error:
     let values = optional_array(reader, name)
     if values == null:
@@ -331,12 +355,14 @@ func optional_string_array(reader: Reader, name: String) -> List[String]? throws
         strings.append(as_string(item))
     return strings.toList()
 
+# The field's object as a reader; null if missing or null; another kind throws Error naming the path.
 func optional_object(reader: Reader, name: String) -> Reader? throws Error:
     let value = optional_value(reader, name)
     if value == null:
         return null
     return as_object(Reader(path=child_path(reader.path, name), value=value))
 
+# The field's exact number text; null if missing or null; another kind throws Error naming the path.
 func optional_number_text(reader: Reader, name: String) -> String? throws Error:
     let value = optional_value(reader, name)
     if value == null:
@@ -370,24 +396,31 @@ func reject_unknown_fields(reader: Reader, allowed: List[String]) -> Unit throws
 func text(value: String) -> json.Value:
     return json.Value.Text(value=value)
 
+# A JSON true or false.
 func bool(value: Bool) -> json.Value:
     return json.Value.Boolean(value=value)
 
+# A JSON number with the integer's exact digits, such as 42 or -7.
 func int(value: Int) -> json.Value:
     return json.Value.Number(text=value.toString())
 
+# A JSON number with this exact text, such as "1.25"; json.stringify throws Error for invalid text.
 func number(text: String) -> json.Value:
     return json.Value.Number(text=text)
 
+# One object member, a key and its value, for object().
 func member(key: String, value: json.Value) -> json.Member:
     return json.Member(key=key, value=value)
 
+# A JSON object with the members in order; json.stringify throws Error for a duplicate key.
 func object(members: List[json.Member]) -> json.Value:
     return json.Value.Object(members=members)
 
+# A JSON array of the values, in order.
 func array(values: List[json.Value]) -> json.Value:
     return json.Value.Array(values=values)
 
+# A JSON array of the strings, in order.
 func string_array(values: List[String]) -> json.Value:
     let items: MutableList[json.Value] = []
     for value in values:

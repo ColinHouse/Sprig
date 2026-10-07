@@ -68,6 +68,8 @@ public final class SprigApi {
             item.put("name", symbol.name);
             item.put("type", display(symbol.type));
             item.put("mutable", symbol.mutable);
+            // A variable's comment, like a declaration's, is read where it is written.
+            doc(item, symbol.module != null ? symbol.module.source : module.source, symbol.span);
             exportOrigin(module,symbol,item);
             out.add(item);
         }

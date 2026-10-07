@@ -1,26 +1,39 @@
 # Small deterministic CLI parser. It performs no shell tokenization.
 import "@std/text.spr" as strings
+# FLAG options take no value (--verbose, -v). VALUE options take one, as in
+# --output path, --output=path or -o path; a separate value may start with "-".
 enum OptionKind:
     FLAG
     VALUE
 
+# One option parse() accepts. name is the long name without dashes (ASCII
+# letters, digits and "-"); short_name, when set, is one ASCII letter or digit;
+# usage() shows description.
 class OptionSpec:
     let name: String
     let kind: OptionKind
     let short_name: String? = null
     let description: String = ""
 
+# A given option's value: Flag (value is always true) for a FLAG option, Text
+# for a VALUE option. Parsed.flag and Parsed.value read it for you.
 variant OptionValue:
     Flag(value: Bool)
     Text(value: String)
 
+# What parse() found: options maps each given option's long name (also when
+# given by its short name) to its value; positionals, a field, keeps the other
+# arguments in order.
 class Parsed:
     let options: Map[String, OptionValue]
     let positionals: List[String]
 
+    # True when the option was given, looked up by its long name.
     func has(name: String) -> Bool:
         return options.containsKey(name)
 
+    # True when the flag was given, false when it was not or name is unknown.
+    # Throws Error when name is a VALUE option that was given.
     func flag(name: String) -> Bool throws Error:
         let found = options.get(name)
         if found != null:
@@ -31,6 +44,8 @@ class Parsed:
                     throw Error("option --" + name + " requires a value")
         return false
 
+    # The option's text ("" for --name=), or null when it was not given. Throws
+    # Error when name is a FLAG option that was given.
     func value(name: String) -> String? throws Error:
         let found = options.get(name)
         if found != null:
@@ -41,18 +56,24 @@ class Parsed:
                     throw Error("option --" + name + " is a flag")
         return null
 
+# Internal: the spec with that long name, or null; parse() looks options up
+# with it.
 func long_option(specs: List[OptionSpec], name: String) -> OptionSpec?:
     for spec in specs:
         if spec.name == name:
             return spec
     return null
 
+# Internal: the spec with that short name, or null; parse() looks options up
+# with it.
 func short_option(specs: List[OptionSpec], name: String) -> OptionSpec?:
     for spec in specs:
         if spec.short_name == name:
             return spec
     return null
 
+# Internal: whether a name is non-empty and only ASCII letters, digits and "-";
+# parse() checks every spec with it.
 func valid_long_name(name: String) -> Bool:
     if name.length() == 0:
         return false
@@ -64,6 +85,8 @@ func valid_long_name(name: String) -> Bool:
         index += 1
     return true
 
+# Internal: the spec checks parse() runs first (valid names, unique long and
+# short names), throwing Error on the first problem; call parse.
 func validate(specs: List[OptionSpec]) -> Unit throws Error:
     let long_names: MutableMap[String, Bool] = {}
     let short_names: MutableMap[String, Bool] = {}
@@ -81,11 +104,16 @@ func validate(specs: List[OptionSpec]) -> Unit throws Error:
                 throw Error("duplicate short option specification: -" + short)
             short_names.set(short, true)
 
+# Internal: records one option for parse(), throwing Error when it was already
+# given; read results through Parsed.
 func put(values: MutableMap[String, OptionValue], spec: OptionSpec, value: OptionValue) -> Unit throws Error:
     if values.containsKey(spec.name):
         throw Error("duplicate option: --" + spec.name)
     values.set(spec.name, value)
 
+# Parses arguments, such as process.arguments(), against specs. Options and
+# positionals may mix; "-" and everything after "--" are positional. Throws Error
+# for an unknown, repeated or malformed option, a missing value or invalid specs.
 func parse(arguments: List[String], specs: List[OptionSpec]) -> Parsed throws Error:
     validate(specs)
     let values: MutableMap[String, OptionValue] = {}
@@ -140,6 +168,8 @@ func parse(arguments: List[String], specs: List[OptionSpec]) -> Parsed throws Er
                 index += 2
     return Parsed(options=values.toMap(), positionals=positionals.toList())
 
+# The help text: a Usage line, the summary, each spec in the given order (VALUE
+# options show <value>) and the "--" entry. It does not validate specs.
 func usage(program: String, summary: String, specs: List[OptionSpec]) -> String:
     var output = "Usage: " + program + " [options] [--] [arguments...]\n"
     output += summary + "\n\nOptions:\n"

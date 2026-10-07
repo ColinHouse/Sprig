@@ -36,6 +36,8 @@ generic T:
         func await_or(fallback: T) -> T:
             return inner.joinOr(fallback)
 
+        # True once the task returned, failed or was cancelled; never waits. A
+        # cancelled task counts as done at once, even before its body stops.
         func is_done() -> Bool:
             return inner.isDone()
 
@@ -44,6 +46,9 @@ generic T:
         func cancel() -> Bool:
             return inner.cancel()
 
+        # True when the task was cancelled before it finished: by cancel(), by
+        # its scope (cancel_all() or a failure elsewhere in it), or while queued
+        # by its pool's shutdown_now(). False for a task that failed by itself.
         func is_cancelled() -> Bool:
             return inner.isCancelled()
 
@@ -61,6 +66,8 @@ class Job:
     func await_within(millis: Int) -> Unit throws Error:
         inner.joinWithin(millis)
 
+    # True once the job returned, failed or was cancelled; never waits. A
+    # cancelled job counts as done at once, even before its body stops.
     func is_done() -> Bool:
         return inner.isDone()
 
@@ -69,6 +76,9 @@ class Job:
     func cancel() -> Bool:
         return inner.cancel()
 
+    # True when the job was cancelled before it finished: by cancel() or by its
+    # scope (cancel_all() or a failure elsewhere in it). False for a job that
+    # failed by itself.
     func is_cancelled() -> Bool:
         return inner.isCancelled()
 
@@ -141,6 +151,7 @@ func run(scope: Scope, work: fn() -> Unit) -> Job throws Error:
 class Pool:
     let inner: HostPool
 
+    # How many worker threads the pool was made with; it never changes.
     func threads() -> Int:
         return inner.threads()
 
@@ -153,6 +164,8 @@ class Pool:
     func shutdown_now() -> Unit:
         inner.shutdownNow()
 
+    # True once shutdown() or shutdown_now() was called, even while tasks are
+    # still finishing; await_termination(millis) waits for them.
     func is_shutdown() -> Bool:
         return inner.isShutdown()
 
@@ -160,6 +173,9 @@ class Pool:
     func await_termination(millis: Int) -> Bool throws Error:
         return inner.awaitTermination(millis)
 
+# A pool of that many platform threads for spawn_on and parallel_map_on; fewer
+# than 1 or more than 10000 is an Error. Shut it down when done; its threads
+# are daemons, so an open pool never keeps the program from ending.
 func pool(threads: Int) -> Pool throws Error:
     if threads < 1:
         throw Error("a pool needs at least one thread, got " + threads)
@@ -200,6 +216,9 @@ generic T, R:
             tasks.append(spawn[R](current, fn() => transform(item)))
         return await_all[R](tasks)
 
+# One task per item on the given pool, in the given scope; results in item
+# order. Starting on a shut-down pool or an ended scope is an Error, and so is
+# a task that failed or was cancelled.
 generic T, R:
     func map_on_in(current: Scope, pool: Pool, items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
         let tasks: MutableList[Task[R]] = []
@@ -237,6 +256,8 @@ generic T:
         func close() -> Unit:
             inner.close()
 
+        # True once close() was called, even while sent values are still
+        # waiting to be received.
         func is_closed() -> Bool:
             return inner.isClosed()
 
@@ -244,6 +265,8 @@ generic T:
         func size() -> Int:
             return inner.size()
 
+# An open channel holding up to capacity values; a capacity below 1 or above
+# 10000000 is an Error. T must be written: concurrent.channel[String](16).
 generic T:
     func channel(capacity: Int) -> Channel[T] throws Error:
         if capacity < 1:
@@ -254,9 +277,12 @@ generic T:
 class Counter:
     let inner: AtomicLong
 
+    # The current value.
     func get() -> Int:
         return inner.get()
 
+    # Replaces the value. To change it based on the old one, use add or
+    # compare_and_set, so no other thread's update is lost.
     func set(value: Int) -> Unit:
         inner.set(value)
 
@@ -276,6 +302,8 @@ class Counter:
     func compare_and_set(expected: Int, updated: Int) -> Bool:
         return inner.compareAndSet(expected, updated)
 
+# A new Counter holding start. Unlike Int arithmetic, add, increment and
+# decrement wrap around past the Int range instead of failing.
 func counter(start: Int) -> Counter:
     return Counter(inner=AtomicLong(start))
 
@@ -289,9 +317,11 @@ class Lock:
     func run(action: fn() -> Unit) -> Unit:
         inner.run(action)
 
+    # True when the calling thread is inside run() or locked() on this lock.
     func is_held_by_current_thread() -> Bool:
         return inner.isHeldByCurrentThread()
 
+# A new reentrant lock that no thread holds yet.
 func lock() -> Lock:
     return Lock(inner=HostLock())
 
@@ -304,12 +334,18 @@ generic T:
 class Latch:
     let inner: HostLatch
 
+    # Lowers the count by one without blocking; when it reaches zero every
+    # waiter continues. At zero it does nothing.
     func count_down() -> Unit:
         inner.countDown()
 
+    # How many count_down() calls are still needed; 0 once the latch is open.
     func remaining() -> Int:
         return inner.remaining()
 
+    # Blocks until the count reaches zero; returns at once when it already is.
+    # No throws clause, so a task body can wait; cancelling a waiting task ends
+    # it with an Error that its await() reports.
     func await() -> Unit:
         inner.await()
 
@@ -319,6 +355,8 @@ class Latch:
             throw Error("timeout millis must not be negative: " + millis)
         return inner.awaitWithin(millis)
 
+# A latch that opens after count calls to count_down(), so latch(0) is open at
+# once. A negative count is an Error; one above 2147483647 is capped there.
 func latch(count: Int) -> Latch throws Error:
     if count < 0:
         throw Error("latch count must not be negative: " + count)

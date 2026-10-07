@@ -1,10 +1,15 @@
 # Synchronous HTTP/HTTPS transport with explicit request and response values.
 import sprig.runtime.http.HostHttp as HostHttp
 
+# One HTTP header. In a Response the name is lowercase, and a header with
+# several values appears as several rows.
 class Header:
     let name: String
     let value: String
 
+# What send() sends: any valid method name, an absolute http or https URL,
+# headers in list order (the JDK refuses ones it reserves, such as Host), an
+# optional UTF-8 text body (null sends none) and a positive timeout_ms.
 class Request:
     let method: String
     let url: String
@@ -12,11 +17,16 @@ class Request:
     let body: String?
     let timeout_ms: Int
 
+# The server's answer. Every status, 3xx, 4xx and 5xx included, is a Response
+# rather than an Error; headers are sorted by name and body is the UTF-8 text.
 class Response:
     let status: Int32
     let headers: List[Header]
     let body: String
 
+# Blocks until the response arrives; redirects are not followed and nothing is
+# retried. Throws Error for a bad URL, method, header or timeout_ms, a network
+# failure or timeout, or a response body that is not valid UTF-8.
 func send(request: Request) -> Response throws Error:
     let header_pairs: MutableList[String] = []
     for header in request.headers:
@@ -46,8 +56,11 @@ func send(request: Request) -> Response throws Error:
         index += 1
     return Response(status=result.status(), headers=response_headers.toList(), body=response_body)
 
+# A GET with no body through send(); throws Error as send() does.
 func get(url: String, headers: List[Header], timeout_ms: Int) -> Response throws Error:
     return send(Request(method="GET", url=url, headers=headers, body=null, timeout_ms=timeout_ms))
 
+# A POST of body as UTF-8 text through send(). No Content-Type is added, so
+# pass one in headers. Throws Error as send() does.
 func post_text(url: String, body: String, headers: List[Header], timeout_ms: Int) -> Response throws Error:
     return send(Request(method="POST", url=url, headers=headers, body=body, timeout_ms=timeout_ms))

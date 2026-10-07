@@ -2,10 +2,16 @@
 import "./sqlite.spr" as sqlite
 import "@std/files.spr" as files
 
+# Applies the NNN_name.sql files in directory to database in file-name order,
+# recording each applied name in the sprig_schema_migrations table. Every
+# entry in the directory must be such a file.
 class Migrations:
     let database: sqlite.Database
     let directory: String
 
+    # Runs each file not yet recorded, with its ledger row in one transaction,
+    # and returns how many ran. A misnamed entry, a repeated NNN, an applied file
+    # after a pending one or failing SQL throws Error; earlier files stay applied.
     func apply() -> Int throws Error:
         database.execute("CREATE TABLE IF NOT EXISTS sprig_schema_migrations (name TEXT PRIMARY KEY NOT NULL)", [])
         let applied_rows = database.query("SELECT name FROM sprig_schema_migrations ORDER BY name", [])
@@ -37,6 +43,8 @@ class Migrations:
                 completed += 1
         return completed
 
+# Internal: apply()'s file-name check: three digits, "_", one or more ASCII
+# letters, digits, "_" or "-", then ".sql". Call Migrations.apply.
 func valid_migration_name(name: String) -> Bool:
     if name.length() < 9:
         return false

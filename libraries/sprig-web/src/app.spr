@@ -11,6 +11,8 @@ import sprig.runtime.web.BadRequest as BadRequest
 import java.lang.IllegalStateException as ResponseFailure
 import java.lang.RuntimeException as RuntimeException
 
+# GET, POST, PUT, PATCH or DELETE. Requests with other methods, HEAD included,
+# match no route (404); OPTIONS gets 204 when cors_origin is set.
 enum Method:
     GET
     POST
@@ -18,6 +20,8 @@ enum Method:
     PATCH
     DELETE
 
+# STRING, INTEGER (int64), BOOLEAN, OBJECT (lists fields) or ARRAY (needs
+# items).
 enum SchemaType:
     STRING
     INTEGER
@@ -25,35 +29,54 @@ enum SchemaType:
     OBJECT
     ARRAY
 
+# One property of an OBJECT schema, required unless required=false. Names must
+# be unique within the object, or route registration throws Error.
 class FieldSchema:
     let name: String
     let schema: Schema
     let required: Bool = true
 
+# OpenAPI description of a JSON value: an OBJECT lists fields; an ARRAY needs
+# items, or route registration throws Error. Requests are not validated
+# against it.
 class Schema:
     let kind: SchemaType
     let fields: List[FieldSchema] = []
     let items: Schema? = null
 
+# OpenAPI metadata for a query parameter, optional unless required=true. It
+# only documents the route; read the value with Request.query(name).
 class QueryParameter:
     let name: String
     let schema: Schema
     let required: Bool = false
 
+# A response header. An invalid name, a CR or LF in the value, or
+# Content-Length or Transfer-Encoding makes the server answer 500 instead.
 class Header:
     let name: String
     let value: String
 
+# A path parameter: the name between the route's braces and the decoded,
+# never empty, segment it matched.
 class Parameter:
     let name: String
     let value: String
 
+# Internal: the host's value, or an IllegalStateException when the host gave
+# null; respond() uses it. Handlers read the Request fields instead.
 func required(value: String?) -> String:
     return request_helpers.required(value)
 
+# Internal: percent-decodes URI text as UTF-8 ("+" becomes a space when plus
+# is true); malformed input throws BadRequest. Request.path, path_param and
+# query are already decoded.
 func decode(value: String, plus: Bool) -> String:
     return request_helpers.decode(value, plus)
 
+# What a handler gets: the method, the percent-decoded path and the UTF-8
+# body. parameters holds the path parameters; raw is the server's transport
+# request.
 class Request:
     let method: String
     let path: String
@@ -61,6 +84,8 @@ class Request:
     let raw: HostRequest
     let parameters: List[Parameter] = []
 
+    # The decoded segment that matched {name} (an encoded "/" stays inside it,
+    # "+" stays "+"); null when the route has no such parameter.
     func path_param(name: String) -> String?:
         for parameter in parameters:
             if parameter.name == name:
@@ -71,18 +96,28 @@ class Request:
     func query(name: String) -> String?:
         return request_helpers.query(raw.rawQuery(), name)
 
+    # The first value of that request header, whose name matches ignoring
+    # case; null when the request does not have it.
     func header(name: String) -> String?:
         return raw.header(name)
 
+    # The body parsed with @std/json. Malformed JSON, duplicate keys included,
+    # throws BadRequest (an Error); left uncaught, the client gets 400.
     func json() -> jsonlib.Value:
         return request_helpers.parse_json(body)
 
+# What a handler returns; the body is sent as UTF-8. A status outside 200..599
+# or an invalid header makes the server answer 500 instead; 204 and 304
+# answers carry no body.
 class Response:
     let status: Int
     let body: String
     let content_type: String = "text/plain; charset=utf-8"
     let headers: List[Header] = []
 
+    # A copy with one more header; the original is unchanged. When a name
+    # repeats in any case, the last value is sent, and Content-Type replaces
+    # content_type.
     func with_header(name: String, value: String) -> Response:
         let output: MutableList[Header] = []
         for header in headers:
@@ -90,15 +125,22 @@ class Response:
         output.append(Header(name=name, value=value))
         return Response(status=status, body=body, content_type=content_type, headers=output.toList())
 
+# A text/plain; charset=utf-8 response with no extra headers.
 func text(body: String, status: Int) -> Response:
     return Response(status=status, body=body)
 
+# The value as an application/json; charset=utf-8 response. A value stringify
+# rejects (a bad number lexeme, a duplicate key, nesting over 128) throws
+# IllegalStateException, which the server answers with 500.
 func json_response(value: jsonlib.Value, status: Int) -> Response:
     try:
         return Response(status=status, body=jsonlib.stringify(value), content_type="application/json; charset=utf-8")
     catch problem: Error:
         throw ResponseFailure("Invalid JSON response")
 
+# One route: a method, a path such as /items/{id} (one {name} per segment), a
+# handler and OpenAPI metadata (summary, schemas, response_status, query
+# parameters) that only documents it: nothing is validated or enforced.
 class Route:
     let method: Method
     let path: String
@@ -109,6 +151,8 @@ class Route:
     let response_status: Int = 200
     let query_parameters: List[QueryParameter] = []
 
+# Internal: a Method as request text ("GET") for respond()'s matching;
+# handlers compare Request.method with such text directly.
 func method_name(method: Method) -> String:
     return match method:
         case Method.GET:
@@ -122,6 +166,8 @@ func method_name(method: Method) -> String:
         case Method.DELETE:
             "DELETE"
 
+# Internal: a Method as its lowercase OpenAPI operation key ("get"); call
+# App.openapi() for the document.
 func operation_name(method: Method) -> String:
     return match method:
         case Method.GET:
@@ -135,16 +181,25 @@ func operation_name(method: Method) -> String:
         case Method.DELETE:
             "delete"
 
+# Internal: match_path()'s answer, Missing or Matched with the path parameters;
+# handlers read them with Request.path_param.
 variant MatchResult:
     Missing
     Matched(parameters: List[Parameter])
 
+# Internal: the name in a whole-segment template such as {id}, else null;
+# App.route() and match_path() use it.
 func parameter_name(segment: String) -> String?:
     return routing.parameter_name(segment)
 
+# Internal: the path with each {name} segment replaced by {}, so App.route()
+# can find equivalent templates.
 func template_shape(path: String) -> String throws Error:
     return routing.template_shape(path)
 
+# Internal: matches a raw request path against a route template, segment by
+# decoded segment; App routes requests itself, and handlers use
+# Request.path_param.
 func match_path(pattern: String, raw_path: String) -> MatchResult throws Error:
     let expected = strings.split(pattern, "/")
     let actual = strings.split(raw_path, "/")
@@ -165,6 +220,8 @@ func match_path(pattern: String, raw_path: String) -> MatchResult throws Error:
         index += 1
     return MatchResult.Matched(parameters=parameters.toList())
 
+# Internal: a Schema as an OpenAPI schema object, throwing Error for an ARRAY
+# without items; App.openapi() returns the whole document.
 func schema_json(schema: Schema) -> jsonlib.Value throws Error:
     match schema.kind:
         case SchemaType.STRING:
@@ -187,6 +244,8 @@ func schema_json(schema: Schema) -> jsonlib.Value throws Error:
                     required_fields.append(field.name)
             return openapi_helpers.object_schema(jsonlib.Value.Object(members=properties.toList()), required_fields.toList())
 
+# Internal: one route's OpenAPI operation object, throwing Error as
+# schema_json() does; App.openapi() returns the whole document.
 func operation_json(route: Route) -> jsonlib.Value throws Error:
     let parameters: MutableList[jsonlib.Value] = []
     for segment in strings.split(route.path, "/"):
@@ -206,6 +265,9 @@ func operation_json(route: Route) -> jsonlib.Value throws Error:
     let response = openapi_helpers.response("Response", response_schema_json)
     return openapi_helpers.operation(route.summary, parameters.toList(), request, route.response_status.toString(), response)
 
+# An HTTP application: add routes, then run(port). It handles one request at a
+# time and serves GET /openapi.json (with title and version) and GET /docs
+# itself; a non-empty cors_origin adds CORS headers and answers OPTIONS.
 class App:
     let title: String
     let version: String = "1.0.0"
@@ -213,6 +275,9 @@ class App:
     let routes: MutableList[Route] = []
     var server: HostServer? = null
 
+    # Adds a route; the first registered match wins. Throws Error for a path not
+    # starting with "/", /openapi.json or /docs, a repeated method and path, a bad
+    # or repeated {name}, renamed {name}s on an equivalent path or bad metadata.
     func route(route: Route) -> Unit throws Error:
         if not strings.starts_with(route.path, "/"):
             throw Error("route path must begin with /")
@@ -244,21 +309,30 @@ class App:
         jsonlib.stringify(operation_json(route))
         routes.append(route)
 
+    # Adds a GET route without OpenAPI metadata; throws Error as route() does.
     func get(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.GET, path=path, handler=handler))
 
+    # Adds a POST route without OpenAPI metadata; throws Error as route() does.
     func post(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.POST, path=path, handler=handler))
 
+    # Adds a PUT route without OpenAPI metadata; throws Error as route() does.
     func put(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.PUT, path=path, handler=handler))
 
+    # Adds a PATCH route without OpenAPI metadata; throws Error as route() does.
     func patch(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.PATCH, path=path, handler=handler))
 
+    # Adds a DELETE route without OpenAPI metadata; throws Error as route()
+    # does.
     func delete(path: String, handler: fn(Request) -> Response) -> Unit throws Error:
         route(Route(method=Method.DELETE, path=path, handler=handler))
 
+    # The OpenAPI 3.0.3 document GET /openapi.json serves, built from the routes
+    # added so far; routes on one path share a path item. Throws Error only for
+    # an ARRAY schema without items, which route() already rejects.
     func openapi() -> jsonlib.Value throws Error:
         let paths: MutableList[jsonlib.Member] = []
         let visited: MutableList[String] = []
@@ -272,6 +346,9 @@ class App:
                 paths.append(jsonlib.Member(key=route.path, value=jsonlib.Value.Object(members=operations.toList())))
         return openapi_helpers.document(title, version, jsonlib.Value.Object(members=paths.toList()))
 
+    # Internal: answers one host request (CORS preflight, the built-in paths,
+    # then the routes in order, else 404) and lets failures escape; dispatch()
+    # wraps it for the server that run(port) starts.
     func respond(raw: HostRequest) -> Response throws Error:
         let method = required(raw.method())
         let path = required(raw.rawPath())
@@ -294,6 +371,9 @@ class App:
                         return route.handler(request)
         return text("Not found", 404)
 
+    # Internal: the server's request callback: respond(), with BadRequest as 400
+    # and other failures as 500, plus the CORS headers. Start serving with
+    # run(port) or run_on(host, port).
     func dispatch(raw: HostRequest) -> HostResponse:
         var response = text("Internal server error", 500)
         try:
@@ -330,12 +410,16 @@ class App:
             throw Error("port must be 0..65535, got " + port)
         server = HostServer(host, port, fn(raw: HostRequest) => dispatch(raw))
 
+    # The port the running server listens on, which is how to learn the one
+    # run(0) picked. Throws Error when the server is not running.
     func port() -> Int throws Error:
         let active = server
         if active != null:
             return active.port()
         throw Error("server is not running")
 
+    # Stops the server; does nothing when it is not running. The App keeps its
+    # routes and can run again.
     func stop() -> Unit:
         let active = server
         if active != null:
