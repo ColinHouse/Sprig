@@ -291,13 +291,15 @@ public final class JvmMetadata {
                     "Java varargs of a type-variable element (T...) are not supported");
         }
         for (int i = 0; i < raw.length; i++) {
-            if (JavaTypes.isCallableClass(raw[i]) && JavaTypes.callable(generic[i]) == null) {
+            if (JavaTypes.isCallableClass(raw[i]) && JavaTypes.callable(generic[i]) == null
+                    && !boundCallable(generic[i], executable)) {
                 return unsupported("sprig-callable-boundary",
                         "Sprig callable boundary requires concrete invariant Fn0..Fn3 type arguments");
             }
         }
         if (executable instanceof Method method && JavaTypes.isCallableClass(method.getReturnType())
-                && JavaTypes.callable(method.getGenericReturnType()) == null) {
+                && JavaTypes.callable(method.getGenericReturnType()) == null
+                && !boundCallable(method.getGenericReturnType(), executable)) {
             return unsupported("sprig-callable-boundary",
                     "Sprig callable result requires concrete invariant Fn0..Fn3 type arguments");
         }
@@ -530,6 +532,35 @@ public final class JvmMetadata {
     private static boolean genericBoundary(java.lang.reflect.Type type) {
         return JavaTypes.shape(type) != JavaTypes.Shape.CLASS
                 || (type instanceof Class<?> clazz && clazz.isArray());
+    }
+
+    /**
+     * An Fn0..Fn3 slot whose type arguments are classes or type variables of the
+     * executable or its declaring class: {@code <T> HostTask<T> start(Fn0<T>)} or
+     * {@code Fn1<E, R> map(...)} on a receiver with known arguments. The slot's
+     * function type is known once those variables are bound, by the receiver's
+     * type arguments or the method's written or inferred ones.
+     */
+    private static boolean boundCallable(Type generic, Executable executable) {
+        if (!(generic instanceof ParameterizedType applied) || !(applied.getRawType() instanceof Class<?> raw)
+                || !JavaTypes.isCallableClass(raw)) {
+            return false;
+        }
+        Type[] arguments = applied.getActualTypeArguments();
+        if (arguments.length != raw.getTypeParameters().length) return false;
+        for (Type argument : arguments) {
+            if (argument instanceof Class<?> clazz) {
+                if (clazz.isArray() || clazz.isPrimitive() || JavaTypes.isCallableClass(clazz)
+                        || JavaTypes.needsValueAdapter(clazz)) return false;
+            } else if (argument instanceof TypeVariable<?> variable) {
+                boolean own = Arrays.asList(executable.getTypeParameters()).contains(variable)
+                        || Arrays.asList(executable.getDeclaringClass().getTypeParameters()).contains(variable);
+                if (!own) return false;
+            } else {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean callableBoundary(Executable executable) {

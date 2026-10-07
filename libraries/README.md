@@ -12,6 +12,7 @@ library through application packages.
 | [`sprig-cli`](sprig-cli/README.md) | Explicit command-line option parsing and usage text. |
 | [`sprig-json-codec`](sprig-json-codec/README.md) | Path-aware JSON decoding and encoding over `@std/json`. The implementation is the bundled `@std/json_codec.spr`; the package reexports it for existing dependents. |
 | [`sprig-http`](sprig-http/README.md) | Small synchronous JDK HTTP/HTTPS client. |
+| [`sprig-concurrent`](sprig-concurrent/README.md) | Tasks, pools, channels, counters, locks and latches over `java.util.concurrent`. |
 
 ## Persistence and server integration
 

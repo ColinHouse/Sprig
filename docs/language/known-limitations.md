@@ -49,10 +49,13 @@ by the historical design kit in `docs/history/design-kit/`.
   Missing/invalid POMs fail. Publishing/registry, authentication, Maven plugins
   and non-JAR runtime artifacts remain unsupported. See `DEPENDENCIES.md`.
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
-  text/time and a typed JSON model. The first-party `sprig-http` library adds a
-  small synchronous JDK HTTP client; it does not provide an HTTP server,
-  streaming, async requests or a stable package registry. The ecosystem remains
-  intentionally small and experimental.
+  text/time and a typed JSON model. The first-party libraries add a small
+  synchronous JDK HTTP client (`sprig-http`), a synchronous HTTP server with
+  explicit OpenAPI metadata (`sprig-web`), SQLite access (`sprig-sqlite`) and
+  tasks, pools, channels, counters, locks and latches over
+  `java.util.concurrent` (`sprig-concurrent`). There is no async/await syntax,
+  no structured concurrency scope, no streaming HTTP and no stable package
+  registry. The ecosystem remains intentionally small and experimental.
   Debugger integration and incremental compilation are absent. `sprig lsp`
   serves diagnostics, hover, navigation, completion, formatting, local
   rename and quick fixes over the Language Server Protocol; it re-checks the
@@ -177,8 +180,11 @@ function and call that from the lambda. A Java functional-interface
 parameter accepts a Sprig function value without a throws clause: parameters
 match exactly after the Java mapping, `void` accepts any result, and the
 compiler emits the adapter; abstract classes and generic interface methods are
-not converted. For `Fn0..Fn3`, only concrete generic signatures
-preserve callable types; raw, wildcard or unresolved type variables are rejected.
+not converted. For `Fn0..Fn3`, concrete generic signatures preserve callable
+types, and so does a signature whose type arguments are type variables of the
+method or its class once they are bound (`<T> HostTask<T> start(Fn0<T>)` with
+`start[Int](work)`, or a receiver with written arguments); raw, wildcard or
+unbound type variables are rejected.
 `Character`/`Short`/`Byte` callable slots and arbitrary parameterized Java slots
 are unsupported because they would require additional erased-value adapters.
 Nullable callable values use `(fn(A) -> R)?`; `fn(A) -> R?` means nullable result.

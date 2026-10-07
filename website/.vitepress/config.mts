@@ -108,6 +108,7 @@ export default defineConfig({
                 { text: 'Gradle 集成', link: '/guide/gradle' },
                 { text: 'Fabric 模组', link: '/guide/fabric' },
                 { text: 'Web 与 SQLite', link: '/guide/web-sqlite' },
+                { text: '并发', link: '/guide/concurrency' },
                 { text: '项目测试（英文）', link: '/en/reference/tooling/testing' }
               ]
             }
@@ -184,6 +185,7 @@ export default defineConfig({
                 { text: 'Gradle integration', link: '/en/guide/gradle' },
                 { text: 'Fabric mods', link: '/en/guide/fabric' },
                 { text: 'Web and SQLite', link: '/en/guide/web-sqlite' },
+                { text: 'Concurrency', link: '/en/guide/concurrency' },
                 { text: 'Testing projects', link: '/en/reference/tooling/testing' }
               ]
             }

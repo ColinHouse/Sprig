@@ -1,0 +1,125 @@
+# Behavior contract of @concurrent: tasks, pools, channels, counters, locks and latches.
+import "@concurrent/concurrent.spr" as concurrent
+import "@std/lists.spr" as lists
+
+# 1. a task returns its value; await on a finished task returns at once
+let answer = concurrent.spawn(fn() => 40 + 2)
+print(answer.await())
+print(answer.is_done())
+
+# 2. a failure inside a task reaches await() as an Error
+func divide(a: Int, b: Int) -> Int:
+    return a.divTrunc(b)
+let failing = concurrent.spawn(fn() => divide(1, 0))
+try:
+    print(failing.await())
+catch problem: Error:
+    print("failed: " + (problem.message.length() > 0))
+
+# 3. parallel_map keeps item order whatever the threads do
+func slow_square(n: Int) -> Int:
+    concurrent.sleep(10 * (5 - n))
+    return n * n
+print(concurrent.parallel_map([1, 2, 3, 4], fn(n: Int) => slow_square(n)))
+
+# 4. a pool with one thread runs tasks in order; shutdown waits for them
+let one = concurrent.pool(1)
+let order: MutableList[Int] = []
+let guard = concurrent.lock()
+func record(n: Int) -> Int:
+    guard.run(fn() => order.append(n))
+    return n
+let ordered = concurrent.parallel_map_on(one, [3, 1, 2], fn(n: Int) => record(n))
+one.shutdown()
+print(one.await_termination(5000))
+print(ordered)
+print(order)
+try:
+    concurrent.spawn_on(one, fn() => 1)
+catch problem: Error:
+    print(problem.message)
+
+# 5. a counter is exact under contention
+let hits = concurrent.counter(0)
+func bump(times: Int) -> Int:
+    var i = 0
+    while i < times:
+        hits.increment()
+        i += 1
+    return times
+let bumpers: MutableList[concurrent.Task[Int]] = []
+for worker in [1, 2, 3, 4]:
+    bumpers.append(concurrent.spawn(fn() => bump(2500)))
+print(lists.sum(concurrent.await_all(bumpers)))
+print(hits.get())
+print(hits.compare_and_set(10000, 0))
+print(hits.get())
+
+# 6. a lock serializes updates to a shared list
+let shared: MutableList[Int] = []
+func push_many(base: Int) -> Int:
+    var i = 0
+    while i < 500:
+        let value = base + i
+        guard.run(fn() => shared.append(value))
+        i += 1
+    return base
+let pushers: MutableList[concurrent.Task[Int]] = []
+for base in [0, 1000, 2000]:
+    pushers.append(concurrent.spawn(fn() => push_many(base)))
+concurrent.await_all(pushers)
+print(shared.size())
+print(concurrent.locked(guard, fn() => shared.size() * 2))
+
+func late_send() -> Int:
+    words.send("late")
+    return 0
+
+# 7. a channel delivers in order, blocks the receiver until a value arrives,
+# and tells the receiver when it is closed
+let words = concurrent.channel[String](2)
+func produce() -> Int:
+    words.send("a")
+    words.send("b")
+    words.send("c")
+    words.close()
+    return 3
+let producer = concurrent.spawn(fn() => produce())
+let received: MutableList[String] = []
+var next = words.receive()
+while next != null:
+    let value = next
+    if value != null:
+        received.append(value)
+    next = words.receive()
+print(received)
+print(producer.await())
+print(words.is_closed())
+let late = concurrent.spawn(fn() => late_send())
+print(late.await_or(-1))
+let empty = concurrent.channel[Int](1)
+print(empty.receive_within(20))
+print(empty.try_send(1))
+print(empty.try_send(2))
+print(empty.size())
+
+# 8. a latch releases its waiter when every task counted down
+let gate = concurrent.latch(3)
+func arrive(n: Int) -> Int:
+    gate.count_down()
+    return n
+let arrivals = concurrent.parallel_map([1, 2, 3], fn(n: Int) => arrive(n))
+print(gate.await_within(5000))
+print(gate.remaining())
+
+# 9. await_within reports a task that is still running, and cancel stops it
+func forever() -> Int:
+    concurrent.sleep(60000)
+    return 0
+let stuck = concurrent.spawn(fn() => forever())
+try:
+    print(stuck.await_within(50))
+catch problem: Error:
+    print(problem.message)
+print(stuck.cancel())
+print(stuck.is_cancelled())

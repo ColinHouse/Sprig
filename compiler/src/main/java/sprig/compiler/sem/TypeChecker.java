@@ -4857,7 +4857,10 @@ public final class TypeChecker {
         Class<?>[] raw = executable.getParameterTypes();
         java.lang.reflect.Type[] generic = executable.getGenericParameterTypes();
         if (JavaTypes.isCallableClass(raw[index])) {
-            FunctionType expected = JavaTypes.callable(generic[index]);
+            // Fn0<T> with T bound by the receiver or the method's type arguments
+            // takes the function type those bindings give.
+            Type bound = JavaTypes.mapFormal(generic[index], raw[index], bindings);
+            FunctionType expected = bound instanceof FunctionType boundFn ? boundFn : JavaTypes.callable(generic[index]);
             if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
             return 4;
         }

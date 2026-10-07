@@ -46,7 +46,7 @@ public final class Catalog {
     public static List<String> topics() {
         return List.of("language", "types", "strings", "functions", "classes", "variants", "match",
                 "nullability", "errors", "collections", "numerics", "modules", "jvm", "conform",
-                "generics", "projects", "dependencies", "agents", "upgrade", "fmt",
+                "generics", "concurrency", "projects", "dependencies", "agents", "upgrade", "fmt",
                 "testing", "wrap", "lsp");
     }
 
@@ -192,22 +192,26 @@ public final class Catalog {
         out.put("arbitraryJavaSam", Map.of("supported", true, "helpTopic", "jvm",
                 "rules", List.of("a Java functional-interface parameter accepts a Sprig fn(...) -> R value; the compiler emits the adapter",
                         "parameters match exactly after the Java mapping; void accepts any result; wildcards inside the interface's type arguments read as their bound",
-                        "method type variables are never inferred; bind them through the receiver or explicit method[Type] arguments",
+                        "method type variables are bound through the receiver, through written method[Type] arguments, or inferred from the plain arguments (never from the lambda)",
                         "a function value with throws Error cannot cross into Java")));
         out.put("genericTypeInference", Map.of("supported", true, "helpTopic", "generics",
                 "rules", List.of("type arguments of a generic Sprig function call, class constructor or variant case with a payload are inferred from the call's arguments when they are left out",
                         "never from the expected type, the assignment target or the result; a type position still writes Type[Arg]",
                         "written [Type] arguments still work and win; write all of them or none",
                         "an unannotated numeric literal, or a list or map literal passed for a bare T, counts only when no other argument says what the parameter is; null, [] and {} say nothing",
-                        "Java methods and Java generic types keep explicit type arguments")));
+                        "Java generic types keep explicit type arguments; a Java method's own type parameters are inferred when the plain arguments fix every one of them exactly, and written otherwise")));
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
         out.put("ifExpression", Map.of("supported", true, "helpTopic", "language",
                 "rules", List.of("if, any elifs and a required else, each with one expression on its own indented line",
-                        "the result typing of expression match; the narrowing of the if statement: a branch sees its own condition true, and else sees the if condition false only when there is no elif",
+                        "the result typing of expression match; the narrowing of the if statement: a branch sees its own condition true and every earlier condition false, and else sees every condition false",
                         "a whole value: after an assignment, return, throw or '=>', or as a branch of another if or match expression; never inside parentheses, brackets or braces, and never an operand",
                         "an if at the start of a statement is the if statement")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
+        guidance(out, "asyncAwait", "concurrency", "the sprig-concurrent library: spawn[T](fn() -> T) -> Task[T] and task.await()",
+                "parallel_map, await_all, pool(threads) and spawn_on for bounded parallelism",
+                "channel[T](capacity) for values between threads; counter, lock and latch for shared state");
+        guidance(out, "errorClasses", "errors", "a class with a message: String field plus conform C to Error(message); throw it, declare throws C, catch it by name or as Error");
         guidance(out, "arrays", "jvm", "foreign JVM array pass-through with exact classes", "byte[] helpers via sprig.runtime.jvm.HostBytes", "List[T] and @std/jvm adapters");
         out.put("varargs", Map.of("supported", true, "helpTopic", "jvm",
                 "rules", List.of("trailing arguments are packed into the final array parameter; zero of them is allowed",
