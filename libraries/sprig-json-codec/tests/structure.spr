@@ -58,13 +58,16 @@ let allowed_extra = codec.root(json.parse("{\"a\": 1, \"extra\": 2}"))
 assert(codec.required_int(allowed_extra, "a") == 1)
 
 # json.parse already rejects duplicate keys; manually constructed Values are
-# still caught by explicit unknown-field validation.
+# still caught by explicit unknown-field validation, in the words of every
+# field lookup and of json itself.
 let duplicate_value = codec.object([
     codec.member("a", codec.int(1)),
     codec.member("a", codec.int(2))])
 let only_a: List[String] = ["a"]
 assert(support.unknown_error(codec.root(duplicate_value), only_a)
-    == "$: duplicate field 'a'")
+    == "$: duplicate object key: a")
+assert(support.required_int_error(codec.root(duplicate_value), "a")
+    == "$: duplicate object key: a")
 
 # Kind checks on arrays and optional wrong types
 assert(support.required_array_error(root, "meta") == "$.meta: expected array, found object")

@@ -388,14 +388,15 @@ func optional_number_text(reader: Reader, name: String) -> String? throws Error:
     return as_number_text(Reader(path=child_path(reader.path, name), value=value))
 
 # Unknown-field policy is explicit: not calling this allows unknown fields.
-# Duplicate keys are rejected here as well, independent of later lookups.
+# Duplicate keys are rejected here as well, independent of later lookups and
+# in the same words, such as "$: duplicate object key: a".
 func reject_unknown_fields(reader: Reader, allowed: List[String]) -> Unit throws Error:
     match reader.value:
         case json.Value.Object as node:
             let seen: MutableList[String] = []
             for member in node.members:
                 if seen.contains(member.key):
-                    throw Error(reader.path + ": duplicate field '" + member.key + "'")
+                    throw Error(reader.path + ": duplicate object key: " + member.key)
                 seen.append(member.key)
                 if not allowed.contains(member.key):
                     throw Error(reader.path + ": unknown field '" + member.key + "'")

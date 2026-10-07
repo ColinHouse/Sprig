@@ -466,8 +466,9 @@ func encode_task(task: Task) -> json.Value:
   of `Decimal`'s range, such as `1e9999999999`, is an `Error` with the path:
   `$.amount: expected decimal in range, found number 1e9999999999`.
 - `reject_unknown_fields(reader, allowed)` throws for a field that is not in
-  the list, and for a duplicate field in a manually built object. Reading any
-  field of such an object throws too: `$: duplicate object key: a`.
+  the list, and for a duplicate key in a manually built object. Reading any
+  field of such an object throws too, with the same message:
+  `$: duplicate object key: a`.
 - `object`, `member`, `array`, `string_array`, `text`, `int`, `bool` and
   `number` build values for `json.stringify`. They add no policy.
 
