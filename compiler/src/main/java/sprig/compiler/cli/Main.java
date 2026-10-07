@@ -1049,7 +1049,7 @@ public final class Main {
                         diagnostics.add(runtimeFailure);
                     }
                 }
-                String uncalledMain = result.exitCode == 0 && result.stdout.isEmpty()
+                String uncalledMain = result.exitCode == 0 && !result.outputWritten
                         ? uncalledMainNote(compilation.main) : null;
                 if (uncalledMain != null && !options.json) {
                     System.err.println(uncalledMain);
@@ -1092,16 +1092,42 @@ public final class Main {
         if (entry == null || entry.findFunction("main") == null) {
             return null;
         }
-        for (sprig.compiler.ast.Stmt statement : entry.topStatements) {
-            if (statement instanceof sprig.compiler.ast.Stmt.ExprStmt expression
-                    && expression.expr instanceof sprig.compiler.ast.Expr.Call call
-                    && call.callee instanceof sprig.compiler.ast.Expr.Name name && name.name.equals("main")) {
-                return null;
-            }
-        }
+        if (containsMainCall(entry.topStatements)) return null;
         return "note: nothing was printed, and no top-level statement calls main. "
                 + "Sprig runs top-level statements in order and does not call main itself: "
                 + "add the line main() at the end of the file, or write the statements at the top level.";
+    }
+
+    private static boolean containsMainCall(List<sprig.compiler.ast.Stmt> statements) {
+        for (sprig.compiler.ast.Stmt statement : statements) {
+            if (statement instanceof sprig.compiler.ast.Stmt.ExprStmt expression
+                    && expression.expr instanceof sprig.compiler.ast.Expr.Call call
+                    && call.callee instanceof sprig.compiler.ast.Expr.Name name && name.name.equals("main")) {
+                return true;
+            }
+            if (statement instanceof sprig.compiler.ast.Stmt.IfStmt branch) {
+                if (containsMainCall(branch.thenBody) || containsMainCall(branch.elseBody == null
+                        ? List.of() : branch.elseBody)) return true;
+                for (sprig.compiler.ast.Stmt.IfStmt.Elif elif : branch.elifs) {
+                    if (containsMainCall(elif.body)) return true;
+                }
+            } else if (statement instanceof sprig.compiler.ast.Stmt.Try tried) {
+                if (containsMainCall(tried.body)
+                        || containsMainCall(tried.finallyBody == null ? List.of() : tried.finallyBody)) return true;
+                for (sprig.compiler.ast.Stmt.Try.CatchClause clause : tried.catches) {
+                    if (containsMainCall(clause.body)) return true;
+                }
+            } else if (statement instanceof sprig.compiler.ast.Stmt.WhileStmt loop) {
+                if (containsMainCall(loop.body)) return true;
+            } else if (statement instanceof sprig.compiler.ast.Stmt.ForStmt loop) {
+                if (containsMainCall(loop.body)) return true;
+            } else if (statement instanceof sprig.compiler.ast.Stmt.Match match) {
+                for (sprig.compiler.ast.Stmt.Match.Branch branch : match.branches) {
+                    if (containsMainCall(branch.body)) return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static final class Prepared {
