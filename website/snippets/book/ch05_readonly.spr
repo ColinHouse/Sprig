@@ -1,0 +1,15 @@
+# MutableList 可以传给要 List 的函数：对方看到的是同一个列表的只读视角。
+func total(xs: List[Int]) -> Int:
+    var sum = 0
+    for x in xs:
+        sum += x
+    return sum
+
+let numbers = [1, 2, 3]
+print(total(numbers))
+numbers.append(4)
+print(total(numbers))
+let snapshot = numbers.toList()
+numbers.append(5)
+print(snapshot.size())
+print(numbers.size())

@@ -1,0 +1,8 @@
+func parse_amount(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+func show(text: String) -> Unit:
+    print(parse_amount(text))

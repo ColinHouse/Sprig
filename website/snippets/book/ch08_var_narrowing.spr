@@ -1,0 +1,3 @@
+var count: Int? = 3
+if count != null:
+    print(count + 1)

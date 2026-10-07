@@ -1,0 +1,13 @@
+let stock: MutableMap[String, Int] = {"tea": 12, "milk": 3}
+stock["rice"] = 20
+print(stock.size())
+print(stock["tea"])
+print(stock["coffee"])
+let tea = stock["tea"]
+if tea != null:
+    print(tea + 1)
+for key in stock.keys():
+    print(key)
+print("milk" in stock)
+stock.remove("milk")
+print(stock)

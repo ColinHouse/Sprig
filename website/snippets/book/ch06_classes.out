@@ -1,0 +1,4 @@
+Expense(item=Coffee, cents=1250, note=morning)
+Coffee: 1250 (morning)
+false
+true

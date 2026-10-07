@@ -1,0 +1,30 @@
+# 收窄的几种位置：if 分支、elif/else、and/or 右侧、提前返回。
+func describe(count: Int?, verbose: Bool) -> String:
+    if count == null:
+        return "none"
+    elif verbose:
+        return "count " + count
+    else:
+        return "quiet " + count
+
+func first_positive(value: Int?) -> Bool:
+    return value != null and value > 0
+
+func label(text: String?) -> String:
+    if text == null or text.length() == 0:
+        return "empty"
+    return text
+
+func double(value: Int?) -> Int:
+    if value == null:
+        return 0
+    return value * 2
+
+let none: Int? = null
+print(describe(3, true))
+print(describe(none, false))
+print(first_positive(5))
+print(first_positive(none))
+print(label(""))
+print(label("hi"))
+print(double(21))

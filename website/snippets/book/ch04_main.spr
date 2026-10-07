@@ -1,0 +1,5 @@
+# 没有特殊的 main：顶层语句就是入口。要用 main 函数也行，但得自己调用。
+func main() -> Unit:
+    print("from main")
+
+main()

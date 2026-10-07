@@ -1,0 +1,18 @@
+variant Shape:
+    Circle(radius: Float)
+    Rect(width: Float, height: Float)
+    Dot
+
+func area(shape: Shape) -> Float:
+    match shape:
+        case Shape.Circle as c:
+            return 3.14159 * c.radius * c.radius
+        case Shape.Rect as r:
+            return r.width * r.height
+        case Shape.Dot:
+            return 0.0
+
+let shapes: List[Shape] = [Shape.Circle(radius=1.0), Shape.Rect(width=2.0, height=3.0), Shape.Dot]
+for shape in shapes:
+    print(area(shape))
+print(Shape.Rect(width=2.0, height=3.0) == Shape.Rect(width=2.0, height=3.0))

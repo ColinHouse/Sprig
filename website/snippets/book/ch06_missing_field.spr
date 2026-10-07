@@ -1,0 +1,5 @@
+class Expense:
+    let item: String
+    let cents: Int
+
+let coffee = Expense(item="Coffee")

@@ -1,0 +1,10 @@
+# let 绑定一次，var 可以重新赋值；类型可以写出来，也可以由值推断。
+let name = "Ada"
+var visits = 0
+visits += 1
+visits = visits + 1
+let height: Float = 1.68
+let tall = height > 1.6
+print(name)
+print(visits)
+print(tall)

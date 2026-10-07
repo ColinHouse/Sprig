@@ -1,0 +1,16 @@
+# if 也可以是一个值：每个分支一行表达式，else 必须写。
+let count = 3
+let size = if count > 9:
+    "many"
+elif count > 0:
+    "some"
+else:
+    "none"
+print(size)
+
+func shipping(cents: Int) -> Int:
+    return if cents >= 5000:
+        0
+    else:
+        499
+print(shipping(6400))

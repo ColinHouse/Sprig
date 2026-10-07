@@ -1,0 +1,4 @@
+func count_up() -> Int:
+    var counter = 0
+    let bump = fn() => counter + 1
+    return bump()
