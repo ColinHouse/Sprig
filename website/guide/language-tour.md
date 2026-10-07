@@ -222,15 +222,15 @@ $[1].id: expected integer, found string
 
 ## 命名
 
-- 函数、方法、参数、变量和字段用小驼峰：`readText`、`maxBy`、`userId`。
-- 类型用大驼峰：类、契约类、`variant`、`enum`，以及它们的分支和类型参数，比如 `HttpServer`、`Expr.Literal`、`Color.Red`、`T`。
-- 缩写当成一个词：写 `parseJson`、`writeUtf8`、`HttpServer`，不写 `parseJSON`。
-- 没有全大写的常量，模块里的 `let` 也用小驼峰。
-- Java 的 API 保留 Java 原名：`ArrayList.add`、`LocalDate.of`、`Thread.MIN_PRIORITY`。实现或覆盖 Java 方法时，方法名跟 Java 一致。
-- 文件和目录用小写加下划线：`json_codec.spr`、`main.spr`。导入时起的别名是普通的名字，用小驼峰：`import "@std/json_codec.spr" as jsonCodec`。
-- 包名（`sprig.toml` 里的 `name`、注册表里的名字）用小写加连字符：`sprig-web`。
+命名跟着 Sprig 代码里已经在用的写法走：
 
-`@std` 和自带的库里的函数现在还是下划线命名（比如 `files.read_utf8`），之后会按这套规则改名。
+- 你自己声明的名字用小写加下划线：函数、方法、参数、变量、字段、模块里的 `let`，还有导入时起的别名，比如 `read_utf8`、`max_by`、`user_id`。缩写也小写：`write_utf8`、`escape_html`。
+- 类型用大驼峰：类、契约类、`variant`、`enum`，以及它们的分支和类型参数，比如 `HttpServer`、`Expr.Literal`、`Color.Red`、`T`。
+- 没有全大写的常量。
+- 内置类型自带的方法（`toString`、`toFloatExact`、`divTrunc`、`toIntOrNull`）和 Java 的 API（`ArrayList.add`、`Thread.MIN_PRIORITY`）保留驼峰原名。实现或覆盖 Java 方法时，方法名跟 Java 一致。
+- 文件和目录也用小写加下划线：`json_codec.spr`、`main.spr`。包名（`sprig.toml` 里的 `name`、注册表里的名字）用小写加连字符：`sprig-web`。
+
+sprig-cli 的 `OptionKind.FLAG` 和 sprig-web 的 `Method.GET`、`SchemaType.STRING` 这几个全大写的分支名是早先定的，保持不变。
 
 ## 另外几个小功能
 

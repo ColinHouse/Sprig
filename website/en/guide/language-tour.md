@@ -222,15 +222,15 @@ $[1].id: expected integer, found string
 
 ## Names
 
-- Functions, methods, parameters, variables and fields are lowerCamelCase: `readText`, `maxBy`, `userId`.
-- Types are UpperCamelCase: classes, contracts, variants and enums, their cases and type parameters, as in `HttpServer`, `Expr.Literal`, `Color.Red` and `T`.
-- An acronym is a word: write `parseJson`, `writeUtf8` and `HttpServer`, not `parseJSON`.
-- There are no all-caps constants; a module-level `let` is lowerCamelCase too.
-- Java APIs keep their Java names: `ArrayList.add`, `LocalDate.of`, `Thread.MIN_PRIORITY`. A method that implements or overrides a Java method uses the Java name.
-- Files and directories are lowercase with underscores: `json_codec.spr`, `main.spr`. An import alias is an ordinary name, so it's lowerCamelCase: `import "@std/json_codec.spr" as jsonCodec`.
-- Package names (`name` in `sprig.toml`, registry names) are lowercase with hyphens: `sprig-web`.
+Names follow what Sprig code already writes:
 
-`@std` and the bundled libraries still name their functions with underscores (such as `files.read_utf8`); they'll be renamed to these rules.
+- A name you declare is lowercase with underscores: functions, methods, parameters, variables, fields, module-level `let`s and import aliases, as in `read_utf8`, `max_by` and `user_id`. An acronym is lowercase too: `write_utf8`, `escape_html`.
+- Types are UpperCamelCase: classes, contracts, variants and enums, their cases and type parameters, as in `HttpServer`, `Expr.Literal`, `Color.Red` and `T`.
+- There are no all-caps constants.
+- The built-in members of the native types (`toString`, `toFloatExact`, `divTrunc`, `toIntOrNull`) and Java APIs (`ArrayList.add`, `Thread.MIN_PRIORITY`) keep their camelCase names. A method that implements or overrides a Java method uses the Java name.
+- Files and directories are lowercase with underscores too: `json_codec.spr`, `main.spr`. Package names (`name` in `sprig.toml`, registry names) are lowercase with hyphens: `sprig-web`.
+
+The all-caps cases of sprig-cli's `OptionKind.FLAG` and sprig-web's `Method.GET` and `SchemaType.STRING` came earlier and stay.
 
 ## A few smaller features
 

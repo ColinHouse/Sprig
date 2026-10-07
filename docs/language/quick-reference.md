@@ -58,19 +58,18 @@ Methods with no result use `-> Unit`. Imports come first. `let` binds once;
 classes and variant cases use named arguments; functions and JVM methods use
 positional arguments. `match` lists every case and has no wildcard.
 
-Names: functions, methods, parameters, variables, fields and module-level
-`let`s are lowerCamelCase (`readText`, `maxBy`, `userId`); types are
-UpperCamelCase: classes, contracts, variants, enums, their cases and type
-parameters (`HttpServer`, `Expr.Literal`, `Color.Red`, `T`). An acronym is a
-word (`parseJson`, `writeUtf8`, `HttpServer`); `Float.isNaN` keeps Java's
-spelling. There are no all-caps constants. Java APIs keep their Java names
-(`ArrayList.add`, `Thread.MIN_PRIORITY`), and a method that implements or
-overrides a Java method uses the Java name. Files and directories are
-`lower_snake_case.spr`; an import alias is lowerCamelCase
-(`import "@std/json_codec.spr" as jsonCodec`); package names are lowercase
-with hyphens (`sprig-web`). `@std` and the bundled libraries still name their
-functions in snake_case (`files.read_utf8`) until they are renamed to these
-rules.
+Names follow what Sprig code already writes. A name you declare (function,
+method, parameter, variable, field, module-level `let`, import alias) is
+lower_snake_case (`read_utf8`, `max_by`, `user_id`); an acronym is lowercase
+inside it (`write_utf8`, `escape_html`). Types are UpperCamelCase: classes,
+contracts, variants, enums, their cases and type parameters (`HttpServer`,
+`Expr.Literal`, `Color.Red`, `T`). There are no all-caps constants. The
+built-in members of the native types (`toString`, `toFloatExact`, `divTrunc`,
+`toIntOrNull`) and Java APIs (`ArrayList.add`, `Thread.MIN_PRIORITY`) keep
+their camelCase names, and a method that implements or overrides a Java method
+uses the Java name. Files and directories are `lower_snake_case.spr`; package
+names are lowercase with hyphens (`sprig-web`). The all-caps enum cases of
+sprig-cli (`FLAG`) and sprig-web (`GET`, `STRING`) predate this and stay.
 
 Use `T?` for expected absence and narrow with `if value != null` before use.
 The right side of a short-circuit `and`/`or` and the guarded block see the
