@@ -70,10 +70,13 @@ by the historical design kit in `docs/history/design-kit/`.
   writes through `? extends`, no wildcard syntax in Sprig); class bounds are validated,
   raw evidence never promotes to concrete arguments, and raw boundaries stay
   erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
-  implicit Java/Sprig collection conversion. Type-use nullability annotations
-  are not interpreted. Java reference results are conservatively nullable,
-  except a `toString()` result; Java reference parameters are conservatively
-  non-null.
+  implicit Java/Sprig collection conversion. Java reference results are
+  conservatively nullable and reference parameters non-null, except where a
+  nullability annotation visible at run time says otherwise (`NotNull`,
+  `NonNull`, `Nonnull`, `Nullable`, `CheckForNull`, and the `NullMarked`,
+  `NonNullApi` and `MethodsReturnNonnullByDefault` defaults); annotations kept
+  only in class files, such as `org.jetbrains.annotations`, are not seen; a
+  `toString()` result is non-null.
 - Sprig `throws` and `catch` are implemented, but their relationship to Java
   exception classes and top-level execution remains provisional. Checked Java
   exceptions follow Java's rule in one direction more: a catch nothing can

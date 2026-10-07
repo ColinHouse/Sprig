@@ -34,7 +34,7 @@ true
 
 Methods that return primitives (`long`, `int`, `double`, `boolean` and so on) never return `null`, so you can use those results directly.
 
-In the other direction, an argument you pass to Java can never be `null`, even when the parameter type is `Object`. Check a `T?` value before you pass it to Java. Sprig doesn't read nullability annotations in Java code.
+In the other direction, an argument you pass to Java can never be `null`, even when the parameter type is `Object`. Check a `T?` value before you pass it to Java. Sprig reads nullability annotations that are visible at run time: a result annotated `@NotNull`/`@NonNull` (or declared in a `@NullMarked` class or package) is a plain `T`, and a parameter annotated `@Nullable` accepts a `T?` or `null`. Annotations that live only in class files, like `org.jetbrains.annotations`, aren't visible and don't count.
 
 ## Type mapping
 
@@ -162,7 +162,7 @@ Before writing the file, `wrap` checks the generated code against the same class
 - **Wildcard syntax**: a wildcard-typed value can be held and passed on, but you can't write a wildcard in a Sprig declaration, and nothing can be added through `? extends`. Deeply nested builder APIs such as Brigadier may still want a small Java adapter; see [Fabric mods](/en/guide/fabric).
 - **Varargs of a type variable** (`T...`): there is no element class to pack into.
 - **Java generic inference**: Java methods and Java generic types take written type arguments, and there's no variance either. Sprig's own generic calls infer theirs; see [generics](/en/guide/generics).
-- **Nullability annotations**: Java's nullability annotations aren't read.
+- **Nullability annotations kept only in class files** (`org.jetbrains.annotations`, Android's): not visible at run time, so not read; the run-time visible ones (JSpecify, JSR-305, Checker Framework, Spring) are.
 - **Arithmetic inside Java**: an `int` overflow inside a Java method doesn't raise Sprig's numeric error.
 
 The full list is in [known limitations](/en/reference/language/known-limitations).

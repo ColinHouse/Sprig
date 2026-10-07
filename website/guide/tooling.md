@@ -2,7 +2,7 @@
 
 Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，连语言服务器也是一个子命令 `sprig lsp`，由编辑器自己启动。VS Code 里的支持见 [VS Code 插件](/guide/editor)。
 
-这页列出的命令，已发布的 v0.7.0-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
+这页列出的命令，已发布的 v0.7.1-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
 
 ## 命令一览
 
@@ -68,7 +68,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.7.0-beta.1",
+  "toolVersion": "sprig-compiler 0.7.1-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -94,7 +94,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.7.0-beta.1",
+  "toolVersion": "sprig-compiler 0.7.1-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},
@@ -146,7 +146,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 
 `sprig lsp` 通过标准输入输出说 Language Server Protocol（LSP），Neovim、Helix 这类编辑器可以直接用它，[VS Code 插件](/guide/editor)也会自动启动它。它是 v0.6.0-beta.1 新加的。
 
-它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。
+它提供边写边报错、悬停提示、跳转到定义、查找引用、大纲、补全、格式化、局部变量和参数的重命名，以及快速修复：错误的改法是一处机械改写时，在编辑器里点一下就能改好。这些都来自和 `sprig check` 同一个编译器，所以编辑器里看到的和命令行永远一致。代码还解析不了的时候，服务器宁可什么都不返回，也不去猜。快速修复比 v0.7.1-beta.1 新，要等下一个版本。
 
 编辑器怎么配置、每项功能的细节，见[语言服务器参考（英文）](/en/reference/tooling/lsp)。
 
