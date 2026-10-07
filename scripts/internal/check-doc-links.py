@@ -7,7 +7,9 @@ all Markdown in an extracted SDK; network links are intentionally not fetched.
 import argparse
 from pathlib import Path
 import re
+import shutil
 import subprocess
+import sys
 from urllib.parse import unquote, urlsplit
 
 parser = argparse.ArgumentParser()
@@ -18,6 +20,17 @@ package = args.root is not None
 if package:
     files = list(root.rglob('*.md'))
 else:
+    # Site pages link into /en/reference/..., which website/scripts/sync-reference.mjs
+    # generates from docs/ before every docs build. Generate them here as well, so
+    # the links are checked against the current docs/ when this script runs on its
+    # own (test-affected.py selects it for documentation changes).
+    node = shutil.which('node')
+    if node is None:
+        print('Node.js 20+ is required to generate the reference pages that site links point to.',
+              file=sys.stderr)
+        raise SystemExit(2)
+    subprocess.run([node, str(root / 'website/scripts/sync-reference.mjs')], cwd=root, check=True,
+                   stdout=subprocess.DEVNULL)
     files = [root / p for p in subprocess.check_output(
         ['git', 'ls-files', '*.md'], cwd=root, text=True).splitlines() if (root / p).is_file()]
     files += list((root / 'website/generated').rglob('*.md'))
