@@ -1,14 +1,18 @@
-# Tasks, pools, channels, counters, locks and latches over java.util.concurrent.
-# Sprig owns the API; the small Java kernel in sprig.runtime.concurrent owns
-# the executor, queue and lock mechanics. A task body is a plain function
-# value: it captures only immutable bindings, so the usual data races on
-# locals cannot happen; shared MutableList/MutableMap values and var fields
-# are not protected, guard them with a Lock or send values through a Channel.
+# Structured concurrency over java.util.concurrent and JDK 21 virtual threads.
+# Sprig owns the API; the small Java kernel in sprig.runtime.concurrent owns the
+# executor, queue and lock mechanics. Every task belongs to a scope: it is
+# started with spawn(scope, work) inside scope(body), runs on a virtual thread,
+# and ends before the scope does. The first failure cancels the sibling tasks
+# and is rethrown from scope() as an Error. A task body is a plain function
+# value: it captures only immutable bindings, so the usual data races on locals
+# cannot happen; shared MutableList/MutableMap values and var fields are not
+# protected, guard them with a Lock or send values through a Channel.
 import java.util.concurrent.atomic.AtomicLong as AtomicLong
 import sprig.runtime.concurrent.HostChannel as HostChannel
 import sprig.runtime.concurrent.HostLatch as HostLatch
 import sprig.runtime.concurrent.HostLock as HostLock
 import sprig.runtime.concurrent.HostPool as HostPool
+import sprig.runtime.concurrent.HostScope as HostScope
 import sprig.runtime.concurrent.HostTask as HostTask
 
 # A computation running on another thread. await() waits for its value; a
@@ -43,14 +47,53 @@ generic T:
         func is_cancelled() -> Bool:
             return inner.isCancelled()
 
-# Starts work on the shared pool of daemon threads: a program whose top-level
-# statements end does not wait for unfinished tasks, so await() what matters.
-generic T:
-    func spawn(work: fn() -> T) -> Task[T]:
-        return Task[T](inner=HostTask.start[T](work))
+# The scope that owns a group of tasks. scope(body) creates one, hands it to
+# the body, and waits for every task before it returns.
+class Scope:
+    let inner: HostScope
 
-# A fixed number of worker threads. Tasks beyond that many run as earlier ones
-# finish, in submission order. shutdown() lets running tasks finish.
+    # Asks every task of the scope to stop.
+    func cancel_all() -> Unit:
+        inner.cancelAll()
+
+    # False once the body has returned: no task can be started then.
+    func is_open() -> Bool:
+        return inner.isOpen()
+
+    # True once some task failed; scope() reports that failure when it ends.
+    func has_failed() -> Bool:
+        return inner.hasFailed()
+
+    # Tasks started so far.
+    func size() -> Int:
+        return inner.taskCount()
+
+# Runs body with a fresh scope. When the body returns, every task started in
+# the scope has ended: the scope waits for them. The first task failure
+# cancels its siblings and is rethrown here as an Error; a failure of the body
+# itself cancels the tasks, waits for them and propagates. Scopes nest.
+generic T:
+    func scope(body: fn(Scope) -> T throws Error) -> T throws Error:
+        let host = HostScope()
+        let current = Scope(inner=host)
+        try:
+            let result = body(current)
+            host.join()
+            return result
+        catch problem: Error:
+            host.abandon()
+            throw problem
+
+# Starts work on a virtual thread owned by the scope. Ten thousand blocking
+# tasks cost what ten cost; use a pool only to bound CPU-bound work.
+generic T:
+    func spawn(scope: Scope, work: fn() -> T) -> Task[T] throws Error:
+        if not scope.is_open():
+            throw Error("the scope has ended; spawn inside the scope body")
+        return Task[T](inner=scope.inner.spawn[T](work))
+
+# A fixed number of platform worker threads for CPU-bound work. Tasks beyond
+# that many run as earlier ones finish, in submission order.
 class Pool:
     let inner: HostPool
 
@@ -77,11 +120,14 @@ func pool(threads: Int) -> Pool throws Error:
         throw Error("a pool needs at least one thread, got " + threads)
     return Pool(inner=HostPool(threads))
 
+# Starts work on the pool's threads; the task still belongs to the scope.
 generic T:
-    func spawn_on(pool: Pool, work: fn() -> T) -> Task[T] throws Error:
+    func spawn_on(scope: Scope, pool: Pool, work: fn() -> T) -> Task[T] throws Error:
+        if not scope.is_open():
+            throw Error("the scope has ended; spawn inside the scope body")
         if pool.is_shutdown():
             throw Error("pool is shut down; it accepts no more tasks")
-        return Task[T](inner=pool.inner.submit[T](work))
+        return Task[T](inner=scope.inner.spawnOn[T](pool.inner, work))
 
 # Waits for every task, in order; the first failure is rethrown.
 generic T:
@@ -91,20 +137,29 @@ generic T:
             values.append(task.await())
         return values
 
-# One task per item on the shared pool; results in item order.
+# One task per item in a scope of its own; results in item order.
 generic T, R:
     func parallel_map(items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
-        let tasks: MutableList[Task[R]] = []
-        for item in items:
-            tasks.append(spawn[R](fn() => transform(item)))
-        return await_all[R](tasks)
+        return scope[List[R]](fn(current: Scope) => map_in[T, R](current, items, transform))
 
-# One task per item on the given pool; results in item order.
+# One task per item on the given pool, in a scope of its own; results in item order.
 generic T, R:
     func parallel_map_on(pool: Pool, items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
+        return scope[List[R]](fn(current: Scope) => map_on_in[T, R](current, pool, items, transform))
+
+# One task per item in the given scope; results in item order.
+generic T, R:
+    func map_in(current: Scope, items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
         let tasks: MutableList[Task[R]] = []
         for item in items:
-            tasks.append(spawn_on[R](pool, fn() => transform(item)))
+            tasks.append(spawn[R](current, fn() => transform(item)))
+        return await_all[R](tasks)
+
+generic T, R:
+    func map_on_in(current: Scope, pool: Pool, items: List[T], transform: fn(T) -> R) -> List[R] throws Error:
+        let tasks: MutableList[Task[R]] = []
+        for item in items:
+            tasks.append(spawn_on[R](current, pool, fn() => transform(item)))
         return await_all[R](tasks)
 
 # A bounded queue between threads. send blocks while it is full, receive
@@ -180,7 +235,8 @@ func counter(start: Int) -> Counter:
     return Counter(inner=AtomicLong(start))
 
 # Mutual exclusion around shared mutable state. The lock is reentrant: the
-# thread holding it may take it again.
+# thread holding it may take it again. It is a java.util.concurrent lock, so a
+# task holding it never pins its virtual thread's carrier.
 class Lock:
     let inner: HostLock
 

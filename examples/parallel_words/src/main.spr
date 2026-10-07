@@ -1,6 +1,7 @@
-# Count words in several texts at once: one task per text, a channel for
-# progress, a counter for the total, and a lock around a shared list.
-import "@concurrent/concurrent.spr" as concurrent
+# Count words in several texts at once: a scope that owns one task per text,
+# a channel for progress, a counter for the total, and a lock around a shared
+# list. Every task ends before its scope does.
+import "@std/concurrent.spr" as concurrent
 
 let texts: List[String] = [
     "the quick brown fox jumps over the lazy dog",
@@ -12,7 +13,8 @@ let texts: List[String] = [
 func word_count(line: String) -> Int:
     return line.split(" ").size()
 
-# parallel_map starts one task per item and returns the results in item order.
+# parallel_map opens a scope, starts one task per item and returns the results
+# in item order once every task has ended.
 let counts = concurrent.parallel_map(texts, fn(line: String) => word_count(line))
 print(counts)
 
@@ -29,13 +31,19 @@ func process(line: String) -> Int:
     progress.try_send("done " + words)
     return words
 
-let pool = concurrent.pool(2)
-let tasks: MutableList[concurrent.Task[Int]] = []
-for line in texts:
-    tasks.append(concurrent.spawn_on(pool, fn() => process(line)))
-let results = concurrent.await_all(tasks)
+# A pool bounds CPU-bound work to two platform threads; the tasks still belong
+# to the scope, which waits for all of them before count_all returns.
+func count_all(s: concurrent.Scope) -> List[Int] throws Error:
+    let pool = concurrent.pool(2)
+    let tasks: MutableList[concurrent.Task[Int]] = []
+    for line in texts:
+        tasks.append(concurrent.spawn_on(s, pool, fn() => process(line)))
+    let results = concurrent.await_all(tasks)
+    pool.shutdown()
+    return results
+
+let results = concurrent.scope(count_all)
 progress.close()
-pool.shutdown()
 print(results)
 print("total " + total.get())
 

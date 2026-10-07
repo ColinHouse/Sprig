@@ -134,7 +134,7 @@ sprig add json-codec --version 0.7.1-beta.1
 
 注册表只是一份索引：一个目录，每个包一个 `packages/名字.toml`，写着它的 Git 仓库、子目录和各版本对应的 tag。`add` 查到以后，在 `sprig.toml` 里写下的是一个**普通的 Git 依赖**，之后 `check`、`run` 不再碰注册表。没有中心服务器、没有账号、没有上传：发布一个包就是往索引仓库提交一个文件（`sprig publish` 帮你生成）。
 
-不声明任何注册表时，默认用 Sprig 仓库里的 `registry/` 目录，里面列着第一方库（`cli`、`json-codec`、`http`、`web`、`sqlite`、`concurrent`）。团队自己的注册表用 `[[registry]]` 声明：
+不声明任何注册表时，默认用 Sprig 仓库里的 `registry/` 目录，里面列着第一方库（`cli`、`json-codec`、`http`、`web`、`sqlite`）。团队自己的注册表用 `[[registry]]` 声明：
 
 ```toml
 [[registry]]

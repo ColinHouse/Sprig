@@ -1,6 +1,6 @@
 # sprig-web 0.1 development library
 
-A synchronous localhost HTTP library implemented in Sprig. JDK 17 HTTP transport
+A synchronous localhost HTTP library implemented in Sprig. JDK HTTP transport
 and UTF-8 decoding live behind a small Java boundary. This is a source checkout
 library, not a published registry package or a production framework.
 

@@ -212,8 +212,9 @@ public final class Catalog {
                         "a whole value: after an assignment, return, throw or '=>', or as a branch of another if or match expression; never inside parentheses, brackets or braces, and never an operand",
                         "an if at the start of a statement is the if statement")));
         guidance(out, "wildcardMatch", "match", "list every enum/variant case explicitly");
-        guidance(out, "asyncAwait", "concurrency", "the sprig-concurrent library: spawn[T](fn() -> T) -> Task[T] and task.await()",
-                "parallel_map, await_all, pool(threads) and spawn_on for bounded parallelism",
+        guidance(out, "asyncAwait", "concurrency", "by design: @std/concurrent.spr runs plain blocking functions as tasks on JDK 21 virtual threads, so no function is colored",
+                "scope(body) owns the tasks started with spawn(scope, work); leaving the scope waits for them and the first failure cancels the rest and is rethrown",
+                "parallel_map, await_all, pool(threads) and spawn_on(scope, pool, work) for bounded CPU-bound work",
                 "channel[T](capacity) for values between threads; counter, lock and latch for shared state");
         out.put("errorClasses", Map.of("supported", true, "helpTopic", "errors",
                 "rules", List.of("a class with a let message: String field becomes an error type through conform C to Error(message)",

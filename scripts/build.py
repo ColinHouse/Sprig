@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portable stage-0 build. Requires Python 3 and JDK 17+ on PATH."""
+"""Portable stage-0 build. Requires Python 3 and JDK 21+ on PATH."""
 import hashlib
 import os
 from pathlib import Path
@@ -37,7 +37,7 @@ def write_launchers(home, packaged=False):
 def main():
     for tool in ('java', 'javac', 'jar'):
         if not shutil.which(tool):
-            raise RuntimeError('JDK 17+ required on PATH: missing ' + tool)
+            raise RuntimeError('JDK 21+ required on PATH: missing ' + tool)
     antlr = Path(os.environ.get('ANTLR_JAR', ROOT / 'build/deps' / ANTLR_NAME)).resolve()
     if not antlr.is_file():
         print('Downloading pinned ANTLR 4.13.2...', flush=True)
@@ -73,7 +73,7 @@ def main():
     # javac argument-file quoting handles checkout paths with spaces on every OS.
     (build / 'sources.txt').write_text('\n'.join('"' + file.as_posix().replace('"', '\\"') + '"' for file in sources) + '\n', encoding='utf-8')
     print('Compiling compiler + runtime...', flush=True)
-    run('javac', '--release', '17', '-encoding', 'UTF-8', '-Xlint:-options', '-cp', os.pathsep.join(str(file) for file in [antlr, *resolver]), '-d', build / 'classes', '@' + str(build / 'sources.txt'))
+    run('javac', '--release', '21', '-encoding', 'UTF-8', '-Xlint:-options', '-cp', os.pathsep.join(str(file) for file in [antlr, *resolver]), '-d', build / 'classes', '@' + str(build / 'sources.txt'))
     resources = ROOT / 'compiler/src/main/resources'
     if resources.is_dir():
         shutil.copytree(resources, build / 'classes', dirs_exist_ok=True)

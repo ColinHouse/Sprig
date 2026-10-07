@@ -4,7 +4,7 @@
 
 ## 先装 JDK
 
-Sprig 会把代码编译成 Java 再交给 JVM 运行，所以需要 **JDK 17 或更新的版本**。注意是 JDK，不是只有 JRE。检查一下：
+Sprig 会把代码编译成 Java 再交给 JVM 运行，所以需要 **JDK 21 或更新的版本**。注意是 JDK，不是只有 JRE。检查一下：
 
 ```bash
 java -version

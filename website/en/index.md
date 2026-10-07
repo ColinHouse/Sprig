@@ -59,7 +59,7 @@ Sprig is young. The current release is the experimental v0.7.1-beta.1. Everythin
 
 ## Up and running in five minutes
 
-You need JDK 17 or newer. Once the [SDK is installed](/en/guide/getting-started):
+You need JDK 21 or newer. Once the [SDK is installed](/en/guide/getting-started):
 
 ```bash
 sprig init hello

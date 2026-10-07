@@ -219,7 +219,7 @@ not an amount: 45.5
 
 - 给它加一个 `tests/` 目录，为 `parse_amount` 写几个测试，再写一个 `compile_fail` 测试保证 `cents / 100` 这种写法被拒绝（第 12 章）。
 - 用 `@std/json` 把支出存成 JSON 文件，仓库里的[任务清单示例](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)就是这么做的。
-- 用 `sprig-concurrent`（第 14 章）并行解析多个月的文件。
+- 用 `@std/concurrent`（第 14 章）并行解析多个月的文件。
 - 用 `sprig-web`（见 [Web 与 SQLite](/guide/web-sqlite)）把报表做成一个本地网页。
 
 ## 全书小结

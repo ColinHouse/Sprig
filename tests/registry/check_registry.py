@@ -156,7 +156,7 @@ def main():
         listing = sprig(own, "search", "--json", env=env)
         names = sorted(p["name"] for p in body(listing)["packages"])
         check("repository-registry-lists-libraries", listing.returncode == 0
-              and names == ["cli", "concurrent", "http", "json-codec", "sqlite", "web"], listing.stdout + listing.stderr)
+              and names == ["cli", "http", "json-codec", "sqlite", "web"], listing.stdout + listing.stderr)
     print(f"registry: {PASSED} checks passed")
     return 0
 
