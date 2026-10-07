@@ -58,6 +58,8 @@ Inside a project, `check`, `run` and `build` don't need a file name; they use th
 - **`build -d <dir>`**: `build` writes to `sprig-build/` by default, and `-d` picks another directory. If the check fails, no class files are written.
 - **`build --emit-java-only`**: runs the static checks and generates Java without calling javac. With `--json`, the result includes `javaSources`, `mainClass` and `javacInvoked: false`.
 
+If a program defines `func main` but writes no output and no top-level statement or nested block calls it, `run` prints a note. Calls inside nested `if`, `try` and similar blocks count.
+
 `sprig explain` tells you what any error code means, and the full list is in [diagnostic codes](/en/reference/tooling/diagnostic-codes).
 
 ## JSON output

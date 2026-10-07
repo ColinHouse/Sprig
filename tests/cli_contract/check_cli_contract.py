@@ -134,6 +134,49 @@ def main():
         assert json_exit.returncode == 2 and json_exit_payload["exitCode"] == 2 \
             and json_exit_payload["diagnostics"][0]["code"] == "SPR-PROGRAM-EXIT" \
             and json_exit_payload["diagnostics"][0]["data"]["programExitCode"] == 2, json_exit_payload
+
+        nested_main = directory / "nested_main.spr"
+        nested_main.write_text('func main() -> Unit:\n'
+                               '    print("hello from main")\n\n'
+                               'try:\n'
+                               '    main()\n'
+                               'catch problem: Error:\n'
+                               '    print(problem)\n', encoding="utf-8")
+        nested_main_run = invoke("run", nested_main, cwd=directory)
+        assert nested_main_run.returncode == 0 and nested_main_run.stdout == "hello from main\n" \
+            and nested_main_run.stderr == "", (nested_main_run.returncode,
+                                                 nested_main_run.stdout, nested_main_run.stderr)
+
+        conditional_main = directory / "conditional_main.spr"
+        conditional_main.write_text('func main() -> Unit:\n'
+                                    '    print("hello from main")\n\n'
+                                    'if true:\n'
+                                    '    main()\n', encoding="utf-8")
+        conditional_main_run = invoke("run", conditional_main, cwd=directory)
+        assert conditional_main_run.returncode == 0 \
+            and conditional_main_run.stdout == "hello from main\n" \
+            and conditional_main_run.stderr == "", (conditional_main_run.returncode,
+                                                       conditional_main_run.stdout,
+                                                       conditional_main_run.stderr)
+
+        uncalled_main = directory / "uncalled_main.spr"
+        uncalled_main.write_text('func main() -> Unit:\n    print("hello")\n', encoding="utf-8")
+        uncalled_main_run = invoke("run", uncalled_main, cwd=directory)
+        assert uncalled_main_run.returncode == 0 and uncalled_main_run.stdout == "" \
+            and "nothing was printed" in uncalled_main_run.stderr, (uncalled_main_run.returncode,
+                                                                     uncalled_main_run.stdout,
+                                                                     uncalled_main_run.stderr)
+
+        printed_uncalled_main = directory / "printed_uncalled_main.spr"
+        printed_uncalled_main.write_text('func main() -> Unit:\n'
+                                         '    print("main")\n\n'
+                                         'print("top level")\n', encoding="utf-8")
+        printed_uncalled_main_run = invoke("run", printed_uncalled_main, cwd=directory)
+        assert printed_uncalled_main_run.returncode == 0 \
+            and printed_uncalled_main_run.stdout == "top level\n" \
+            and printed_uncalled_main_run.stderr == "", (printed_uncalled_main_run.returncode,
+                                                           printed_uncalled_main_run.stdout,
+                                                           printed_uncalled_main_run.stderr)
         print(f"CLI contract: {len(invalid)} rejected-option cases and end-to-end contracts passed")
 
 

@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** Runs a compiled Sprig program in a child JVM, capturing output. */
 public final class JavaRunner {
@@ -16,6 +18,7 @@ public final class JavaRunner {
         public String stdout = "";
         public String stderr = "";
         public boolean timedOut;
+        public boolean outputWritten;
     }
 
     private JavaRunner() {
@@ -66,11 +69,32 @@ public final class JavaRunner {
             builder.environment().put("SPRIG_STACKTRACE", "1");
         }
         if (streamOutput) {
-            builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            builder.redirectOutput(ProcessBuilder.Redirect.PIPE);
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT);
         } else builder.redirectOutput(outFile.toFile());
         builder.redirectError(errFile.toFile());
         Process process = builder.start();
+        AtomicBoolean outputWritten = new AtomicBoolean();
+        AtomicReference<IOException> outputFailure = new AtomicReference<>();
+        Thread outputForwarder = null;
+        if (streamOutput) {
+            outputForwarder = new Thread(() -> {
+                try (var input = process.getInputStream()) {
+                    byte[] buffer = new byte[8192];
+                    int count;
+                    while ((count = input.read(buffer)) >= 0) {
+                        if (count == 0) continue;
+                        outputWritten.set(true);
+                        System.out.write(buffer, 0, count);
+                        System.out.flush();
+                    }
+                } catch (IOException exception) {
+                    outputFailure.set(exception);
+                }
+            }, "sprig-child-stdout");
+            outputForwarder.setDaemon(true);
+            outputForwarder.start();
+        }
         if (!streamOutput) process.getOutputStream().close();
         Result result = new Result();
         Thread cleanup = new Thread(process::destroy, "sprig-child-cleanup");
@@ -89,10 +113,16 @@ public final class JavaRunner {
             process.destroy();
             Runtime.getRuntime().removeShutdownHook(cleanup);
         }
+        if (outputForwarder != null) {
+            outputForwarder.join();
+            if (outputFailure.get() != null) throw outputFailure.get();
+        }
+        result.outputWritten = outputWritten.get();
         // A program (or a Java library it calls) may write bytes that are not
         // UTF-8; report them as replacement characters instead of failing.
         if (!streamOutput && Files.exists(outFile)) {
             result.stdout = new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8);
+            result.outputWritten = !result.stdout.isEmpty();
         }
         if (Files.exists(errFile)) {
             result.stderr = new String(Files.readAllBytes(errFile), StandardCharsets.UTF_8);

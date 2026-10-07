@@ -58,6 +58,8 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 - **`build -d <目录>`**：`build` 默认输出到 `sprig-build/`，`-d` 可以换个目录。检查没通过时不会生成 class 文件。
 - **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。
 
+如果程序定义了 `func main`，但运行时没有输出，也没有任何顶层语句或其嵌套代码块调用 `main`，`run` 会给出提示；嵌套的 `if`、`try` 等代码块里的调用也会计入。
+
 每个错误码的含义都可以用 `sprig explain` 查，完整列表见[错误码（英文）](/en/reference/tooling/diagnostic-codes)。
 
 ## JSON 输出
