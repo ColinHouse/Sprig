@@ -3,7 +3,6 @@ package sprig.runtime.concurrent;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -15,18 +14,17 @@ import sprig.runtime.SprigError;
 
 /**
  * A computation running on another thread, with a typed result. Sprig owns the
- * API ({@code @concurrent/concurrent.spr}); this class owns the JDK executor
- * mechanics. Tasks started without a pool share one cached pool of daemon
- * threads, so a program whose main thread ends does not wait for them.
+ * API ({@code @std/concurrent.spr}); this class owns the JDK future mechanics.
+ * Every task belongs to a {@link HostScope}, which starts it on a virtual
+ * thread (or on a {@link HostPool}) and waits for it before the scope ends.
  */
 public final class HostTask<T> {
     private static final AtomicLong COUNTER = new AtomicLong();
     private static final ThreadFactory FACTORY = runnable -> {
-        Thread thread = new Thread(runnable, "sprig-task-" + COUNTER.incrementAndGet());
+        Thread thread = new Thread(runnable, "sprig-pool-" + COUNTER.incrementAndGet());
         thread.setDaemon(true);
         return thread;
     };
-    private static final ExecutorService SHARED = Executors.newCachedThreadPool(FACTORY);
 
     private final Future<T> future;
 
@@ -36,12 +34,6 @@ public final class HostTask<T> {
 
     static ThreadFactory factory() {
         return FACTORY;
-    }
-
-    /** Starts the work on the shared pool. */
-    @NonNull
-    public static <T> HostTask<T> start(Fn0<T> work) {
-        return startOn(SHARED, work);
     }
 
     static <T> HostTask<T> startOn(ExecutorService executor, Fn0<T> work) {
@@ -91,7 +83,7 @@ public final class HostTask<T> {
         return value;
     }
 
-    private static SprigError failure(Throwable cause) {
+    static SprigError failure(Throwable cause) {
         if (cause instanceof SprigError error) return error;
         return new SprigError("task failed: " + cause, cause);
     }

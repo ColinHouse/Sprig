@@ -1,20 +1,51 @@
-# Behavior contract of @concurrent: tasks, pools, channels, counters, locks and latches.
-import "@concurrent/concurrent.spr" as concurrent
+# Behavior contract of @std/concurrent: scopes, tasks on virtual threads,
+# pools, channels, counters, locks and latches.
+import "@std/concurrent.spr" as concurrent
 import "@std/lists.spr" as lists
+import "@std/time.spr" as time
+import java.net.ServerSocket as ServerSocket
+import java.net.Socket as Socket
+import java.net.InetAddress as InetAddress
+import java.io.IOException as IOException
 
 # 1. a task returns its value; await on a finished task returns at once
-let answer = concurrent.spawn(fn() => 40 + 2)
-print(answer.await())
-print(answer.is_done())
+func answer(s: concurrent.Scope) -> Int throws Error:
+    let task = concurrent.spawn(s, fn() => 40 + 2)
+    let value = task.await()
+    print(task.is_done())
+    return value
+print(concurrent.scope(answer))
 
-# 2. a failure inside a task reaches await() as an Error
+# 2. a failure inside a task reaches await() as an Error; it is the scope's
+# failure too, reported again when the scope ends (tolerate a failure inside
+# the task body, or with await_or)
 func divide(a: Int, b: Int) -> Int:
     return a.divTrunc(b)
-let failing = concurrent.spawn(fn() => divide(1, 0))
+func awaited_failure(s: concurrent.Scope) -> Int throws Error:
+    let failing = concurrent.spawn(s, fn() => divide(1, 0))
+    try:
+        return failing.await()
+    catch problem: Error:
+        print("failed: " + (problem.message.length() > 0))
+        return -1
 try:
-    print(failing.await())
+    print(concurrent.scope(awaited_failure))
 catch problem: Error:
-    print("failed: " + (problem.message.length() > 0))
+    print("scope failed too: " + problem.message.contains("zero"))
+func tolerated(s: concurrent.Scope) -> Int throws Error:
+    let failing = concurrent.spawn(s, fn() => divide(1, 0))
+    return failing.await_or(-1)
+try:
+    print(concurrent.scope(tolerated))
+catch problem: Error:
+    print("tolerated still fails the scope: " + problem.message.contains("zero"))
+func unawaited_failure(s: concurrent.Scope) -> Int throws Error:
+    concurrent.spawn(s, fn() => divide(1, 0))
+    return 7
+try:
+    print(concurrent.scope(unawaited_failure))
+catch problem: Error:
+    print("scope failed: " + problem.message.contains("zero"))
 
 # 3. parallel_map keeps item order whatever the threads do
 func slow_square(n: Int) -> Int:
@@ -34,8 +65,11 @@ one.shutdown()
 print(one.await_termination(5000))
 print(ordered)
 print(order)
+func spawn_on_closed_pool(s: concurrent.Scope) -> Int throws Error:
+    concurrent.spawn_on(s, one, fn() => 1)
+    return 0
 try:
-    concurrent.spawn_on(one, fn() => 1)
+    concurrent.scope(spawn_on_closed_pool)
 catch problem: Error:
     print(problem.message)
 
@@ -47,10 +81,12 @@ func bump(times: Int) -> Int:
         hits.increment()
         i += 1
     return times
-let bumpers: MutableList[concurrent.Task[Int]] = []
-for worker in [1, 2, 3, 4]:
-    bumpers.append(concurrent.spawn(fn() => bump(2500)))
-print(lists.sum(concurrent.await_all(bumpers)))
+func bump_all(s: concurrent.Scope) -> Int throws Error:
+    let bumpers: MutableList[concurrent.Task[Int]] = []
+    for worker in [1, 2, 3, 4]:
+        bumpers.append(concurrent.spawn(s, fn() => bump(2500)))
+    return lists.sum(concurrent.await_all(bumpers))
+print(concurrent.scope(bump_all))
 print(hits.get())
 print(hits.compare_and_set(10000, 0))
 print(hits.get())
@@ -64,16 +100,13 @@ func push_many(base: Int) -> Int:
         guard.run(fn() => shared.append(value))
         i += 1
     return base
-let pushers: MutableList[concurrent.Task[Int]] = []
-for base in [0, 1000, 2000]:
-    pushers.append(concurrent.spawn(fn() => push_many(base)))
-concurrent.await_all(pushers)
+func push_all(s: concurrent.Scope) -> Int throws Error:
+    for base in [0, 1000, 2000]:
+        concurrent.spawn(s, fn() => push_many(base))
+    return 0
+concurrent.scope(push_all)
 print(shared.size())
 print(concurrent.locked(guard, fn() => shared.size() * 2))
-
-func late_send() -> Int:
-    words.send("late")
-    return 0
 
 # 7. a channel delivers in order, blocks the receiver until a value arrives,
 # and tells the receiver when it is closed
@@ -84,19 +117,28 @@ func produce() -> Int:
     words.send("c")
     words.close()
     return 3
-let producer = concurrent.spawn(fn() => produce())
-let received: MutableList[String] = []
-var next = words.receive()
-while next != null:
-    let value = next
-    if value != null:
-        received.append(value)
-    next = words.receive()
-print(received)
-print(producer.await())
-print(words.is_closed())
-let late = concurrent.spawn(fn() => late_send())
-print(late.await_or(-1))
+func late_send() -> Int:
+    words.send("late")
+    return 0
+func consume(s: concurrent.Scope) -> Int throws Error:
+    let producer = concurrent.spawn(s, fn() => produce())
+    let received: MutableList[String] = []
+    var next = words.receive()
+    while next != null:
+        let value = next
+        if value != null:
+            received.append(value)
+        next = words.receive()
+    print(received)
+    print(producer.await())
+    print(words.is_closed())
+    let late = concurrent.spawn(s, fn() => late_send())
+    print(late.await_or(-1))
+    return 0
+try:
+    concurrent.scope(consume)
+catch problem: Error:
+    print("late send failed the scope: " + problem.message.contains("closed"))
 let empty = concurrent.channel[Int](1)
 print(empty.receive_within(20))
 print(empty.try_send(1))
@@ -112,14 +154,141 @@ let arrivals = concurrent.parallel_map([1, 2, 3], fn(n: Int) => arrive(n))
 print(gate.await_within(5000))
 print(gate.remaining())
 
-# 9. await_within reports a task that is still running, and cancel stops it
+# 9. await_within reports a task that is still running, and cancel stops it;
+# the scope then ends because the cancelled task has ended
 func forever() -> Int:
     concurrent.sleep(60000)
     return 0
-let stuck = concurrent.spawn(fn() => forever())
+func stuck_task(s: concurrent.Scope) -> Int throws Error:
+    let stuck = concurrent.spawn(s, fn() => forever())
+    try:
+        print(stuck.await_within(50))
+    catch problem: Error:
+        print(problem.message)
+    print(stuck.cancel())
+    print(stuck.is_cancelled())
+    return 0
+let started_at = time.monotonic_nanos()
 try:
-    print(stuck.await_within(50))
+    concurrent.scope(stuck_task)
 catch problem: Error:
-    print(problem.message)
-print(stuck.cancel())
-print(stuck.is_cancelled())
+    print("cancelled task reported: " + problem.message.contains("cancel"))
+print((time.monotonic_nanos() - started_at) < 5000000000)
+
+# 10. the first failure cancels its siblings: a sibling blocked on a latch is
+# interrupted, and the scope rethrows the first failure
+let never = concurrent.latch(1)
+func wait_forever() -> Int:
+    never.await()
+    return 1
+func fail_fast() -> Int:
+    concurrent.sleep(20)
+    return divide(1, 0)
+func siblings(s: concurrent.Scope) -> Int throws Error:
+    concurrent.spawn(s, fn() => wait_forever())
+    concurrent.spawn(s, fn() => wait_forever())
+    concurrent.spawn(s, fn() => fail_fast())
+    return 0
+let before_siblings = time.monotonic_nanos()
+try:
+    concurrent.scope(siblings)
+catch problem: Error:
+    print("siblings cancelled: " + problem.message.contains("zero"))
+print((time.monotonic_nanos() - before_siblings) < 5000000000)
+print(never.remaining())
+
+# 11. leaving the scope waits for every task, even unawaited ones
+let done: MutableList[Int] = []
+func slow_record(n: Int) -> Int:
+    concurrent.sleep(30)
+    guard.run(fn() => done.append(n))
+    return n
+func fire_and_forget(s: concurrent.Scope) -> Int throws Error:
+    for n in [1, 2, 3]:
+        concurrent.spawn(s, fn() => slow_record(n))
+    return done.size()
+print(concurrent.scope(fire_and_forget))
+print(done.size())
+
+# 12. scopes nest; an inner failure reaches the outer body as an Error it can handle
+func inner_fails(s: concurrent.Scope) -> Int throws Error:
+    concurrent.spawn(s, fn() => divide(2, 0))
+    return 0
+func outer(s: concurrent.Scope) -> String throws Error:
+    let fine = concurrent.spawn(s, fn() => 5)
+    var inner = "inner ok"
+    try:
+        concurrent.scope(inner_fails)
+    catch problem: Error:
+        inner = "inner failed"
+    return inner + " " + fine.await()
+print(concurrent.scope(outer))
+
+# 13. a task cannot be started after its scope ended
+var escaped: concurrent.Scope? = null
+func keep(s: concurrent.Scope) -> Int throws Error:
+    escaped = s
+    return 0
+concurrent.scope(keep)
+let kept = escaped
+if kept != null:
+    print(kept.is_open())
+    try:
+        concurrent.spawn(kept, fn() => 1)
+    catch problem: Error:
+        print(problem.message)
+
+# 14. ten thousand tasks that each sleep 100 ms finish together: virtual threads
+func nap() -> Int:
+    concurrent.sleep(100)
+    return 1
+func many(s: concurrent.Scope) -> Int throws Error:
+    let tasks: MutableList[concurrent.Task[Int]] = []
+    var i = 0
+    while i < 10000:
+        tasks.append(concurrent.spawn(s, fn() => nap()))
+        i += 1
+    return lists.sum(concurrent.await_all(tasks))
+let before_many = time.monotonic_nanos()
+print(concurrent.scope(many))
+let many_millis = (time.monotonic_nanos() - before_many).divTrunc(1000000)
+print(many_millis < 2000)
+
+# 15. blocking Java I/O inside a task works unchanged: a loopback echo
+func serve(server: ServerSocket) -> String:
+    try:
+        let client = server.accept()
+        if client == null:
+            return "no client"
+        let input = client.getInputStream()
+        let output = client.getOutputStream()
+        if input == null or output == null:
+            return "no streams"
+        let byte = input.read()
+        output.write(byte + 1)
+        output.flush()
+        client.close()
+        return "served"
+    catch problem: IOException:
+        return "io failed: " + problem
+func echo(s: concurrent.Scope) -> String throws Error:
+    let loopback = InetAddress.getLoopbackAddress()
+    if loopback == null:
+        return "no loopback"
+    try:
+        let server = ServerSocket(0, 1, loopback)
+        let serving = concurrent.spawn(s, fn() => serve(server))
+        let socket = Socket(loopback, server.getLocalPort())
+        let out = socket.getOutputStream()
+        let input = socket.getInputStream()
+        if out == null or input == null:
+            return "no streams"
+        out.write(41)
+        out.flush()
+        let reply = input.read()
+        socket.close()
+        server.close()
+        return serving.await() + " " + reply
+    catch problem: IOException:
+        return "io failed: " + problem
+print(concurrent.scope(echo))

@@ -26,6 +26,8 @@ public final class Project {
     public final String name;
     public final String version;
     public final String language;
+    /** SPDX license identifier from [project] license, or null. */
+    public final String license;
     public final String source;
     public final String defaultEntry;
     public final boolean hasExplicitEntry;
@@ -109,6 +111,7 @@ public final class Project {
         this.name = declaredName;
         this.version = project.getOrDefault("version", "0.1.0");
         this.language = project.getOrDefault("language", "0.8");
+        this.license = project.get("license");
         this.source = project.getOrDefault("source", "src");
         this.hasExplicitEntry = project.containsKey("entry");
         this.defaultEntry = project.getOrDefault("entry", source + "/main.spr");

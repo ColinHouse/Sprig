@@ -6,7 +6,7 @@ The current release is [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/relea
 |---|---|
 | Compiler | `0.7.1-beta.1` |
 | Language version | `0.8-dev` |
-| Requires | JDK 17 or newer (the SDK doesn't include a JDK) |
+| Requires | JDK 21 or newer (the SDK doesn't include a JDK); the published v0.7.1-beta.1 still accepts JDK 17 |
 | License | Apache-2.0 |
 | Platforms | Linux and macOS are supported; Windows is an experimental preview |
 
