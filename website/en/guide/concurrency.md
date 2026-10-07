@@ -27,6 +27,27 @@ print(concurrent.scope(count_all))
 - There is no unscoped `spawn`: a task always belongs to the scope it was started in, and starting one after the body returned is an `Error`.
 - A task body is a plain function value, so it captures only `let` bindings and parameters: the data races on locals that other languages have cannot be written. Shared `MutableList`/`MutableMap` values and `var` fields are not protected; see locks and channels below.
 
+## Work with no result: run and scope_run
+
+`Unit` is not a value, so a task that only has an effect can't be a `Task[Unit]`. Use `run` for it, and `scope_run` for a scope body that only coordinates:
+
+```sprig
+import "@std/concurrent.spr" as concurrent
+
+func announce(line: String) -> Unit:
+    print("> " + line)
+
+func announce_all(s: concurrent.Scope) -> Unit throws Error:
+    for line in ["ready", "steady"]:
+        concurrent.run(s, fn() => announce(line))
+
+concurrent.scope_run(announce_all)
+```
+
+- `run(s, work)` starts a `fn() -> Unit` and returns a `Job`. It has the same methods as a task: `await()` waits and reports a failure as an `Error` but returns nothing, and `cancel()` and `is_done()` work as before.
+- `scope_run(body)` is `scope()` for a body that returns nothing, with the same rules: it waits for every task and job, and the first failure cancels the rest and is rethrown.
+- The two announcements may print in either order, since they run at the same time.
+
 ## Many tasks: parallel_map and await_all
 
 ```sprig

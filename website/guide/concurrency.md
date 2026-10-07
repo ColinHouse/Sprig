@@ -27,6 +27,27 @@ print(concurrent.scope(count_all))
 - 没有不属于作用域的 `spawn`：任务永远属于启动它的那个作用域，body 返回之后再启动任务会报 `Error`。
 - 任务体是普通的函数值，只能捕获 `let` 绑定和参数，所以其他语言里那种对局部变量的数据竞争在 Sprig 里写不出来。共享的 `MutableList`、`MutableMap` 和 `var` 字段不受保护，见下面的锁和通道。
 
+## 没有结果的任务：run 和 scope_run
+
+`Unit` 不是值，所以只有副作用的任务不能写成 `Task[Unit]`。这种任务用 `run`；只负责调度、不返回结果的作用域体用 `scope_run`：
+
+```sprig
+import "@std/concurrent.spr" as concurrent
+
+func announce(line: String) -> Unit:
+    print("> " + line)
+
+func announce_all(s: concurrent.Scope) -> Unit throws Error:
+    for line in ["ready", "steady"]:
+        concurrent.run(s, fn() => announce(line))
+
+concurrent.scope_run(announce_all)
+```
+
+- `run(s, work)` 启动一个 `fn() -> Unit`，返回 `Job`。它的方法和任务一样：`await()` 等它结束，失败时报 `Error`，只是不返回值；`cancel()`、`is_done()` 也照常可用。
+- `scope_run(body)` 就是给"不返回值的 body"用的 `scope()`，规则完全相同：等所有任务和 job 结束，第一个失败会取消其余的并重新抛出。
+- 两条输出的先后顺序不固定，因为它们是同时运行的。
+
 ## 一批任务：parallel_map 和 await_all
 
 ```sprig
