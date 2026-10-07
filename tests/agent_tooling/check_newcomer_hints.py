@@ -322,7 +322,7 @@ def main():
                  "startsWith": "startsWith(\"a\")", "endsWith": "endsWith(\"a\")", "compareTo": "compareTo(\"a\")",
                  "toUpperCase": "toUpperCase()",
                  "toLowerCase": "toLowerCase()", "trim": "trim()", "split": "split(\",\")",
-                 "replace": "replace(\"a\", \"b\")", "repeat": "repeat(2)", "toInt": "toInt()",
+                 "replace": "replace(\"a\", \"b\")", "repeat": "repeat(2)", "lastIndexOf": "lastIndexOf(\"a\")", "toInt": "toInt()",
                  "toIntOrNull": "toIntOrNull()", "toFloat": "toFloat()", "toString": "toString()"}
         check("help-strings-lists-every-method", set(strings) == set(calls), str(strings))
         program = "\n".join(f"let v{i} = \"a1\".{calls[name]}" for i, name in enumerate(strings) if name in calls)
