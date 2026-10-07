@@ -52,7 +52,7 @@ public final class TypeChecker {
     /** Arity table for built-in methods; guards the switch below against bad calls. */
     private static final Map<String, int[]> BUILTIN_ARITY = Map.ofEntries(
             Map.entry("toString", new int[]{0, 0}),
-            Map.entry("Int.toString", new int[]{0, 0}), Map.entry("Int.toFloat", new int[]{0, 0}),
+            Map.entry("Int.toString", new int[]{0, 0}),
             Map.entry("Int.toFloatExact", new int[]{0, 0}), Map.entry("Int.toFloatLossy", new int[]{0, 0}),
             Map.entry("Int.toInt32Exact", new int[]{0, 0}), Map.entry("Int.toDecimal", new int[]{0, 0}),
             Map.entry("Int.divTrunc", new int[]{1, 1}), Map.entry("Int.compareTo", new int[]{1, 1}),
@@ -62,11 +62,11 @@ public final class TypeChecker {
             Map.entry("Int32.toString", new int[]{0, 0}), Map.entry("Int32.toInt", new int[]{0, 0}),
             Map.entry("Int32.toFloat", new int[]{0, 0}), Map.entry("Int32.toDecimal", new int[]{0, 0}),
             Map.entry("Int32.divTrunc", new int[]{1, 1}),
-            Map.entry("Int.parse", new int[]{1, 1}), Map.entry("Int.abs", new int[]{1, 1}),
+            Map.entry("Int.abs", new int[]{1, 1}),
             Map.entry("Int.min", new int[]{2, 2}), Map.entry("Int.max", new int[]{2, 2}),
             Map.entry("Float.toString", new int[]{0, 0}), Map.entry("Float.isNaN", new int[]{0, 0}),
             Map.entry("Float.abs", new int[]{1, 1}),
-            Map.entry("Float.toInt", new int[]{0, 0}), Map.entry("Float.toIntExact", new int[]{0, 0}),
+            Map.entry("Float.toIntExact", new int[]{0, 0}),
             Map.entry("Float.toIntTrunc", new int[]{0, 0}),
             Map.entry("Float.toFloat32Exact", new int[]{0, 0}),
             Map.entry("Float.toFloat32Lossy", new int[]{0, 0}),
@@ -75,7 +75,7 @@ public final class TypeChecker {
             Map.entry("Float32.toString", new int[]{0, 0}), Map.entry("Float32.toFloat", new int[]{0, 0}),
             Map.entry("Float32.isNaN", new int[]{0, 0}), Map.entry("Float32.isInfinite", new int[]{0, 0}),
             Map.entry("Float32.isFinite", new int[]{0, 0}),
-            Map.entry("Decimal.parse", new int[]{1, 1}), Map.entry("Decimal.fromInt", new int[]{1, 1}),
+            Map.entry("Decimal.parse", new int[]{1, 1}),
             Map.entry("Decimal.fromJava", new int[]{1, 1}),
             Map.entry("Decimal.divide", new int[]{3, 3}),
             Map.entry("Decimal.toString", new int[]{0, 0}),
@@ -2076,7 +2076,7 @@ public final class TypeChecker {
                         "Integer / would truncate; use a.divTrunc(b), or convert both operands explicitly",
                         module.uri, span).withTypes("explicit division", left.display() + " / " + right.display())
                         .withHint("Write " + a + ".divTrunc(" + b + ") to drop the remainder on purpose, or "
-                                + a + ".toFloat() / " + b + ".toFloat() for a Float result. "
+                                + a + "." + toFloatCall(left) + " / " + b + "." + toFloatCall(right) + " for a Float result. "
                                 + "text.fixed(value, decimals) from @std/text.spr prints a Float with that many decimals."));
                 return NativeType.ERROR;
             }
@@ -2177,12 +2177,17 @@ public final class TypeChecker {
             }
         }
         if (isInteger(left) && isBinaryFloat(right)) {
-            return "Convert the Int side: " + operandText(leftExpr, "value") + ".toFloat().";
+            return "Convert the Int side: " + operandText(leftExpr, "value") + "." + toFloatCall(left) + ".";
         }
         if (isBinaryFloat(left) && isInteger(right)) {
-            return "Convert the Int side: " + operandText(rightExpr, "value") + ".toFloat().";
+            return "Convert the Int side: " + operandText(rightExpr, "value") + "." + toFloatCall(right) + ".";
         }
         return "Convert deliberately with an exact or explicitly lossy numeric method.";
+    }
+
+    /** An Int32 widens to Float exactly; an Int says what happens beyond 2^53. */
+    private static String toFloatCall(Type integer) {
+        return integer == NativeType.INT32 ? "toFloat()" : "toFloatExact()";
     }
 
     private static boolean isInteger(Type type) {
@@ -3997,9 +4002,14 @@ public final class TypeChecker {
         }
         String id = BuiltinMembers.staticId(receiver, access.name);
         if (id == null) {
-            diagnostics.add(Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
+            Diagnostic missing = Diagnostic.error(Codes.NAME_UNRESOLVED, Phase.NAME,
                     "Type " + receiver.display() + " has no static member '" + access.name + "'",
-                    module.uri, access.span));
+                    module.uri, access.span);
+            String hint = Newcomer.staticMemberHint(receiver.display(), access.name);
+            if (hint != null) {
+                missing.withHint(hint);
+            }
+            diagnostics.add(missing);
             return errorField(access);
         }
         return builtin(access, id, NativeType.ERROR, receiver);
@@ -4216,6 +4226,10 @@ public final class TypeChecker {
             if (hint != null) {
                 missing.withHint(hint);
             }
+            String exact = Newcomer.exactConversion(receiver.display(), access.name);
+            if (exact != null && access.nameSpan != null) {
+                missing.withEdit(access.nameSpan, exact, "write " + exact + "(), which keeps the old behaviour");
+            }
             diagnostics.add(missing);
             return errorField(access);
         }
@@ -4277,7 +4291,7 @@ public final class TypeChecker {
                 checkArity(call, 0, 0, id);
                 return NativeType.STRING;
             }
-            case "Int.toString", "Int.toFloat", "Int.toFloatExact", "Int.toFloatLossy" -> {
+            case "Int.toString", "Int.toFloatExact", "Int.toFloatLossy" -> {
                 checkArity(call, 0, 0, id);
                 return id.contains("Float") ? NativeType.FLOAT : NativeType.STRING;
             }
@@ -4310,7 +4324,7 @@ public final class TypeChecker {
                 checkArity(call, 0, 0, id);
                 return id.endsWith("toString") ? NativeType.STRING : NativeType.BOOL;
             }
-            case "Float.toInt", "Float.toIntExact", "Float.toIntTrunc" -> {
+            case "Float.toIntExact", "Float.toIntTrunc" -> {
                 checkArity(call, 0, 0, id);
                 return NativeType.INT;
             }
@@ -4332,10 +4346,6 @@ public final class TypeChecker {
             }
             case "Decimal.parse" -> {
                 requireString(first);
-                return NativeType.DECIMAL;
-            }
-            case "Decimal.fromInt" -> {
-                requireInt(first);
                 return NativeType.DECIMAL;
             }
             case "Decimal.fromJava" -> {
@@ -4638,9 +4648,9 @@ public final class TypeChecker {
                 checkArity(call, 0, 0, id);
                 return NativeType.UNIT;
             }
-            case "Int.parse", "Int.abs" -> {
+            case "Int.abs" -> {
                 checkArity(call, 1, 1, id);
-                requireStringOrInt(call.args.get(0), id.equals("Int.abs"));
+                requireInt(call.args.get(0));
                 return NativeType.INT;
             }
             case "Int.min", "Int.max" -> {
@@ -4705,12 +4715,6 @@ public final class TypeChecker {
     private void requireString(Expr.Arg arg) {
         Type actual = checkExpr(arg.value, NativeType.STRING);
         requireAssignable(NativeType.STRING, actual, arg.value.span, Codes.TYPE_MISMATCH, "String argument");
-    }
-
-    private void requireStringOrInt(Expr.Arg arg, boolean intExpected) {
-        Type actual = checkExpr(arg.value, intExpected ? NativeType.INT : NativeType.STRING);
-        requireAssignable(intExpected ? NativeType.INT : NativeType.STRING, actual,
-                arg.value.span, Codes.TYPE_MISMATCH, "argument");
     }
 
     private void requireInt(Expr.Arg arg) {

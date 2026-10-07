@@ -36,7 +36,7 @@ generic T:
         var sum = 0.0
         for item in items:
             sum = sum + amount(item)
-        return sum / items.size().toFloat()
+        return sum / items.size().toFloatExact()
 
 generic T:
     func labels(items: List[T], label: fn(T) -> String) -> List[String]:
@@ -113,7 +113,7 @@ print(any[Item](items, fn(i: Item) => i.cents > 5000))
 print(count[Item](items, fn(i: Item) => i.cents < 1000))
 print(check[Int](3, fn(n: Int) => n > 2))
 print(total[Item](items, fn(i: Item) => i.cents))
-print(average[Int]([1, 2, 6], fn(n: Int) => n.toFloat()))
+print(average[Int]([1, 2, 6], fn(n: Int) => n.toFloatExact()))
 print(labels[Item](items, fn(i: Item) => i.name))
 print(first_size[String](["", "abc"], fn(s: String) => s.toIntOrNull()))
 print(first_size[String](["x", "42"], fn(s: String) => s.toIntOrNull()))

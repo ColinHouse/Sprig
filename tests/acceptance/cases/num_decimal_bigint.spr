@@ -3,7 +3,7 @@ let fifth = Decimal.parse("0.2")
 print(tenth + fifth)
 print((tenth + fifth) == Decimal.parse("0.3"))
 print(Decimal.parse("1").divide(Decimal.parse("3"), 6, "HALF_EVEN"))
-print(Decimal.fromInt(5) * Decimal.fromInt(3))
+print(5.toDecimal() * 3.toDecimal())
 print(Decimal.parse("42").toIntExact())
 
 let huge = BigInt.parse("123456789012345678901234567890")

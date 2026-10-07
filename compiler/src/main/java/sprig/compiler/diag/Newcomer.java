@@ -20,7 +20,7 @@ public final class Newcomer {
             + "join text with +, for example print(\"total \" + total).";
     private static final String TO_INT = "Convert text to a whole number with text.toIntOrNull(), "
             + "which is null when the text is not one, or text.toInt(), which fails instead.";
-    private static final String TO_FLOAT = "Convert text with text.toFloat(), and an Int with n.toFloat().";
+    private static final String TO_FLOAT = "Convert text with text.toFloat(), and an Int with n.toFloatExact().";
     private static final String TO_STRING = "Turn a value into text with value.toString(), "
             + "or join it to a String with +.";
     private static final String LENGTH = "A String has value.length(); a list or map has items.size().";
@@ -157,7 +157,40 @@ public final class Newcomer {
     }
 
     /** A hint for a member that a built-in type does not have but a newcomer expects, or null. */
+    /**
+     * The one spelling of a fallible numeric conversion: an Int has no
+     * toFloat() and a Float no toInt(), because each can lose information.
+     */
+    public static String exactConversion(String typeDisplay, String member) {
+        if (typeDisplay.equals("Int") && member.equals("toFloat")) {
+            return "toFloatExact";
+        }
+        if (typeDisplay.equals("Float") && member.equals("toInt")) {
+            return "toIntExact";
+        }
+        return null;
+    }
+
+    /** A hint for a static member that Sprig spells another way. */
+    public static String staticMemberHint(String typeDisplay, String member) {
+        if (typeDisplay.equals("Decimal") && member.equals("fromInt")) {
+            return "Convert an integer with value.toDecimal().";
+        }
+        if (List.of("Int", "Float").contains(typeDisplay) && List.of("parse", "valueOf").contains(member)) {
+            return typeDisplay.equals("Int") ? TO_INT : "Convert text with text.toFloat().";
+        }
+        return null;
+    }
+
     public static String memberHint(String typeDisplay, String member) {
+        if (typeDisplay.equals("Int") && member.equals("toFloat")) {
+            return "An Int beyond 2^53 has no exact Float: write value.toFloatExact(), which fails instead of "
+                    + "rounding, or value.toFloatLossy(), which rounds.";
+        }
+        if (typeDisplay.equals("Float") && member.equals("toInt")) {
+            return "A Float with a fraction has no exact Int: write value.toIntExact(), which fails on a "
+                    + "fraction, or value.toIntTrunc(), which drops it.";
+        }
         boolean text = typeDisplay.equals("String");
         boolean collection = typeDisplay.startsWith("List[") || typeDisplay.startsWith("MutableList[")
                 || typeDisplay.startsWith("Map[") || typeDisplay.startsWith("MutableMap[");

@@ -39,7 +39,7 @@ print(identity[Bool](true))
 print(identity[String]("hi"))
 print(identity[String?](null))
 print(identity[BigInt](BigInt.fromInt(5)))
-print(identity[Decimal](Decimal.fromInt(3)))
+print(identity[Decimal](3.toDecimal()))
 print(present[String]("here"))
 print(present[String](null))
 

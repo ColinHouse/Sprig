@@ -7,7 +7,7 @@ print(max64)
 print(min32)
 print(max32)
 print((7).divTrunc(3))
-print((7).toFloat() / 2.0)
+print((7).toFloatExact() / 2.0)
 print((3.9).toIntTrunc())
 let narrow: Float32 = 0.1
 print(narrow.toFloat())

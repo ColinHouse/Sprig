@@ -87,7 +87,7 @@ for i in range(80):
     elif k % 10 == 2:
         spread.append(0.0)
     else:
-        spread.append(k.toFloat() - 40.0)
+        spread.append(k.toFloatExact() - 40.0)
 spread.sort()
 print(spread)
 

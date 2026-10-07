@@ -89,6 +89,8 @@ QUICK_FIXES = [
     ("named-constructor-after-emoji", 'class P:\n    let x: Int\n    let y: Int\n'
      'let total = "😀😀".length() + P(1, 2).x\nprint(total)\n', "SPR-CALL-NAMED-REQUIRED", True),
     ("elif", "let x = 3\nif x > 5:\n    print(1)\nelse if x > 1:\n    print(2)\n", "SPR-SYNTAX-ERROR", True),
+    # An Int has no toFloat(); the fix writes the one spelling, with the same behaviour.
+    ("exact-int-to-float", "let n = 3\nprint(n.toFloat() / 2.0)\n", "SPR-NAME-UNRESOLVED", True),
 ]
 
 # What the test client declares: prepared rename and CodeAction literals, as VS Code's client does.

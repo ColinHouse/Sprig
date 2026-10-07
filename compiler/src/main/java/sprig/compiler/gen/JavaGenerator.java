@@ -2081,7 +2081,7 @@ public final class JavaGenerator {
         String code = switch (id) {
             case "toString" -> "sprig.runtime.SprigRuntime.str(" + recv + ")";
             case "Int.toString" -> "java.lang.Long.toString(" + recv + ")";
-            case "Int.toFloat", "Int.toFloatExact" -> "sprig.runtime.NumericOps.toFloatExact(" + recv + ")";
+            case "Int.toFloatExact" -> "sprig.runtime.NumericOps.toFloatExact(" + recv + ")";
             case "Int.toFloatLossy" -> "((double) " + recv + ")";
             case "Int.toInt32Exact" -> "sprig.runtime.NumericOps.toInt32Exact(" + recv + ")";
             case "Int.toDecimal", "Int32.toDecimal" -> "sprig.runtime.SprigDecimal.fromInt(" + recv + ")";
@@ -2096,13 +2096,12 @@ public final class JavaGenerator {
             case "Int32.toInt" -> "((long) " + recv + ")";
             case "Int32.toFloat" -> "((double) " + recv + ")";
             case "Int32.toString" -> "java.lang.Integer.toString(" + recv + ")";
-            case "Int.parse" -> "sprig.runtime.SprigRuntime.parseInt(" + a0 + ")";
             case "Int.abs" -> "sprig.runtime.NumericOps.abs(" + a0 + ")";
             case "Int.min" -> "java.lang.Math.min(" + a0 + ", " + a1 + ")";
             case "Int.max" -> "java.lang.Math.max(" + a0 + ", " + a1 + ")";
             case "Float.toString" -> "java.lang.Double.toString(" + recv + ")";
             case "Float.isNaN" -> "java.lang.Double.isNaN(" + recv + ")";
-            case "Float.toInt", "Float.toIntExact" -> "sprig.runtime.NumericOps.floatToIntExact(" + recv + ")";
+            case "Float.toIntExact" -> "sprig.runtime.NumericOps.floatToIntExact(" + recv + ")";
             case "Float.toIntTrunc" -> "sprig.runtime.NumericOps.floatToIntTrunc(" + recv + ")";
             case "Float.toFloat32Exact" -> "sprig.runtime.NumericOps.toFloat32Exact(" + recv + ")";
             case "Float.toFloat32Lossy" -> "((float) " + recv + ")";
@@ -2119,7 +2118,6 @@ public final class JavaGenerator {
             case "Float32.isInfinite" -> "java.lang.Float.isInfinite(" + recv + ")";
             case "Float32.isFinite" -> "java.lang.Float.isFinite(" + recv + ")";
             case "Decimal.parse" -> "sprig.runtime.SprigDecimal.parse(" + a0 + ")";
-            case "Decimal.fromInt" -> "sprig.runtime.SprigDecimal.fromInt(" + a0 + ")";
             case "Decimal.fromJava" -> "sprig.runtime.SprigDecimal.fromJava(" + a0 + ")";
             case "Decimal.divide" -> recv + ".divide(" + a0 + ", " + a1 + ", " + emitExpr(args.get(2)) + ")";
             case "Decimal.toString" -> recv + ".toString()";

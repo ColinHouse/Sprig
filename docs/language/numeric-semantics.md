@@ -11,12 +11,12 @@ binary64 name; `Float64` is **not** an alias.
 
 | Sprig type | Representation | Construction |
 |---|---|---|
-| `Int` | signed 64-bit, −2^63 through 2^63−1 | unsuffixed integer literal, `Int.parse`, checked conversion |
+| `Int` | signed 64-bit, −2^63 through 2^63−1 | unsuffixed integer literal, `text.toInt()`, checked conversion |
 | `Int32` | signed 32-bit, −2^31 through 2^31−1 | contextual integer literal, `Int.toInt32Exact` |
 | `BigInt` | arbitrary-precision integer (`BigInteger` wrapper) | `BigInt.parse(text)`, `BigInt.fromInt(value)`, `BigInt.fromJava(value)` |
 | `Float` | IEEE 754 binary64 (`double`) | floating literal, contextual integer literal, conversion |
 | `Float32` | IEEE 754 binary32 (`float`) | contextual floating/integer literal, checked conversion |
-| `Decimal` | arbitrary-precision base-10 (`BigDecimal` wrapper) | `Decimal.parse(text)`, `Decimal.fromInt(value)`, `Decimal.fromJava(value)` |
+| `Decimal` | arbitrary-precision base-10 (`BigDecimal` wrapper) | `Decimal.parse(text)`, `value.toDecimal()`, `Decimal.fromJava(value)` |
 
 The parser preserves original literal text and source span. Integer literals
 are parsed as arbitrary precision before checking the target range; the
@@ -40,14 +40,24 @@ whitespace before parsing (`" 12 ".toIntOrNull()` is `12`), where
 | `Int32` → `Int` | yes, exact | `.toInt()` |
 | `Float32` → `Float` | yes, exact | `.toFloat()` |
 | `Int` → `Int32` | no | `.toInt32Exact()`; range error |
-| `Int` → `Float` | no | `.toFloat()` / `.toFloatExact()`; precision error, or `.toFloatLossy()` |
+| `Int32` → `Float` | no | `.toFloat()`, always exact |
+| `Int` → `Float` | no | `.toFloatExact()`; precision error, or `.toFloatLossy()` |
 | `Float` → `Float32` | no | `.toFloat32Exact()`; precision/range error, or `.toFloat32Lossy()` |
-| `Float` → `Int` | no | `.toInt()` / `.toIntExact()`; fractional/range error, or `.toIntTrunc()`; range error |
-| `Int`/`Int32` → `Decimal` | no | `.toDecimal()` or `Decimal.fromInt` |
+| `Float` → `Int` | no | `.toIntExact()`; fractional/range error, or `.toIntTrunc()`; range error |
+| `Int`/`Int32` → `Decimal` | no | `.toDecimal()` |
 | `BigInt` → `Int` | no | `.toIntExact()`; range error |
 | `BigInt` → `Float` | no | `.toFloatExact()` or `.toFloatLossy()` |
 | `Decimal` → `Int`/`Float` | no | `.toIntExact()`, `.toFloatExact()`, `.toFloatLossy()` |
 | `Decimal` ↔ binary float | no | explicit conversion; construct Decimal from decimal text or Java BigDecimal |
+
+Each conversion between number types has one spelling. A method without a
+suffix never fails
+(`Int32.toInt()`, `Int32.toFloat()`, `Float32.toFloat()`, `toDecimal()`); a
+conversion that can lose information says what happens instead: `...Exact()`
+fails, `...Lossy()` rounds and `...Trunc()` drops the fraction. `Int.toFloat()`
+and `Float.toInt()` do not exist; the checker names the exact spelling and its
+quick fix writes it, with the same behaviour. `Decimal.fromInt(value)` is
+written `value.toDecimal()` and `Int.parse(text)` is written `text.toInt()`.
 
 Safe widening also applies to nullable numeric values: `Int32?` → `Int?`
 and `Float32?` → `Float?` preserve `null`. At every accepted scalar value
