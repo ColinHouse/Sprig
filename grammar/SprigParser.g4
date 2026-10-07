@@ -34,7 +34,15 @@ importStatement: IMPORT (qualifiedName | STRING) (AS IDENT)?;
 exportStatement: {"export".equals(_input.LT(1).getText())}? IDENT IDENT DOT IDENT;
 qualifiedName: IDENT (DOT IDENT)*;
 
-classDefinition: CLASS IDENT COLON classSuite;
+// A class is a block of fields and methods, or, for a record of immutable
+// fields only, one line: class Pair(first: Int, second: Int). Both forms
+// build the same class; var fields, defaults and methods need the block.
+classDefinition
+    : CLASS IDENT COLON classSuite
+    | CLASS IDENT LPAREN inlineFields RPAREN NEWLINE
+    ;
+inlineFields: inlineField (COMMA inlineField)* COMMA?;
+inlineField: IDENT COLON typeRef;
 classSuite
     : NEWLINE INDENT (NEWLINE | fieldDeclaration statementEnd | functionDefinition | PASS NEWLINE)+ DEDENT
     ;

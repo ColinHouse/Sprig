@@ -30,6 +30,10 @@ public final class Newcomer {
     public static final String CATCH = "A catch clause names the error and its type: 'catch problem: Error:' "
             + "(or an imported Java exception type), with the handling code indented below it, "
             + "and problem.message holds the text.";
+    /** How text is built from values; for f"...", $"...", `...${}` and "...".format(). */
+    public static final String INTERPOLATION = "Build text with +, which joins a String to any value: "
+            + "write \"hello \" + name + \"!\" for f\"hello {name}!\"; put an expression in a let first "
+            + "(let total = price * count) and join the name.";
     private static final String SELF = "A method uses the object's fields and methods by name; "
             + "there is no self or this.";
     /** How a value that depends on a condition is written; for Python's a if c else b and C's c ? a : b. */
@@ -174,6 +178,43 @@ public final class Newcomer {
         }
         if (text && List.of("parseInt", "toInteger", "asInt").contains(member)) {
             return TO_INT;
+        }
+        if (text && List.of("format", "formatted", "interpolate").contains(member)) {
+            return "Build text with +, for example \"total: \" + total + \" items\"; Sprig has no format strings.";
+        }
+        if (text && List.of("lines", "splitlines", "splitLines").contains(member)) {
+            return "Split into lines with text.lines(value) after 'import \"@std/text.spr\" as text'.";
+        }
+        if (text && List.of("padStart", "padEnd", "ljust", "rjust", "padLeft", "padRight", "center").contains(member)) {
+            return "Pad with text.pad_left(value, width, fill) or text.pad_right(value, width, fill) "
+                    + "after 'import \"@std/text.spr\" as text'.";
+        }
+        if (text && List.of("removeprefix", "removesuffix", "stripPrefix", "stripSuffix", "removePrefix",
+                "removeSuffix").contains(member)) {
+            return "Remove a prefix or suffix with text.strip_prefix(value, prefix) or text.strip_suffix(value, suffix) "
+                    + "after 'import \"@std/text.spr\" as text'.";
+        }
+        if (text && List.of("find", "index", "search").contains(member)) {
+            return "Find text with value.indexOf(needle) (-1 when absent) or value.lastIndexOf(needle).";
+        }
+        if (text && List.of("replaceAll", "replaceFirst", "sub").contains(member)) {
+            return "Replace every occurrence with value.replace(old, new); Sprig has no regular expressions here.";
+        }
+        if (text && List.of("startswith", "endswith", "beginsWith", "hasPrefix", "hasSuffix").contains(member)) {
+            return "Use value.startsWith(prefix) or value.endsWith(suffix).";
+        }
+        if (text && List.of("chars", "toCharArray", "characters", "codePoints", "iter").contains(member)) {
+            return "Iterate a String one code point at a time: 'for ch in value:'; value[i] is one code point.";
+        }
+        if (text && List.of("isdigit", "isDigit", "isNumeric", "isalpha", "isAlpha", "isLetter").contains(member)) {
+            return "Classify ASCII text with text.is_ascii_digit(value) or text.is_ascii_letter(value) "
+                    + "after 'import \"@std/text.spr\" as text'; value.toIntOrNull() tests for a whole number.";
+        }
+        if (text && List.of("reversed", "reverse").contains(member)) {
+            return "There is no reverse method: loop 'for ch in value:' and prepend, or collect value[i] into a MutableList and sort/reverse there.";
+        }
+        if (text && List.of("join", "concat", "append").contains(member)) {
+            return "Join text with +, or a list of strings with String.join(separator, items).";
         }
         if (collection && List.of("has", "includes", "containsKey").contains(member) && typeDisplay.contains("List")) {
             return "Test membership with items.contains(value) or value in items.";

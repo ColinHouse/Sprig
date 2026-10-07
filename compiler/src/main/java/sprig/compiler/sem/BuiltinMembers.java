@@ -36,20 +36,20 @@ public final class BuiltinMembers {
         STATIC.put(NativeType.STRING, List.of("join", "fromCode"));
 
         INSTANCE.put(NativeType.INT, List.of("toFloat", "toFloatExact", "toFloatLossy", "toInt32Exact",
-                "toDecimal", "divTrunc", "toString"));
-        INSTANCE.put(NativeType.INT32, List.of("toInt", "toFloat", "toDecimal", "divTrunc", "toString"));
+                "toDecimal", "divTrunc", "compareTo", "toString"));
+        INSTANCE.put(NativeType.INT32, List.of("toInt", "toFloat", "toDecimal", "divTrunc", "compareTo", "toString"));
         INSTANCE.put(NativeType.FLOAT, List.of("toInt", "toIntExact", "toIntTrunc", "toFloat32Exact",
-                "toFloat32Lossy", "isNaN", "isInfinite", "isFinite", "approxEqual", "toString"));
-        INSTANCE.put(NativeType.FLOAT32, List.of("toFloat", "isNaN", "isInfinite", "isFinite", "toString"));
+                "toFloat32Lossy", "isNaN", "isInfinite", "isFinite", "approxEqual", "compareTo", "toString"));
+        INSTANCE.put(NativeType.FLOAT32, List.of("toFloat", "isNaN", "isInfinite", "isFinite", "compareTo", "toString"));
         INSTANCE.put(NativeType.DECIMAL, List.of("divide", "toIntExact", "toFloatExact", "toFloatLossy",
-                "toJava", "toString"));
+                "toJava", "compareTo", "toString"));
         INSTANCE.put(NativeType.BIGINT, List.of("divTrunc", "toIntExact", "toFloatExact", "toFloatLossy",
-                "toDecimal", "toJava", "toString"));
+                "toDecimal", "toJava", "compareTo", "toString"));
         INSTANCE.put(NativeType.BOOL, List.of("toString"));
         INSTANCE.put(NativeType.STRING, List.of("length", "isEmpty", "charAt", "codeAt", "substring",
                 "indexOf", "contains", "startsWith", "endsWith", "compareTo", "toUpperCase", "toLowerCase", "trim",
                 "split",
-                "replace", "repeat", "toInt", "toIntOrNull", "toFloat", "toString"));
+                "replace", "repeat", "lastIndexOf", "toInt", "toIntOrNull", "toFloat", "toString"));
     }
 
     /** The checker's id for {@code Type.name} on a built-in type name, or null. */

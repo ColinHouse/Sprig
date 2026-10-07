@@ -239,7 +239,7 @@ public final class Catalog {
         guidance(out, "pipeline", "language", "ordinary statements");
         guidance(out, "stringInterpolation", "strings", "+ concatenation");
         guidance(out, "charType", "strings", "one-code-point String elements via indexing and iteration");
-        guidance(out, "tuples", "language", "classes or variants with named fields");
+        guidance(out, "tuples", "language", "a one-line class with named fields: class Pair(first: Int, second: Int), built as Pair(first=1, second=2)", "variants with named fields");
         guidance(out, "destructuring", "language", "explicit field access");
         out.put("packageRegistry", Map.of("supported", true, "helpTopic", "dependencies",
                 "rules", List.of("a registry is an index of where packages live: packages/NAME.toml with the Git repository, subdir and releases",

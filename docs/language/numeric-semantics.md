@@ -85,6 +85,15 @@ explicit base-10 digits after the point and a Java `RoundingMode` name such as
 `"HALF_EVEN"`; invalid mode, zero divisor or unsupported scale is a numeric
 runtime error. Decimal addition, subtraction and multiplication are exact.
 
+Ordering as a value: `a.compareTo(b)` is defined on `Int`, `Int32`, `Float`,
+`Float32`, `Decimal` and `BigInt` (as on `String`). The argument has the
+receiver's own type, with no implicit conversion (`SPR-NUM-CONVERSION` or
+`SPR-NUM-MIXED` otherwise), and the result is `Int32`: negative, zero or
+positive, so `fn(a: Int, b: Int) => a.compareTo(b)` is a Java `Comparator`.
+`Int`, `Int32`, `Float` and `Float32` use the JDK's `compare` (for `Float`,
+`-0.0 < 0.0` and `NaN` sorts last, as `Double.compare` does); `Decimal` and
+`BigInt` return the sign of their exact comparison.
+
 ## Binary floating behavior
 
 `Float`/`Float32` arithmetic uses JVM IEEE 754 `double`/`float`: round to

@@ -106,6 +106,19 @@ public final class AstBuilder {
     private Decl buildClass(SprigParser.ClassDefinitionContext ctx) {
         List<Decl.Field> fields = new ArrayList<>();
         List<Decl.Func> methods = new ArrayList<>();
+        if (ctx.classSuite() == null) {
+            // One-line form: every field is an immutable let without a default.
+            for (SprigParser.InlineFieldContext field : ctx.inlineFields().inlineField()) {
+                Decl.Field built = new Decl.Field(field.IDENT().getText(), false, buildTypeRef(field.typeRef()), null);
+                built.span = span(field);
+                built.nameSpan = span(field.IDENT());
+                fields.add(built);
+            }
+            Decl.ClassDecl decl = new Decl.ClassDecl(ctx.IDENT().getText(), fields, methods);
+            decl.span = span(ctx);
+            decl.nameSpan = span(ctx.IDENT());
+            return decl;
+        }
         for (SprigParser.FieldDeclarationContext field : ctx.classSuite().fieldDeclaration()) {
             fields.add(new Decl.Field(field.IDENT().getText(), field.VAR() != null,
                     buildTypeRef(field.typeRef()),

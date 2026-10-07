@@ -1,0 +1,8 @@
+Pair(first=1, second=2)
+Pair(first=2, second=1)
+true
+false
+Named(first=1, second=2)
+1
+a
+b
