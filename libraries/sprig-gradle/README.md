@@ -39,7 +39,7 @@ sprig {
 }
 ```
 
-For Fabric/Loom, choose the `client` source set; see
+For Fabric/Loom, target `main` for content both sides need (items, blocks) and `client` for a client-only mod; see
 [`sprig-fabric`](../sprig-fabric/README.md) for a runnable starter.
 
 ## Toolchain discovery

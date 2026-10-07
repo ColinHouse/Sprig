@@ -1,4 +1,11 @@
 import dev.sprig.fabric.CounterActions as CounterActions
+import net.minecraft.world.item.Item as Item
+import net.minecraft.world.item.Item.Properties as Properties
+import net.minecraft.world.level.Level as Level
+import net.minecraft.world.entity.player.Player as Player
+import net.minecraft.world.InteractionHand as InteractionHand
+import net.minecraft.world.InteractionResult as InteractionResult
+import net.minecraft.network.chat.Component as Component
 
 class Counter:
     var ticks: Int = 0
@@ -13,3 +20,28 @@ conform Counter to CounterActions
 
 func new_counter() -> Counter:
     return Counter()
+
+# A Minecraft item written in Sprig. The class extends Item: the object the
+# game registers is the object Sprig mutates, `use` overrides Item.use, and
+# `parent.use(...)` runs the inherited implementation. Registration stays in
+# Java (SprigItems), because Registry.register's generic bound is outside
+# Sprig's interop profile.
+class Wand:
+    let properties: Properties
+    var uses: Int = 0
+
+    func use(level: Level, player: Player, hand: InteractionHand) -> InteractionResult throws Error:
+        uses += 1
+        if not level.isClientSide():
+            let message = Component.literal("Sprig wand used " + uses + " times")
+            if message != null:
+                player.sendSystemMessage(message)
+        let result = parent.use(level, player, hand)
+        if result == null:
+            throw Error("Item.use returned null")
+        return result
+
+conform Wand to Item(properties) as parent
+
+func new_wand(properties: Properties) -> Wand:
+    return Wand(properties=properties)
