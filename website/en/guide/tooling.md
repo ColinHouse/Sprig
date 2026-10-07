@@ -14,6 +14,7 @@ The ones you'll use most while writing code:
 | `sprig run [file] [-- args]` | Checks, compiles and runs; anything after `--` goes to your program |
 | `sprig test [path]` | Runs the project's tests; `--filter` picks tests by name |
 | `sprig build [file]` | Generates Java source and class files |
+| `sprig build --bundle [--archive]` | Writes a directory with its own Java runtime that runs on a machine without a JDK; see below |
 | `sprig fmt <file or directory>` | Formats code; with `--check` it only checks and changes nothing |
 
 Projects and dependencies:
@@ -57,6 +58,7 @@ Inside a project, `check`, `run` and `build` don't need a file name; they use th
 - **`run --stacktrace`**: when your program fails with an uncaught error, Sprig reports `SPR-RUNTIME-ERROR` or `SPR-RUNTIME-EXCEPTION` and points at the line in your source. Add this option when you also want the full JVM stack trace.
 - **`build -d <dir>`**: `build` writes to `sprig-build/` by default, and `-d` picks another directory. If the check fails, no class files are written.
 - **`build --emit-java-only`**: runs the static checks and generates Java without calling javac. With `--json`, the result includes `javaSources`, `mainClass` and `javacInvoked: false`.
+- **`build --bundle`**: also writes `<name>/` inside the build output (the name is the `--bin`, the project name or the file name) that you can hand to someone with no Java installed: `bin/<name>` is a POSIX sh launcher and `bin/<name>.cmd` the Windows one; `lib/` holds the program's JAR, the Sprig runtime and every JAR from the lock file (Maven dependencies included, named by coordinate); `runtime/` is a Java runtime image that jlink builds from the modules those JARs actually use, with the JDK's license notices kept in `runtime/legal/` (OpenJDK's GPLv2 with the Classpath Exception allows redistributing it together with the notices). The launcher runs the program in your current directory, forwards arguments and the exit status unchanged, and keeps a class-data-sharing archive of the program's classes under your cache directory so the second start is faster. Your program is never run while bundling. **The image runs only on the operating system and CPU architecture that built it**; the command output says which, so build on each platform you ship to. `--archive` also writes `<name>.zip` next to the bundle, and the launchers stay executable after unzipping. You need a full JDK (`jdeps`, `jlink` and `jmods/`): a missing tool is `SPR-BUNDLE-TOOLS`, a `jdeps` failure `SPR-BUNDLE-JDEPS`, a missing `jmods/` or a `jlink` failure `SPR-BUNDLE-LAYOUT`, each with a fix. Details: [bundles](/en/reference/projects/bundle).
 
 `sprig explain` tells you what any error code means, and the full list is in [diagnostic codes](/en/reference/tooling/diagnostic-codes).
 

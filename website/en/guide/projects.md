@@ -36,6 +36,7 @@ You can run these from any subdirectory of the project; Sprig walks up until it 
 sprig check                  # checks the entry point and every file it imports
 sprig run                    # checks and runs
 sprig build                  # generates Java and class files
+sprig build --bundle         # also a directory with its own Java runtime, for a machine without a JDK
 sprig test                   # runs the tests under tests/
 sprig project                # shows project information
 sprig run path/to/file.spr   # a file you name explicitly always wins
