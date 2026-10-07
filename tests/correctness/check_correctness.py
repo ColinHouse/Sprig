@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regression checks for correctness defects found in the independent audit."""
 import os
+import re
 import json
 import subprocess
 import tempfile
@@ -157,6 +158,39 @@ def string_join_lowering():
               and ran.stdout.strip() == "n=340.51.5truepen items=[1, 2]3", f"{ran.stdout!r} {ran.stderr!r}")
 
 
+def yield_values_never_start_with_a_parenthesis():
+    """A branch value of an expression match must not follow `yield` with `(`.
+
+    javac 17 (unlike javac 26) reads `yield (` followed by a comma at the first
+    level of parentheses, as in `(SprigMutableMap.<String, Long>ofEntries(...)).keys()`,
+    as a call of a method named yield and rejects the program (#154). Such a
+    value is assigned to a local first; the long if expression's values are
+    casts `((T) (...))` whose commas are nested deeper.
+    """
+    source = ("enum C:\n    A\n    B\n"
+              "func keys(c: C) -> List[String]:\n    return match c:\n        case C.A:\n"
+              '            ({"k": 4}).keys()\n        case C.B:\n            ["b"]\n'
+              "func table(c: C) -> MutableMap[String, Int]:\n    return match c:\n        case C.A:\n"
+              '            ({"k": 4})\n        case C.B:\n            {"j": 1}\n'
+              "func size(c: C) -> Int:\n    return match c:\n        case C.A:\n"
+              '            ({"k": 4}).size()\n        case C.B:\n            7\n'
+              "let c = C.A\nlet top = match c:\n    case C.A:\n"
+              '        ({"x": 1, "y": 2}).keys()\n    case C.B:\n        ["none"]\n'
+              "print(keys(C.A))\nprint(table(C.A))\nprint(size(C.A))\nprint(top)\nprint(keys(C.B))\n")
+    with tempfile.TemporaryDirectory(prefix="sprig-yield-") as work:
+        path = Path(work) / "yields.spr"
+        path.write_text(source, encoding="utf-8")
+        out = Path(work) / "out"
+        built = run("build", path, "--emit-java-only", "-d", out)
+        generated = list(out.rglob("$M_yields.java"))
+        java = generated[0].read_text(encoding="utf-8") if generated else ""
+        check("yield-value-never-starts-with-parenthesis", built.returncode == 0 and "yield" in java
+              and re.search(r"yield\s*\(", java) is None, re.findall(r"yield\s*\(.{0,60}", java))
+        ran = run("run", path)
+        check("yield-parenthesized-values-run", ran.returncode == 0 and
+              ran.stdout == "[k]\n{k: 4}\n1\n[x, y]\n[b]\n", f"{ran.stdout!r} {ran.stderr!r}")
+
+
 def run_program(name, source, expected):
     """Check, compile with javac and run one program; the output must match."""
     with tempfile.TemporaryDirectory(prefix="sprig-run-") as work:
@@ -195,6 +229,7 @@ def java_to_string():
 
 def main():
     sealed_variant_lowering()
+    yield_values_never_start_with_a_parenthesis()
     string_join_lowering()
     generic_compound_assignment()
     java_to_string()
