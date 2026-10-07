@@ -18,7 +18,7 @@ compatible editors. To build the extension yourself, see
 [Development](#development--开发).
 
 Highlighting, the outline and snippets work immediately, without Java or the
-compiler. Everything else needs JDK 17+ and the
+compiler. Everything else needs JDK 21+ and the
 [Sprig SDK](https://colinhouse.github.io/Sprig/en/guide/getting-started). Set
 **Sprig: Compiler Path** to the SDK's `bin/sprig` launcher, or put the SDK's
 `bin` on PATH. A built Sprig source checkout is found by searching parent

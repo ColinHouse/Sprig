@@ -13,7 +13,7 @@ Once you've done the [tutorial](/en/tutorial), these fuller programs are a good 
 
 - [application_foundation](https://github.com/ColinHouse/Sprig/tree/main/examples/application_foundation): HTTP, JSON encoding and decoding, UTC time and file handling.
 - [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) and [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations): JDBC through Maven, with transactions, persistence and database migrations.
-- [parallel_words](https://github.com/ColinHouse/Sprig/tree/main/examples/parallel_words): counts words in parallel with `sprig-concurrent`, using a task, a pool, a channel, a counter and a lock once each; see [Concurrency](/en/guide/concurrency).
+- [parallel_words](https://github.com/ColinHouse/Sprig/tree/main/examples/parallel_words): counts words in parallel with `@std/concurrent`, using a scope, tasks, a pool, a channel, a counter and a lock once each; see [Concurrency](/en/guide/concurrency).
 - [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger): a compact bookkeeping HTTP backend whose data survives a restart. See [Web and SQLite](/en/guide/web-sqlite).
 - [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web): typed routes, JSON and OpenAPI documentation.
 

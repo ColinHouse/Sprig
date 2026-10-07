@@ -8,7 +8,7 @@ Along the way you'll break things on purpose a few times. Reading the compiler's
 
 ## 0. Set up
 
-You need JDK 17 or newer and the Sprig SDK. If you haven't installed them yet, start with [Getting started](/en/guide/getting-started).
+You need JDK 21 or newer and the Sprig SDK. If you haven't installed them yet, start with [Getting started](/en/guide/getting-started).
 
 Then create a project:
 
