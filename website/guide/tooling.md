@@ -62,6 +62,8 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 - **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。
 - **`build --bundle`**：在 `build` 的输出目录里再写一个 `<名字>/` 目录（名字是 `--bin`、项目名或文件名），交给没装 Java 的人也能运行：`bin/<名字>` 是 POSIX sh 启动器，`bin/<名字>.cmd` 是 Windows 启动器；`lib/` 里是程序的 jar、Sprig 运行时和锁文件里的全部 jar（Maven 依赖也在，按坐标命名）；`runtime/` 是用 jlink 从这些 jar 实际用到的模块做出来的 Java 运行时镜像，`runtime/legal/` 里的 JDK 许可声明原样保留（OpenJDK 的 GPLv2 + Classpath Exception 允许连同声明一起分发）。启动器在你当前的目录里运行程序，原样转发参数和退出码，并把程序自己的类做成 class-data-sharing 归档放在用户缓存目录里，第二次启动更快。打包时不会运行你的程序。**镜像只能在构建它的操作系统和 CPU 架构上运行**，命令输出会写明是哪个平台；要给别的平台就在那个平台上构建。加 `--archive` 会在旁边再写一个 `<名字>.zip`，解压后启动器照样可执行。需要完整的 JDK（有 `jdeps`、`jlink` 和 `jmods/`）：缺工具报 `SPR-BUNDLE-TOOLS`，`jdeps` 分析失败报 `SPR-BUNDLE-JDEPS`，没有 `jmods/` 或 jlink 失败报 `SPR-BUNDLE-LAYOUT`，每个都带修法。详见 [bundle 说明（英文）](/en/reference/projects/bundle)。
 
+如果程序定义了 `func main`，但运行时没有输出，也没有任何顶层语句或其嵌套代码块调用 `main`，`run` 会给出提示；嵌套的 `if`、`try` 等代码块里的调用也会计入。
+
 每个错误码的含义都可以用 `sprig explain` 查，完整列表见[错误码（英文）](/en/reference/tooling/diagnostic-codes)。
 
 ## JSON 输出

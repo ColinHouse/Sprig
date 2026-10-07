@@ -41,9 +41,9 @@ checker resolves against; text help prints each example's source. Diagnostics
 for constructs from other languages (`else if`, `var x: T` without a value,
 `List<Int>`, braces, `++`, `;`, `&&`, `readLine()`, `len()`, `True`, `str`, an
 unimported `Math`) name the Sprig spelling in the message or hint, and a missing
-`@std` module lists the bundled ones. When a file declares `func main`, has no
-top-level statements and prints nothing, `run` adds a note (standard error, or
-`note` with `--json`).
+`@std` module lists the bundled ones. When a run writes no output and no
+top-level statement or nested block calls a declared `func main`, `run` adds a
+note (standard error, or `note` with `--json`).
 
 Use `help` topics before writing unfamiliar constructs. `capabilities` lists
 deliberately unsupported features; grammar acceptance alone does not imply
