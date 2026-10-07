@@ -1,0 +1,9 @@
+variant Shape:
+    Circle(radius: Float)
+    Square(side: Float)
+
+variant Fill:
+    Solid(alpha: Float)
+    Empty
+
+print(Shape.Circle(radius=1.0) == Fill.Solid(alpha=1.0))

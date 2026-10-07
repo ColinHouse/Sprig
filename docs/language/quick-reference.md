@@ -90,7 +90,11 @@ collection seen read-only (no copy; `toList()`/`toMap()` snapshot). The reverse
 needs `toMutableList()`, and element types stay invariant.
 `==`/`!=` compare numbers, `Bool`, `String`, enums, variants, lists and maps by
 value, and class objects by identity: two objects whose fields match are still
-two objects, so compare the fields you mean (`a.id == b.id`). `a.compareTo(b)` on
+two objects, so compare the fields you mean (`a.id == b.id`). Two different
+cases of one variant can be compared and are never equal, and a list or map
+literal takes the other operand's type (`xs == []`). `in`, `contains`,
+`indexOf` and `remove` find an element with the same `==`, so a Float NaN is
+never found and `-0.0` finds `0.0`. `a.compareTo(b)` on
 `Int`, `Int32`, `Float`, `Float32`, `Decimal`, `BigInt` and `String` takes the
 receiver's own type and returns `Int32`, so `fn(a: Int, b: Int) => a.compareTo(b)`
 is a Java `Comparator`. Nullable

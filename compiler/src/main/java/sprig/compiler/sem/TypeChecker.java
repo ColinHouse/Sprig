@@ -1848,9 +1848,22 @@ public final class TypeChecker {
         if (op.equals("in")) {
             return checkIn(binary);
         }
-        Type left = checkExpr(binary.left, null);
-        Type right = checkExpr(binary.right,
-                binary.right instanceof Expr.IntLit || binary.right instanceof Expr.FloatLit ? left : null);
+        // A list or map literal compared with == or != takes the other
+        // operand's type, as an initializer takes the declared type, so
+        // `xs == []` needs no annotation. A literal on the left is typed after
+        // the right operand; only the checking order changes, not evaluation.
+        boolean equality = op.equals("==") || op.equals("!=");
+        Type left;
+        Type right;
+        if (equality && isCollectionLiteral(binary.left) && !isCollectionLiteral(binary.right)) {
+            right = checkExpr(binary.right, null);
+            left = checkExpr(binary.left, right);
+        } else {
+            left = checkExpr(binary.left, null);
+            right = checkExpr(binary.right, binary.right instanceof Expr.IntLit
+                    || binary.right instanceof Expr.FloatLit
+                    || (equality && isCollectionLiteral(binary.right)) ? left : null);
+        }
         // v0.8: a bare type parameter guarantees no operators. Null checks are
         // the one universally valid comparison and stay allowed.
         boolean nullCheck = left == NativeType.NULL || right == NativeType.NULL;
@@ -1884,6 +1897,11 @@ public final class TypeChecker {
             case "<", "<=", ">", ">=" -> checkOrdering(binary, left, right);
             default -> NativeType.ERROR;
         };
+    }
+
+    /** A list or map literal: its type can come from where it goes. */
+    private static boolean isCollectionLiteral(Expr expr) {
+        return expr instanceof Expr.ListLit || expr instanceof Expr.MapLit;
     }
 
     static boolean containsTypeParameter(Type type) {
@@ -1997,9 +2015,12 @@ public final class TypeChecker {
         Type rightBase = right.nonNull();
         boolean safeNumericPair = (isInteger(leftBase) && isInteger(rightBase))
                 || (isBinaryFloat(leftBase) && isBinaryFloat(rightBase));
+        // Two cases of one variant compare at the variant's type, the type a
+        // list literal holding both gets: different cases are never equal.
         if (!safeNumericPair && !leftBase.equals(rightBase)
                 && !Semantics.isAssignable(leftBase, rightBase)
-                && !Semantics.isAssignable(rightBase, leftBase)) {
+                && !Semantics.isAssignable(rightBase, leftBase)
+                && !casesOfOneVariant(leftBase, rightBase)) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
                     "Cannot compare " + left.display() + " with " + right.display(),
                     module.uri, binary.span).withTypes(left.display(), right.display()));
@@ -2331,11 +2352,17 @@ public final class TypeChecker {
         if (Semantics.isAssignable(b, a)) {
             return b;
         }
-        if (a instanceof VariantCaseType caseA && b instanceof VariantCaseType caseB
-                && caseA.variant == caseB.variant && caseA.variantArgs.equals(caseB.variantArgs)) {
+        if (casesOfOneVariant(a, b)) {
+            VariantCaseType caseA = (VariantCaseType) a;
             return new VariantType(caseA.variant, caseA.variantArgs);
         }
         return null;
+    }
+
+    /** Two cases of the same variant instantiation, such as Shape.Circle and Shape.Square. */
+    private static boolean casesOfOneVariant(Type a, Type b) {
+        return a instanceof VariantCaseType caseA && b instanceof VariantCaseType caseB
+                && caseA.variant == caseB.variant && caseA.variantArgs.equals(caseB.variantArgs);
     }
 
     private boolean isPrintReference(Expr expr) {

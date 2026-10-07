@@ -258,10 +258,10 @@ public final class SprigRuntime {
         }
     }
 
-    /** Deep structural equality used by Sprig {@code ==} on reference values. */
     /**
      * {@code in} helpers. Arguments are evaluated left-to-right, so the element
-     * expression runs before the container expression exactly as written.
+     * expression runs before the container expression exactly as written. A
+     * list is searched with {@code ==}, as {@link SprigList#indexOf} searches.
      */
     public static boolean listContains(Object element, SprigList<?> list) {
         return list.contains(element);
@@ -275,6 +275,11 @@ public final class SprigRuntime {
         return haystack.contains(needle);
     }
 
+    /**
+     * Deep structural equality used by Sprig {@code ==} on reference values:
+     * IEEE equality for two Floats or two Float32s (NaN equals nothing, -0.0
+     * equals 0.0), identity and then equals for everything else.
+     */
     public static boolean equalsValue(Object a, Object b) {
         if (a instanceof Double x && b instanceof Double y) return x.doubleValue() == y.doubleValue();
         if (a instanceof Float x && b instanceof Float y) return x.floatValue() == y.floatValue();

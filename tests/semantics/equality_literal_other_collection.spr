@@ -1,0 +1,2 @@
+let ages: Map[String, Int] = {"ada": 36}
+print(ages == [36])
