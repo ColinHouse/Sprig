@@ -187,8 +187,12 @@ public final class Catalog {
      */
     private static Map<String, Object> featureGuidance() {
         Map<String, Object> out = new LinkedHashMap<>();
-        guidance(out, "inheritance", "classes", "composition", "narrow Java host adapter");
-        guidance(out, "interfaces", "classes", "composition", "narrow Java adapter with fn(A) -> R or Fn0..Fn3");
+        guidance(out, "inheritance", "classes", "a contract class (methods without bodies) that classes conform to", "composition", "narrow Java host adapter");
+        out.put("interfaces", Map.of("supported", true, "helpTopic", "classes",
+                "rules", List.of("a class whose methods all have no body is a contract: no fields, no default bodies, not constructible",
+                        "conform C to Contract (or alias.Contract from an imported module) requires every method with the same parameter and result types, throwing no more than the contract",
+                        "a conforming object goes where the contract type is expected and is used through the contract's methods; never the reverse, and generics stay invariant",
+                        "generated as a Java interface the class implements; contracts and conforming classes are non-generic in v1")));
         out.put("arbitraryJavaSam", Map.of("supported", true, "helpTopic", "jvm",
                 "rules", List.of("a Java functional-interface parameter accepts a Sprig fn(...) -> R value; the compiler emits the adapter",
                         "parameters match exactly after the Java mapping; void accepts any result; wildcards inside the interface's type arguments read as their bound",
@@ -225,8 +229,13 @@ public final class Catalog {
         guidance(out, "annotations", "language", "explicit typed metadata", "ordinary functions");
         guidance(out, "decorators", "language", "ordinary functions and modules");
         guidance(out, "macros", "language", "ordinary functions and modules");
-        guidance(out, "blockLambdas", "functions", "named function plus expression lambda fn(x: T) => named(x)");
-        guidance(out, "namedFunctionReferences", "functions", "expression lambda forwarding fn(x: T) => named(x)");
+        guidance(out, "blockLambdas", "functions", "a named function used as a value: items.map(convert)", "named function plus expression lambda fn(x: T) => named(x)");
+        out.put("namedFunctionReferences", Map.of("supported", true, "helpTopic", "functions",
+                "rules", List.of("a named function, a module function (lists.sum) or a method (counter.bump) without a call is a value of the type of the forwarding lambda, throws clause included",
+                        "a method reference evaluates its receiver once, when the value is created",
+                        "a generic function writes its type arguments: identity[Int]; nothing is inferred from where the value goes",
+                        "print is a value only where a fn(T) -> Unit is expected (items.forEach(print)); other built-ins and Java or built-in methods are called, not referenced",
+                        "function values are not compared with == or !=")));
         out.put("callableThrows", Map.of("supported", true, "helpTopic", "errors",
                 "rules", List.of("a lambda that calls a function throwing Error has the type fn(A) -> R throws Error",
                         "a value without the clause is accepted where the clause is expected, never the reverse",

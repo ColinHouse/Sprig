@@ -31,8 +31,9 @@ It is a **declared foreign conformance conversion**, not general subtyping:
   rejected until narrowed;
 - `List[Task] → List[Runnable]` is never inferred (generics stay invariant);
 - there is no inheritance between Sprig classes (a Java superclass is
-  declared with the class form below), no Sprig `interface` declaration, no
-  structural matching and no SAM conversion;
+  declared with the class form below), no structural matching and no SAM
+  conversion; a Sprig-side contract is a class without method bodies, see
+  [Contract classes](#contract-classes);
 - `conform` does not change the class's Sprig API. `Task()` methods keep Sprig
   semantics; only the `J` view uses Java interop metadata.
 
@@ -47,6 +48,61 @@ class EndTickAdapter:
 
 conform EndTickAdapter to EndTick
 ```
+
+## Contract classes
+
+A class whose methods all end at the line break, with no body and no fields,
+is a **contract**:
+
+```sprig
+class Sink:
+    func write(line: String) -> Unit
+    func flush() -> Int
+
+class Console:
+    var written: Int = 0
+
+    func write(line: String) -> Unit:
+        written += 1
+        print(line)
+
+    func flush() -> Int:
+        return written
+conform Console to Sink
+
+func log_all(lines: List[String], sink: Sink) -> Int:
+    for line in lines:
+        sink.write(line)
+    return sink.flush()
+
+print(log_all(["a", "b"], Console()))
+```
+
+- `conform C to Contract` (or `conform C to alias.Contract` for a contract
+  declared in an imported Sprig module) requires `C` to have every method of
+  the contract with the same parameter types and result type, the same
+  `rethrows`, and a `throws` clause that is a subset of the contract's
+  (`SPR-CONFORM-MEMBER`, `SPR-CONFORM-EFFECTS`). Nothing is adapted or
+  renamed.
+- A `C` value then goes where the contract type is expected (`Sink`,
+  `Sink?`, a `List[Sink]` literal), and is used through the contract's
+  methods only. There is no conversion back (`let c: Console = sink` is
+  rejected) and generics stay invariant (`List[Console]` is not `List[Sink]`).
+- A contract cannot be constructed, declare fields, or mix methods with and
+  without a body (`SPR-CLASS-ABSTRACT`); a contract cannot itself conform.
+  A function outside a class never omits its body (`SPR-SYNTAX-ERROR`).
+- Contracts and conforming classes are non-generic in v1; one `conform` per
+  relation; a class may conform to several contracts and Java interfaces.
+- Generated Java: the contract is a `public interface` with one abstract
+  method per Sprig method (`void` for `Unit`, checked Java exceptions in the
+  `throws` clause); the conforming class `implements` it. `==` on contract
+  values is identity, like any class value; `print` shows the object's own
+  class.
+
+This is the open counterpart of `variant`: a `variant` lists every case in
+one place and `match` must cover them all; a contract lists the methods and
+any module may add a conforming class. Neither is inheritance: a contract has
+no state and no default bodies.
 
 ## v1 rules
 

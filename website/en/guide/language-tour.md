@@ -36,6 +36,9 @@ Blocks are defined by indentation, as in Python:
 
 - Fields are declared with `let` (fixed once the object exists) or `var` (can change), optionally with a default.
 - A small class with only `let` fields and no methods fits on one line: `class Position(x: Int, y: Int)`. It is the same kind of class as the block form; `var` fields, defaults and methods need the block.
+- A class whose methods have **no body** is a contract. Another class declares `conform Console to Sink` and must have every method of the contract with the same types; a `Console` then goes wherever a `Sink` is expected and is used through the contract's methods. A contract has no fields, no default bodies, cannot be constructed, and there is no conversion back. Example:
+
+<<< @/snippets/contracts.spr
 - You create objects with field names: `Hero(name="Ada", health=80)`. Missing, misspelled or repeated fields are compile errors.
 - Inside a method, a field's bare name refers to the current object's field; there's no prefix.
 - Parameters and local variables can't have the same name as a field.
@@ -150,6 +153,9 @@ Your own classes, variants and functions can go inside a `generic T:` (or `gener
 - A lambda is an expression: `fn(x: Int) => x * 2`.
 - It takes 0 to 3 parameters and its body is a single expression. It may call a function that throws `Error`; its type then says so (see Function types below).
 - A lambda can't capture a `var` local; that's rejected with `SPR-TYPE-CAPTURE`. Copy the value into a `let` first.
+- A named function, module function or method without the call parentheses is a function value: `items.map(shout)`, `lists.sum`, `counter.bump`. Its type is the forwarding lambda's, throws clause included. A method reference evaluates its receiver once, when the value is created. A generic function writes its type arguments: `identity[Int]`. `print` is a value only where a `fn(T) -> Unit` is expected, such as `items.forEach(print)`. Java and built-in methods still take a lambda. Function values are not compared with `==`.
+
+<<< @/snippets/function_references.spr
 
 ## Function types
 
@@ -218,7 +224,7 @@ $[1].id: expected integer, found string
 None of these exist yet:
 
 - inferring type arguments from the expected type, and variance
-- inheritance and interfaces
+- inheritance (open polymorphism is a contract class, see [Classes](#classes))
 - `%=`
 - tuples and destructuring
 - string interpolation: `"${name}"` is just text. Join with `+` instead: it accepts any value on either side, so `"count " + count` works without `toString()`, and the value appears as `print` would show it. `null`, a value that may be `null` (such as an `Int?`) and a `Unit` result are rejected. A chain evaluates from the left, so `1 + 2 + " items"` is `3 items`.

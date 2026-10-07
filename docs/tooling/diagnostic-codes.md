@@ -24,6 +24,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-THROWS-UNUSED | A function declares a checked Java exception that its body can never throw. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-CONFORM-EFFECTS | A witness method declares checked exceptions the Java interface method does not permit. |
+| SPR-CLASS-ABSTRACT | A contract class (a class whose methods have no body) declares fields, mixes methods with and without a body, or is constructed; a contract is implemented by classes that conform to it. |
 | SPR-CONFORM-MEMBER | A class method does not exactly match the Java method it witnesses or overrides, or a required abstract method is missing. |
 | SPR-CONFORM-OVERLOAD | The Java interface requires overloaded abstract methods, which Sprig classes cannot represent. |
 | SPR-CONFORM-PARENT | The parent view of a class that extends a Java class only calls inherited methods; it is not a value, has no fields and cannot reach abstract methods. |

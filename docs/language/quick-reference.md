@@ -15,6 +15,15 @@ class Hero:
 
 class Pair(first: Int, second: Int)  # one line: let fields only, same class otherwise
 
+class Greeter:  # a contract: methods without bodies; classes conform to it
+    func greet(name: String) -> String
+
+class Bot:
+    func greet(name: String) -> String:
+        return "hi " + name
+
+conform Bot to Greeter  # Bot has every Greeter method, so a Bot goes where a Greeter is expected
+
 let hero = Hero(name="Ada")
 hero.health += 1
 let label = "health " + hero.health  # + joins text with any non-null value
@@ -38,6 +47,10 @@ print(eval(Expr.Add(left=Expr.Literal(value=1), right=Expr.Literal(value=2))))
 ```
 
 Every named function/method has typed parameters and an explicit `->` result.
+A function, module function or method name without a call is a function value
+(`items.map(shout)`, `counter.bump`, `lists.sum`; a generic one writes its type
+arguments, `identity[Int]`); `print` is one where a `fn(T) -> Unit` is expected
+(`items.forEach(print)`). Function values are not compared with `==`.
 Methods with no result use `-> Unit`. Imports come first. `let` binds once;
 `var` permits rebinding. Local types may be inferred. Constructors for Sprig
 classes and variant cases use named arguments; functions and JVM methods use

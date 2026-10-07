@@ -598,6 +598,16 @@ public final class Explanations {
                         "For different signatures, write a separate class that composes the original."));
                 out.put("relatedCodes", List.of(Codes.CONFORM_MEMBER, Codes.CONFORM_OVERLOAD, Codes.JVM_CLASS));
             }
+            case Codes.CLASS_ABSTRACT -> {
+                out.put("whyMatters", "A contract names what a conforming class must provide and nothing else: no state, no default bodies, no instances of its own, so a value of the contract type is always some conforming object.");
+                out.put("commonCauses", List.of("A method header ends at the line break by mistake, which turns the class into a contract.",
+                        "A contract declares let or var fields, or some of its methods have bodies.",
+                        "Sink() is constructed where a conforming class such as Console() was meant."));
+                out.put("safeFixes", List.of("Give every method a body (end the header with ':') to make an ordinary class.",
+                        "Keep only bodiless methods in the contract and move fields and bodies into the classes that 'conform C to Contract'.",
+                        "Construct a conforming class and pass it where the contract type is expected."));
+                out.put("relatedCodes", List.of(Codes.CONFORM_MEMBER, Codes.CONFORM_TARGET));
+            }
             case Codes.CONFORM_MEMBER -> {
                 out.put("whyMatters", "A witness or override must match the Java signature exactly: name, arity, JVM parameter shapes and return shape; a method named like a Java method with another shape would silently become a new overload.");
                 out.put("commonCauses", List.of("The class is missing a required method.",

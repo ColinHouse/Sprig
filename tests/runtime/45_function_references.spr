@@ -1,0 +1,88 @@
+# A named function, a module function, a method or print used as a value is a
+# function reference: the same function type as the lambda that forwards to it.
+import "@std/lists.spr" as lists
+
+func double(n: Int) -> Int:
+    return n * 2
+
+func shout(text: String) -> String:
+    return text.toUpperCase() + "!"
+
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+func apply_twice(value: Int, step: fn(Int) -> Int) -> Int:
+    return step(step(value))
+
+class Counter:
+    var count: Int = 0
+
+    func bump(by: Int) -> Int:
+        count += by
+        return count
+
+    func label() -> String:
+        return "count=" + count
+
+class Greeter:
+    let prefix: String
+
+    func greet(name: String) -> String:
+        return prefix + " " + name
+
+func make_counter(start: Int) -> Counter:
+    print("made")
+    return Counter(count=start)
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+# A named function as a value.
+print(apply_twice(5, double))
+let twice: fn(Int) -> Int = double
+print(twice(21))
+print(["a", "b"].map(shout))
+
+# A module function as a value; a generic one writes its type arguments.
+let words = ["pear", "fig", "banana"]
+let total: fn(List[Int]) -> Int = lists.sum
+print(total([1, 2, 3]))
+let flip = lists.reversed[String]
+print(flip(words))
+
+# print as a value where the element type is known.
+words.forEach(print)
+
+# A method reference captures its receiver once.
+let counter = Counter()
+let bump = counter.bump
+print(bump(2))
+print(bump(3))
+print(counter.count)
+let made = make_counter(10).bump
+print(made(1))
+print(made(1))
+
+# A method reference on a var receiver is bound when the value is created.
+var current = Greeter(prefix="hi")
+let greet = current.greet
+current = Greeter(prefix="bye")
+print(greet("Ada"))
+print(current.greet("Ada"))
+
+# A reference to a throwing function has the throws clause.
+let parser: fn(String) -> Int throws Error = parse
+try:
+    print(parser("12"))
+    print(parser("x"))
+catch problem: Error:
+    print(problem.message)
+
+# A generic function needs its type arguments written.
+let same = identity[String]
+print(same("kept"))
+print(apply_twice(1, identity[Int]))

@@ -1,0 +1,2 @@
+func area(side: Float) -> Float
+print(area(2.0))

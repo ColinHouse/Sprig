@@ -1,0 +1,8 @@
+class Sink:
+    func write(line: String) -> Unit
+class Console:
+    func write(line: String) -> Unit:
+        print(line)
+func use(sink: Sink) -> Unit:
+    sink.write("x")
+use(Console())

@@ -4,8 +4,13 @@ print(double(21))
 func apply_twice(value: Int, step: fn(Int) -> Int) -> Int:
     return step(step(value))
 
+func triple(n: Int) -> Int:
+    return n * 3
+
 print(apply_twice(5, double))
 print(apply_twice(5, fn(n: Int) => n + 1))
+# A named function is a value too: the same as fn(n: Int) => triple(n).
+print(apply_twice(5, triple))
 
 let base = 10
 let add_base = fn(n: Int) => n + base
@@ -13,4 +18,4 @@ print(add_base(5))
 
 let scores = [3, 8, 5]
 print(scores.map(fn(s: Int) => s * 10))
-scores.forEach(fn(s: Int) => print(s))
+scores.forEach(print)

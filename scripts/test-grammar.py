@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # Negative fixtures whose shape the grammar accepts so that the front end can
 # report the one error and still build the AST for the language server; the
 # AST builder rejects them with SPR-SYNTAX-ERROR.
-GRAMMAR_ACCEPTS = {"22_if_expression_missing_else.spr"}
+GRAMMAR_ACCEPTS = {"22_if_expression_missing_else.spr", "24_function_without_body.spr"}
 
 
 def main():

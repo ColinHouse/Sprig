@@ -1,0 +1,5 @@
+func double(n: Int) -> Int:
+    return n * 2
+let f = double
+let g = double
+print(f == g)

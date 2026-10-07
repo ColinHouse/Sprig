@@ -1,0 +1,17 @@
+# A contract: methods without bodies. Conforming classes implement them.
+class Shape:
+    func area() -> Float
+    func describe(prefix: String) -> String throws Error
+
+class Square:
+    let side: Float
+
+    func area() -> Float:
+        return side * side
+
+    func describe(prefix: String) -> String throws Error:
+        return prefix + " square"
+conform Square to Shape
+
+let shape: Shape = Square(side=2.0)
+print(shape.area())

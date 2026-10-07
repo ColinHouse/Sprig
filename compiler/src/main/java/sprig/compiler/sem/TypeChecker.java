@@ -359,11 +359,14 @@ public final class TypeChecker {
         narrowing.push(new HashMap<>());
         checkSequence(func.body);
         narrowing.pop();
-        checkDeclaredThrows(func, escaping);
+        if (!func.abstractMethod) {
+            checkDeclaredThrows(func, escaping);
+        }
         escaping = null;
         activeTypeParams = previousTypeParams;
         Type returnType = func.returnType;
-        if (returnType != NativeType.UNIT && returnType != NativeType.ERROR && !definitelyReturns(func.body)) {
+        if (returnType != NativeType.UNIT && returnType != NativeType.ERROR && !func.abstractMethod
+                && !definitelyReturns(func.body)) {
             diagnostics.add(Diagnostic.error(Codes.FLOW_MISSING_RETURN, Phase.FLOW,
                     "Function '" + func.name + "' must return " + returnType.display() + " on every path",
                     module.uri, func.span));
@@ -1022,6 +1025,11 @@ public final class TypeChecker {
 
     Type checkExpr(Expr expr, Type expected) {
         Type type;
+        Type reference = functionReference(expr, expected);
+        if (reference != null) {
+            expr.type = reference;
+            return reference;
+        }
         if (expr instanceof Expr.IntLit literal) {
             type = checkIntLiteral(literal, expected);
         } else if (expr instanceof Expr.FloatLit literal) {
@@ -1332,8 +1340,14 @@ public final class TypeChecker {
                     "Type '" + access.name + "' from module " + field.module.name
                             + " cannot be used as a value",
                     module.uri, access.span));
-        } else if (field.kind == ResolvedField.Kind.METHOD || field.kind == ResolvedField.Kind.JVM_METHOD
-                || field.kind == ResolvedField.Kind.BUILTIN_METHOD) {
+        } else if (field.kind == ResolvedField.Kind.JVM_METHOD || field.kind == ResolvedField.Kind.BUILTIN_METHOD) {
+            String owner = field.kind == ResolvedField.Kind.JVM_METHOD ? "Java method" : "Built-in method";
+            diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
+                    owner + " '" + access.name + "' is not a value; call it, or pass a lambda",
+                    module.uri, access.span)
+                    .withHint("Only Sprig functions and methods are referenced by name. Write the lambda: "
+                            + "fn(value: Type) => receiver." + access.name + "(value)."));
+        } else if (field.kind == ResolvedField.Kind.METHOD) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
                     "Method '" + access.name + "' is not a first-class value; call it",
                     module.uri, access.span));
@@ -1894,6 +1908,18 @@ public final class TypeChecker {
     }
 
     private Type checkEquality(Expr.Binary binary, Type left, Type right) {
+        if (left != null && right != null
+                && (left.nonNull() instanceof FunctionType || right.nonNull() instanceof FunctionType)
+                && left != NativeType.NULL && right != NativeType.NULL) {
+            // Two mentions of the same function make two values, so identity
+            // would answer false where a reader expects true: not comparable.
+            diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                    "Function values cannot be compared with '" + binary.op + "'", module.uri, binary.span)
+                    .withTypes("comparable values", left.display() + " and " + right.display())
+                    .withHint("Compare what the functions compute, or compare a name, enum or variant that chooses "
+                            + "the function; a nullable function value may still be compared with null."));
+            return NativeType.BOOL;
+        }
         if (left == NativeType.UNIT || right == NativeType.UNIT) {
             requireValue(left, binary.left, "an operand of '" + binary.op + "'");
             requireValue(right, binary.right, "an operand of '" + binary.op + "'");
@@ -2248,6 +2274,186 @@ public final class TypeChecker {
             return new VariantType(caseA.variant, caseA.variantArgs);
         }
         return null;
+    }
+
+    private boolean isPrintReference(Expr expr) {
+        return expr instanceof Expr.Name name && name.symbol != null && name.symbol.kind == Symbol.Kind.FUNCTION
+                && name.symbol.decl == null && name.name.equals("print");
+    }
+
+    /**
+     * A named function, module function, method or {@code print} used as a value
+     * is a function reference. It is checked and generated as the lambda that
+     * forwards to it ({@code fn(a: T) => f(a)}), so it has the ordinary function
+     * type, including the throws clause of what it calls. A method reference
+     * evaluates its receiver once, when the value is created. Returns null when
+     * the expression is not a reference.
+     */
+    private Type functionReference(Expr expr, Type expected) {
+        if (expr.rewritten != null) {
+            return checkExpr(expr.rewritten, expected);
+        }
+        Decl.Func func = null;
+        Expr callee = null;
+        Expr.FieldAccess methodAccess = null;
+        Expr.Subscript written = null;
+        Map<TypeParameterType, Type> map = Map.of();
+        boolean print = false;
+        if (expr instanceof Expr.Name name) {
+            Symbol symbol = name.symbol;
+            if (symbol == null) {
+                return null;
+            }
+            if (symbol.kind == Symbol.Kind.FUNCTION && symbol.decl == null) {
+                if (!name.name.equals("print")) {
+                    return null; // other built-ins are reported as "must be called"
+                }
+                print = true;
+            } else if (symbol.kind == Symbol.Kind.FUNCTION || symbol.kind == Symbol.Kind.METHOD) {
+                func = (Decl.Func) symbol.decl;
+            } else {
+                return null;
+            }
+            Expr.Name forward = new Expr.Name(name.name);
+            forward.symbol = symbol;
+            forward.span = name.span;
+            callee = forward;
+        } else if (expr instanceof Expr.FieldAccess access) {
+            ResolvedField field = resolveFieldAccess(access, false);
+            if (field.kind == ResolvedField.Kind.MODULE_FUNCTION && field.symbol != null
+                    && field.symbol.decl instanceof Decl.Func moduleFunc) {
+                func = moduleFunc;
+                callee = access;
+            } else if (field.kind == ResolvedField.Kind.METHOD && field.methodDecl != null) {
+                func = field.methodDecl;
+                methodAccess = access;
+                map = field.substitution;
+            } else {
+                return null;
+            }
+        } else if (expr instanceof Expr.Subscript subscript && subscript.typeArgs != null) {
+            Decl.Func generic = null;
+            if (subscript.base instanceof Expr.Name name && name.symbol != null
+                    && (name.symbol.kind == Symbol.Kind.FUNCTION || name.symbol.kind == Symbol.Kind.METHOD)
+                    && name.symbol.decl instanceof Decl.Func decl) {
+                generic = decl;
+            } else if (subscript.base instanceof Expr.FieldAccess access) {
+                ResolvedField field = resolveFieldAccess(access, false);
+                if (field.kind == ResolvedField.Kind.MODULE_FUNCTION && field.symbol != null
+                        && field.symbol.decl instanceof Decl.Func decl) {
+                    generic = decl;
+                } else if (field.kind == ResolvedField.Kind.METHOD && field.methodDecl != null) {
+                    generic = field.methodDecl;
+                    methodAccess = access;
+                }
+            }
+            if (generic == null || generic.typeParams.isEmpty()) {
+                return null;
+            }
+            List<Type> args = resolveGenericArgs(generic, subscript);
+            if (args == null) {
+                return NativeType.ERROR;
+            }
+            func = generic;
+            written = subscript;
+            map = Substitution.forFunction(generic, args);
+            callee = subscript;
+        } else {
+            return null;
+        }
+        String display = func != null ? func.name : "print";
+        // Parameter types: from the referenced function, or for print from the
+        // place the value goes to (never inferred from anything else).
+        List<Type> paramTypes = new ArrayList<>();
+        if (print) {
+            if (expected == null || !(expected.nonNull() instanceof FunctionType target) || target.params.size() != 1) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_NOT_CALLABLE, Phase.TYPE,
+                        "print as a value needs the parameter type of the place it goes to", module.uri, expr.span)
+                        .withHint("Pass print where a fn(T) -> Unit is expected, such as items.forEach(print), "
+                                + "or write the lambda: fn(value: String) => print(value)."));
+                return NativeType.ERROR;
+            }
+            paramTypes.add(target.params.get(0));
+        } else {
+            if (!func.typeParams.isEmpty() && written == null) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
+                        "Generic function '" + display + "' as a value needs its type arguments", module.uri, expr.span)
+                        .withHint("Write " + display + "[" + String.join(", ", func.typeParams) + "] with the types "
+                                + "spelled out, or a lambda: fn(value: Type) => " + display + "(value). Type arguments "
+                                + "are never inferred from where a value goes."));
+                return NativeType.ERROR;
+            }
+            if (func.params.size() > 3) {
+                diagnostics.add(Diagnostic.error(Codes.TYPE_FUNCTION_ARITY, Phase.TYPE,
+                        "Function '" + display + "' takes " + func.params.size()
+                                + " parameters; a function value takes zero to three", module.uri, expr.span));
+                return NativeType.ERROR;
+            }
+            for (Decl.Param param : func.params) {
+                Type type = param.type == null ? NativeType.ERROR : Substitution.apply(param.type, map);
+                paramTypes.add(type);
+            }
+        }
+        List<Decl.Param> params = new ArrayList<>();
+        List<Expr.Arg> args = new ArrayList<>();
+        for (int i = 0; i < paramTypes.size(); i++) {
+            Decl.Param param = new Decl.Param("value" + i, null);
+            param.type = paramTypes.get(i);
+            param.symbol = new Symbol(Symbol.Kind.PARAM, param.name, param.type);
+            param.symbol.span = expr.span;
+            param.nameSpan = expr.span;
+            params.add(param);
+            Expr.Name use = new Expr.Name(param.name);
+            use.symbol = param.symbol;
+            use.span = expr.span;
+            args.add(new Expr.Arg(null, use));
+        }
+        Expr.Lambda lambda;
+        if (methodAccess != null) {
+            // The receiver is evaluated once: an immutable name is captured as
+            // it is, anything else is bound to a hidden let first.
+            Expr receiver = written == null ? methodAccess.receiver : ((Expr.FieldAccess) written.base).receiver;
+            Expr use = receiver;
+            Symbol bound = null;
+            if (!(receiver instanceof Expr.Name receiverName && receiverName.symbol != null
+                    && !receiverName.symbol.mutable
+                    && (receiverName.symbol.kind == Symbol.Kind.LOCAL || receiverName.symbol.kind == Symbol.Kind.PARAM
+                        || receiverName.symbol.kind == Symbol.Kind.TOP_VAR))) {
+                Type receiverType = receiver.type == null ? checkExpr(receiver, null) : receiver.type;
+                bound = new Symbol(Symbol.Kind.LOCAL, "receiver", receiverType);
+                bound.mutable = false;
+                bound.span = expr.span;
+                Expr.Name boundName = new Expr.Name("receiver");
+                boundName.symbol = bound;
+                boundName.span = expr.span;
+                use = boundName;
+            }
+            Expr.FieldAccess forward = new Expr.FieldAccess(use, func.name);
+            forward.span = expr.span;
+            forward.nameSpan = methodAccess.nameSpan;
+            Expr target = forward;
+            if (written != null) {
+                Expr.Subscript generic = new Expr.Subscript(forward, null, written.typeArgs);
+                generic.span = expr.span;
+                target = generic;
+            }
+            Expr.Call call = new Expr.Call(target, args);
+            call.span = expr.span;
+            lambda = new Expr.Lambda(params, call);
+            if (bound != null) {
+                lambda.boundReceiver = receiver;
+                lambda.receiverSymbol = bound;
+            }
+        } else {
+            Expr.Call call = new Expr.Call(callee, args);
+            call.span = expr.span;
+            lambda = new Expr.Lambda(params, call);
+        }
+        lambda.span = expr.span;
+        expr.rewritten = lambda;
+        Type type = checkLambda(lambda, expected);
+        lambda.type = type;
+        return type;
     }
 
     private Type checkLambda(Expr.Lambda lambda, Type expected) {
@@ -3152,6 +3358,15 @@ public final class TypeChecker {
     /** With {@code inference}, the class's type arguments were inferred; see {@link #checkArgument}. */
     private void checkClassConstructor(ClassType classType, Expr.Call call, Inference inference) {
         Decl.ClassDecl decl = classType.decl;
+        if (decl.contract) {
+            diagnostics.add(Diagnostic.error(Codes.CLASS_ABSTRACT, Phase.TYPE,
+                    "Contract class '" + decl.name + "' has methods without a body and cannot be constructed",
+                    module.uri, call.span)
+                    .withHint("Write a class with those methods and 'conform C to " + decl.name
+                            + "', then construct that class; a value of type " + decl.name + " is any conforming object."));
+            checkArgsUnchecked(call);
+            return;
+        }
         Map<TypeParameterType, Type> map = classType.args.isEmpty()
                 ? Map.of() : Substitution.forClass(classType);
         if (call.resolved != null) {
@@ -4205,7 +4420,8 @@ public final class TypeChecker {
             case "List.forEach" -> {
                 checkArity(call, 1, 1, id);
                 ListType list = (ListType) receiver;
-                FunctionType fn = requireFunctionArg(call.args.get(0), 1);
+                FunctionType fn = requireFunctionArg(call.args.get(0), 1,
+                        new FunctionType(List.of(list.element), NativeType.UNIT));
                 if (fn != null) {
                     requireAssignable(list.element, fn.params.get(0), call.args.get(0).value.span,
                             Codes.TYPE_MISMATCH, "forEach argument");
@@ -4366,7 +4582,12 @@ public final class TypeChecker {
     }
 
     private FunctionType requireFunctionArg(Expr.Arg arg, int arity) {
-        Type type = checkExpr(arg.value, null);
+        return requireFunctionArg(arg, arity, null);
+    }
+
+    /** {@code expected} types a bare {@code print} reference; a lambda keeps its own types. */
+    private FunctionType requireFunctionArg(Expr.Arg arg, int arity, FunctionType expected) {
+        Type type = checkExpr(arg.value, isPrintReference(arg.value) ? expected : null);
         if (type instanceof FunctionType functionType) {
             if (functionType.params.size() != arity) {
                 diagnostics.add(Diagnostic.error(Codes.TYPE_MISMATCH, Phase.TYPE,
@@ -5617,6 +5838,15 @@ public final class TypeChecker {
                     "Nullable value is not assignable to " + expected + " (" + what
                             + "); check for null first",
                     module.uri, span).withTypes(expected, got));
+            return;
+        }
+        if (target != null && actual != null && target.nonNull() instanceof ClassType contract && contract.decl.contract
+                && actual.nonNull() instanceof ClassType given && !given.decl.contract) {
+            diagnostics.add(Diagnostic.error(code, Phase.TYPE, "Type mismatch in " + what, module.uri, span)
+                    .withTypes(expected, got)
+                    .withHint("'" + given.decl.name + "' does not conform to the contract '" + contract.decl.name
+                            + "': declare 'conform " + given.decl.name + " to " + contract.display()
+                            + "' after the class, with every method of the contract matched exactly."));
             return;
         }
         if (target != null && actual != null && isNumeric(target.nonNull()) && isNumeric(actual.nonNull())) {

@@ -68,7 +68,7 @@ Java 的数组也不直接对应任何 Sprig 类型：可以把一个 Java 方�
 
 ## 13.6 让 Sprig 的类满足 Java 接口
 
-第 9 章的 `conform NotFound to Error(message)` 是 `conform` 的一种用法。更一般的形式是让一个 Sprig 类满足一个导入的 Java 接口，这样就能把它交给要求那个接口的 Java 库：
+第 6 章的契约类和第 9 章的 `conform NotFound to Error(message)` 都用了 `conform`。第三种用法是让一个 Sprig 类满足一个导入的 Java 接口，这样就能把它交给要求那个接口的 Java 库：
 
 ```sprig
 import java.lang.Runnable as Runnable

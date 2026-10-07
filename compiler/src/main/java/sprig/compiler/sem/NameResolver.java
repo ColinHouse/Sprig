@@ -365,6 +365,32 @@ public final class NameResolver {
                 declareFunction(module, method, classDecl);
                 resolveFunctionTypes(module, method);
             }
+            // A method without a body makes the class a contract: only such
+            // methods, no fields; it is generated as an interface.
+            boolean anyAbstract = false;
+            boolean anyConcrete = false;
+            for (Decl.Func method : classDecl.methods) {
+                if (method.abstractMethod) anyAbstract = true; else anyConcrete = true;
+            }
+            if (anyAbstract) {
+                classDecl.contract = true;
+                if (!classDecl.fields.isEmpty()) {
+                    diagnostics.add(Diagnostic.error(Codes.CLASS_ABSTRACT, Phase.NAME,
+                            "Contract class '" + classDecl.name + "' declares fields; a class whose methods have "
+                                    + "no body lists only the methods a conforming class must have",
+                            module.uri, classDecl.fields.get(0).span)
+                            .withHint("Move the fields into the classes that conform to '" + classDecl.name
+                                    + "', or give every method a body to make this an ordinary class."));
+                }
+                if (anyConcrete) {
+                    Decl.Func concrete = classDecl.methods.stream().filter(m -> !m.abstractMethod).findFirst().get();
+                    diagnostics.add(Diagnostic.error(Codes.CLASS_ABSTRACT, Phase.NAME,
+                            "Contract class '" + classDecl.name + "' mixes methods with and without a body",
+                            module.uri, concrete.span)
+                            .withHint("A contract has no default implementations: remove the body of '" + concrete.name
+                                    + "' and implement it in each conforming class, or give every method a body."));
+                }
+            }
         } else if (decl instanceof Decl.EnumDecl enumDecl) {
             Set<String> caseNames = new HashSet<>();
             for (String caseName : enumDecl.cases) {

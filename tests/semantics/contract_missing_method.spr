@@ -1,0 +1,7 @@
+class Sink:
+    func write(line: String) -> Unit
+    func flush() -> Unit
+class Console:
+    func write(line: String) -> Unit:
+        print(line)
+conform Console to Sink

@@ -10,6 +10,7 @@
 42
 20
 7
+45
 15
 [30, 80, 50]
 3
@@ -22,7 +23,9 @@
 - 函数值可以存进 `let`、作为参数传递、作为返回值。
 - lambda 可以**捕获**外面的 `let` 绑定（`base`）。
 
-用 `func` 定义的具名函数**不是**值：`apply_twice(5, factorial)` 会报 `SPR-TYPE-NOT-CALLABLE`，要写成 `fn(n: Int) => factorial(n)`。这样所有能当值传的函数在代码里长得都一样。
+用 `func` 定义的具名函数不加括号就是一个函数值：`apply_twice(5, triple)` 和 `apply_twice(5, fn(n: Int) => triple(n))` 完全一样。模块里的函数（`lists.sum`）和对象的方法（`counter.bump`）也可以这样引用；方法引用在创建时就记住了接收者。`print` 比较特殊：它能接受任何类型，所以只有在编译器知道参数类型的位置才能当值，比如 `scores.forEach(print)`；单独 `let p = print` 会被拒绝，提示写 lambda。泛型函数要写出类型参数（`identity[Int]`），因为 Sprig 从不从"值要去的地方"推断类型。
+
+两条相关的限制：Java 方法和内置方法（`names.add`、`text.length`）不能直接引用，写 lambda；函数值不能用 `==` 比较（同一个名字的两次引用是两个值，比较只会让人困惑）。
 
 ### 故意写错：捕获 var
 
@@ -57,7 +60,7 @@ Java 库里大量方法接收函数式接口（`Comparator`、`Runnable`、`Func
 
 ## 小结
 
-- `fn(参数: 类型) => 表达式`，类型写 `fn(T) -> R`；具名函数要包一层才能当值。
+- `fn(参数: 类型) => 表达式`，类型写 `fn(T) -> R`；具名函数、模块函数、方法不加括号就是值，`print` 只在参数类型已知的位置是值。
 - lambda 只能捕获 `let`，不能捕获 `var`。
 - 调用会抛出的函数的 lambda 类型带 `throws`；高阶函数用 `rethrows` 把这个性质传给调用者。
 
