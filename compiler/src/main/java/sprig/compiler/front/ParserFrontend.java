@@ -57,6 +57,8 @@ public final class ParserFrontend {
         // Whether a reported if expression runs to the end of the file, where ANTLR's
         // recovery can leave its enclosing blocks unclosed.
         boolean[] ifExpressionAtEnd = {false};
+        int[] firstErrorTokenIndex = {-1};
+        boolean[] missingBlockReported = {false};
         parser.removeErrorListeners();
         parser.addErrorListener(new BaseErrorListener() {
             @Override
@@ -67,6 +69,18 @@ public final class ParserFrontend {
                 if (reported[0] && offendingSymbol instanceof Token layout
                         && (layout.getType() == SprigLexer.INDENT || layout.getType() == SprigLexer.DEDENT)) {
                     return;
+                }
+                // If recovery already found the source error and only layout remains,
+                // the EOF diagnostic is a cascade rather than another useful problem.
+                if (offendingSymbol instanceof Token end) {
+                    if (end.getType() == Token.EOF && (missingBlockReported[0]
+                            || (reported[0] && firstErrorTokenIndex[0] >= 0
+                                && onlyLayoutAfter(parser.getTokenStream(), firstErrorTokenIndex[0])))) {
+                        return;
+                    }
+                    if (end.getType() != Token.EOF) {
+                        missingBlockReported[0] = false;
+                    }
                 }
                 // After an if expression's error, what ANTLR's recovery trips over inside
                 // that if expression says nothing new. When the if expression runs to the
@@ -101,10 +115,15 @@ public final class ParserFrontend {
                     return;
                 }
                 reported[0] = true;
-                String pretty = msg;
+                if (offendingSymbol instanceof Token token) {
+                    firstErrorTokenIndex[0] = token.getTokenIndex();
+                }
+                String pretty = readableParserMessage(msg);
                 String targetedHint = null;
                 String foreign = ifError == null && offendingSymbol instanceof org.antlr.v4.runtime.Token token
                         ? foreignSyntax(parser, token, msg) : null;
+                String missingBlock = offendingSymbol instanceof Token token
+                        ? missingBlockHeader(parser, token) : null;
                 if (ifError != null) {
                     Span at = spanOf(ifError.at());
                     // The line the error is shown on is reported too.
@@ -119,6 +138,11 @@ public final class ParserFrontend {
                     int split = foreign.indexOf('\n');
                     pretty = foreign.substring(0, split);
                     targetedHint = foreign.substring(split + 1);
+                } else if (offendingSymbol instanceof Token token && token.getType() == SprigLexer.INDENT) {
+                    pretty = "Unexpected indentation: this line is indented but the previous line does not open a block";
+                } else if (missingBlock != null) {
+                    pretty = "Expected an indented block after '" + missingBlock + ":'";
+                    missingBlockReported[0] = true;
                 } else if (e instanceof FailedPredicateException failed
                         && offendingSymbol instanceof org.antlr.v4.runtime.Token token) {
                     pretty = predicateMessage(parser, failed, token);
@@ -229,6 +253,37 @@ public final class ParserFrontend {
             case "toClause" -> "Expected 'to' in 'conform ClassName to InterfaceName', found " + unexpected;
             default -> "Unexpected " + unexpected;
         };
+    }
+
+    /** Replace synthetic layout-token names that ANTLR exposes in generic messages. */
+    private static String readableParserMessage(String message) {
+        return message.replace("<INDENT>", "indentation")
+                .replace("<DEDENT>", "the end of an indented block")
+                .replace("<EOF>", "the end of the file")
+                .replace("INDENT", "indentation")
+                .replace("DEDENT", "the end of an indented block")
+                .replace("EOF", "the end of the file");
+    }
+
+    /** The block opener immediately before a missing suite, if it is recognized here. */
+    private static String missingBlockHeader(SprigParser parser, Token token) {
+        if (!parser.getExpectedTokens().contains(SprigLexer.INDENT)) {
+            return null;
+        }
+        TokenStream stream = parser.getTokenStream();
+        int index = token.getTokenIndex() - 1;
+        while (index >= 0) {
+            int type = typeAt(stream, index);
+            if (type != SprigLexer.NEWLINE && type != SprigLexer.INDENT && type != SprigLexer.DEDENT) {
+                break;
+            }
+            index--;
+        }
+        if (index < 1 || typeAt(stream, index) != SprigLexer.COLON
+                || typeAt(stream, index - 1) != SprigLexer.ELSE) {
+            return null;
+        }
+        return "else";
     }
 
     /**

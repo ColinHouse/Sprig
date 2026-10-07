@@ -118,6 +118,10 @@ CASES = [
     ("if-after-block-header", "let n = 3\nwhile n > 5: if n > 0:\n    print(n)\n", "SPR-SYNTAX-ERROR",
      "no one-line if or loop"),
     ("assignment-in-condition", "var line = \"a\"\nwhile (line = \"b\"):\n    print(1)\n", "SPR-SYNTAX-ERROR", "Compare with '=='"),
+    ("unexpected-indent", "let x = 1\n    let y = 2\nprint(x)\n", "SPR-SYNTAX-ERROR",
+     "Unexpected indentation: this line is indented but the previous line does not open a block"),
+    ("missing-else-body", "func f(n: Int) -> Int:\n    if n > 0:\n        return 1\n    else:\n    return 2\nprint(f(1))\n",
+     "SPR-SYNTAX-ERROR", "Expected an indented block after 'else:'"),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloat()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",
      "sum.toFloat() / count.toFloat()"),
@@ -262,6 +266,19 @@ def main():
         (work / "case.spr").write_text("func main():\n    print(1)\n    print(2)\nprint(3)\n", encoding="utf-8")
         data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
         check("no-layout-cascade", len(data) == 1 and "<INDENT>" not in json.dumps(data), json.dumps(data))
+
+        # Layout failures use Sprig wording and do not cascade into synthetic token names or EOF.
+        for name, source, expected in (
+            ("unexpected-indent", "let x = 1\n    let y = 2\nprint(x)\n",
+             "Unexpected indentation: this line is indented but the previous line does not open a block"),
+            ("missing-else-body", "func f(n: Int) -> Int:\n    if n > 0:\n        return 1\n    else:\n    return 2\nprint(f(1))\n",
+             "Expected an indented block after 'else:'"),
+        ):
+            (work / "case.spr").write_text(source, encoding="utf-8")
+            data = json.loads(run("check", "case.spr", "--json", cwd=work).stdout)["diagnostics"]
+            rendered = json.dumps(data)
+            check("layout-wording-" + name, len(data) == 1 and expected in data[0].get("message", "")
+                  and not any(token in rendered for token in ("<INDENT>", "<DEDENT>", "DEDENT", "<EOF>")), rendered)
 
         # One error per line: ANTLR's follow-on errors on a broken line are not repeated.
         (work / "case.spr").write_text("print(1 2 3 4)\nlet y = = 2\n", encoding="utf-8")
