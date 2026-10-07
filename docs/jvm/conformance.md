@@ -91,8 +91,31 @@ print(log_all(["a", "b"], Console()))
 - A contract cannot be constructed, declare fields, or mix methods with and
   without a body (`SPR-CLASS-ABSTRACT`); a contract cannot itself conform.
   A function outside a class never omits its body (`SPR-SYNTAX-ERROR`).
-- Contracts and conforming classes are non-generic in v1; one `conform` per
-  relation; a class may conform to several contracts and Java interfaces.
+- One `conform` per relation; a class may conform to several contracts and
+  Java interfaces. `conform` is written in the module that declares the class,
+  so there is no retroactive conformance for an imported or dependency class
+  (`SPR-CONFORM-SOURCE`; wrap it in a local class that forwards), and
+  conformance is always declared: a class with the right methods is not a
+  `Sink` until it says so (`SPR-TYPE-MISMATCH` names the missing `conform`).
+- Three rules hold for the 0.8 language. They are decisions, not gaps, and
+  each rejection names the alternative:
+  - **A contract is never generic.** `Repository[T]` inside a `generic` block
+    is `SPR-CLASS-ABSTRACT`, and a generic class never conforms
+    (`SPR-CONFORM-SOURCE`). Declare one contract per element type, or keep a
+    generic class that holds its single operation as a `fn` field.
+  - **A contract is a type, never a bound.** `requires T: Sink` is
+    `SPR-GENERIC-CONSTRAINT`: take `Sink` as the parameter type
+    (`func drain(sink: Sink)`). Capabilities stay the closed set `Equatable`
+    and `Comparable`; a contract has no associated types and never conforms
+    to or extends another contract.
+  - **A contract has no default methods.** Mixing methods with and without a
+    body is `SPR-CLASS-ABSTRACT`: write the shared behavior as a module
+    function that takes the contract, `func log_all(sink: Sink, lines:
+    List[String]) -> Unit`.
+- There is no downcast from a contract to a class and no type test on class
+  or contract values: `match` is for enums and variants. The decision guide
+  is one line: **a closed set of types is a variant; an open set is a
+  contract.**
 - Generated Java: the contract is a `public interface` with one abstract
   method per Sprig method (`void` for `Unit`, checked Java exceptions in the
   `throws` clause); the conforming class `implements` it. `==` on contract

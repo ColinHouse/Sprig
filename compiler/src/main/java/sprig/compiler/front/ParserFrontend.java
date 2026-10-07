@@ -122,6 +122,12 @@ public final class ParserFrontend {
                 } else if (e instanceof FailedPredicateException failed
                         && offendingSymbol instanceof org.antlr.v4.runtime.Token token) {
                     pretty = predicateMessage(parser, failed, token);
+                    if (pretty.startsWith("Expected 'to' in 'conform") && ".".equals(token.getText())) {
+                        pretty = "conform names a class declared in this module; 'conform alias.Class to ...' is not accepted";
+                        targetedHint = "Conformance is declared where the class is declared, so an imported class cannot be "
+                                + "conformed here (no retroactive conformance). Write a local class that holds the imported "
+                                + "value and forwards the contract's methods, and conform that class.";
+                    }
                 } else if (offendingSymbol instanceof org.antlr.v4.runtime.Token token
                         && token.getType() == org.antlr.v4.runtime.Token.EOF) {
                     pretty = message(msg, "unexpected end of file");
@@ -226,7 +232,7 @@ public final class ParserFrontend {
                 ? parser.getRuleNames()[failed.getRuleIndex()] : "";
         return switch (rule) {
             case "statementEnd" -> "Expected the end of the line, found " + unexpected;
-            case "toClause" -> "Expected 'to' in 'conform ClassName to InterfaceName', found " + unexpected;
+            case "toClause" -> "Expected 'to' in 'conform ClassName to ContractName', found " + unexpected;
             default -> "Unexpected " + unexpected;
         };
     }

@@ -24,11 +24,11 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-FLOW-THROWS-UNUSED | A function declares a checked Java exception that its body can never throw. |
 | SPR-FLOW-UNREACHABLE | Statement follows a statement that always exits. |
 | SPR-CONFORM-EFFECTS | A witness method declares checked exceptions the Java interface method does not permit. |
-| SPR-CLASS-ABSTRACT | A contract class (a class whose methods have no body) declares fields, mixes methods with and without a body, or is constructed; a contract is implemented by classes that conform to it. |
+| SPR-CLASS-ABSTRACT | A contract class (a class whose methods have no body) declares fields, mixes methods with and without a body, is generic, or is constructed; a contract is implemented by classes that conform to it. |
 | SPR-CONFORM-MEMBER | A class method does not exactly match the Java method it witnesses or overrides, or a required abstract method is missing. |
 | SPR-CONFORM-OVERLOAD | The Java interface requires overloaded abstract methods, which Sprig classes cannot represent. |
 | SPR-CONFORM-PARENT | The parent view of a class that extends a Java class only calls inherited methods; it is not a value, has no fields and cannot reach abstract methods. |
-| SPR-CONFORM-SOURCE | The conform source must be a non-generic Sprig class declared in this module. |
+| SPR-CONFORM-SOURCE | The conform source must be a non-generic Sprig class with method bodies, declared in this module; there is no retroactive conformance and a contract never conforms. |
 | SPR-CONFORM-TARGET | The conform target must be an imported public, non-generic, non-sealed Java interface, or with parentheses a public, non-final, non-generic Java class (or the built-in `Error`, which makes an error class) whose constructor the named fields select. |
 | SPR-JVM-AMBIGUOUS | The Java overload is ambiguous for these argument types. |
 | SPR-JVM-CLASS | The imported Java class could not be loaded, or it lives in the unnamed package. |
@@ -89,7 +89,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-TYPE-GENERIC-ARITY | A generic declaration was used with the wrong number of type arguments (supply every parameter in declaration order). |
 | SPR-TYPE-GENERIC-ARGS-REQUIRED | A generic call or constructor needs written `[Type]` arguments: its arguments do not say what a type parameter is, or two of them disagree. |
 | SPR-TYPE-GENERIC-NULLABLE | This type parameter is used with `?` in the declaration, so its argument must be non-nullable. |
-| SPR-GENERIC-CONSTRAINT | A `requires` clause names an unknown capability or is misplaced, or a type argument is not `Comparable` where the callee requires it. |
+| SPR-GENERIC-CONSTRAINT | A `requires` clause names an unknown capability, or a contract or class in place of one (a contract is a type, never a bound), or is misplaced, or a type argument is not `Comparable` where the callee requires it. |
 | SPR-PROJECT-MANIFEST | `sprig.toml` is missing, malformed, or lacks a required field. |
 | SPR-PROJECT-ENTRY | The project entry point is missing or the named `--bin` is unknown. |
 | SPR-PROJECT-UNSUPPORTED | The project or a dependency needs project features or a language version this compiler does not support. |

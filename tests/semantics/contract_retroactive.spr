@@ -1,0 +1,6 @@
+import "contract_helper_module.spr" as helper
+class Local:
+    func write(line: String) -> Unit:
+        print(line)
+conform Console to helper.Sink
+print("x")
