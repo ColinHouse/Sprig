@@ -47,6 +47,31 @@ generic T:
         func is_cancelled() -> Bool:
             return inner.isCancelled()
 
+# A task that only has an effect, started with run(scope, work). Unit is not
+# a value, so it is not a Task[Unit]: await() waits and reports a failure as
+# an Error, and returns nothing.
+class Job:
+    let inner: HostTask[Bool]
+
+    # Waits for the job. A failure inside it is an Error here.
+    func await() -> Unit throws Error:
+        inner.join()
+
+    # Waits at most millis; a timeout is an Error and the job keeps running.
+    func await_within(millis: Int) -> Unit throws Error:
+        inner.joinWithin(millis)
+
+    func is_done() -> Bool:
+        return inner.isDone()
+
+    # Asks the job to stop (its thread is interrupted); true when it had not
+    # finished yet. await() on a cancelled job is an Error.
+    func cancel() -> Bool:
+        return inner.cancel()
+
+    func is_cancelled() -> Bool:
+        return inner.isCancelled()
+
 # The scope that owns a group of tasks. scope(body) creates one, hands it to
 # the body, and waits for every task before it returns.
 class Scope:
@@ -92,6 +117,25 @@ generic T:
             throw Error("the scope has ended; spawn inside the scope body")
         return Task[T](inner=scope.inner.spawn[T](work))
 
+# scope() for a body that only coordinates: the same waiting, cancelling and
+# error rules, for a body that returns nothing.
+func scope_run(body: fn(Scope) -> Unit throws Error) -> Unit throws Error:
+    let host = HostScope()
+    let current = Scope(inner=host)
+    try:
+        body(current)
+        host.join()
+    catch problem: Error:
+        host.abandon()
+        throw problem
+
+# spawn() for work that only has an effect, such as writing a file or sending
+# on a channel. The job belongs to the scope like any task.
+func run(scope: Scope, work: fn() -> Unit) -> Job throws Error:
+    if not scope.is_open():
+        throw Error("the scope has ended; run inside the scope body")
+    return Job(inner=scope.inner.run(work))
+
 # A fixed number of platform worker threads for CPU-bound work. Tasks beyond
 # that many run as earlier ones finish, in submission order.
 class Pool:
@@ -104,7 +148,8 @@ class Pool:
     func shutdown() -> Unit:
         inner.shutdown()
 
-    # Stops accepting tasks and interrupts the running ones.
+    # Stops accepting tasks and interrupts the running ones; tasks still queued
+    # are cancelled and never run.
     func shutdown_now() -> Unit:
         inner.shutdownNow()
 

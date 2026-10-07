@@ -1,0 +1,112 @@
+# List operations keep their results and their order over every kind of list.
+# map and filter are eager: every map function runs before any filter
+# function, so the side effects of a chain appear in that order.
+# sort() is ascending and stable in compareTo order: UTF-16 code units for
+# String, as < compares them, and -0.0 before 0.0 with NaN last for Float.
+import "@std/lists.spr" as lists
+import java.lang.Double as Double
+import java.lang.Float as JavaFloat
+
+func doubled_noting(x: Int) -> Int:
+    print("map " + x.toString())
+    return x * 2
+
+func over_four_noting(x: Int) -> Bool:
+    print("filter " + x.toString())
+    return x > 4
+
+let numbers: List[Int] = [1, 2, 3, 4, 5]
+print(numbers.map(fn(x: Int) => doubled_noting(x)).filter(fn(x: Int) => over_four_noting(x)))
+let growing: MutableList[Int] = [5, 4, 3]
+print(growing.map(fn(x: Int) => doubled_noting(x)).filter(fn(x: Int) => over_four_noting(x)))
+numbers.forEach(fn(x: Int) => print("each " + x.toString()))
+growing.forEach(fn(x: Int) => print("each mutable " + x.toString()))
+
+# Lists built by a literal, a map, a snapshot, range, split, map keys and none at all.
+let repeated: List[Int] = [3, 1, 3, 2, 1]
+print(repeated.filter(fn(x: Int) => x > 1))
+print(repeated.map(fn(x: Int) => x * 10).filter(fn(x: Int) => x != 20).map(fn(x: Int) => x + 1))
+let snapshot = growing.toList()
+growing.append(9)
+print(snapshot.map(fn(x: Int) => x - 1))
+print(growing.filter(fn(x: Int) => x % 2 == 1))
+print(range(0, 12, 3).map(fn(x: Int) => x * x))
+print(range(10).filter(fn(x: Int) => x % 4 == 0))
+print("b,a,,c".split(",").filter(fn(part: String) => part != "").map(fn(part: String) => part + part))
+let ages = {"ada": 36, "alan": 41, "grace": 85}
+print(ages.keys().filter(fn(name: String) => name.length() > 3))
+let none: List[Int] = []
+print(none.map(fn(x: Int) => x + 1))
+print(none.filter(fn(x: Int) => true))
+none.forEach(fn(x: Int) => print("never"))
+let nested: List[List[Int]] = [[1, 2], [], [3]]
+print(nested.map(fn(row: List[Int]) => row.size()).filter(fn(size: Int) => size > 0))
+print(numbers.filter(fn(x: Int) => false).size())
+print(numbers.filter(fn(x: Int) => true) == numbers)
+let squares: MutableList[Int] = []
+numbers.map(fn(x: Int) => x * x).forEach(fn(x: Int) => squares.append(x))
+print(squares)
+
+# Strings: a supplementary character's high surrogate (D834, D83D) sorts
+# before BMP characters from U+E000 up, which code point order would reverse.
+let words: MutableList[String] = ["｡", "😀", "z", "A", "東", "", "é", "𝄞", "ﬀ", "a"]
+words.sort()
+print(words)
+print("😀" < "｡")
+print("😀".compareTo("｡"))
+print(lists.sorted(["｡", "😀", "ﬀ", "𝄞"]))
+print(lists.sort_by(["｡", "😀", "ﬀ", "𝄞"], fn(word: String) => word))
+let many: MutableList[String] = []
+let pieces = ["😀", "｡", "a", "𝄞", "東", "ﬀ", "Z", "é"]
+for i in range(70):
+    let j = (i * 29) % 70
+    many.append(pieces.get(j % 8) + pieces.get(j.divTrunc(8) % 8))
+many.sort()
+var ordered = true
+for i in range(many.size() - 1):
+    if many.get(i) > many.get(i + 1):
+        ordered = false
+print(ordered)
+print(many)
+
+# Floats: compareTo order, so -0.0 before 0.0 and NaN last.
+let floats: MutableList[Float] = [2.5, Double.NaN, 0.0, -0.0, Double.NEGATIVE_INFINITY, -1.5,
+                                  Double.POSITIVE_INFINITY, 0.0, -0.0, Double.NaN]
+floats.sort()
+print(floats)
+let narrow: MutableList[Float32] = [JavaFloat.NaN, 1.5, -0.0, 0.0, JavaFloat.NEGATIVE_INFINITY, -0.0]
+narrow.sort()
+print(narrow)
+let spread: MutableList[Float] = []
+for i in range(80):
+    let k = (i * 37) % 80
+    if k % 10 == 0:
+        spread.append(Double.NaN)
+    elif k % 10 == 1:
+        spread.append(-0.0)
+    elif k % 10 == 2:
+        spread.append(0.0)
+    else:
+        spread.append(k.toFloat() - 40.0)
+spread.sort()
+print(spread)
+
+# Stable: equal values keep their order (Decimal 2.50 and 2.5 compare equal).
+let amounts: MutableList[Decimal] = [Decimal.parse("2.50"), Decimal.parse("1"), Decimal.parse("2.5"),
+                                     Decimal.parse("1.0"), Decimal.parse("2.500")]
+amounts.sort()
+print(amounts)
+let scales: MutableList[Decimal] = []
+for i in range(60):
+    scales.append(Decimal.parse(((i * 11) % 6).toString() + "." + "0".repeat(i % 4)))
+scales.sort()
+print(scales)
+let flags: MutableList[Bool] = [true, false, true, false]
+flags.sort()
+print(flags)
+let small: MutableList[Int32] = [3, -1, 2]
+small.sort()
+print(small)
+let huge: MutableList[BigInt] = [BigInt.parse("100000000000000000000"), BigInt.parse("-5"), BigInt.parse("7")]
+huge.sort()
+print(huge)

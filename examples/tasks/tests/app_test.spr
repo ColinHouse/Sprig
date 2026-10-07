@@ -1,0 +1,23 @@
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "../src/app.spr" as app
+import "../src/tasks.spr" as tasks
+
+func commands() -> Unit throws Error:
+    let path = files.join(test.temp_dir(), "tasks.json")
+    test.equal_int(app.run(["--file", path, "add", "Buy", "milk"]), 0, "add")
+    test.equal_int(app.run(["-f", path, "add", "Walk"]), 0, "add 2")
+    test.equal_int(app.run(["--file", path, "done", "1"]), 0, "done")
+    let saved = tasks.load(path)
+    test.equal_int(saved.size(), 2, "saved tasks")
+    test.equal_text(saved[0].title, "Buy milk", "joined title")
+    test.equal_bool(saved[0].done, true, "done persisted")
+    test.equal_int(app.run(["--file", path, "remove", "2"]), 0, "remove")
+    test.equal_int(tasks.load(path).size(), 1, "one left")
+    test.equal_int(app.run(["--file", path, "done", "9"]), 2, "unknown id fails")
+    test.equal_int(app.run(["--file", path, "frobnicate"]), 2, "unknown command fails")
+    test.equal_int(app.run(["--bogus"]), 2, "unknown option fails")
+    test.equal_int(app.run(["--help"]), 0, "help")
+
+test.check("runs the subcommands", commands)
+test.finish()

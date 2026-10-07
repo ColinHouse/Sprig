@@ -27,7 +27,7 @@ it is not evidence of a fresh agent learning or contributing.
 
 To demonstrate a **fresh agent**, start a new agent using only the public docs,
 SDK/repository and scoped issue. Record its actual queries, edits and failures;
-use the trial record in `TRIAL.md`. Do not splice the replay into a claim of
+use the trial record in [`trial.md`](trial.md). Do not splice the replay into a claim of
 agent success. Do not publish the video until several reviewed, genuinely
 mergeable `good first issue` / `agent-friendly` issues are open.
 

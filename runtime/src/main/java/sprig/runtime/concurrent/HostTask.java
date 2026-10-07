@@ -4,6 +4,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -37,12 +38,30 @@ public final class HostTask<T> {
     }
 
     static <T> HostTask<T> startOn(ExecutorService executor, Fn0<T> work) {
+        return startOn(executor, work, null);
+    }
+
+    /**
+     * Starts work; {@code whenComplete} runs once the task is complete in any
+     * way, including a cancellation before its body ever ran (a cancelled
+     * FutureTask never calls its body, so a body's own finally cannot report
+     * that). Executors.newVirtualThreadPerTaskExecutor and the pool's fixed
+     * executor both run the FutureTask given to execute().
+     */
+    static <T> HostTask<T> startOn(ExecutorService executor, Fn0<T> work, Runnable whenComplete) {
         if (work == null) throw new SprigError("task work must not be null");
+        FutureTask<T> future = new FutureTask<>(work::apply) {
+            @Override
+            protected void done() {
+                if (whenComplete != null) whenComplete.run();
+            }
+        };
         try {
-            return new HostTask<>(executor.submit(work::apply));
+            executor.execute(future);
         } catch (java.util.concurrent.RejectedExecutionException e) {
             throw new SprigError("pool is shut down; it accepts no more tasks", e);
         }
+        return new HostTask<>(future);
     }
 
     /** Waits for the result. A failure inside the task is rethrown here as an Error. */

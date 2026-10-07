@@ -63,5 +63,5 @@ understanding the change, tests, licensing and correctness. Meet the same gates:
 - No part of the project is developed fully automatically. Every merged change
   has human review.
 - Passing tests is evidence, not proof. The
-  [known limitations](https://colinhouse.github.io/Sprig/en/reference/KNOWN_LIMITATIONS)
+  [known limitations](https://colinhouse.github.io/Sprig/en/reference/language/known-limitations)
   page states what is not covered.

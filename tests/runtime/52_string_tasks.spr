@@ -1,0 +1,72 @@
+# Tasks on virtual threads index different texts outside Latin-1 at the same
+# time. The count of the last long text indexed is remembered in one place
+# shared by every thread, so the tasks keep replacing each other's entry; every
+# answer is still checked against the task's own code points. The tasks start
+# together behind a latch, and each text has its own length and a marker of
+# its own at the end.
+import "@std/concurrent.spr" as concurrent
+
+let tasks = 16
+let rounds = 40
+
+func joined(codes: List[Int]) -> String:
+    var text = ""
+    for code in codes:
+        text += String.fromCode(code)
+    return text
+
+# Task t: a unit chosen by t, repeated 4 + t times, then the marker U+4E00 + t.
+func codes_for(task: Int) -> List[Int]:
+    let units: List[List[Int]] = [
+        [26481, 20140, 30340, 233, 101, 769, 54620, 44544, 32, 97],
+        [65, 128512, 26481, 233, 101, 769, 54620, 131072, 32, 129418, 20140, 97, 776],
+        [128512, 129418, 128054, 128077, 26481],
+        [25935, 25463, 29392, 29432, 12289, 54620, 44544]]
+    let unit = units[task % 4]
+    let out: MutableList[Int] = []
+    for r in range(4 + task):
+        for code in unit:
+            out.append(code)
+    out.append(19968 + task)
+    return out.toList()
+
+# Returns [checks, mismatches].
+func work(task: Int, start: concurrent.Latch) -> List[Int]:
+    let codes = codes_for(task)
+    let text = joined(codes)
+    let n = codes.size()
+    let marker = String.fromCode(19968 + task)
+    start.count_down()
+    start.await()
+    var checks = 0
+    var bad = 0
+    for round in range(rounds):
+        for k in range(n):
+            let i = (k * 7 + round) % n
+            let element = String.fromCode(codes[i])
+            if text.codeAt(i) != codes[i]:
+                bad += 1
+            if text[i] != element or text.charAt(i) != element:
+                bad += 1
+            if text.substring(i, i + 1) != element:
+                bad += 1
+            if text.length() != n:
+                bad += 1
+            checks += 4
+        if text.indexOf(marker) != n - 1 or text.lastIndexOf(marker) != n - 1:
+            bad += 1
+        if text.substring(round % n).length() != n - round % n:
+            bad += 1
+        checks += 2
+    return [checks, bad]
+
+let start = concurrent.latch(tasks)
+let results = concurrent.parallel_map(range(tasks).toList(), fn(task: Int) => work(task, start))
+var checks = 0
+var mismatches = 0
+for result in results:
+    checks += result[0]
+    mismatches += result[1]
+print("tasks " + results.size())
+print("checks " + checks)
+print("mismatches " + mismatches)

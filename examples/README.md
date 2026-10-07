@@ -29,6 +29,14 @@ used by examples are in [`libraries/`](../libraries/).
 - [ledger](ledger/README.md) — reduced accounts/categories/transactions HTTP
   backend with integer minor units and restart persistence.
 - [mini_web](mini_web/README.md) — typed routes, JSON, OpenAPI and Swagger UI.
+- [blog](blog/README.md) — static blog generator: posts with front matter to
+  HTML pages and an index, exit codes for bad input (`@std/files`, `@std/text`).
+- [todo](todo/README.md) — todo list stored in SQLite behind a small HTTP API;
+  its test drives the live server over HTTP.
+- [tasks](tasks/README.md) — todo CLI with subcommands over a JSON file
+  (`sprig-cli`, `@std/json_codec`).
+- [crawler](crawler/README.md) — concurrent crawler over local pages with
+  scopes, tasks, a channel, a counter and a lock (`@std/concurrent`).
 - [test_runner](test_runner/README.md) — runtime, table, temporary-file,
   subprocess and expected-diagnostic tests using `sprig test`.
 

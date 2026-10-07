@@ -1,0 +1,95 @@
+# HTTP API over the store: GET/POST /todos, POST /todos/{id}/done, DELETE /todos/{id}.
+import "@web/app.spr" as web
+import "@std/json.spr" as json
+import "./store.spr" as store
+
+func todo_json(todo: store.Todo) -> json.Value:
+    return json.Value.Object(members=[
+        json.Member(key="id", value=json.Value.Number(text="" + todo.id)),
+        json.Member(key="title", value=json.Value.Text(value=todo.title)),
+        json.Member(key="done", value=json.Value.Boolean(value=todo.done))
+    ])
+
+func error_json(message: String, status: Int) -> web.Response:
+    return web.json_response(json.Value.Object(members=[json.Member(key="error", value=json.Value.Text(value=message))]), status)
+
+func id_param(req: web.Request) -> Int?:
+    let raw = req.path_param("id")
+    if raw == null:
+        return null
+    return raw.toIntOrNull()
+
+# The "title" member of the request body, or null when it is missing or not text.
+func title_of(body: json.Value) -> String? throws Error:
+    match json.find_member(body, "title"):
+        case json.Lookup.Found as found:
+            match found.value:
+                case json.Value.Text as text:
+                    return text.value
+                case json.Value.Null:
+                    return null
+                case json.Value.Boolean:
+                    return null
+                case json.Value.Number:
+                    return null
+                case json.Value.Array:
+                    return null
+                case json.Value.Object:
+                    return null
+        case json.Lookup.Missing:
+            return null
+        case json.Lookup.NotObject:
+            return null
+
+class Api:
+    let todos: store.Store
+
+    func list(req: web.Request) -> web.Response:
+        try:
+            let items = todos.all().map(todo_json)
+            return web.json_response(json.Value.Array(values=items), 200)
+        catch problem: Error:
+            return error_json(problem.message, 500)
+
+    func create(req: web.Request) -> web.Response:
+        try:
+            let title = title_of(req.json())
+            if title == null:
+                return error_json("body must be an object with a text 'title'", 400)
+            return web.json_response(todo_json(todos.add(title)), 201)
+        catch problem: Error:
+            return error_json(problem.message, 400)
+
+    func done(req: web.Request) -> web.Response:
+        let id = id_param(req)
+        if id == null:
+            return error_json("id must be an integer", 400)
+        try:
+            if not todos.complete(id):
+                return error_json("no todo " + id, 404)
+            let todo = todos.find(id)
+            if todo == null:
+                return error_json("no todo " + id, 404)
+            return web.json_response(todo_json(todo), 200)
+        catch problem: Error:
+            return error_json(problem.message, 500)
+
+    func remove(req: web.Request) -> web.Response:
+        let id = id_param(req)
+        if id == null:
+            return error_json("id must be an integer", 400)
+        try:
+            if not todos.remove(id):
+                return error_json("no todo " + id, 404)
+            return web.text("", 204)
+        catch problem: Error:
+            return error_json(problem.message, 500)
+
+func build_app(todos: store.Store) -> web.App throws Error:
+    let api = Api(todos=todos)
+    let app = web.App(title="Todo API")
+    app.get("/todos", fn(req: web.Request) => api.list(req))
+    app.post("/todos", fn(req: web.Request) => api.create(req))
+    app.post("/todos/{id}/done", fn(req: web.Request) => api.done(req))
+    app.delete("/todos/{id}", fn(req: web.Request) => api.remove(req))
+    return app

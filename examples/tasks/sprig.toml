@@ -1,0 +1,8 @@
+[project]
+name = "tasks"
+version = "0.1.0"
+language = "0.8"
+
+[[dependency]]
+name = "cli"
+path = "../../libraries/sprig-cli"

@@ -1,0 +1,4 @@
+import java.util.ArrayList as ArrayList
+
+let names: List[String] = ["ada"]
+let java_names: ArrayList[String] = names

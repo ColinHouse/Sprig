@@ -133,6 +133,7 @@ public final class Main {
         out.println("  run   [file.spr] [--bin NAME] [--json] [--keep] [--no-cache] [--stacktrace] [-- a b] compile and execute on the JVM");
         out.println("  test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline] run project tests and compile-fail fixtures");
         out.println("  build [file.spr] [--bin NAME] [-d dir] [--emit-java-only] [--json] emit Java sources + .class files");
+        out.println("  build [file.spr] [--bin NAME] [-d dir] --bundle [--archive] [--json] also write a self-contained bundle (own Java runtime)");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
         out.println("  help [topic] [--json]                       language reference (topics: "
@@ -279,7 +280,7 @@ public final class Main {
             data.put("memberCount", count);
             if (count == 0) {
                 diagnostics.error(Codes.JVM_MEMBER, Phase.JVM,
-                        "No public JVM member named '" + options.memberFilter + "' on " + clazz.getName(), null, null);
+                        "No public or protected JVM member named '" + options.memberFilter + "' on " + clazz.getName(), null, null);
                 report(diagnostics, options.json, "api", 1, null);
                 return 1;
             }
@@ -293,6 +294,15 @@ public final class Main {
                     System.out.println("  " + item.get("javaSignature") + " => "
                             + item.getOrDefault("sprigSignature", item.getOrDefault("sprigType", "")));
                     if (item.get("unusableReason") != null) System.out.println("    unavailable: " + item.get("unusableReason"));
+                }
+            }
+            List<Map<String, Object>> protectedMethods = (List<Map<String, Object>>) data.get("protectedMethods");
+            if (protectedMethods != null && !protectedMethods.isEmpty()) {
+                System.out.println("protectedMethods (in a class declared with 'conform C to "
+                        + clazz.getSimpleName() + "(...) as NAME': override them, call them as NAME.m(...)):");
+                for (Map<String, Object> item : protectedMethods) {
+                    System.out.println("  " + item.get("javaSignature") + " => " + item.get("sprigSignature")
+                            + (Boolean.TRUE.equals(item.get("final")) ? "  (final: callable, not overridable)" : ""));
                 }
             }
         }
@@ -720,6 +730,7 @@ public final class Main {
         data.put("javacAvailable", javax.tools.ToolProvider.getSystemJavaCompiler() != null);
         data.put("compilerHome", System.getProperty("sprig.home", "unknown"));
         data.put("runtimeSource", runtimeSourceDir() == null ? null : runtimeSourceDir().toString());
+        data.put("runtimeClasses", shippedRuntimeClasses());
         data.put("antlrAvailable", Main.class.getClassLoader().getResource("org/antlr/v4/runtime/Parser.class") != null);
         data.put("classpath", JvmClasspath.entries().stream().map(Path::toString).toList());
         data.put("compilerClasspath", System.getProperty("java.class.path"));
@@ -898,20 +909,71 @@ public final class Main {
             lineMaps.put(path, output.lineMaps.get(file));
             uris.put(path, output.uris.get(file));
         }
-        List<Path> sources = new ArrayList<>(listJavaFiles(javaDir));
-        sources.addAll(runtimeSources(diagnostics));
-        boolean compiled = JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
+        List<Path> sources = listJavaFiles(javaDir);
+        // The runtime classes are compiled once per SDK and copied into classes/.
+        RuntimeClasses runtime = RuntimeClasses.locate();
+        if (runtime == null) RuntimeClasses.reportMissing(diagnostics);
+        boolean compiled = runtime == null
+                ? JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris)
+                : runtime.compileProgram(classesDir, sources, diagnostics, lineMaps, uris);
         if (!compiled || diagnostics.hasErrors()) {
             report(diagnostics, options.json, "build", 1, null);
             return 1;
         }
-        report(diagnostics, options.json, "build", 0, null);
-        if (options.json) return 0;
-        System.out.println("Built " + options.file + " -> " + outDir.toAbsolutePath());
+        BundleCommand.Result bundle = null;
+        if (options.bundle) {
+            String bundleName = BundleCommand.bundleName(bundleName(options, sourcePrep));
+            Map<Path, String> jarNames = new LinkedHashMap<>();
+            if (sourcePrep.graph != null) {
+                // Cached Maven artifacts are stored under their digest; the bundle names them by coordinate.
+                for (sprig.compiler.project.Lockfile.JvmEntry entry : sourcePrep.graph.lock.jvm) {
+                    jarNames.put(MavenResolver.contentPath(entry).toAbsolutePath().normalize(),
+                            entry.artifact + "-" + entry.version
+                                    + (entry.classifier == null || entry.classifier.isEmpty() ? "" : "-" + entry.classifier)
+                                    + "." + (entry.extension == null || entry.extension.isEmpty() ? "jar" : entry.extension));
+                }
+            }
+            bundle = BundleCommand.bundle(outDir, bundleName, classesDir, output.mainClass,
+                    JvmClasspath.entries(), jarNames, options.archive, diagnostics);
+            if (bundle == null || diagnostics.hasErrors()) {
+                report(diagnostics, options.json, "build", 1, null);
+                return 1;
+            }
+        }
+        if (options.json) {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("mainClass", output.mainClass);
+            details.put("classes", classesDir.toAbsolutePath().toString());
+            if (bundle != null) details.putAll(bundle.details());
+            System.out.print(JsonWriter.result(diagnostics.all(), null, "build", 0, null, details));
+            return 0;
+        }
+        report(diagnostics, false, "build", 0, null);
+        System.out.println("Built " + (options.file == null ? sourcePrep.source : options.file) + " -> " + outDir.toAbsolutePath());
         System.out.println("  Java sources: " + javaDir.toAbsolutePath());
         System.out.println("  Classes:      " + classesDir.toAbsolutePath());
         System.out.println("  Main class:   " + output.mainClass);
+        if (bundle != null) {
+            System.out.println("  Bundle:       " + bundle.directory.toAbsolutePath());
+            System.out.println("    run it with " + bundle.unixLauncher.toAbsolutePath() + " (or " + bundle.windowsLauncher.getFileName() + " on Windows)");
+            System.out.println("    lib/ " + (bundle.libBytes / 1024) + " KB; runtime/ " + (bundle.runtimeBytes / (1024 * 1024)) + " MB, modules "
+                    + String.join(", ", bundle.modules) + (bundle.cdsArchive ? "" : " (no JDK class-data-sharing archive on this platform)"));
+            System.out.println("    the bundle " + BundleCommand.platformNote());
+            if (bundle.archive != null) System.out.println("  Archive:      " + bundle.archive.toAbsolutePath());
+        }
         return 0;
+    }
+
+    /** The bundle's name: the --bin, the project, or the file. */
+    private static String bundleName(Options options, Prepared sourcePrep) {
+        if (options.bin != null) return options.bin;
+        if (options.file == null) {
+            Project project = Project.discover(Path.of(""));
+            if (project != null && project.name != null && !project.name.isBlank()) return project.name;
+        }
+        Path source = options.file != null ? options.file : sourcePrep.source;
+        String fileName = source.getFileName().toString();
+        return fileName.endsWith(".spr") ? fileName.substring(0, fileName.length() - 4) : fileName;
     }
 
     private static int run(String[] args) throws IOException, InterruptedException {
@@ -946,19 +1008,21 @@ public final class Main {
                     lineMaps.put(path, output.lineMaps.get(file));
                     uris.put(path, output.uris.get(file));
                 }
-                List<Path> runtime = runtimeSources(diagnostics);
+                RuntimeClasses runtime = RuntimeClasses.locate();
+                if (runtime == null) RuntimeClasses.reportMissing(diagnostics);
                 // The same program compiled before runs from its cached classes;
                 // javac is the larger part of a run's start-up.
-                Path cacheRoot = options.noCache ? null : JavacCache.root();
-                String cacheKey = cacheRoot == null ? null : JavacCache.key(output, runtime);
+                Path cacheRoot = options.noCache || runtime == null ? null : JavacCache.root();
+                String cacheKey = cacheRoot == null ? null : JavacCache.key(output, runtime.digest());
                 Path cached = JavacCache.lookup(cacheRoot, cacheKey);
                 if (cached != null && !options.keep) {
                     classesDir = cached;
                 } else {
                     writeSources(output, javaDir);
-                    List<Path> sources = new ArrayList<>(listJavaFiles(javaDir));
-                    sources.addAll(runtime);
-                    boolean compiled = JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
+                    List<Path> sources = listJavaFiles(javaDir);
+                    boolean compiled = runtime == null
+                            ? JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris)
+                            : runtime.compileProgram(classesDir, sources, diagnostics, lineMaps, uris);
                     if (!compiled || diagnostics.hasErrors()) {
                         report(diagnostics, options.json, "run", 1, null);
                         return 1;
@@ -1824,18 +1888,18 @@ public final class Main {
         }
     }
 
-    static List<Path> runtimeSources(Diagnostics diagnostics) throws IOException {
-        Path dir = runtimeSourceDir();
-        if (dir == null) {
-            diagnostics.error(Codes.JVM_INTERNAL, Phase.JVM,
-                    "Sprig runtime sources not found; set -Dsprig.home or build via scripts/build.sh",
-                    null, null);
-            return List.of();
+    /** The precompiled runtime classes shipped with this compiler that serve this JVM, or null. */
+    private static String shippedRuntimeClasses() {
+        try {
+            RuntimeClasses runtime = RuntimeClasses.locate();
+            Path shipped = runtime == null ? null : runtime.shippedClasses();
+            return shipped == null ? null : shipped.toString();
+        } catch (IOException e) {
+            return null;
         }
-        return listJavaFiles(dir);
     }
 
-    private static Path runtimeSourceDir() {
+    static Path runtimeSourceDir() {
         List<Path> candidates = new ArrayList<>();
         String home = System.getProperty("sprig.home");
         if (home != null) {
@@ -1969,7 +2033,8 @@ public final class Main {
 
     private static int filterApiMembers(Map<String, Object> data, String member) {
         int count = 0;
-        for (String category : List.of("constructors", "staticMethods", "instanceMethods", "fields")) {
+        for (String category : List.of("constructors", "staticMethods", "instanceMethods", "protectedMethods",
+                "fields")) {
             List<Map<String, Object>> all = (List<Map<String, Object>>) data.get(category);
             List<Map<String, Object>> filtered = all.stream()
                     .filter(item -> member.equals(item.get("name"))
@@ -1992,6 +2057,8 @@ public final class Main {
         Path outDir;
         boolean outDirSpecified;
         boolean emitJavaOnly;
+        boolean bundle;
+        boolean archive;
         boolean stacktrace;
         boolean force;
         boolean separatorProvided;
@@ -2016,6 +2083,8 @@ public final class Main {
                     case "--no-cache" -> options.noCache = true;
                     case "--force" -> options.force = true;
                     case "--emit-java-only" -> options.emitJavaOnly = true;
+                    case "--bundle" -> options.bundle = true;
+                    case "--archive" -> options.archive = true;
                     case "--bin" -> {
                         if (i + 1 < args.length && !args[i + 1].startsWith("-")) options.bin = args[++i];
                         else options.optionError = "--bin requires a binary name";
@@ -2067,6 +2136,9 @@ public final class Main {
         String violation(String command) {
             if (syntaxOnly && !command.equals("check")) return "--syntax-only is only valid with check";
             if (emitJavaOnly && !command.equals("build")) return "--emit-java-only is only valid with build";
+            if (bundle && !command.equals("build")) return "--bundle is only valid with build";
+            if (archive && !bundle) return "--archive is only valid with build --bundle";
+            if (bundle && emitJavaOnly) return "--bundle needs compiled classes; drop --emit-java-only";
             if (keep && !command.equals("run")) return "--keep is only valid with run";
             if (noCache && !command.equals("run")) return "--no-cache is only valid with run";
             if (stacktrace && !command.equals("run")) return "--stacktrace is only valid with run";

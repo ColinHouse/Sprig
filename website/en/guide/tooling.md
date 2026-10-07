@@ -14,6 +14,7 @@ The ones you'll use most while writing code:
 | `sprig run [file] [-- args]` | Checks, compiles and runs; anything after `--` goes to your program |
 | `sprig test [path]` | Runs the project's tests; `--filter` picks tests by name |
 | `sprig build [file]` | Generates Java source and class files |
+| `sprig build --bundle [--archive]` | Writes a directory with its own Java runtime that runs on a machine without a JDK; see below |
 | `sprig fmt <file or directory>` | Formats code; with `--check` it only checks and changes nothing |
 
 Projects and dependencies:
@@ -25,6 +26,8 @@ Projects and dependencies:
 | `sprig add`, `sprig remove` | Adds or removes a dependency; see [projects](/en/guide/projects) |
 | `sprig project` | Shows project information |
 | `sprig deps` | Lists declared dependencies |
+| `sprig search [text]` | Lists the packages a registry offers |
+| `sprig publish --registry DIR ...` | Writes a release entry into a local registry directory, see [Projects](/en/guide/projects) |
 
 Looking things up:
 
@@ -53,10 +56,11 @@ Inside a project, `check`, `run` and `build` don't need a file name; they use th
 
 - **`check --syntax-only`**: `check` never generates code anyway; this option makes it faster still by checking only tokens, indentation and syntax.
 - **`run --keep`**: keeps the generated Java files so you can look at them.
-- **`run --no-cache`**: compiles with javac even when the same program ran before. By default `run` and `test` keep the compiled classes of each program under `~/.sprig/cache/javac` (the newest 64), keyed by the generated Java, the compiler version, the runtime sources and the classpath, so running an unchanged program again skips javac and starts in well under a second instead of about two. `SPRIG_JAVAC_CACHE=off` turns the cache off; a directory path moves it.
+- **`run --no-cache`**: compiles with javac even when the same program ran before. By default `run` and `test` keep the compiled classes of each program under `~/.sprig/cache/javac` (the newest 64), keyed by the generated Java, the compiler and Java versions, the runtime and the classpath, so running an unchanged program again skips javac. When javac does run, it compiles only your program: the SDK ships the runtime already compiled, and its classes are copied next to yours. With a JDK other than the one that built the SDK, the first run compiles the runtime once into `~/.sprig/cache/runtime`. `SPRIG_JAVAC_CACHE=off` turns the program cache off; a directory path moves it.
 - **`run --stacktrace`**: when your program fails with an uncaught error, Sprig reports `SPR-RUNTIME-ERROR` or `SPR-RUNTIME-EXCEPTION` and points at the line in your source. Add this option when you also want the full JVM stack trace.
 - **`build -d <dir>`**: `build` writes to `sprig-build/` by default, and `-d` picks another directory. If the check fails, no class files are written.
 - **`build --emit-java-only`**: runs the static checks and generates Java without calling javac. With `--json`, the result includes `javaSources`, `mainClass` and `javacInvoked: false`.
+- **`build --bundle`**: also writes `<name>/` inside the build output (the name is the `--bin`, the project name or the file name) that you can hand to someone with no Java installed: `bin/<name>` is a POSIX sh launcher and `bin/<name>.cmd` the Windows one; `lib/` holds the program's JAR, the Sprig runtime and every JAR from the lock file (Maven dependencies included, named by coordinate); `runtime/` is a Java runtime image that jlink builds from the modules those JARs actually use, with the JDK's license notices kept in `runtime/legal/` (OpenJDK's GPLv2 with the Classpath Exception allows redistributing it together with the notices). The launcher runs the program in your current directory, forwards arguments and the exit status unchanged, and keeps a class-data-sharing archive of the program's classes under your cache directory so the second start is faster. Your program is never run while bundling. **The image runs only on the operating system and CPU architecture that built it**; the command output says which, so build on each platform you ship to. `--archive` also writes `<name>.zip` next to the bundle, and the launchers stay executable after unzipping. You need a full JDK (`jdeps`, `jlink` and `jmods/`): a missing tool is `SPR-BUNDLE-TOOLS`, a `jdeps` failure `SPR-BUNDLE-JDEPS`, a missing `jmods/` or a `jlink` failure `SPR-BUNDLE-LAYOUT`, each with a fix. Details: [bundles](/en/reference/projects/bundle).
 
 If a program defines `func main` but writes no output and no top-level statement or nested block calls it, `run` prints a note. Calls inside nested `if`, `try` and similar blocks count.
 
@@ -157,7 +161,7 @@ Editor setup and the details of each feature are in the [language server referen
 
 These are planned but not implemented:
 
-- publishing packages, and a module registry
+- a hosted central package registry with accounts and upload: today's registries are Git or local directory indexes, and publishing is a pull request to `registry/`, see [Projects](/en/guide/projects)
 - incremental checking
 
 Early design proposals are in the [Agent tool protocol](https://github.com/ColinHouse/Sprig/blob/main/docs/history/design-kit/AGENT_TOOL_PROTOCOL.md). It's a historical proposal, not a description of what exists. For what `sprig api` can and can't tell you, see the [JVM interop reference](/en/reference/jvm/interop).

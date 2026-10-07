@@ -1,0 +1,5 @@
+# tasks: a todo list CLI over a JSON file. `sprig run -- add Buy milk`.
+import "@std/process.spr" as process
+import "./app.spr" as app
+
+process.exit(app.run(process.arguments()))

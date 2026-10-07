@@ -36,6 +36,7 @@ language = "0.8"
 sprig check                  # 检查入口，以及它导入的所有文件
 sprig run                    # 检查并运行
 sprig build                  # 生成 Java 和 class 文件
+sprig build --bundle         # 再打一个自带 Java 运行时的目录，给没装 JDK 的机器
 sprig test                   # 运行 tests/ 下的测试
 sprig project                # 查看项目信息
 sprig run path/to/file.spr   # 指定了文件，就以你指定的为准
@@ -107,7 +108,7 @@ sprig add json-codec         # 查到后写成普通的 Git 依赖（git、tag�
 sprig add json-codec --version 0.7.1-beta.1
 ```
 
-注册表只是一份索引：一个目录，里面每个包一个 `packages/名字.toml`，写着它的 Git 仓库、子目录和各个发布版本对应的 tag。它不是新的下载方式，`add` 之后清单里就是完整的 Git 依赖，`check`、`run` 不再碰注册表。项目用 `[[registry]]` 声明自己用哪些注册表（本地 `path` 或 Git `url`）；一个都不写时，默认用 Sprig 仓库里的 `registry/` 目录，里面列着第一方库。
+注册表只是一份索引：一个目录，里面每个包一个 `packages/名字.toml`，写着它的 Git 仓库、子目录和各个发布版本对应的 tag。它不是新的下载方式，`add` 之后清单里就是完整的 Git 依赖，`check`、`run` 不再碰注册表。项目用 `[[registry]]` 声明自己用哪些注册表：每个表都要有 `name`，再加本地 `path` 或 Git `url`，`--registry` 用的就是这个名字；一个都不写时，默认用 Sprig 仓库里的 `registry/` 目录，里面列着第一方库。
 
 每个版本是一个 SemVer 版本号加一个 Git ref，通常是 tag 以及发布时它指向的提交（`rev`）。最新版本按 SemVer 顺序选，不看列表位置。被撤回（`yanked`）的版本不会再被新依赖选中，但已经锁定它的项目照样能解析；tag 被移动过的版本会被拒绝，因为已发布的版本是不可变的。
 
@@ -120,7 +121,7 @@ cd my-package
 sprig publish --registry ../Sprig/registry --tag v1.0.0 --license Apache-2.0 --owner your-github-handle
 ```
 
-`publish` 在本地的索引目录里写好条目，并记下 tag 指向的提交；之后提交这个文件、开 pull request。默认注册表是严格的：包名只能是小写字母、数字和连字符；每个版本是一个固定到提交的 tag（不接受 branch）；必须写 `license`（SPDX 标识）和 `owners`（GitHub 用户名）；已发布的版本不能改也不能删，有问题就撤回：`sprig publish --yank 1.0.0 --reason "原因"`。改别人的条目需要该条目的 owner 发起，或者由维护者批准。工作流会把每个新版本在它的 tag 处克隆下来，核对提交，再用当前 SDK 跑 `sprig resolve`、`sprig check` 和 `sprig test`。
+`publish` 在本地的索引目录里写好条目，并记下 tag 指向的提交；之后提交这个文件、开 pull request。默认注册表是严格的：包名只能是小写字母、数字和连字符；每个版本是一个固定到提交的 tag（不接受 branch）；必须写 `license`（SPDX 标识）和 `owners`（GitHub 用户名）；已发布的版本不能改也不能删，有问题就撤回：`sprig publish --registry ../Sprig/registry --yank 1.0.0 --reason "原因"`。改别人的条目需要该条目的 owner 发起，或者由维护者批准。工作流会把每个新版本在它的 tag 处克隆下来，核对提交，再用当前 SDK 跑 `sprig resolve`、`sprig check` 和 `sprig test`。
 
 查不到的包或版本会报 `SPR-DEP-REGISTRY`，`sprig search` 能看到到底有什么。细节见[依赖契约（英文）](/en/reference/projects/dependencies)。
 

@@ -3,7 +3,7 @@
 The historical `docs/history/design-kit/LANGUAGE_SPEC.md` fixed `Int` at 64 bits and `Float` at
 binary64 but explicitly left overflow and integer division unspecified. This
 stage-0 implementation supplies those missing rules. See
-`NUMERIC_SEMANTICS.md` for the binding contract and runnable examples under
+[`numeric-semantics.md`](numeric-semantics.md) for the binding contract and runnable examples under
 `tests/numeric/`.
 
 | Decision | Alternatives considered | Reason and Agent impact |
