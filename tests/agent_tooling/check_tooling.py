@@ -91,7 +91,9 @@ def main():
 
     # Every advertised capability must point to executable evidence; every
     # deliberately unsupported one must have canonical guidance.
-    driver = (ROOT / "scripts/test.py").read_text(encoding="utf-8")
+    # The gates of scripts/test.py are the keys of tests/test-map.json; a suite
+    # counts as evidence only when the runner knows it.
+    driver = set(json.loads((ROOT / "tests/test-map.json").read_text(encoding="utf-8"))["gates"])
 
     def executable_evidence(entry):
         relative = entry.split("#", 1)[0]
