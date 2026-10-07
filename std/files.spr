@@ -42,6 +42,8 @@ func make_directory(path: String) -> Unit throws Error:
     catch problem: IOException:
         throw failure("create directory " + path, problem)
 
+# Resolve child against base using lexical path rules. An absolute child replaces
+# base; this does not constrain the result to stay beneath base.
 func join(base: String, child: String) -> String throws Error:
     let value = HostFiles.join(base, child)
     if value != null:
@@ -102,6 +104,7 @@ func temp_file() -> String throws Error:
         throw failure("create a temporary file", problem)
     throw Error("host temp_file returned null")
 
+# Return a sorted snapshot of the directory entries as absolute normalized paths.
 func list(path: String) -> List[String] throws Error:
     try:
         let snapshot = HostFiles.directory(path)
