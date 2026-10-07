@@ -971,6 +971,11 @@ public final class JavaGenerator {
                     + "\"compound assignment requires an existing map key\");");
         }
         String oldValue = receiver + ".get(" + key + ")";
+        if (!assign.op.equals("=") && containsTypeParameter(index.receiver.type)) {
+            // A collection typed with a type parameter is a raw Java type, so get()
+            // is an Object; read it as the element's concrete type, as for a field.
+            oldValue = unboxGeneric(oldValue, index.type);
+        }
         w.line(receiver + ".set(" + key + ", " + assignmentValue(index.type, oldValue, assign) + ");");
     }
 

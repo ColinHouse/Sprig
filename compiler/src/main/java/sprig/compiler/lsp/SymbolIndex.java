@@ -642,10 +642,6 @@ final class SymbolIndex {
     }
 
     static String display(Type type) {
-        // Sprig's Error is sprig.runtime.SprigError underneath; show the Sprig name.
-        if (type instanceof JavaType javaType && javaType.clazz == sprig.runtime.SprigError.class) {
-            return "Error";
-        }
         return type == null ? "?" : type.display();
     }
 }

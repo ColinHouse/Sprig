@@ -26,7 +26,9 @@ public final class JavaType implements Type {
             return new JavaType(clazz.getComponentType()).display() + "[]";
         }
         if (args.isEmpty()) {
-            return clazz.getSimpleName() + (platformNullable ? "?" : "");
+            // Sprig's Error is sprig.runtime.SprigError underneath; show the Sprig name.
+            String name = clazz == sprig.runtime.SprigError.class ? "Error" : clazz.getSimpleName();
+            return name + (platformNullable ? "?" : "");
         }
         StringJoiner joiner = new StringJoiner(", ", clazz.getName() + "[", "]");
         for (Type arg : args) {

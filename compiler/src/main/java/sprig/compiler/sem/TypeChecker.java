@@ -541,7 +541,7 @@ public final class TypeChecker {
             // and arithmetic: `Int32 += 1` follows the same literal rule as
             // `x = x + 1`. Variables still never narrow implicitly.
             Type valueType = checkExpr(assign.value, targetType);
-            Type result = checkArithmetic(op, targetType, valueType, assign.span, true, null, assign.value);
+            Type result = checkArithmetic(op, targetType, valueType, assign.span, true, target, assign.value);
             requireAssignable(targetType, result, assign.value.span, Codes.TYPE_ASSIGN, "assignment");
         }
     }
@@ -1838,7 +1838,8 @@ public final class TypeChecker {
     private static String operandHint(Type left, Type right, Expr leftExpr, Expr rightExpr) {
         for (int side = 0; side < 2; side++) {
             Type type = side == 0 ? left : right;
-            if (type instanceof NullableType nullable) {
+            // A Java result is nullable as a platform JavaType, not a NullableType.
+            if (type != null && type.isNullable()) {
                 Expr operand = side == 0 ? leftExpr : rightExpr;
                 if (!(operand instanceof Expr.Name)) {
                     // Only a binding narrows; a field, an index or a call is read again.
@@ -1854,7 +1855,7 @@ public final class TypeChecker {
                             + "(let current = " + name + "), check 'if current != null:', and use current inside that block.";
                 }
                 return name + " may be null (" + type.display() + "): check it first with 'if " + name
-                        + " != null:', and inside that block it is " + nullable.inner.display()
+                        + " != null:', and inside that block it is " + type.nonNull().display()
                         + ", or give a fallback with or_else from @std/nulls.spr.";
             }
         }
@@ -2901,10 +2902,12 @@ public final class TypeChecker {
         if (receiver instanceof JavaType javaType) {
             // toString() is the text print shows, as for every value: an Error's
             // message, also for the errors built on it and one caught as
-            // RuntimeException. SprigRuntime.str gives Java's own text for every
-            // other exception, while Java code keeps Throwable.toString, whose
-            // "class: message" header stack traces and `run --stacktrace` read.
-            if (access.name.equals("toString") && Throwable.class.isAssignableFrom(javaType.clazz)) {
+            // RuntimeException, and Java's own text for any other object, an
+            // interface-typed one included. Java code keeps Throwable.toString,
+            // whose "class: message" header stack traces and `run --stacktrace`
+            // read. A class with a toString overload that takes arguments
+            // (BigInteger.toString(int)) stays a Java call.
+            if (access.name.equals("toString") && !hasToStringWithArguments(javaType.clazz)) {
                 return builtin(access, "toString", NativeType.STRING, javaType);
             }
             return javaMember(javaType, access, false);
@@ -3089,6 +3092,16 @@ public final class TypeChecker {
                 caseType.display() + " has no payload field '" + access.name + "'",
                 module.uri, access.span));
         return errorField(access);
+    }
+
+    private static boolean hasToStringWithArguments(Class<?> clazz) {
+        for (Method method : clazz.getMethods()) {
+            if (method.getName().equals("toString") && method.getParameterCount() > 0
+                    && !java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** "Java class X" in a diagnostic, but Sprig's own Error under its Sprig name. */
