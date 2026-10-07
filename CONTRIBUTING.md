@@ -9,7 +9,7 @@ understanding the change, tests, licensing and correctness.
 
 ## First contribution
 
-1. Install **JDK 17+**, **Python 3.12+**, **Node.js 20+ / npm**, and Git.
+1. Install **JDK 21+**, **Python 3.12+**, **Node.js 20+ / npm**, and Git.
 2. Fork and clone the repository; create a focused branch.
 3. Pick a scoped issue. `good first issue` means small and reviewed;
    `agent-friendly` means it has a mechanically testable contract.
@@ -63,7 +63,7 @@ Never change a golden output or weaken an assertion merely to remove a failure.
 
 Release validation additionally packages the SDK, verifies checksums/legal
 notices, extracts and exercises each showcase from the archive, and runs the
-Linux/macOS × JDK17/26 hosted matrix; the Windows preview job runs the same gates separately and is not a required check. Maintainers record those
+Linux/macOS × JDK21/26 hosted matrix; the Windows preview job runs the same gates separately and is not a required check. Maintainers record those
 results in the milestone validation record. A local contributor gate does
 not establish release or platform validation.
 
@@ -120,7 +120,7 @@ compilation replaces review of user-visible behavior.
 ## Protected main
 
 Main requires a PR, an up-to-date branch, resolved review conversations and
-Linux/macOS × JDK17/26 plus Documentation site checks. Rules also apply to
+Linux/macOS × JDK21/26 plus Documentation site checks. Rules also apply to
 administrators; force pushes and deletion are disabled. Required approval count
 is currently zero for this small maintainer team; this does not replace patch
 review or the submitter's AI-disclosure responsibility. Windows preview is not

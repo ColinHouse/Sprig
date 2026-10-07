@@ -8,7 +8,7 @@ tools, automation and application code. Agent-friendly should also mean
 review-friendly: inspectable source, explicit signatures, compiler queries and
 structured diagnostics help people verify what changed.
 
-The latest published SDK is [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1); it requires a separate JDK 17+. Linux and macOS are release-supported. Windows is an experimental preview. Sprig uses a Java stage-0 compiler and is not self-hosted. Check the [release status](docs/releases/validation.md) and installed `sprig capabilities --json` for the exact implemented feature set.
+The latest published SDK is [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1); it requires a separate JDK 21+. Linux and macOS are release-supported. Windows is an experimental preview. Sprig uses a Java stage-0 compiler and is not self-hosted. Check the [release status](docs/releases/validation.md) and installed `sprig capabilities --json` for the exact implemented feature set.
 
 ## A first look
 
@@ -74,7 +74,7 @@ sprig run
 
 ## Build from source
 
-JDK 17+, Python 3.12+, Node.js 20+/npm and Git are needed for the full
+JDK 21+, Python 3.12+, Node.js 20+/npm and Git are needed for the full
 developer gate. The first build downloads pinned ANTLR and Maven Resolver
 tools.
 

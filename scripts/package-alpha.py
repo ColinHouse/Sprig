@@ -179,7 +179,7 @@ def main():
         (package / 'AGENT_GUIDE.md').write_text(guide, encoding='utf-8', newline='\n')
         (package / 'README.md').write_text(f'''# Sprig {tag} SDK
 
-{maturity_label}, JDK 17+, language v0.8-dev. Supported: Linux/macOS.
+{maturity_label}, JDK 21+, language v0.8-dev. Supported: Linux/macOS.
 Windows is an experimental preview, not a release-supported platform. Sprig is a small, explicit
 JVM language for tools, automation and reliable application code. The SDK
 contains the stage-0 compiler/runtime, ANTLR and pinned Maven Resolver libraries.
@@ -197,7 +197,7 @@ libraries/sprig-fabric/README.md; set SPRIG_HOME to this extracted SDK root.
 
 The supported managed installer for Linux/macOS is documented in
 `docs/INSTALL.md`. It verifies the release checksum and keeps versioned SDKs
-under `~/.sprig`. Requires JDK 17 or newer (`java` and `javac`) on PATH.
+under `~/.sprig`. Requires JDK 21 or newer (`java` and `javac`) on PATH.
 Windows is an experimental preview, not a release gate.
 
 This archive can also be extracted manually. Add its `bin` directory to PATH;

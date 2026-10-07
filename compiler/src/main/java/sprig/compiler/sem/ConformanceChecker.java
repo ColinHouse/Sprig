@@ -540,15 +540,19 @@ public final class ConformanceChecker {
                     "conform source '" + conform.sourceName
                             + "' must be a Sprig class declared in this module",
                     module.uri, conform.span)
-                    .withHint("Declare conform next to a local class; dependency types cannot be conformed."));
+                    .withHint("Declare conform in the module that declares the class; there is no retroactive conformance "
+                            + "for an imported or dependency class. To use one where a contract is expected, write a local "
+                            + "class that holds it and forwards the contract's methods, and conform that class."));
             return false;
         }
         if (!classDecl.typeParams.isEmpty()) {
             diagnostics.add(Diagnostic.error(Codes.CONFORM_SOURCE, Phase.TYPE,
-                    "Generic class '" + classDecl.name
-                            + "' cannot declare a foreign JVM conformance in v1",
+                    "Generic class '" + classDecl.name + "' cannot conform to '" + conform.targetAlias
+                            + "': a generic class neither conforms to a contract nor declares a foreign JVM conformance "
+                            + "in the 0.8 language",
                     module.uri, conform.span)
-                    .withHint("Use a non-generic class, or adapt through composition."));
+                    .withHint("Declare one non-generic class per element type and conform each, or keep the generic class "
+                            + "and pass its single operation as a fn value where the contract was wanted."));
             return false;
         }
         conform.source = classDecl;

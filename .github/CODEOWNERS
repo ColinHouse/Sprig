@@ -1,0 +1,3 @@
+# The package registry index: a pull request that changes it needs a maintainer's
+# review in addition to the registry validation workflow.
+/registry/ @ColinHouse

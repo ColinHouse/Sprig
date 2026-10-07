@@ -13,8 +13,13 @@ by the historical design kit in `docs/history/design-kit/`.
   or adapters, protected methods only through the parent view, and no `self`. It declares a foreign
   JVM contract; it does not add inheritance between Sprig classes. Open
   polymorphism inside Sprig is a contract class (methods without bodies) that
-  classes `conform` to; a contract has no fields, no default bodies and is
-  non-generic in v1. Generic methods witness by erasure; boxed
+  classes `conform` to. For the 0.8 language a contract has no fields, is
+  never generic, is a type and never a `requires` bound, and has no default
+  methods; a contract never conforms to another contract, there is no
+  downcast or type test, and conformance is declared in the class's own module
+  (no retroactive or structural conformance). These are decisions with
+  targeted diagnostics, not gaps; a closed set of types is a variant, an open
+  set is a contract. Generic methods witness by erasure; boxed
   `Short`/`Byte`/`Character` parameters are not expressible because of the
   existing interop adapters.
 - Generics accept one or more parameters (`generic K, V:`). Type arguments of
@@ -55,11 +60,11 @@ by the historical design kit in `docs/history/design-kit/`.
 - The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
   text/time and a typed JSON model. The first-party libraries add a small
   synchronous JDK HTTP client (`sprig-http`), a synchronous HTTP server with
-  explicit OpenAPI metadata (`sprig-web`), SQLite access (`sprig-sqlite`) and
-  tasks, pools, channels, counters, locks and latches over
-  `java.util.concurrent` (`sprig-concurrent`). There is no async/await syntax,
-  no structured concurrency scope, no streaming HTTP and no hosted central
-  package registry. The ecosystem remains intentionally small and experimental.
+  explicit OpenAPI metadata (`sprig-web`) and SQLite access (`sprig-sqlite`).
+  Concurrency is the bundled `@std/concurrent.spr`: structured scopes over JDK 21
+  virtual threads, pools, channels, counters, locks and latches; there is no
+  async/await syntax by design, no `then` on a task, no scope deadline, no
+  streaming HTTP and no hosted central package registry. The ecosystem remains intentionally small and experimental.
   Debugger integration and incremental compilation are absent. `sprig lsp`
   serves diagnostics, hover, navigation, completion, formatting, local
   rename and quick fixes over the Language Server Protocol; it re-checks the
@@ -126,7 +131,7 @@ by the historical design kit in `docs/history/design-kit/`.
   does not promise cross-JVM bitwise identity for transcendental functions,
   numerical stability, physical units, or mathematically correct algorithms.
 - Compiler classes use `javac --release 17`. Supported release platforms are Linux/macOS
-  with JDK 17 and 26; Windows is an experimental, non-blocking preview; definitions are not execution evidence. The current
+  with JDK 21 and 26; Windows is an experimental, non-blocking preview; definitions are not execution evidence. The current
   release validation report records which exact source/archive gates ran.
   No production or architecture-wide portability guarantee is made.
 - Portable local locks carry owner-relative locators and survive relocation of the

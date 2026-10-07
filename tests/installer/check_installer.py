@@ -117,12 +117,12 @@ def main():
             no_jdk = subprocess.run(["/bin/sh", str(INSTALLER), "--version", "v1.2.3"],
                                     env={**env, "HOME": str(work / "no-jdk"), "PATH": str(work)},
                                     text=True, capture_output=True, timeout=5)
-            assert no_jdk.returncode != 0 and "JDK 17 or newer" in no_jdk.stderr
+            assert no_jdk.returncode != 0 and "JDK 21 or newer" in no_jdk.stderr
             fake_tools = work / "old-java-bin"
             fake_tools.mkdir()
             for name, content in {
                 "java": '#!/bin/sh\necho \'openjdk version "11.0.2"\' >&2\n',
-                "javac": '#!/bin/sh\necho \'javac 17.0.1\' >&2\n',
+                "javac": '#!/bin/sh\necho \'javac 21.0.1\' >&2\n',
             }.items():
                 tool = fake_tools / name
                 tool.write_text(content)

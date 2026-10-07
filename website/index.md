@@ -59,7 +59,7 @@ Sprig 还在早期。当前发布的版本是实验性的 v0.7.1-beta.1：上面
 
 ## 五分钟跑起来
 
-需要 JDK 17 或更新的版本。[装好 SDK](/guide/getting-started) 以后：
+需要 JDK 21 或更新的版本。[装好 SDK](/guide/getting-started) 以后：
 
 ```bash
 sprig init hello

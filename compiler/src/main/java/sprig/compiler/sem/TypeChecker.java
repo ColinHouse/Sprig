@@ -823,10 +823,43 @@ public final class TypeChecker {
             }
             return;
         }
+        Symbol named = capabilityNamesType(requires.capability);
+        if (named != null) {
+            // Contracts and classes are types, never bounds: a type parameter is
+            // constrained only by the closed capabilities.
+            String kind = named.decl instanceof Decl.ClassDecl classDecl ? (classDecl.contract ? "contract" : "class")
+                    : named.kind == Symbol.Kind.VARIANT ? "variant" : named.kind == Symbol.Kind.ENUM ? "enum" : "type";
+            String lower = Character.toLowerCase(requires.capability.charAt(requires.capability.lastIndexOf('.') + 1))
+                    + requires.capability.substring(requires.capability.lastIndexOf('.') + 2);
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                    "'" + requires.capability + "' is a " + kind + ", not a capability; a " + kind
+                            + " is a type, never a bound on a type parameter",
+                    module.uri, requires.span)
+                    .withHint("Take '" + requires.capability + "' as the parameter type instead of a type parameter bounded by it: "
+                            + "replace '" + requires.parameter + "' with '" + requires.capability + "' in the signature ("
+                            + lower + ": " + requires.capability + ") and drop the requires clause. Capabilities are the closed set "
+                            + "Equatable and Comparable."));
+            return;
+        }
         diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
                 "Unknown capability '" + requires.capability
                         + "'; v0.8 defines Comparable and Equatable",
                 module.uri, requires.span));
+    }
+
+    /** The user type a requires clause names in place of a capability, or null. */
+    private Symbol capabilityNamesType(String capability) {
+        int dot = capability.indexOf('.');
+        if (dot < 0) {
+            Symbol symbol = module.scope.types.get(capability);
+            return symbol != null && symbol.decl != null ? symbol : null;
+        }
+        Symbol alias = module.scope.importAliases.get(capability.substring(0, dot));
+        if (alias == null || alias.kind != Symbol.Kind.MODULE || alias.module == null) {
+            return null;
+        }
+        Symbol symbol = alias.module.scope.types.get(capability.substring(dot + 1));
+        return symbol != null && symbol.decl != null ? symbol : null;
     }
 
     /**
@@ -900,9 +933,15 @@ public final class TypeChecker {
         boolean valid = scrutinee instanceof EnumType || scrutinee instanceof VariantType
                 || scrutinee instanceof VariantCaseType;
         if (!valid && scrutinee != NativeType.ERROR) {
-            diagnostics.add(Diagnostic.error(Codes.MATCH_SCRUTINEE, Phase.TYPE,
+            Diagnostic error = Diagnostic.error(Codes.MATCH_SCRUTINEE, Phase.TYPE,
                     "match requires an enum or variant value", module.uri, match.scrutinee.span)
-                    .withTypes("enum or variant", scrutinee.display()));
+                    .withTypes("enum or variant", scrutinee.display());
+            if (scrutinee instanceof ClassType classType) {
+                error.withHint("There are no type tests on " + (classType.decl.contract ? "contract" : "class")
+                        + " values. A closed set of types is a variant: declare one with a case per type and match on it; "
+                        + "an open set is a contract: call its methods instead of testing the type.");
+            }
+            diagnostics.add(error);
         }
         match.matchedType = scrutinee;
         Set<String> seen = new LinkedHashSet<>();
@@ -5847,6 +5886,16 @@ public final class TypeChecker {
                     .withHint("'" + given.decl.name + "' does not conform to the contract '" + contract.decl.name
                             + "': declare 'conform " + given.decl.name + " to " + contract.display()
                             + "' after the class, with every method of the contract matched exactly."));
+            return;
+        }
+        if (target != null && actual != null && actual.nonNull() instanceof ClassType contract && contract.decl.contract
+                && target.nonNull() instanceof ClassType wanted && !wanted.decl.contract) {
+            diagnostics.add(Diagnostic.error(code, Phase.TYPE, "Type mismatch in " + what, module.uri, span)
+                    .withTypes(expected, got)
+                    .withHint("A value of the contract '" + contract.decl.name + "' is never converted back to the class '"
+                            + wanted.decl.name + "': there is no downcast and no type test. Call the contract's methods, "
+                            + "or, when the set of types is closed, declare a variant with a case per type and match on it "
+                            + "(a closed set of types is a variant; an open set is a contract)."));
             return;
         }
         if (target != null && actual != null && isNumeric(target.nonNull()) && isNumeric(actual.nonNull())) {

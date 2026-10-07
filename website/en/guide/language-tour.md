@@ -39,6 +39,12 @@ Blocks are defined by indentation, as in Python:
 - A class whose methods have **no body** is a contract. Another class declares `conform Console to Sink` and must have every method of the contract with the same types; a `Console` then goes wherever a `Sink` is expected and is used through the contract's methods. A contract has no fields, no default bodies, cannot be constructed, and there is no conversion back. Example:
 
 <<< @/snippets/contracts.spr
+- When to use a variant and when a contract, in one line: **a closed set of types is a variant; an open set is a contract.** Closed means you list every case in one place and `match` must cover them all; open means any module can add another class that conforms.
+- Three rules about contracts are settled for the 0.8 language. They are decisions, not "not yet", and each rejection tells you what to write instead:
+  - **A contract is never generic.** A `class Repository` inside a `generic T:` block is `SPR-CLASS-ABSTRACT`, and a generic class can't `conform`. Write one contract per element type (`IntRepository`), or keep a generic class that holds the one operation as a `fn` field.
+  - **A contract is a type, never a bound.** `requires T: Sink` is `SPR-GENERIC-CONSTRAINT`: take `Sink` as the parameter type, `func drain(sink: Sink) -> Unit`. `requires` accepts only `Equatable` and `Comparable`. A contract doesn't conform to another contract either.
+  - **A contract has no default methods.** Mixing methods with and without a body is `SPR-CLASS-ABSTRACT`. Write the shared behavior as a module function that takes the contract: `func log_all(sink: Sink, lines: List[String]) -> Unit`.
+- Also: a contract value never converts back to its class (no downcast), there's no type test on class or contract values and `match` is for enums and variants only; `conform` is written in the module that declares the class (you can't add it to an imported class), and a class with the right methods isn't a `Sink` until it says `conform`.
 - You create objects with field names: `Hero(name="Ada", health=80)`. Missing, misspelled or repeated fields are compile errors.
 - Inside a method, a field's bare name refers to the current object's field; there's no prefix.
 - Parameters and local variables can't have the same name as a field.

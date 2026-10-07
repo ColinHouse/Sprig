@@ -1,0 +1,9 @@
+class Console:
+    func write(line: String) -> Unit:
+        print(line)
+
+generic T:
+    func drain(lines: List[String], sink: T) -> Unit:
+        requires T: Console
+        print(lines.size())
+print("x")
