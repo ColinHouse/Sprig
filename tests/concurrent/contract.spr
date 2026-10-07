@@ -145,6 +145,20 @@ print(empty.try_send(1))
 print(empty.try_send(2))
 print(empty.size())
 
+# 7b. closing a full channel does not wait for a receiver; the values are
+# still drained, then null (#164)
+let full = concurrent.channel[Int](2)
+full.send(1)
+full.send(2)
+print(full.try_send(3))
+full.close()
+print("closed full")
+print(full.receive())
+print(full.receive())
+print(full.receive())
+print(full.size())
+print(full.try_send(4))
+
 # 8. a latch releases its waiter when every task counted down
 let gate = concurrent.latch(3)
 func arrive(n: Int) -> Int:
