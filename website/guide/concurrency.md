@@ -118,7 +118,7 @@ gate.count_down()
 print(gate.await_within(1000))
 ```
 
-- `Counter` 是原子的 `Int`：`get`、`set`、`add`、`increment`、`decrement`、`compare_and_set`。
+- `Counter` 是原子的 `Int`：`get`、`set`、`add`、`increment`、`decrement`、`compare_and_set`。和 `Int` 运算一样，`add`、`increment`、`decrement` 的结果超出 `Int` 范围时会失败，报的是和 `+` 相同的数值错误，计数器的值保持不变。
 - `Lock` 是可重入的互斥锁：`run(action)` 和 `locked(lock, work)` 在持有锁的时候运行函数值。修改共享的 `MutableList`/`MutableMap` 时用它。它是 `java.util.concurrent` 的锁，持有它的任务不会钉住虚拟线程的载体线程。
 - `Latch` 是倒数计数：每个任务 `count_down()`，等待方 `await()` 或 `await_within(millis)`。
 

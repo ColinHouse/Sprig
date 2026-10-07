@@ -271,7 +271,8 @@ generic T:
             throw Error("channel capacity must be at least 1, got " + capacity)
         return Channel[T](inner=HostChannel[T](capacity))
 
-# An Int that several threads change atomically.
+# An Int that several threads change atomically. add, increment and decrement
+# are checked like Int arithmetic: a result past the Int range fails.
 class Counter:
     let inner: AtomicLong
 
@@ -284,24 +285,34 @@ class Counter:
     func set(value: Int) -> Unit:
         inner.set(value)
 
-    # Adds delta and returns the new value.
+    # Adds delta and returns the new value. A sum past the Int range fails the
+    # way Int addition does, and the value stays as it was.
     func add(delta: Int) -> Int:
-        return inner.addAndGet(delta)
+        while true:
+            let current = inner.get()
+            let updated = current + delta
+            if inner.compareAndSet(current, updated):
+                return updated
 
-    # Adds one and returns the new value.
+    # Adds one and returns the new value; at the largest Int it fails like add.
     func increment() -> Int:
-        return inner.incrementAndGet()
+        return add(1)
 
-    # Subtracts one and returns the new value.
+    # Subtracts one and returns the new value. At the smallest Int it fails the
+    # way Int subtraction does, and the value stays as it was.
     func decrement() -> Int:
-        return inner.decrementAndGet()
+        while true:
+            let current = inner.get()
+            let updated = current - 1
+            if inner.compareAndSet(current, updated):
+                return updated
 
     # Sets updated only when the value is still expected; true when it did.
     func compare_and_set(expected: Int, updated: Int) -> Bool:
         return inner.compareAndSet(expected, updated)
 
-# A new Counter holding start. Unlike Int arithmetic, add, increment and
-# decrement wrap around past the Int range instead of failing.
+# A new Counter holding start. Its add, increment and decrement fail past the
+# Int range, as Int arithmetic does.
 func counter(start: Int) -> Counter:
     return Counter(inner=AtomicLong(start))
 

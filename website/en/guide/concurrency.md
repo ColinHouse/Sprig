@@ -118,7 +118,7 @@ gate.count_down()
 print(gate.await_within(1000))
 ```
 
-- A `Counter` is an atomic `Int`: `get`, `set`, `add`, `increment`, `decrement`, `compare_and_set`.
+- A `Counter` is an atomic `Int`: `get`, `set`, `add`, `increment`, `decrement`, `compare_and_set`. Like `Int` arithmetic, `add`, `increment` and `decrement` fail when the result would leave the `Int` range, with the same numeric error as `+`, and the counter keeps its value.
 - A `Lock` is reentrant mutual exclusion: `run(action)` and `locked(lock, work)` run a function value while holding it. Use it around shared `MutableList`/`MutableMap` changes. It is a `java.util.concurrent` lock, so a task holding it never pins its carrier thread.
 - A `Latch` counts down: each task calls `count_down()`, the waiter calls `await()` or `await_within(millis)`.
 
