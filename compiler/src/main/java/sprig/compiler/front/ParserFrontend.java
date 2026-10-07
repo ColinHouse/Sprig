@@ -67,7 +67,7 @@ public final class ParserFrontend {
                                     int charPositionInLine, String msg, RecognitionException e) {
                 // The lexer already identifies the unclosed opener. Parser recovery over
                 // the swallowed physical newlines would only cascade on each remaining line.
-                if (layout.hasUnclosedGrouping()) {
+                if (layout.hasUnclosedGrouping() || layout.hasUnterminatedString()) {
                     return;
                 }
                 // An INDENT or DEDENT that only fails because an earlier error broke the

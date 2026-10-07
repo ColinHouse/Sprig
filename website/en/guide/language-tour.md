@@ -216,6 +216,7 @@ $[1].id: expected integer, found string
 
 ## A few smaller features
 
+- String literals must close on the same line. A missing closing quote or a newline inside a string reports `SPR-LEX-STRING` on the unterminated literal.
 - `sprig fmt` formats code in one standard style. It keeps your comments and has no options. See [formatter](/en/reference/tooling/formatter).
 - A module can re-export an imported declaration with `export alias.Symbol`, but that can't be used to get around a dependency's exports. There's no `export *`. See [re-exports](/en/reference/language/module-reexports).
 - An expression `match` allows one expression per branch; for several lines, use a statement `match`. See [match expressions](/en/reference/language/match-expressions).

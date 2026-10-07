@@ -31,6 +31,7 @@ public final class LayoutTokenSource implements TokenSource {
     private final List<Token> output = new ArrayList<>();
     private int cursor = 0;
     private boolean unclosedGrouping;
+    private boolean unterminatedString;
 
     public LayoutTokenSource(TokenSource lexer, Diagnostics diagnostics, String uri) {
         this.lexer = lexer;
@@ -49,6 +50,10 @@ public final class LayoutTokenSource implements TokenSource {
 
     public boolean hasUnclosedGrouping() {
         return unclosedGrouping;
+    }
+
+    public boolean hasUnterminatedString() {
+        return unterminatedString;
     }
 
     private static Span spanOf(Token token) {
@@ -114,6 +119,24 @@ public final class LayoutTokenSource implements TokenSource {
                 continue;
             }
             if (type == SprigLexer.ERROR_CHAR) {
+                if ("\"".equals(token.getText())) {
+                    int lineEndIndex = i + 1;
+                    while (lineEndIndex < raw.size() && raw.get(lineEndIndex).getType() != SprigLexer.NEWLINE
+                            && raw.get(lineEndIndex).getType() != Token.EOF) {
+                        lineEndIndex++;
+                    }
+                    Token lineEnd = raw.get(lineEndIndex);
+                    int line = Math.max(0, token.getLine() - 1);
+                    int startColumn = Math.max(0, token.getCharPositionInLine());
+                    int endColumn = Math.max(startColumn + 1, lineEnd.getCharPositionInLine());
+                    Span span = new Span(line, startColumn, line, endColumn,
+                            token.getStartIndex(), lineEnd.getStartIndex());
+                    diagnostics.add(Diagnostic.error(Codes.LEX_STRING, Phase.LEX,
+                            "Unterminated string literal", uri, span).withRelatedHelp("language"));
+                    unterminatedString = true;
+                    i = lineEndIndex - 1;
+                    continue;
+                }
                 error(Codes.LEX_CHAR, "Invalid character '" + token.getText() + "'", token,
                         foreignCharacterHint(token.getText()));
                 continue;
