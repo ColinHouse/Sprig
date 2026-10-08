@@ -155,8 +155,15 @@ public @interface Nullable {}
 ''',
     "NullMarked.java": '''package audit;
 @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
-@java.lang.annotation.Target({java.lang.annotation.ElementType.TYPE, java.lang.annotation.ElementType.PACKAGE})
+@java.lang.annotation.Target({java.lang.annotation.ElementType.TYPE, java.lang.annotation.ElementType.PACKAGE,
+        java.lang.annotation.ElementType.METHOD})
 public @interface NullMarked {}
+''',
+    "NullUnmarked.java": '''package audit;
+@java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+@java.lang.annotation.Target({java.lang.annotation.ElementType.TYPE, java.lang.annotation.ElementType.PACKAGE,
+        java.lang.annotation.ElementType.METHOD})
+public @interface NullUnmarked {}
 ''',
     "Annotated.java": '''package audit;
 public final class Annotated {
@@ -170,6 +177,8 @@ public final class Annotated {
     public static String need(String value) { return value; }
     public static @NotNull Integer boxed() { return 7; }
     public static long sum(@Nullable Long value) { return value == null ? -1 : value; }
+    /** A method-level default inside an unmarked class: its result is non-null. */
+    @NullMarked public static String markedResult() { return "mk"; }
 }
 ''',
     "Marked.java": '''package audit;
@@ -178,6 +187,15 @@ public final class Marked {
     private Marked() {}
     public static String name() { return "m"; }
     @Nullable public static String maybe() { return null; }
+    /** The innermost marker wins: this result is nullable again, and really is null. */
+    @NullUnmarked public static String unmarked() { return null; }
+    /** An unmarked nested class inside the marked one: its results are nullable. */
+    @NullUnmarked
+    public static final class Loose {
+        private Loose() {}
+        public static String plain() { return null; }
+        @NullMarked public static String marked() { return "nested"; }
+    }
 }
 ''',
     "Invisible.java": '''package audit;
@@ -656,6 +674,19 @@ print(Interop.total(1, 2))
                and marked_api.get("maybe", {}).get("nullableResult") is True,
                str({k: (v.get("nullableResult"), v.get("sprigReturnType"), v.get("sprigParameterTypes"))
                     for k, v in annotated_api.items()}) + str(marked_api.get("name")))
+        # JSpecify scoping: the innermost NullMarked/NullUnmarked wins, a method's
+        # own marker before its class, an unmarked nested class before the outer one.
+        loose_api = {m["name"]: m for m in (body(call("api", "audit.Marked.Loose", "--classpath", cp, "--json")) or {})
+                     .get("staticMethods", [])}
+        verify("api-nullability-method-markers",
+               marked_api.get("unmarked", {}).get("nullableResult") is True
+               and marked_api.get("unmarked", {}).get("sprigReturnType") == "String?"
+               and annotated_api.get("markedResult", {}).get("nullableResult") is False
+               and annotated_api.get("markedResult", {}).get("sprigReturnType") == "String"
+               and loose_api.get("plain", {}).get("nullableResult") is True
+               and loose_api.get("marked", {}).get("nullableResult") is False,
+               str({k: v.get("nullableResult") for k, v in marked_api.items()})
+               + str(annotated_api.get("markedResult")) + str({k: v.get("nullableResult") for k, v in loose_api.items()}))
         invisible_api = {m["name"]: m for m in (body(call("api", "audit.Invisible", "--classpath", cp, "--json")) or {})
                          .get("staticMethods", [])}
         invisible_fields = {f["name"]: f for f in (body(call("api", "audit.Invisible", "--classpath", cp, "--json")) or {})
@@ -693,6 +724,7 @@ print(Invisible.items().size())
                f"exit={invisible_plain.returncode} {invisible_plain.stdout}{invisible_plain.stderr}")
         _, nullability_run = run_file("nullability.spr", '''import audit.Annotated as Annotated
 import audit.Marked as Marked
+import audit.Marked.Loose as Loose
 
 print(Annotated.name().length())
 print(Annotated.boxed() + 1)
@@ -710,19 +742,26 @@ let annotated = Annotated()
 print(annotated.label.length())
 annotated.plainField = null
 print(annotated.plainField == null)
+print(Annotated.markedResult().length())
+print(Loose.marked().length())
+print(Marked.unmarked() == null)
 ''')
         verify("run-nullability-annotations",
                nullability_run.returncode == 0
-               and nullability_run.stdout == "3\n8\nM\nnone\nnone\nheld\n5\n-1\n5\ntrue\n",
+               and nullability_run.stdout == "3\n8\nM\nnone\nnone\nheld\n5\n-1\n5\ntrue\n2\n6\ntrue\n",
                f"exit={nullability_run.returncode} stdout={nullability_run.stdout!r} stderr={nullability_run.stderr!r}")
         for name, source, expected in (
             ("plain-result", "print(Annotated.plain().length())\n", "SPR-TYPE-NULLABLE"),
             ("marked-nullable-result", "print(Marked.maybe().length())\n", "SPR-TYPE-NULLABLE"),
+            # Before the method marker was read, this was typed String and failed at run time.
+            ("unmarked-method-result", "print(Marked.unmarked().length())\n", "SPR-TYPE-NULLABLE"),
+            ("unmarked-nested-class-result", "print(Loose.plain().length())\n", "SPR-TYPE-NULLABLE"),
             ("unannotated-parameter", "let maybe = Annotated.maybe()\nAnnotated.need(maybe)\n", "SPR-TYPE-NULLABLE"),
             ("non-null-field-write", "let a = Annotated()\na.label = null\n", "SPR-TYPE-NULL"),
         ):
             _, rejected = check_file(f"nullability-{name}.spr",
-                                     "import audit.Annotated as Annotated\nimport audit.Marked as Marked\n" + source,
+                                     "import audit.Annotated as Annotated\nimport audit.Marked as Marked\n"
+                                     "import audit.Marked.Loose as Loose\n" + source,
                                      "--json")
             rejected_diag = diagnostic(rejected)
             verify(f"check-nullability-{name}",

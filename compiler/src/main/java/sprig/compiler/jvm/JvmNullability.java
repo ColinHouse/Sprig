@@ -12,9 +12,10 @@ import java.util.Set;
  * Nullability declared by annotations that are visible at run time, matched
  * by simple name so every library's spelling counts: NotNull, NonNull and
  * Nonnull or Nullable and CheckForNull on a method result, a parameter or a
- * field (as a declaration or a type-use annotation), and the class, package
- * or module defaults NullMarked, NonNullApi, MethodsReturnNonnullByDefault
- * and FieldsAreNonnullByDefault, which NullUnmarked cancels. An annotation
+ * field (as a declaration or a type-use annotation), and the method, class,
+ * package or module defaults NullMarked, NonNullApi,
+ * MethodsReturnNonnullByDefault and FieldsAreNonnullByDefault, which
+ * NullUnmarked cancels; the innermost marker wins, as JSpecify specifies. An annotation
  * kept only in class files (CLASS retention, as org.jetbrains.annotations
  * and the Android ones are) is invisible to reflection, so the declaring
  * class's file is read as well ({@link ClassFileAnnotations}). Parameters
@@ -40,7 +41,14 @@ public final class JvmNullability {
         if (explicit == null) {
             explicit = ClassFileAnnotations.of(method.getDeclaringClass()).result(method);
         }
-        return explicit != null ? explicit : defaults(method.getDeclaringClass(), RESULTS_NON_NULL);
+        if (explicit != null) {
+            return explicit;
+        }
+        // JSpecify scopes: the innermost marker wins, so a method's own
+        // NullMarked or NullUnmarked comes before its class, the enclosing
+        // classes, the package and the module.
+        Boolean own = marked(method.getAnnotations(), RESULTS_NON_NULL);
+        return own != null ? own : defaults(method.getDeclaringClass(), RESULTS_NON_NULL);
     }
 
     /** A field declared non-null, by annotation or by a default on its class or package. */
