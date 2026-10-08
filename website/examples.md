@@ -6,7 +6,9 @@
 
 - [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：命令行任务清单，数据存在本地的 JSON 文件里。演示文件读写、带类型的数据模型，以及用 `@std/json_codec` 读取 JSON 字段，不需要联网。
 - [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：从 JSON 里挑选字段的命令行工具，由多个文件组成，用 `sprig-cli` 库解析命令行选项。
+- [tasks](https://github.com/ColinHouse/Sprig/tree/main/examples/tasks)：带子命令的命令行待办清单，数据存在 JSON 文件里（`sprig-cli`、`@std/json_codec`）。
 - [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary)：读取一个小的 JSON 配置文件，输出格式固定的摘要；输入有误时会给出清楚的错误信息。
+- [blog](https://github.com/ColinHouse/Sprig/tree/main/examples/blog)：静态博客生成器，把带 front matter 的文章生成 HTML 页面和索引，输入有误时返回对应的退出码（`@std/files`、`@std/text`、`@std/lists`）。
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：三个用 Sprig 写的小工具，读取编译器输出的 JSON，用来查询 Java 和 Sprig API、汇总错误信息、比较 API 的差异。
 
 ## 用到 Java 库的应用
@@ -14,7 +16,9 @@
 - [application_foundation](https://github.com/ColinHouse/Sprig/tree/main/examples/application_foundation)：HTTP、JSON 编解码、UTC 时间和文件处理。
 - [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) 和 [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations)：通过 Maven 使用 JDBC，演示事务、数据持久化和数据库迁移。
 - [parallel_words](https://github.com/ColinHouse/Sprig/tree/main/examples/parallel_words)：用 `@std/concurrent` 并行统计词数，作用域、任务、线程池、通道、计数器和锁各用一次，见[并发](/guide/concurrency)。
+- [crawler](https://github.com/ColinHouse/Sprig/tree/main/examples/crawler)：在本地页面上并发抓取，用到作用域、任务、通道、计数器和锁（`@std/concurrent`）。
 - [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger)：精简的记账 HTTP 后端，重启后数据还在。详见 [Web 与 SQLite](/guide/web-sqlite)。
+- [todo](https://github.com/ColinHouse/Sprig/tree/main/examples/todo)：数据存在 SQLite 里、通过小型 HTTP 接口访问的待办清单（`sprig-sqlite`、`sprig-web`）；它的测试通过 HTTP 驱动真正运行的服务。
 - [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web)：带类型的路由、JSON 和 OpenAPI 文档。
 
 第三方 Java 库照常用 Maven 坐标加进项目，由锁文件固定版本，见[项目](/guide/projects)和 [JVM 互操作](/guide/jvm-interop)。Sprig 自己维护的库都在 [`libraries/`](https://github.com/ColinHouse/Sprig/tree/main/libraries) 目录里。

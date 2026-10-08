@@ -1,6 +1,6 @@
 # Working with AI assistants
 
-Sprig was designed with AI coding assistants in mind. Compiler errors carry a stable code, an exact location and a hint for the fix, and they're also available as JSON. An assistant can act on them directly instead of guessing what a paragraph of text means.
+Sprig was designed with AI coding assistants in mind. Compiler errors carry a stable code and an exact location, many come with a hint for the fix, and all of it is available as JSON. An assistant can act on them directly instead of guessing what a paragraph of text means.
 
 To be clear about what that does and doesn't buy you: it doesn't guarantee that AI-written code is correct. What it does give you is that when something goes wrong, both you and the assistant can see where and why, and every fix stays easy for a person to review.
 

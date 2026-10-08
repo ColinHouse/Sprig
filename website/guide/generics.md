@@ -50,7 +50,7 @@ let entries: List[Entry[String, Int]] = [] # 写在类型里的，总是要写
 - `null`、`[]` 和 `{}` 什么也说明不了。有元素的列表或 map 字面量按元素算。如果直接传给普通的 `T`，字面量就作为一个整体来算，而且只在别的实参都没说明 `T` 时才算数：单独写 `identity([1])` 得到 `MutableList[Int]`，和 `let xs = [1]` 一样；旁边有一个 `List[Int]` 的值时，这个字面量也会变成 `List[Int]`。
 - lambda 的参数类型是写出来的，所以按写的算；它的函数体给出结果类型。
 - 几个实参给出的类型不一样时，取其他类型都能放进去的那一个：`Int32` 和 `Int` 得到 `Int`，同一个 variant 的两种情况得到这个 variant。找不到这样的类型，调用就报错。
-- Java 方法和 `ArrayList[String]` 这样的 Java 泛型类型，类型参数总是要写。
+- `ArrayList[String]` 这样的 Java 泛型类型，类型参数总是要写。Java 泛型方法自己的类型参数，实参能唯一确定时会推断（`Collections.sort(names)`）；只出现在返回值里的，或者只能靠 lambda 确定的，要自己写，见 [JVM 互操作](/guide/jvm-interop)。
 
 算出来以后，每个实参都会按算出的类型检查一遍，和你自己写出类型参数完全一样。实参说明不了的时候，编译器会停下来，请你写出来：
 

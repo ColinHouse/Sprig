@@ -2,7 +2,7 @@
 
 Sprig 会先编译成 Java 再运行，所以 JDK 自带的类和 Maven 上的 Java 库都能直接用。这页讲怎么导入、调用 Java 类，以及 Sprig 在和 Java 交接的地方会做哪些检查。
 
-总的原则偏保守：Java 没法保证一个返回值不是 `null`，Sprig 就当它可能是 `null`，唯一的例外是 `toString()`，它总是返回 `String`；反过来，你传给 Java 的参数一律不能是 `null`。
+总的原则偏保守：Java 没说一个返回值不会是 `null`，Sprig 就当它可能是 `null`。`toString()` 总是返回 `String`，标了非空注解的结果也是普通的值（见下面）。反过来，你传给 Java 的参数默认不能是 `null`，标了 `@Nullable` 的参数除外。
 
 完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。
 
@@ -34,7 +34,7 @@ true
 
 返回基本类型（`long`、`int`、`double`、`boolean` 等）的方法不会返回 `null`，结果可以直接用。
 
-反过来，传给 Java 的参数一律不能是 `null`，参数类型是 `Object` 也一样。所以 `T?` 类型的值要先检查，再传给 Java。Sprig 会读取可空性注解：标了 `@NotNull`/`@NonNull`（或者所在类、包标了 `@NullMarked`）的结果就是普通的 `T`，标了 `@Nullable` 的参数接受 `T?` 或 `null`。运行时可见的注解（JSpecify、JSR-305）通过反射读，只保留在 class 文件里的注解（比如 `org.jetbrains.annotations`）直接从 class 文件里读。Minecraft 本身用 JSpecify 标注，每个包都有 `@NullMarked`，所以 `Item.use`、`Component.literal` 拿到的就是普通值，只有标了 `@Nullable` 的成员才是 `T?`。
+反过来，传给 Java 的参数默认不能是 `null`，参数类型是 `Object` 也一样。所以 `T?` 类型的值要先检查，再传给 Java。Sprig 会读取可空性注解：标了 `@NotNull`/`@NonNull`（或者所在类、包标了 `@NullMarked`）的结果就是普通的 `T`，标了 `@Nullable` 的参数接受 `T?` 或 `null`。运行时可见的注解（JSpecify、JSR-305）通过反射读，只保留在 class 文件里的注解（比如 `org.jetbrains.annotations`）直接从 class 文件里读。Minecraft 本身用 JSpecify 标注，每个包都有 `@NullMarked`，所以 `Item.use`、`Component.literal` 拿到的就是普通值，只有标了 `@Nullable` 的成员才是 `T?`。
 
 ## 类型对照
 

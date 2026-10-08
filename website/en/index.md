@@ -23,7 +23,7 @@ features:
   - title: Check for null first
     details: A value that can be null is written T?, and you check it before use. Objects returned by Java count too.
   - title: Errors you can act on
-    details: Every error has a stable code, an exact location and a fix hint. Ask for JSON and hand it to your editor or AI assistant.
+    details: Every error has a stable code and an exact location, and many come with a fix hint. Ask for JSON and hand it to your editor or AI assistant.
 ---
 
 ## A first look
@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## Can I use it yet?
 
-Sprig is young. The current release is the experimental v0.7.1-beta.1. Everything listed above works today, and each item has an example you can run. It has no inheritance and no variance, and it isn't meant for production use yet. Contract classes (methods without bodies) and type arguments inferred from a call's arguments are newer than v0.7.1-beta.1; see [release status](/en/project/release-status), and it isn't meant for production use. The full list is in [known limitations](/en/reference/language/known-limitations).
+Sprig is young. The current release is the experimental v0.7.1-beta.1. Everything listed above works today, and each item has an example you can run. It has no inheritance and no variance, and it isn't meant for production use yet. This site follows the `main` branch, so some of what it shows, such as contract classes, `if` expressions, function references and `@std/concurrent`, is newer than v0.7.1-beta.1; [release status](/en/project/release-status) has the full list. The limits are listed in [known limitations](/en/reference/language/known-limitations).
 
 ## Up and running in five minutes
 

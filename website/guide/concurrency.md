@@ -25,7 +25,7 @@ print(concurrent.scope(count_all))
 - **第一个失败会取消其他兄弟任务**，并由 `scope()` 作为 `Error` 重新抛出，所以 `scope` 声明了 `throws Error`。就算 body 是因为在等一个被这次失败取消掉的任务才失败的，你拿到的也是那个失败，而不是 "task was cancelled"。任务里的失败也会由那个任务的 `await()` 报出来；在那里接住它并不能撤销作用域的失败。要容忍某个任务失败，就在任务体里处理掉，比如返回 `Ok`/`Failed` 这样的 variant。`await_or(fallback)` 并不会容忍失败：任务失败或被取消时它给出兜底值，而且没有 `throws` 子句，所以一个任务体可以用它等另一个任务，但作用域照样会失败。
 - 主动取消的任务（`task.cancel()`、`s.cancel_all()`、线程池的 `shutdown_now()`）不算失败。取消会中断任务的线程，在阻塞点生效：`sleep`、`await`、通道的 `receive`、尊重中断的 Java I/O。一个从不阻塞的循环会跑到头。所以 `cancel()` 之后 `is_done()` 马上就是 `true`，哪怕任务体还在跑、要到下一个阻塞点才停；作用域照样会等任务体结束。
 - 没有不属于作用域的 `spawn`：任务永远属于启动它的那个作用域，body 返回之后再启动任务会报 `Error`。
-- 任务体是普通的函数值，只能捕获 `let` 绑定和参数，所以其他语言里那种对局部变量的数据竞争在 Sprig 里写不出来。共享的 `MutableList`、`MutableMap` 和 `var` 字段不受保护，见下面的锁和通道。
+- 任务体是普通的函数值，捕获不了函数里的 `var` 局部变量，所以其他语言里那种对局部变量的数据竞争在 Sprig 里写不出来。其余共享的东西都不受保护：模块顶层的 `var`（任务体能读到它，它调用的函数也能改它），共享的 `MutableList`、`MutableMap`，以及 `var` 字段。要在任务之间共享，就用下面的计数器、锁或通道。
 
 ## 没有结果的任务：run 和 scope_run
 
@@ -129,7 +129,7 @@ print(gate.await_within(1000))
 - 在任务体调用的具名函数里 `try`/`catch`，把结果转成 `variant`（比如 `Ok`/`Failed`）返回；
 - 让它失败：`await()` 在等待处报出来，作用域结束时再报一次。`await_or(fallback)` 没有 `throws` 子句，一个任务体可以用它等另一个任务。
 
-任务体常用的模块函数（`send`、`receive`、`receive_within`、`sleep`、`run`、`locked`）都没有 `throws` 子句，参数不合法时在运行时报 `Error`。`concurrent.sleep(millis)` 和 `time.sleep` 的区别就在这里：正在 `sleep` 的任务被取消时会立刻结束。
+任务体常调用的这些都没有 `throws` 子句：通道的 `send`、`receive` 和 `receive_within`，`concurrent.sleep`，锁的 `run`，以及 `concurrent.locked`；参数不合法时在运行时报 `Error`。`concurrent.spawn` 和 `concurrent.run` 声明了 `throws Error`，任务体不能直接调用它们。`concurrent.sleep(millis)` 和 `time.sleep` 的区别就在这里：正在 `sleep` 的任务被取消时会立刻结束。
 
 ## 为什么不是 async/await
 

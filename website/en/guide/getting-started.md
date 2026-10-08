@@ -25,6 +25,10 @@ sprig version
 
 To upgrade later, run `sprig upgrade --check` to see whether there's a new version, then `sprig upgrade`.
 
+::: tip You get v0.7.1-beta.1
+The install script installs the newest published release, v0.7.1-beta.1 today. This site follows the `main` branch, and some of what it shows (`if` expressions, contract classes, `@std/concurrent`, `sprig build --bundle`) is newer. To use those, build from source as described [below](#windows-and-building-from-source); [release status](/en/project/release-status) lists the differences.
+:::
+
 ### Manual download
 
 You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1), verify it and unpack it yourself:

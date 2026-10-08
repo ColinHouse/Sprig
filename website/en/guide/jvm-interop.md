@@ -2,7 +2,7 @@
 
 Sprig compiles to Java before it runs, so the JDK's classes and Java libraries from Maven are right there for you to use. This page covers importing and calling Java classes, and the checks Sprig makes where your code meets Java.
 
-The general rule is cautious. Java can't promise that a returned value isn't `null`, so Sprig assumes it might be; the one exception is `toString()`, which is always a `String`. In the other direction, nothing you pass to Java may be `null`.
+The general rule is cautious. Unless Java says otherwise, Sprig assumes a returned value might be `null`: `toString()` is always a `String`, and a result the library annotates as non-null is a plain value (see below). In the other direction, what you pass to Java may not be `null` unless the parameter is annotated `@Nullable`.
 
 The [JVM interop reference](/en/reference/jvm/interop) has the complete rules. To plug Sprig into an existing build such as Gradle or Loom, see [Gradle integration](/en/guide/gradle) and [Fabric mods](/en/guide/fabric).
 
@@ -34,7 +34,7 @@ true
 
 Methods that return primitives (`long`, `int`, `double`, `boolean` and so on) never return `null`, so you can use those results directly.
 
-In the other direction, an argument you pass to Java can never be `null`, even when the parameter type is `Object`. Check a `T?` value before you pass it to Java. Sprig reads nullability annotations: a result annotated `@NotNull`/`@NonNull` (or declared in a `@NullMarked` class or package) is a plain `T`, and a parameter annotated `@Nullable` accepts a `T?` or `null`. Run-time visible annotations (JSpecify, JSR-305) are read through reflection; annotations that live only in class files, like `org.jetbrains.annotations`, are read from the class file. Minecraft itself is JSpecify-annotated with `@NullMarked` on every package, so `Item.use` or `Component.literal` give you a plain value and only its `@Nullable` members are `T?`.
+In the other direction, an argument you pass to Java can't be `null` by default, even when the parameter type is `Object`. Check a `T?` value before you pass it to Java. Sprig reads nullability annotations: a result annotated `@NotNull`/`@NonNull` (or declared in a `@NullMarked` class or package) is a plain `T`, and a parameter annotated `@Nullable` accepts a `T?` or `null`. Run-time visible annotations (JSpecify, JSR-305) are read through reflection; annotations that live only in class files, like `org.jetbrains.annotations`, are read from the class file. Minecraft itself is JSpecify-annotated with `@NullMarked` on every package, so `Item.use` or `Component.literal` give you a plain value and only its `@Nullable` members are `T?`.
 
 ## Type mapping
 
@@ -91,7 +91,7 @@ Imported Java classes and generic methods can take concrete type arguments, like
 
 - Type arguments are kept intact. You can write `List[Map[String, Int32]]` or `Host.method[String](value)`, and type arguments inherited from a superclass or interface are recognized too.
 - Results are still treated as possibly `null`, so `get` on an `ArrayList[String]` returns `String?`.
-- Type arguments of generic methods aren't inferred, so write them out.
+- A generic method's own type arguments are inferred when its arguments fix every one of them (`Collections.sort(names)`, `List.of(1, 2, 3)`); one that only the result mentions, or that only a lambda would fix, is written out (`Collectors.toList[Int]()`).
 - A raw type (one with no type arguments) can't stand in for a parameterized one. `ArrayList[String]()` works as a `List[String]`; a raw `ArrayList()` doesn't.
 - Wildcards keep their bounds: a `List<? extends Number>` result gives you `Number?` elements, a `List<? extends Number>` parameter takes an `ArrayList[Int]`, and anything that would write through `? extends` (like `add`) is rejected. Generic arrays (`T[]`) aren't supported; `sprig api` shows the reason code.
 

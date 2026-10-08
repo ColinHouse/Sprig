@@ -117,7 +117,7 @@ true
 - 提前返回也行：写了 `if x == null: return ...` 之后，后面的代码都把 `x` 当作有值。前面几个分支都提前返回的 `if/elif` 链也一样。
 - 把可能为 `null` 的值用在需要非空的地方，会报 `SPR-TYPE-NULLABLE`。
 - `var` 局部变量和类的字段都不会收窄，不管中间有没有调用函数：先把它复制到一个 `let`（`let current = name`），再判断 `current`。
-- Java 方法返回的对象一律当作可能为 `null`（`toString()` 的结果除外），见 [JVM 互操作](/guide/jvm-interop)。
+- Java 方法返回的对象默认当作可能为 `null`；例外是 `toString()` 的结果，以及库用注解标明不会为空的结果，见 [JVM 互操作](/guide/jvm-interop)。
 
 如果只是想要一个默认值，或者没有值就报错，用 `@std/nulls`（v0.6.0-beta.1 新增）可以省掉 `if`：
 

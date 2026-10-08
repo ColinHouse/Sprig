@@ -6,7 +6,7 @@ The current release is [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/relea
 |---|---|
 | Compiler | `0.7.1-beta.1` |
 | Language version | `0.8-dev` |
-| Requires | the published v0.7.1-beta.1 accepts JDK 17 or newer (the SDK doesn't include a JDK); the source on `main` and the next release require JDK 21 |
+| Requires | JDK 21 or newer for the install script and for the source on `main` (the SDK doesn't include a JDK). The published v0.7.1-beta.1 itself still runs on JDK 17 if you install its ZIP by hand |
 | License | Apache-2.0 |
 | Platforms | Linux and macOS are supported; Windows is an experimental preview |
 
@@ -42,7 +42,15 @@ Coming from v0.6? Read the upgrade section of the [v0.7.0-beta.1 release notes](
 
 ## Changes since the release
 
-This website follows the source on the repository's `main` branch, which can be ahead of the release. When a page describes something newer than v0.7.1-beta.1, it says so. So far that's quick fixes in the language server; generic calls that work out their type arguments from the arguments you pass; `if` expressions; `elif` and `else` knowing the earlier conditions are false; error classes (`conform E to Error(message)`); a `MutableList` accepted where a `List` is expected; contract classes (`conform C to Contract`); one-line classes `class Pair(first: Int, second: Int)`; named functions, module functions and methods used as values without parentheses; structured scopes over virtual threads in `@std/concurrent`; packages published to `registry/` by pull request; and a JDK 21 minimum. The draft notes for the next release are in [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md).
+This website follows the source on the repository's `main` branch, which is ahead of v0.7.1-beta.1. Not every page marks what's new, so go by this list:
+
+- Language: `if` expressions; `elif` and `else` knowing the earlier conditions are false; generic calls that work out their type arguments from the arguments you pass; contract classes (`conform C to Contract`); one-line classes `class Pair(first: Int, second: Int)`; named functions, module functions and methods used as values without parentheses; error classes (`conform E to Error(message)`); a `MutableList` accepted where a `List` is expected; `compareTo` on the number types, `String.lastIndexOf`, and comparisons with a literal such as `xs == []`.
+- Java: extending a Java class with `conform C to J(fields) as NAME`; nullability annotations; Java generic methods inferring their type arguments from the arguments; the `--classpath-file` option.
+- Libraries: structured scopes over virtual threads in `@std/concurrent`; `find_groups` in `@std/regex`, `max`, `min`, `max_by` and `min_by` in `@std/lists`, `escape_html` in `@std/text`; `app.put`, `app.patch` and `app.run_on` in sprig-web; one statement per SQL string in sprig-sqlite, and migrations checked as a whole before any runs.
+- Tools: quick fixes in the language server; `sprig build --bundle`; the compiled-class cache of `run` and `test` (`run --no-cache`); `sprig search`, `sprig publish` and packages published to `registry/` by pull request; a runtime failure inside an `@std` function reported at your line that called it.
+- A JDK 21 minimum.
+
+A few changes reject code that v0.7.1-beta.1 accepts. The one you'll meet first is the number conversions: each now has one spelling. `n.toFloat()`, `x.toInt()`, `Decimal.fromInt(n)` and `Int.parse(text)` are gone; write `n.toFloatExact()`, `x.toIntExact()`, `n.toDecimal()` and `text.toInt()`. The others (a narrower type in `elif` and `else`, library functions that now declare `throws Error`, a Float map key reached through generic code) and the full upgrade list are in the draft notes for the next release, [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md).
 
 ## How it was verified
 

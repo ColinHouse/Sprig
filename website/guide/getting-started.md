@@ -25,6 +25,10 @@ sprig version
 
 以后想升级，运行 `sprig upgrade --check` 看看有没有新版本，再用 `sprig upgrade` 升级。
 
+::: tip 装好的是 v0.7.1-beta.1
+安装脚本装的是最新发布的版本，现在是 v0.7.1-beta.1。这个网站按 `main` 分支来写，有些功能（比如 `if` 表达式、契约类、`@std/concurrent`、`sprig build --bundle`）比它新。想用这些功能，就按下面[从源码构建](#windows-和从源码构建)的步骤来；具体差别见[发布状态](/project/release-status)。
+:::
+
 ### 手动下载
 
 也可以从[发布页](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1)下载 ZIP，自己校验后解压：

@@ -6,7 +6,7 @@
 |---|---|
 | 编译器 | `0.7.1-beta.1` |
 | 语言版本 | `0.8-dev` |
-| 运行环境 | 已发布的 v0.7.1-beta.1 接受 JDK 17 或更新的版本（SDK 不附带 JDK）；`main` 上的源码和下一个版本要求 JDK 21 |
+| 运行环境 | 安装脚本和 `main` 上的源码要求 JDK 21 或更新的版本（SDK 不附带 JDK）。已发布的 v0.7.1-beta.1 本身在 JDK 17 上也能运行，但要手动下载它的 ZIP 来安装 |
 | 许可证 | Apache-2.0 |
 | 平台 | 正式支持 Linux 和 macOS；Windows 是实验性预览 |
 
@@ -42,7 +42,15 @@ v0.7.1-beta.1 修好了一次评测用真实程序和 Java 对照在 v0.7.0-beta
 
 ## 发布之后的改动
 
-网站按仓库 `main` 分支上的源码来写，源码可能比这个版本新。页面上介绍比 v0.7.1-beta.1 更新的内容时，会专门注明。目前这样的内容有：语言服务器的快速修复；泛型调用根据你传的参数算出类型参数；`if` 表达式；`elif` 和 `else` 知道前面的条件为假；错误类（`conform E to Error(message)`）；`MutableList` 可以直接当 `List` 用；契约类（`conform C to Contract`）；单行类 `class Pair(first: Int, second: Int)`；不加括号就是函数值的具名函数、模块函数和方法；`@std/concurrent` 的结构化 scope 和虚拟线程；经 pull request 发布到 `registry/` 的包；以及最低 JDK 21。下一个版本的说明草稿见 [v0.8.0-beta.1（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md)。
+网站按仓库 `main` 分支上的源码来写，比 v0.7.1-beta.1 新。不是每一页都会注明哪些内容是新的，所以请以这份清单为准：
+
+- 语言：`if` 表达式；`elif` 和 `else` 知道前面的条件为假；泛型调用根据你传的参数算出类型参数；契约类（`conform C to Contract`）；单行类 `class Pair(first: Int, second: Int)`；不加括号就是函数值的具名函数、模块函数和方法；错误类（`conform E to Error(message)`）；`MutableList` 可以直接当 `List` 用；数字类型上的 `compareTo`、`String.lastIndexOf`，以及 `xs == []` 这样直接和字面量比较。
+- Java：用 `conform C to J(字段) as 名字` 继承 Java 类；读取可空性注解；Java 泛型方法按实参推断类型参数；`--classpath-file` 选项。
+- 库：`@std/concurrent` 的结构化 scope 和虚拟线程；`@std/regex` 的 `find_groups`，`@std/lists` 的 `max`、`min`、`max_by`、`min_by`，`@std/text` 的 `escape_html`；sprig-web 的 `app.put`、`app.patch` 和 `app.run_on`；sprig-sqlite 的每个 SQL 字符串只能有一条语句，迁移在运行前先整体检查。
+- 工具：语言服务器的快速修复；`sprig build --bundle`；`run` 和 `test` 的编译缓存（`run --no-cache`）；`sprig search`、`sprig publish`，以及经 pull request 发布到 `registry/` 的包；`@std` 函数里的运行时错误指向你调用它的那一行。
+- 最低 JDK 21。
+
+有几处改动会让 v0.7.1-beta.1 能通过的代码报错。最先碰到的会是数字转换：每种只留一种写法。`n.toFloat()`、`x.toInt()`、`Decimal.fromInt(n)` 和 `Int.parse(text)` 都没有了，分别改成 `n.toFloatExact()`、`x.toIntExact()`、`n.toDecimal()` 和 `text.toInt()`。其余几处（`elif` 和 `else` 里更窄的类型、改为声明 `throws Error` 的库函数、经泛型代码传入的 Float map 键）和完整的升级说明，见下一个版本的说明草稿 [v0.8.0-beta.1（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md)。
 
 ## 怎么验证的
 

@@ -148,6 +148,7 @@ export default defineConfig({
               text: '指南',
               items: [
                 { text: '快速开始', link: '/guide/getting-started' },
+                { text: '安装与升级（英文）', link: '/en/reference/projects/install' },
                 { text: '语言速查', link: '/guide/language-tour' },
                 { text: '泛型', link: '/guide/generics' },
                 { text: '项目', link: '/guide/projects' },
@@ -305,10 +306,10 @@ export default defineConfig({
             {
               text: 'Project',
               items: [
+                { text: 'Release status', link: '/en/project/release-status' },
                 { text: 'Contributing', link: '/en/project/contributing' },
                 { text: 'AI-assisted development', link: '/en/project/contributing/ai-disclosure' },
                 { text: 'License', link: '/en/project/contributing/license-status' },
-                { text: 'Release status', link: '/en/project/release-status' },
                 { text: 'Third-party notices', link: '/en/project/contributing/third-party-notices' }
               ]
             }

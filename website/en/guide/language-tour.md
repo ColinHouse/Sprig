@@ -117,7 +117,7 @@ true
 - Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present. An `if/elif` chain whose earlier branches all return works the same way.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A `var` local or a class field never narrows, whether or not a function is called in between: copy it into a `let` (`let current = name`) and check that.
-- Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).
+- Objects returned by Java methods are treated as possibly `null`, except a `toString()` result and results the library annotates as non-null; see [JVM interop](/en/guide/jvm-interop).
 
 When all you want is a fallback value or an error, `@std/nulls` (new in v0.6.0-beta.1) saves the `if`:
 

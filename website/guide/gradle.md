@@ -32,7 +32,7 @@ sprig {
 }
 ```
 
-用 Loom 开发 Minecraft 模组时，把 `targetSourceSet` 设成 `client`，完整的项目见 [Fabric 模组](/guide/fabric)。
+用 Loom 开发 Minecraft 模组时，物品、方块这类两端都要用的内容放进 `main`，只在客户端运行的模组才设成 `client`。完整的项目见 [Fabric 模组](/guide/fabric)。
 
 ## 日常使用
 
