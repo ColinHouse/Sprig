@@ -66,8 +66,8 @@ public final class Main {
             exit = dispatch(args);
         } catch (IOException e) {
             if (jsonRequested(args)) {
-                printFatalJson(args, Codes.JVM_INTERNAL, "I/O error: " + e.getMessage());
-            } else System.err.println("sprig: i/o error: " + e.getMessage());
+                printFatalJson(args, Codes.JVM_INTERNAL, "I/O error: " + ioErrorDetail(e));
+            } else System.err.println("sprig: i/o error: " + ioErrorDetail(e));
             exit = 2;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -1962,6 +1962,21 @@ public final class Main {
             if (arg.equals("--json")) return true;
         }
         return false;
+    }
+
+    /**
+     * The message of a fatal I/O error with where it came from: an unexpected
+     * "Stream closed" or "Broken pipe" is only diagnosable with its origin, and
+     * the CLI has no other place to report an exception that escaped a command.
+     */
+    static String ioErrorDetail(IOException e) {
+        StringBuilder detail = new StringBuilder(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+        detail.append(" (").append(e.getClass().getName());
+        StackTraceElement[] trace = e.getStackTrace();
+        for (int i = 0; i < Math.min(2, trace.length); i++) {
+            detail.append(i == 0 ? " at " : ", ").append(trace[i]);
+        }
+        return detail.append(')').toString();
     }
 
     private static void printFatalJson(String[] args, String code, String message) {

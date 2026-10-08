@@ -167,7 +167,6 @@ public final class JavaRunner {
         }
         if (!streamOutput) process.getOutputStream().close();
         Result result = new Result();
-        boolean forwarded = true;
         try {
             if (timeoutMillis <= 0) result.exitCode = process.waitFor();
             else if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
@@ -181,21 +180,25 @@ public final class JavaRunner {
         finally {
             // destroy() closes the program's streams. Once the program has ended,
             // let the forwarder pass on all it wrote and reach the end of the
-            // stream first; closing it under the forwarder made its last read fail
-            // with "Stream closed" although nothing was lost. A grandchild that
-            // keeps the pipe open is not waited for longer than two seconds.
+            // stream first. A grandchild that keeps the pipe open is not waited
+            // for longer than two seconds.
             if (outputForwarder != null && !process.isAlive()) {
                 outputForwarder.join(2000);
             }
-            forwarded = outputForwarder == null || !outputForwarder.isAlive();
             process.destroy();
             removeHook(cleanup);
         }
         if (outputForwarder != null) {
             outputForwarder.join();
-            // Only a failure while forwarding is the run's; one after destroy()
-            // closed a stream the forwarder was still reading is not.
-            if (forwarded && outputFailure.get() != null) throw outputFailure.get();
+            // A read failure on the program's stdout pipe is not the run's failure:
+            // the program has ended, its exit status and stderr are the outcome, and
+            // every byte read before the failure was forwarded. The JDK closes the
+            // pipe under a reader when the process exits or destroy() runs, which
+            // surfaced as a spurious "sprig: i/o error: Stream closed" on macOS.
+            IOException failure = outputFailure.get();
+            if (failure != null && System.getenv("SPRIG_STACKTRACE") != null) {
+                System.err.println("sprig: note: the program's output stream failed after it ended: " + failure);
+            }
         }
         result.outputWritten = outputWritten.get();
         // A program (or a Java library it calls) may write bytes that are not
