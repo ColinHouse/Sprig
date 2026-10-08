@@ -1,0 +1,4 @@
+# 门面模块：把别的模块的名字转出来。
+import "./math_module.spr" as math
+
+export math.square

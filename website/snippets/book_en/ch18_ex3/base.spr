@@ -1,0 +1,2 @@
+# The base module for exercise 3: it can only initialize once.
+print("base initialized")

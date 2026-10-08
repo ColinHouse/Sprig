@@ -1,0 +1,4 @@
+# The facade for exercise 2.
+import "./double.spr" as source
+
+export source.double

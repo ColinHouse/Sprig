@@ -1,0 +1,4 @@
+# The import has the alias math, but the call does not go through it.
+import "./math_module.spr" as math
+
+print(square(7))

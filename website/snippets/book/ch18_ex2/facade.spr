@@ -1,0 +1,4 @@
+# 练习 2 的门面。
+import "./double.spr" as source
+
+export source.double

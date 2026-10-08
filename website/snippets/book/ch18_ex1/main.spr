@@ -1,0 +1,4 @@
+# 练习 1 的入口。
+import "./double.spr" as double
+
+print(double.double(21))

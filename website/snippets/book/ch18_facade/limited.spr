@@ -1,0 +1,4 @@
+# 门面只转出了 square，所以 pi_approx 看不到。
+import "./facade.spr" as facade
+
+print(facade.pi_approx)

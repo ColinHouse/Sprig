@@ -1,0 +1,5 @@
+# Exercise 3: import the same module twice, under two aliases.
+import "./base.spr" as first
+import "./base.spr" as second
+
+print("main done")

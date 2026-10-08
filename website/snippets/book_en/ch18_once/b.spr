@@ -1,0 +1,4 @@
+# This module imports d, then prints its own line.
+import "./d.spr" as d
+
+print("b done")
