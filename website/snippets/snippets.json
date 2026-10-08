@@ -3,6 +3,9 @@
   "executable": [
     "book/appendix_a_precedence.spr",
     "book/appendix_a_semantics.spr",
+    "book/appendix_c_builtins.spr",
+    "book/appendix_c_contextual.spr",
+    "book/appendix_c_methods.spr",
     "book/ch01_hello.spr",
     "book/ch02_bindings.spr",
     "book/ch02_bool.spr",
