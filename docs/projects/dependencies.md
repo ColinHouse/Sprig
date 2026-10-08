@@ -1,4 +1,4 @@
-# Dependency contract (main, after v0.7.1-beta.1)
+# Dependency contract (main, after v0.8.0-beta.1)
 
 `sprig resolve`, `sprig add` and `sprig remove` are explicit dependency
 resolution commands: they may write `sprig.lock` and follow branches and tags.
@@ -8,7 +8,7 @@ that commit (`--offline` makes that an error instead).
 A source file explicitly outside the discovered project source root remains standalone.
 The public v0.2 release did not implement Maven. These rules describe the
 Maven/JVM dependency support first shipped in v0.4.0-alpha.1 and remains part of
-the v0.7.1-beta.1 SDK.
+the v0.8.0-beta.1 SDK.
 
 ## Sprig packages
 

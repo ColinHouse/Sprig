@@ -31,6 +31,6 @@ Packages are source distributions reached by path or Git. The repository's
 `registry/` directory is the default package registry: `sprig search` lists
 these libraries and `sprig add NAME` adds one as a Git dependency at its
 released tag. Use Maven coordinates for third-party JVM dependencies.
-The v0.7.1-beta.1 SDK includes these first-party packages and their documented
+The v0.8.0-beta.1 SDK includes these first-party packages and their documented
 examples. They remain experimental Beta APIs; check each package guide and the
 installed SDK's capabilities before adopting them.
