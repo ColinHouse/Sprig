@@ -1,0 +1,3 @@
+# A full line starting with # is a comment; the compiler ignores it.
+print("Hello, Sprig")
+print("One file, two lines.")
