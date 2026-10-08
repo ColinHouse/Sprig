@@ -417,6 +417,37 @@ def main():
                   and "SPR-DEP-OFFLINE" in fresh.stdout + fresh.stderr,
                   fresh.stdout + fresh.stderr)
 
+            # A dependency's own .gitattributes must not change its checkout. The
+            # Sprig repository itself asks for CRLF in .bat files, and the cache
+            # compares every checked-out file with the commit's blob, byte for byte,
+            # so a converted file failed verification and the dependency, the default
+            # registry included, could not be resolved.
+            attributed = base / "attributed-work"
+            attributed.mkdir()
+            git(attributed, "init", "-q", "-b", "main", ".")
+            write(attributed / ".gitattributes",
+                  "* text=auto eol=lf\n*.bat text eol=crlf\n*.spr ident\n")
+            write(attributed / "sprig.toml",
+                  '[project]\nname = "attributed"\nversion = "0.1.0"\nlanguage = "0.8"\n'
+                  'exports = ["lib.spr"]\n')
+            write(attributed / "src/lib.spr", "# $Id$\nfunc value() -> Int:\n    return 7\n")
+            write(attributed / "tools/run.bat", "@echo off\necho run\n")
+            git(attributed, "add", "-A")
+            git(attributed, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "A")
+            project(base / "attributed-app", "attributed-app")
+            write(base / "attributed-app/sprig.toml",
+                  '[project]\nname = "attributed-app"\nversion = "0.1.0"\nlanguage = "0.8"\n\n'
+                  '[[dependency]]\nname = "attributed"\n'
+                  f'git = "{attributed.as_uri()}"\nbranch = "main"\n')
+            write(base / "attributed-app/src/main.spr",
+                  'import "@attributed/lib.spr" as lib\nprint(lib.value())\n')
+            attributed_resolve = run(base / "attributed-app", "resolve")
+            check("git-checkout-ignores-dependency-attributes", attributed_resolve.returncode == 0,
+                  attributed_resolve.stdout + attributed_resolve.stderr)
+            attributed_run = run(base / "attributed-app", "run")
+            check("git-attributed-dependency-runs", attributed_run.returncode == 0
+                  and attributed_run.stdout == "7\n", attributed_run.stdout + attributed_run.stderr)
+
     print(f"dependency resolver: {CHECKS} checks passed")
     return 0
 
