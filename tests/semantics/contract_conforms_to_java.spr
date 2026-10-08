@@ -1,0 +1,13 @@
+import java.lang.Runnable as Runnable
+
+class Runner:
+    func run() -> Unit
+
+class Real:
+    func run() -> Unit:
+        print("real")
+
+conform Runner to Runnable
+conform Real to Runner
+let r: Runnable = Real()
+r.run()

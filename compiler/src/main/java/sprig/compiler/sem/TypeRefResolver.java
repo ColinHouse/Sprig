@@ -14,6 +14,7 @@ import sprig.compiler.diag.Newcomer;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.types.ClassType;
+import sprig.compiler.types.FunctionType;
 import sprig.compiler.types.JavaType;
 import sprig.compiler.types.ListType;
 import sprig.compiler.types.MapType;
@@ -44,6 +45,10 @@ public final class TypeRefResolver {
     /** Why Float and Float32 are not Map keys; the same words wherever the rule is applied. */
     static final String FLOAT_MAP_KEY =
             "Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality";
+
+    /** Why function values are not Map keys; the same words wherever the rule is applied. */
+    static final String FUNCTION_MAP_KEY =
+            "Function values cannot be Map keys: a Map key needs equality, and function values cannot be compared";
 
     public TypeRefResolver(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
@@ -729,6 +734,12 @@ public final class TypeRefResolver {
                     diagnostics.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE,
                             FLOAT_MAP_KEY, module.uri, ref.args.get(0).span)
                             .withHint("Use an explicit quantized Int key, or a Decimal key when decimal identity is intended."));
+                    return NativeType.ERROR;
+                }
+                if (key.nonNull() instanceof FunctionType) {
+                    diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                            FUNCTION_MAP_KEY, module.uri, ref.args.get(0).span)
+                            .withHint(TypeChecker.FUNCTION_MAP_KEY_HINT));
                     return NativeType.ERROR;
                 }
                 if (value == NativeType.UNIT || key == NativeType.NULL) {

@@ -92,10 +92,13 @@ simple name so every library's spelling counts:
 - a parameter annotated `Nullable` or `CheckForNull` accepts a `T?` or `null`
   when the value crosses without conversion (an `Int?` is already a `Long`; an
   `Int?` for an `Integer` slot would need narrowing and stays rejected);
-- `NullMarked` or `NonNullApi` on a class, an enclosing class, the package or
-  the module, and `MethodsReturnNonnullByDefault`/`FieldsAreNonnullByDefault`
-  on a package, make unannotated results and fields non-null; `NullUnmarked`
-  cancels the default. Parameters are never made nullable by a default.
+- `NullMarked` or `NonNullApi` on a method, a class, an enclosing class, the
+  package or the module, and `MethodsReturnNonnullByDefault`/
+  `FieldsAreNonnullByDefault` on a package, make unannotated results and
+  fields non-null; `NullUnmarked` cancels the default. The innermost marker
+  wins, as JSpecify specifies: a `@NullUnmarked` method inside a
+  `@NullMarked` class has a nullable result again. Parameters are never made
+  nullable by a default.
 
 `sprig api` reports the outcome: `nullableResult` is false and
 `sprigReturnType`/`sprigType` drop the `?` for a non-null result or field, and

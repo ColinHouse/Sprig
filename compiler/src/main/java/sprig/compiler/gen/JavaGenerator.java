@@ -2317,8 +2317,12 @@ public final class JavaGenerator {
 
     private String jvmArgument(Expr arg, sprig.compiler.sem.JvmMember member, int index) {
         Class<?>[] params = member.executable.getParameterTypes();
-        if (index < params.length && arg.type != null && arg.type.nonNull() instanceof FunctionType
-                && sprig.compiler.sem.JavaTypes.functionalMethod(params[index]) != null) {
+        Class<?> functional = index < params.length
+                ? sprig.compiler.sem.JavaTypes.boundFormalClass(
+                        member.executable.getGenericParameterTypes()[index], params[index], member.bindings)
+                : null;
+        if (functional != null && arg.type != null && arg.type.nonNull() instanceof FunctionType
+                && sprig.compiler.sem.JavaTypes.functionalMethod(functional) != null) {
             return javaCallableAdapter(arg, member, index);
         }
         Class<?> param = index < params.length ? jvmParameter(member, index) : Object.class;
@@ -2334,6 +2338,12 @@ public final class JavaGenerator {
     private String javaCallableAdapter(Expr arg, sprig.compiler.sem.JvmMember member, int index) {
         Class<?> raw = member.executable.getParameterTypes()[index];
         java.lang.reflect.Type generic = member.executable.getGenericParameterTypes()[index];
+        // A formal erased to Object but bound through the receiver is its bound
+        // interface here, as scoreBoundFormal already judged it.
+        generic = sprig.compiler.sem.JavaTypes.boundFormalType(generic, member.bindings);
+        raw = sprig.compiler.sem.JavaTypes.boundFormalClass(
+                member.executable.getGenericParameterTypes()[index],
+                member.executable.getParameterTypes()[index], member.bindings);
         java.lang.reflect.Method sam = sprig.compiler.sem.JavaTypes.functionalMethod(raw);
         Map<java.lang.reflect.TypeVariable<?>, Type> local =
                 sprig.compiler.sem.JavaTypes.functionalBindings(generic, raw, member.bindings);

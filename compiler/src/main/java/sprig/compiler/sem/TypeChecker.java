@@ -148,6 +148,10 @@ public final class TypeChecker {
     /** The hint for a Float or Float32 map key that a map literal gives it. */
     static final String FLOAT_MAP_KEY_HINT = "Use an explicit quantized Int key or Decimal key.";
 
+    /** The hint for a function-valued Map key, written or inferred. */
+    static final String FUNCTION_MAP_KEY_HINT =
+            "Use a String, Int, enum or variant key, or key the map by a value the function computes.";
+
     public TypeChecker(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
         this.reported = diagnostics;
@@ -231,9 +235,14 @@ public final class TypeChecker {
         }
         // An initializer that fails gives its binding the error type, which is
         // silent afterwards, so the rest of the module is still checked and
-        // reports its own errors in the same round. The statement-order check of
-        // the same initializer repeats its reports, which the sink drops.
-        for (Symbol symbol : inference.globalInitializers.keySet()) inference.inferGlobal(symbol);
+        // reports its own errors in the same round. The statements are checked
+        // here in source order with the same early-exit narrowing as the real
+        // pass, so an unannotated global after `if d == null: throw` infers the
+        // narrowed type too. The statement-order check below repeats the same
+        // reports, which the sink drops.
+        inference.narrowing.push(new HashMap<>());
+        inference.checkSequence(module.topStatements);
+        inference.narrowing.pop();
         prepareDefaultEffects();
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
@@ -925,6 +934,51 @@ public final class TypeChecker {
                     .withHint("Comparable types are Int, Int32, Float, Float32, Decimal, BigInt and String;"
                             + " for other types, pass an explicit comparison function."));
         }
+    }
+
+    /** Each {@code requires X: Equatable} of the callee must hold for its type argument at this use. */
+    private void checkEquatableArguments(Decl.Func func, Map<TypeParameterType, Type> map, Span span) {
+        for (Stmt stmt : func.body) {
+            if (!(stmt instanceof Stmt.Requires requires)) break;
+            if (!requires.capability.equals("Equatable")) continue;
+            Type argument = null;
+            for (Map.Entry<TypeParameterType, Type> entry : map.entrySet()) {
+                if (entry.getKey().name.equals(requires.parameter)) argument = entry.getValue();
+            }
+            // No substitution: a call from inside the generic declaration itself.
+            if (argument == null) argument = activeTypeParams.get(requires.parameter);
+            if (argument == null || argument == NativeType.ERROR || isEquatableType(argument)) continue;
+            if (argument instanceof TypeParameterType parameter) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                        "Type parameter '" + parameter.name + "' is not Equatable here, but '" + func.name
+                                + "' requires an Equatable type argument",
+                        module.uri, span)
+                        .withTypes("Equatable type", argument.display())
+                        .withHint("Begin this function with 'requires " + parameter.name + ": Equatable'."));
+                continue;
+            }
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                    "Type argument '" + argument.display() + "' for " + requires.parameter
+                            + " is not Equatable, which '" + func.name + "' requires",
+                    module.uri, span)
+                    .withTypes("Equatable type", argument.display())
+                    .withHint("Every value type is Equatable except a function value; compare what the functions "
+                            + "compute instead."));
+        }
+    }
+
+    /**
+     * Equatable is every value type whose values compare with {@code ==}, except
+     * a function value, which has no value equality; a type parameter is
+     * Equatable where its function declares {@code requires X: Equatable}.
+     */
+    private boolean isEquatableType(Type type) {
+        if (type instanceof TypeParameterType parameter) {
+            return currentFunction != null
+                    && currentFunction.equatableParams.contains(parameter.name)
+                    && activeTypeParams.containsKey(parameter.name);
+        }
+        return !(type.nonNull() instanceof FunctionType);
     }
 
     /** Whether equality on this parameter is justified by a requires clause. */
@@ -1670,6 +1724,7 @@ public final class TypeChecker {
         recordGenericUse(func, args, subscript.span);
         Map<TypeParameterType, Type> map = Substitution.forFunction(func, args);
         checkComparableArguments(func, map, subscript.span);
+        checkEquatableArguments(func, map, subscript.span);
         Type returnType = Substitution.apply(func.returnType, map);
         ResolvedCall resolved = resolvedCall(call,
                 func.isMethod() ? ResolvedCall.Kind.METHOD : ResolvedCall.Kind.FUNCTION, returnType);
@@ -2379,7 +2434,12 @@ public final class TypeChecker {
                 valueType = inferredValue == null ? NativeType.ERROR : inferredValue;
             }
         }
-        if (keyType.nonNull() == NativeType.FLOAT || keyType.nonNull() == NativeType.FLOAT32) {
+        if (keyType.nonNull() instanceof FunctionType) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                    TypeRefResolver.FUNCTION_MAP_KEY, module.uri, lit.span)
+                    .withHint(FUNCTION_MAP_KEY_HINT));
+            keyType = NativeType.ERROR;
+        } else if (keyType.nonNull() == NativeType.FLOAT || keyType.nonNull() == NativeType.FLOAT32) {
             diagnostics.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE,
                     TypeRefResolver.FLOAT_MAP_KEY, module.uri, lit.span).withHint(FLOAT_MAP_KEY_HINT));
             keyType = NativeType.ERROR;
@@ -2757,6 +2817,7 @@ public final class TypeChecker {
                         return inferFunctionCall(func, symbol, call, ResolvedCall.Kind.METHOD);
                     }
                     checkComparableArguments(func, Map.of(), call.span);
+                    checkEquatableArguments(func, Map.of(), call.span);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
                     resolved.symbol = symbol;
                     resolved.methodDecl = func;
@@ -2859,6 +2920,7 @@ public final class TypeChecker {
                     Decl.Func func = field.methodDecl;
                     Map<TypeParameterType, Type> map = field.substitution;
                     checkComparableArguments(func, map, call.span);
+                    checkEquatableArguments(func, map, call.span);
                     Type returnType = Substitution.apply(func.returnType, map);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, returnType);
                     resolved.symbol = func.symbol;
@@ -3028,10 +3090,10 @@ public final class TypeChecker {
             @Override
             public Type typeOf(Expr part) {
                 if (part == current[0] && !takesExpectedType(part)) {
-                    int before = diagnostics.errorCount();
+                    int before = diagnostics.errorReportCount();
                     Type type = checkExpr(part, null);
                     inference.checked.put(part, type);
-                    if (diagnostics.errorCount() != before) {
+                    if (diagnostics.errorReportCount() != before) {
                         inference.broken.add(part);
                         return null;
                     }
@@ -3146,7 +3208,7 @@ public final class TypeChecker {
         if (probing == 0) {
             return false;
         }
-        if (!inference.valid && diagnostics.errorCount() == errorsBefore) {
+        if (!inference.valid && diagnostics.errorReportCount() == errorsBefore) {
             diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
                     "Cannot infer type arguments", module.uri, span));
         }
@@ -3155,7 +3217,7 @@ public final class TypeChecker {
 
     /** A generic function called without type arguments: lists.sorted(names). */
     private Type inferFunctionCall(Decl.Func func, Symbol symbol, Expr.Call call, ResolvedCall.Kind kind) {
-        int errors = diagnostics.errorCount();
+        int errors = diagnostics.errorReportCount();
         List<GenericSlot> slots = new ArrayList<>();
         int count = Math.min(call.args.size(), func.params.size());
         for (int i = 0; i < count; i++) {
@@ -3178,6 +3240,7 @@ public final class TypeChecker {
         }
         if (inference.valid) {
             checkComparableArguments(func, map, calleeSpan(call));
+            checkEquatableArguments(func, map, calleeSpan(call));
         } else if (call.args.size() == func.params.size() && !call.hasNamedArgs()) {
             // A wrong argument count or named arguments explain a missing type argument themselves.
             reportUninferred(func, inference, callee, typeArgs -> callee + typeArgs + "(...)", call.span);
@@ -3189,7 +3252,7 @@ public final class TypeChecker {
 
     /** A generic class constructed without type arguments: Box(value=42). */
     private Type inferClassConstruction(Decl.ClassDecl decl, Symbol symbol, Expr.Call call) {
-        int errors = diagnostics.errorCount();
+        int errors = diagnostics.errorReportCount();
         List<GenericSlot> slots = new ArrayList<>();
         Set<String> given = new HashSet<>();
         // Positional, unknown or missing fields explain a missing type argument themselves.
@@ -3239,7 +3302,7 @@ public final class TypeChecker {
     /** A case of a generic variant constructed without type arguments: Option.Some(value=1). */
     private Type inferVariantConstruction(Decl.VariantDecl decl, Decl.VariantCase variantCase,
                                           Expr.FieldAccess access, Expr.Call call) {
-        int errors = diagnostics.errorCount();
+        int errors = diagnostics.errorReportCount();
         if (access.receiver instanceof Expr.FieldAccess qualifier) {
             resolveFieldAccess(qualifier, false); // module.Variant: recorded for tooling, like any member
         }
@@ -3354,7 +3417,7 @@ public final class TypeChecker {
      * was reported before the call.
      */
     private void requireAnError(Inference inference, int errorsBefore, String name, String form, Span span) {
-        if (inference.valid || inference.rejected || diagnostics.errorCount() != errorsBefore) {
+        if (inference.valid || inference.rejected || diagnostics.errorReportCount() != errorsBefore) {
             return;
         }
         if (!inference.solution.blocked.isEmpty() && errorsBefore > 0) {
@@ -5301,8 +5364,14 @@ public final class TypeChecker {
             if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
             return 4;
         }
-        if (arg.nonNull() instanceof FunctionType && JavaTypes.functionalMethod(raw[index]) != null) {
-            return scoreJavaCallable(generic[index], raw[index], arg, bindings);
+        if (arg.nonNull() instanceof FunctionType) {
+            // The formal may be a type variable erased to Object and bound by
+            // the receiver: AtomicReference[Runnable].set(V) is Runnable here.
+            Class<?> functionalClass = JavaTypes.boundFormalClass(generic[index], raw[index], bindings);
+            if (JavaTypes.functionalMethod(functionalClass) != null) {
+                return scoreJavaCallable(JavaTypes.boundFormalType(generic[index], bindings),
+                        functionalClass, arg, bindings);
+            }
         }
         if (JavaTypes.capturedWrite(generic[index], bindings)) {
             // add(E) or addAll(Collection<? extends E>) on a List<? extends Number>

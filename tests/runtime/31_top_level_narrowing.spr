@@ -21,3 +21,17 @@ func area() -> Int:
     return rows * cols
 
 print(area())
+
+# An unannotated top-level binding infers through the narrowing too: the
+# initializer is typed in statement order, like a function body's.
+let product = rows * cols
+print(product)
+let copy = rows
+print(copy + 1)
+var mutable_copy = rows
+print(mutable_copy)
+let sign = if rows > 0:
+    "positive"
+else:
+    "non-positive"
+print(sign)

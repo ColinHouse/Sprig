@@ -715,7 +715,7 @@ public final class NameResolver {
                     // value expression in this scope (e.g. a Java explicit
                     // generic call Shapes.repeat[T](...) inside generic T).
                     Expr candidate = TypeChecker.indexFromTypeArgs(subscript.typeArgs);
-                    if (candidate != null && indexNameResolvable(scope, candidate)) {
+                    if (candidate != null && indexNameResolvable(module, scope, candidate)) {
                         resolveExpr(module, scope, candidate);
                         subscript.resolvedIndex = candidate;
                     }
@@ -770,13 +770,21 @@ public final class NameResolver {
         }
     }
 
-    /** Whether an index candidate's leftmost name resolves as a value here. */
-    private static boolean indexNameResolvable(Scope scope, Expr candidate) {
+    /**
+     * Whether an index candidate's leftmost name resolves as a value, a known
+     * type or an imported module here. A type or module name makes the bracket
+     * payload an ordinary index too ({@code by_day[Day.Mon]},
+     * {@code by_name[texts.TITLE]}); a name the resolver cannot place at all,
+     * such as a type parameter, is left to the checker.
+     */
+    private static boolean indexNameResolvable(Module module, Scope scope, Expr candidate) {
         if (candidate instanceof Expr.Name name) {
-            return scope.resolve(name.name) != null;
+            return scope.resolve(name.name) != null
+                    || module.scope.types.get(name.name) != null
+                    || module.scope.importAliases.get(name.name) != null;
         }
         if (candidate instanceof Expr.FieldAccess access) {
-            return indexNameResolvable(scope, access.receiver);
+            return indexNameResolvable(module, scope, access.receiver);
         }
         return true;
     }

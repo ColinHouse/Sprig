@@ -89,7 +89,9 @@ print(log_all(["a", "b"], Console()))
   methods only. There is no conversion back (`let c: Console = sink` is
   rejected) and generics stay invariant (`List[Console]` is not `List[Sink]`).
 - A contract cannot be constructed, declare fields, or mix methods with and
-  without a body (`SPR-CLASS-ABSTRACT`); a contract cannot itself conform.
+  without a body (`SPR-CLASS-ABSTRACT`); a contract cannot itself conform, to
+  another contract, a Java interface or a Java class alike
+  (`SPR-CONFORM-SOURCE`): each implementing class declares both conformances.
   A function outside a class never omits its body (`SPR-SYNTAX-ERROR`).
 - One `conform` per relation; a class may conform to several contracts and
   Java interfaces. `conform` is written in the module that declares the class,

@@ -555,6 +555,20 @@ public final class ConformanceChecker {
                             + "and pass its single operation as a fn value where the contract was wanted."));
             return false;
         }
+        if (classDecl.contract) {
+            // A contract never conforms, whatever the target: it has no method
+            // bodies to stand for the target's methods, and the generated
+            // interface would not extend a Java interface anyway.
+            String target = (conform.targetModuleAlias == null ? "" : conform.targetModuleAlias + ".")
+                    + conform.targetAlias;
+            diagnostics.add(Diagnostic.error(Codes.CONFORM_SOURCE, Phase.TYPE,
+                    "Contract class '" + classDecl.name + "' cannot conform to '" + target
+                            + "'; only a class with method bodies conforms",
+                    module.uri, conform.span)
+                    .withHint("Conform each implementing class to both: a class that conforms to '" + classDecl.name
+                            + "' also declares 'conform ... to " + target + "'."));
+            return false;
+        }
         conform.source = classDecl;
         return true;
     }
@@ -677,14 +691,6 @@ public final class ConformanceChecker {
                             + name + "' does not provide",
                     module.uri, conform.parentAliasSpan != null ? conform.parentAliasSpan : conform.span)
                     .withHint("A contract has no method bodies to inherit; remove 'as " + conform.parentAlias + "'."));
-            return;
-        }
-        if (classDecl.contract) {
-            diagnostics.add(Diagnostic.error(Codes.CONFORM_SOURCE, Phase.TYPE,
-                    "Contract class '" + classDecl.name + "' cannot conform to '" + name
-                            + "'; only a class with method bodies conforms",
-                    module.uri, conform.span)
-                    .withHint("Conform each implementing class to both contracts instead."));
             return;
         }
         if (!contract.typeParams.isEmpty() || !classDecl.typeParams.isEmpty()) {

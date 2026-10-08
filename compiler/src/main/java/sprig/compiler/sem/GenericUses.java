@@ -15,6 +15,7 @@ import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
+import sprig.compiler.types.FunctionType;
 import sprig.compiler.types.NativeType;
 import sprig.compiler.types.Substitution;
 import sprig.compiler.types.Type;
@@ -147,6 +148,9 @@ final class GenericUses {
                 if (actual == NativeType.FLOAT || actual == NativeType.FLOAT32) {
                     out.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE, TypeRefResolver.FLOAT_MAP_KEY,
                             key.module().uri, key.span()).withHint(TypeChecker.FLOAT_MAP_KEY_HINT));
+                } else if (actual instanceof FunctionType) {
+                    out.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE, TypeRefResolver.FUNCTION_MAP_KEY,
+                            key.module().uri, key.span()).withHint(TypeChecker.FUNCTION_MAP_KEY_HINT));
                 }
             }
             for (Use use : usesIn.getOrDefault(decl, Set.of())) {

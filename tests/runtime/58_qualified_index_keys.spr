@@ -1,0 +1,24 @@
+# A map index written as a qualified name — an enum case — is an index, not a
+# type argument list: the checker resolves its names like any expression, and
+# an inferred literal keeps its key type.
+enum Day:
+    Mon
+    Tue
+    Wed
+
+func name(day: Day) -> String:
+    return match day:
+        case Day.Mon:
+            "mon"
+        case Day.Tue:
+            "tue"
+        case Day.Wed:
+            "wed"
+
+let by_day: Map[Day, Int] = {Day.Mon: 1, Day.Tue: 2}
+print(by_day[Day.Mon])
+print(by_day[Day.Tue])
+print(by_day[Day.Wed])
+let inferred = {Day.Wed: "wed", Day.Mon: "mon"}
+print(inferred[Day.Wed])
+print(name(Day.Tue))
