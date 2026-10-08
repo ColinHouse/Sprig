@@ -1,0 +1,10 @@
+class Reading:
+    var read: Int = 0
+
+    func read_pages(n: Int) -> Unit:
+        read += n
+
+let session = Reading()
+session.read_pages(10)
+session.read_pages(5)
+print(session.read)

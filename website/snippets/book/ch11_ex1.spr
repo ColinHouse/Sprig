@@ -1,0 +1,5 @@
+class Book(title: String, pages: Int)
+
+let book = Book(title="Sprig", pages=200)
+print(book)
+print(book.title)
