@@ -1,0 +1,5 @@
+import "@std/process.spr" as process
+
+func ask() -> Unit:
+    let line = process.read_line()
+    print(line)

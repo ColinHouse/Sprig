@@ -1,0 +1,11 @@
+let stock: MutableMap[String, Int] = {"tea": 12}
+let coffee = stock["coffee"]
+print(coffee)
+if coffee == null:
+    print("coffee: none")
+else:
+    print("coffee: " + coffee)
+
+let tea = stock["tea"]
+if tea != null:
+    print("tea: " + tea)

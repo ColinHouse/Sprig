@@ -1,0 +1,5 @@
+let stock: Map[String, Int] = {"tea": 12, "milk": 3, "rice": 20}
+var total = 0
+for value in stock.values():
+    total += value
+print(total)

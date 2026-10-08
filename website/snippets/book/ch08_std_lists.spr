@@ -1,0 +1,12 @@
+import "@std/lists.spr" as lists
+
+# 想不改动调用者的列表，就先 toList() 做只读快照再传给 lists.sorted。
+let words = ["pear", "fig", "banana", "fig"]
+print(lists.sorted(words.toList()))
+print(words)
+print(lists.reversed(words))
+print(lists.distinct(words))
+print(lists.index_of(words, "fig"))
+print(lists.sum([1, 2, 3]))
+print(lists.take(words, 2))
+print(lists.drop(words, 3))

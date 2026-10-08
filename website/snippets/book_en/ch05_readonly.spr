@@ -1,0 +1,15 @@
+# A MutableList can be passed to a function that wants a List: the callee sees the same list, read-only.
+func total(xs: List[Int]) -> Int:
+    var sum = 0
+    for x in xs:
+        sum += x
+    return sum
+
+let numbers = [1, 2, 3]
+print(total(numbers))
+numbers.append(4)
+print(total(numbers))
+let snapshot = numbers.toList()
+numbers.append(5)
+print(snapshot.size())
+print(numbers.size())

@@ -1,0 +1,5 @@
+let counts: MutableMap[String, Int] = {"tea": 1}
+counts["tea"] += 1
+print(counts["tea"])
+counts["fig"] += 1
+print(counts)

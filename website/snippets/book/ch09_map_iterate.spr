@@ -1,0 +1,9 @@
+let stock: Map[String, Int] = {"tea": 12, "milk": 3, "rice": 20}
+for key in stock:
+    print(key)
+for value in stock.values():
+    print(value)
+for key in stock.keys():
+    let value = stock[key]
+    if value != null:
+        print(key + "=" + value)

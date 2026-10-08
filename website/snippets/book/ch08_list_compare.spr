@@ -1,0 +1,14 @@
+let a = [1, 2, 3]
+let b = [1, 2, 3]
+let c = [3, 1]
+print(a == b)
+print(a == c)
+print(a != c)
+
+let words = ["pear", "fig", "banana"]
+words.sort()
+print(words)
+
+let scores = [90, 72, 85]
+scores.sort()
+print(scores)
