@@ -163,6 +163,78 @@ print(BoundDefault().value)
         assert invoke('fmt',p).returncode==0
         formatted=invoke('run',p)
         assert (formatted.returncode,formatted.stdout,formatted.stderr)==(result.returncode,result.stdout,result.stderr)
+        boxed_yields = HEADER + '''let absent_int: Int? = null
+let absent_small: Int32? = null
+let absent_flag: Bool? = null
+let absent_float: Float? = null
+let absent_float32: Float32? = null
+let absent_text: String? = null
+func null_int(flag: Flag) -> Int?:
+    return match flag:
+        case Flag.On:
+            absent_int
+        case Flag.Off:
+            42
+func null_int32(flag: Flag) -> Int32?:
+    return match flag:
+        case Flag.On:
+            absent_small
+        case Flag.Off:
+            7
+func null_bool(flag: Flag) -> Bool?:
+    return match flag:
+        case Flag.On:
+            absent_flag
+        case Flag.Off:
+            true
+func null_float(flag: Flag) -> Float?:
+    return match flag:
+        case Flag.On:
+            absent_float
+        case Flag.Off:
+            1.5
+func null_float32(flag: Flag) -> Float32?:
+    return match flag:
+        case Flag.On:
+            absent_float32
+        case Flag.Off:
+            2.5
+func text(yes: Bool) -> String?:
+    if yes:
+        return "text"
+    return null
+func null_string(flag: Flag) -> String?:
+    return match flag:
+        case Flag.On:
+            absent_text
+        case Flag.Off:
+            text(true)
+func null_calc(flag: Flag) -> Int?:
+    let result: Int? = match flag:
+        case Flag.On:
+            absent_int
+        case Flag.Off:
+            1 + 1
+    return result
+print(null_int(Flag.On))
+print(null_int(Flag.Off))
+print(null_int32(Flag.On))
+print(null_int32(Flag.Off))
+print(null_bool(Flag.On))
+print(null_bool(Flag.Off))
+print(null_float(Flag.On))
+print(null_float(Flag.Off))
+print(null_float32(Flag.On))
+print(null_float32(Flag.Off))
+print(null_string(Flag.On))
+print(null_string(Flag.Off))
+print(null_calc(Flag.On))
+print(null_calc(Flag.Off))
+'''
+        p.write_text(boxed_yields)
+        result=invoke('run',p)
+        assert result.returncode==0 and result.stdout==('null\n42\nnull\n7\nnull\ntrue\nnull\n1.5\n'
+            'null\n2.5\nnull\ntext\nnull\n2\n'),result.stdout+result.stderr
         p.write_text(advanced.replace('func effect(flag: Flag) -> Int throws Error:', 'func effect(flag: Flag) -> Int:'))
         result=invoke('check',p,'--json')
         assert result.returncode!=0 and 'SPR-FLOW-THROWS' in result.stdout,result.stdout+result.stderr

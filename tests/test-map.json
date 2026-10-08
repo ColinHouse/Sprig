@@ -206,6 +206,8 @@
         "tests/runtime/check_strings.py",
         "tests/runtime/check_runtime_diagnostics.py",
         "tests/conform/check_conform.py",
+        "tests/if_expression/check_if_expression.py",
+        "tests/match_expression/check_match_expression.py",
         "tests/adversarial/regressions/check_java_identifiers.py",
         "tests/adversarial/regressions/check_jvm_limits.py",
         "tests/adversarial/regressions/check_jvm_bridges.py",
