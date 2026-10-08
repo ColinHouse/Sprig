@@ -9,6 +9,7 @@ The extension helps you write Sprig in VS Code with:
 - an outline
 - hover information
 - completion
+- parameter hints and semantic highlighting (with a compiler that provides them)
 - go-to-definition, find references and rename
 - snippets
 - a Testing view
@@ -48,12 +49,16 @@ The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the ex
 | Hover | Any name: its declaration and type, including local variables and parameters, plus the comment above it | Keywords, `JavaClass.method`, `module.function` and your top-level declarations, from the saved file |
 | Completion | After a dot, the members of any value, including local variables; elsewhere, the names in scope and keywords | Keywords, the file's declarations and imported names; members after `JavaClass.`, `module.`, an enum name or a top-level variable |
 | Go to Definition (F12) | Any name, across files | Import paths, `module.member` and declarations in the same file |
-| Find References (Shift+F12) | Every use of a declaration | Not available |
+| Find References (Shift+F12) | Uses of a declaration; warns when the 200-file analysis limit makes results incomplete | Not available |
+| Parameter hints | When provided by the compiler: `(` and `,` show Sprig functions, methods, named constructor parameters and Java overload candidates, with the active parameter; no closing parenthesis is required | Not available |
+| Semantic highlighting | When provided by the compiler: resolved types, functions, methods, fields, parameters and variables, using the current theme | Lexical highlighting only |
 | Rename (F2) | Local variables and parameters | Not available |
 | Formatting | **Format Document** (Shift+Alt+F) runs `sprig fmt`. To format on every save, turn on VS Code's `editor.formatOnSave` | The same |
 | Outline | The Outline view and the breadcrumbs list functions, classes, variants, enums, fields, methods and top-level variables | The same |
 
 In both cases, hovering over a keyword shows its `sprig help` text, **Go to Symbol in Workspace** searches all your files, and clicking an error code opens the diagnostic code reference. For snippets, type a prefix such as `func`, `class`, `variant`, `match`, `ifnn`, `try` or `importj` and press Tab.
+
+These new capabilities come from the updated compiler; extension 0.3.0 registers them automatically without a new extension release. Nested calls and commas inside strings do not advance the outer call's active parameter; named constructor fields can be written out of order. Java parameter names missing from bytecode use `arg0`, `arg1`, etc. Java candidates are not ranked by argument types, and Sprig generics display their written type parameters; built-in functions and native string/collection methods have no parameter signatures yet. Unrelated syntax errors can still prevent a hint. Syntax or name-resolution failures clear semantic tokens and leave lexical highlighting available.
 
 ## Commands
 

@@ -2,7 +2,7 @@
 
 Language support for [Sprig](https://colinhouse.github.io/Sprig/en/), an
 indentation-based, statically typed language for the JVM. Diagnostics as you
-type, quick fixes, hover, completion, navigation, references, rename and
+type, quick fixes, hover, completion, parameter hints, semantic highlighting, navigation, references, rename and
 formatting come from the Sprig language server, `sprig lsp`, which runs the
 same parser and type checker as `sprig check`. The extension does not
 implement a second type checker. It also runs programs and tests, shows the
@@ -64,7 +64,9 @@ the remote host. Browser-only VS Code and virtual file systems are unsupported.
 | Hover | Declarations in Sprig syntax with their types, including locals, parameters and narrowed nullable values, plus the comments above them | Java members, module members and your top-level declarations, from the saved file |
 | Completion | After `.`, the members of any value, including locals and parameters; elsewhere, names in scope, imports and keywords | Keywords, declarations and imports; members after `JavaClass.`, `module.`, an enum or variant, or a top-level variable |
 | Go to Definition | Functions, types, cases, fields, parameters and locals, across modules; on an `import`, the imported file | Import paths, `module.member` and declarations in the same file |
-| Find References | Every use of a declaration | Not available |
+| Find References | Uses of a declaration; warns when the 200-file analysis limit omits matching files | Not available |
+| Parameter hints | With a compiler that advertises signature help: Sprig functions, methods and named constructors, plus Java overload candidates; `(` and `,` show the active argument even before `)` | Not available |
+| Semantic highlighting | With a compiler that advertises semantic tokens: resolved types, functions, methods, fields, parameters and variables | Lexical highlighting only |
 | Rename | Local variables and parameters, checked before the edit is applied | Not available |
 | Formatting | **Format Document** applies `sprig fmt`; combine with `editor.formatOnSave` if you like | The same, through a temporary copy of the editor text |
 | Outline | Classes with fields and methods, enums and variants with their cases, functions and top-level variables | The same, found lexically |
@@ -149,8 +151,12 @@ capitalized type names, built-in and generic/nullable types, source `fn(A) -> R`
 `fn(x: A) => expr` lambdas, numeric exponents,
 double-quoted strings and escapes, `#` comments, variant/match, and operators.
 Single quotes, Python keywords and Java syntax are not added to Sprig.
-Colors follow the user's theme. This is lexical highlighting, not semantic name
-resolution: capitalized identifiers are a type-name heuristic.
+Colors follow the user's theme. Without semantic tokens, capitalized identifiers
+are a lexical type-name heuristic. With a compiler that advertises semantic
+tokens, the language server adds resolved identifier categories, including
+declaration and readonly modifiers; uppercase variables and lowercase types
+are classified by their declarations. A syntax or name-resolution error clears
+semantic tokens and leaves lexical highlighting available.
 Four spaces and spaces instead of tabs are default editor settings for Sprig.
 
 ### Trust and diagnostics
@@ -169,8 +175,14 @@ Server**; its own log is the **Sprig Language Server** output.
 ### Limitations
 
 - The language server re-checks the whole program on each change, renames only
-  locals and parameters, and has no workspace symbols, signature help, code
-  actions other than quick fixes, or semantic highlighting yet.
+  locals and parameters, and has no workspace symbols or code actions other
+  than quick fixes. Signature help and semantic tokens require a compiler that
+  advertises them; extension 0.3.0 registers them automatically.
+- Signature help completes the call being typed, including nested calls and
+  strings with commas; unrelated syntax errors can still prevent an answer.
+  Java overloads are candidates, not ranked by argument types. Missing Java
+  parameter names use `arg0`, `arg1`, etc. Sprig generics display written types;
+  built-in functions and native collection/string methods have no signatures yet.
 - In a multi-root workspace, one language server serves the window, with the
   compiler configured for the Sprig file or folder it started from.
 - Without the language server, the outline, workspace symbols and Go to

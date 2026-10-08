@@ -23,6 +23,10 @@ exports.run=async()=>{
   const outlineDoc=await vscode.workspace.openTextDocument(outlineFile);
   assert.deepEqual((await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',outlineDoc.uri)).map(s=>s.name),['Hero']);
   assert.equal((await vscode.commands.executeCommand('vscode.executeHoverProvider',outlineDoc.uri,new vscode.Position(3,12))).length,0,'no compiler hover without trust');
+  const restrictedSignature=await vscode.commands.executeCommand('vscode.executeSignatureHelpProvider',outlineDoc.uri,new vscode.Position(3,15),'(');
+  assert.ok(!restrictedSignature||restrictedSignature.signatures.length===0,'no parameter hints without trust');
+  const restrictedTokens=await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens',outlineDoc.uri);
+  assert.ok(!restrictedTokens||restrictedTokens.data.length===0,'no semantic tokens without trust');
   const restrictedEdits=await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider',outlineDoc.uri,{tabSize:4,insertSpaces:true});
   assert.ok(!restrictedEdits||restrictedEdits.length===0,'no formatting without trust');
   assert.equal(await vscode.commands.executeCommand('sprig.runTests'),undefined);
@@ -131,6 +135,18 @@ exports.run=async()=>{
  const members=(await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',live.uri,new vscode.Position(6,8),'.')).items.map(i=>typeof i.label==='string'?i.label:i.label.label);
  assert.ok(members.includes('width'),'members of a local variable: '+JSON.stringify(members));
  const undot=new vscode.WorkspaceEdit();undot.delete(live.uri,new vscode.Range(6,0,7,0));await vscode.workspace.applyEdit(undot);await live.save();
+ // The installed LSP client registers signatures and semantic tokens from server capabilities.
+ const signatureEdit=new vscode.WorkspaceEdit();signatureEdit.insert(live.uri,new vscode.Position(6,0),'    shapes.area(\n');await vscode.workspace.applyEdit(signatureEdit);
+ const signature=await vscode.commands.executeCommand('vscode.executeSignatureHelpProvider',live.uri,new vscode.Position(6,16),'(');
+ assert.ok(signature.signatures.some(s=>s.label==='func area(box: Box) -> Int'),'signature of an imported function with no right parenthesis');
+ assert.equal(signature.activeParameter,0);assert.equal(signature.signatures[signature.activeSignature].parameters[0].label,'box: Box');
+ const unsignature=new vscode.WorkspaceEdit();unsignature.delete(live.uri,new vscode.Range(6,0,7,0));await vscode.workspace.applyEdit(unsignature);
+ const legend=await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokensLegend',live.uri);
+ const semantic=await vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens',live.uri);
+ assert.ok(legend.tokenTypes.includes('parameter')&&legend.tokenTypes.includes('variable')&&legend.tokenTypes.includes('property'));
+ let tokenLine=0,tokenColumn=0;const resolvedTokens=[];
+ for(let i=0;i<semantic.data.length;i+=5){const [delta,column,length,kind]=semantic.data.slice(i,i+5);tokenLine+=delta;tokenColumn=delta?column:tokenColumn+column;resolvedTokens.push([tokenLine,tokenColumn,length,legend.tokenTypes[kind]]);}
+ for(const expected of [[2,5,6,'function'],[2,12,4,'parameter'],[3,8,3,'variable'],[3,25,5,'property']])assert.ok(resolvedTokens.some(t=>t.every((v,i)=>v===expected[i])),'semantic token '+JSON.stringify(expected)+': '+JSON.stringify(resolvedTokens));
  const located=(await vscode.commands.executeCommand('vscode.executeDefinitionProvider',live.uri,new vscode.Position(4,34))).map(l=>l.uri?{uri:l.uri,range:l.range}:{uri:l.targetUri,range:l.targetRange});
  assert.equal(located.length,1);assert.equal(located[0].uri.fsPath,path.join(served,'shapes.spr'));assert.equal(located[0].range.start.line,3);
  const references=await vscode.commands.executeCommand('vscode.executeReferenceProvider',live.uri,new vscode.Position(4,34));

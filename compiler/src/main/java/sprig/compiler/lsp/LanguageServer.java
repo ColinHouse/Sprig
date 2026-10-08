@@ -262,6 +262,10 @@ public final class LanguageServer {
                 return documentSymbols(params);
             case "textDocument/completion":
                 return completion(params);
+            case "textDocument/signatureHelp":
+                return signatureHelp(params);
+            case "textDocument/semanticTokens/full":
+                return semanticTokens(params);
             case "textDocument/formatting":
                 return formatting(params);
             case "textDocument/prepareRename":
@@ -335,6 +339,9 @@ public final class LanguageServer {
         capabilities.put("referencesProvider", true);
         capabilities.put("documentSymbolProvider", true);
         capabilities.put("completionProvider", Map.of("triggerCharacters", List.of("."), "resolveProvider", false));
+        capabilities.put("signatureHelpProvider", Map.of("triggerCharacters", List.of("(", ","),
+                "retriggerCharacters", List.of(",", ")")));
+        capabilities.put("semanticTokensProvider", Map.of("legend", SemanticTokens.legend(), "full", true));
         capabilities.put("documentFormattingProvider", true);
         capabilities.put("renameProvider", prepareRename ? Map.of("prepareProvider", true) : true);
         if (codeActionLiterals) {
@@ -597,6 +604,20 @@ public final class LanguageServer {
     // Language features
     // ------------------------------------------------------------------
 
+    private Map<String, Object> signatureHelp(Map<String, Object> params) {
+        Document document = document(params);
+        if (document == null) return null;
+        Map<String, Object> position = Json.object(params, "position");
+        int cursor = document.lines.offset(Json.integer(position, "line", 0), Json.integer(position, "character", 0));
+        return SignatureHelp.help(document.path, document.lines, cursor,
+                text -> analyzer.analyze(document.path, overlaysWith(document.path, text)));
+    }
+
+    private Map<String, Object> semanticTokens(Map<String, Object> params) {
+        Document document = document(params);
+        return Map.of("data", document == null ? List.of() : SemanticTokens.full(analysis(document), document.path));
+    }
+
     private Map<String, Object> hover(Map<String, Object> params) {
         Document document = document(params);
         if (document == null) {
@@ -680,9 +701,6 @@ public final class LanguageServer {
         Pattern word = Pattern.compile("\\b" + Pattern.quote(name) + "\\b");
         Map<Path, String> overlays = overlays();
         for (Path file : projectSources(manifest.getParent())) {
-            if (out.size() >= MAX_REFERENCE_FILES) {
-                break;
-            }
             if (!seen.add(file) || !manifest.equals(Project.findManifest(file.getParent()))) {
                 continue;
             }
@@ -692,6 +710,12 @@ public final class LanguageServer {
                 }
             } catch (IOException | RuntimeException e) {
                 continue;
+            }
+            if (out.size() >= MAX_REFERENCE_FILES) {
+                notify("window/showMessage", Map.of("type", 2, "message",
+                        "Sprig: Find References is incomplete; the search reached its "
+                                + MAX_REFERENCE_FILES + "-file analysis limit. Some matching files were not checked."));
+                break;
             }
             out.add(analyzer.analyze(file, overlays));
         }
