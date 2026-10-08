@@ -1,0 +1,26 @@
+import "@std/process.spr" as process
+import "@std/random.spr" as random
+
+func play_interactive(secret: Int) -> Unit throws Error:
+    var tries = 0
+    while true:
+        let line = process.read_line()
+        if line == null:
+            print("no more input; the number was " + secret)
+            return
+        let guess = line.toIntOrNull()
+        if guess == null:
+            print("not a number: " + line)
+            continue
+        tries += 1
+        if guess == secret:
+            print("correct in " + tries + " tries")
+            return
+        if guess < secret:
+            print("too low")
+        else:
+            print("too high")
+
+print("I am thinking of a number between 1 and 100.")
+let secret = random.seeded(7).next_int(100) + 1
+play_interactive(secret)

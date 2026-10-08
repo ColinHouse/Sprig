@@ -1,0 +1,6 @@
+import "@std/random.spr" as random
+
+let seeds = [1, 2, 3]
+for seed in seeds:
+    let secret = random.seeded(seed).next_int(100) + 1
+    print("round " + seed.toString() + ": secret " + secret)

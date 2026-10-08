@@ -1,0 +1,21 @@
+import "@std/random.spr" as random
+
+func play(secret: Int, guesses: List[String]) -> Int:
+    var tries = 0
+    for text in guesses:
+        let guess = text.toIntOrNull()
+        if guess == null:
+            continue
+        tries += 1
+        if guess == secret:
+            print("correct in " + tries + " tries")
+            return tries
+        if guess < secret:
+            print("too low")
+        else:
+            print("too high")
+    print("out of guesses after " + tries + " tries; the number was " + secret)
+    return tries
+
+let secret = random.seeded(7).next_int(100) + 1
+play(secret, ["10", "50"])

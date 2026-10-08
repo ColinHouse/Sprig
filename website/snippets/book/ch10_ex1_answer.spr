@@ -1,0 +1,4 @@
+import "@std/random.spr" as random
+
+let secret = random.seeded(42).next_int(10) + 1
+print("secret is " + secret)

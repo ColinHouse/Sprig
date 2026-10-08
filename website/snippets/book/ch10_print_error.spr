@@ -1,0 +1,4 @@
+import "@std/process.spr" as process
+
+process.print_error("this line goes to standard error")
+print("this line goes to standard output")
