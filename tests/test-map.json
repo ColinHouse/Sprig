@@ -113,6 +113,9 @@
     "scripts/internal/verify-doc-snippets.py": {
       "full": false
     },
+    "scripts/internal/check-doc-outputs.py": {
+      "full": false
+    },
     "scripts/internal/check-doc-links.py": {
       "full": false
     },
@@ -376,10 +379,12 @@
         "website/**",
         "README.md",
         "CONTRIBUTING.md",
-        "AGENTS.md"
+        "AGENTS.md",
+        "scripts/internal/check-doc-outputs.py"
       ],
       "gates": [
         "scripts/internal/verify-doc-snippets.py",
+        "scripts/internal/check-doc-outputs.py",
         "scripts/internal/check-doc-links.py",
         "tests/docs/check_doc_roles.py"
       ]
