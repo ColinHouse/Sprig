@@ -1,0 +1,6 @@
+var found = -1
+for n in range(1, 100):
+    if n * n > 200:
+        found = n
+        break
+print(found)

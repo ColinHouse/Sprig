@@ -1,0 +1,5 @@
+func greet(name: String) -> Unit:
+    print("Hello, " + name + "!")
+
+greet("Ada")
+greet("Grace")

@@ -1,0 +1,4 @@
+func double(n: Int):
+    return n * 2
+
+print(double(4))

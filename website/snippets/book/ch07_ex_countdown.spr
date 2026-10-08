@@ -1,0 +1,8 @@
+func countdown(start: Int) -> Unit:
+    var n = start
+    while n > 0:
+        print(n)
+        n -= 1
+    print("liftoff")
+
+countdown(3)

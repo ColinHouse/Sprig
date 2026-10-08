@@ -1,0 +1,18 @@
+func label(age: Int) -> String:
+    if age < 0:
+        return "invalid"
+    if age < 18:
+        return "minor"
+    return "adult"
+
+func show(n: Int) -> Unit:
+    if n < 0:
+        print("negative, skipping")
+        return
+    print("value " + n)
+
+print(label(-1))
+print(label(10))
+print(label(30))
+show(-3)
+show(5)

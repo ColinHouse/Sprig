@@ -1,0 +1,23 @@
+var celsius = -5
+if celsius < 0:
+    print("freezing")
+elif celsius < 20:
+    print("cool")
+else:
+    print("warm")
+
+celsius = 12
+if celsius < 0:
+    print("freezing")
+elif celsius < 20:
+    print("cool")
+else:
+    print("warm")
+
+celsius = 30
+if celsius < 0:
+    print("freezing")
+elif celsius < 20:
+    print("cool")
+else:
+    print("warm")

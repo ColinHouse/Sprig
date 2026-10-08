@@ -1,0 +1,6 @@
+var total = 0
+var n = 1
+while n <= 5:
+    total += n
+    n += 1
+print(total)

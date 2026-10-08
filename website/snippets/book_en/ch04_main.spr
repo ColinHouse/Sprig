@@ -1,0 +1,5 @@
+# There is no special main: top-level statements are the entry point. A main function is fine, but you must call it yourself.
+func main() -> Unit:
+    print("from main")
+
+main()

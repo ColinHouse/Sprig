@@ -1,0 +1,8 @@
+let bottles = 5
+let size = if bottles > 9:
+    "large"
+elif bottles > 3:
+    "medium"
+else:
+    "small"
+print(size)

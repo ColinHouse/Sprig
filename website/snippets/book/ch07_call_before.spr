@@ -1,0 +1,4 @@
+print(twice(3))
+
+func twice(n: Int) -> Int:
+    return n * 2

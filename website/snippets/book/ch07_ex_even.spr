@@ -1,0 +1,5 @@
+func is_even(n: Int) -> Bool:
+    return n % 2 == 0
+
+print(is_even(10))
+print(is_even(7))
