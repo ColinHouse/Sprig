@@ -498,7 +498,7 @@ final class TypeArgumentInference {
     }
 
     /** Visits a type and its parts until the test is true. */
-    private static boolean visit(Type type, Predicate<Type> test) {
+    static boolean visit(Type type, Predicate<Type> test) {
         if (type == null) {
             return false;
         }

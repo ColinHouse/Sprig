@@ -122,6 +122,48 @@ def check_atomic_write(launcher):
         # A dangling link's target is created as a new file, as write_utf8 creates it.
         assert mode(real / 'missing.txt') == 0o640, oct(mode(real / 'missing.txt'))
 
+def check_read_only_target(launcher):
+    """A rename needs only the directory's write permission, yet atomic_write_utf8 does not
+    replace a file the process may not write: like write_utf8, it fails with "access denied"
+    and writes nothing, also when a symbolic link leads to that file. Windows needs privileges
+    for links, so there only the file itself is checked. A process that may write a read-only
+    file anyway (root, as in some CI containers) cannot show the failure and skips the check."""
+    posix = os.name != 'nt'
+    with tempfile.TemporaryDirectory(prefix='sprig std read-only ') as work:
+        root = Path(work)
+        locked = root / 'locked.txt'
+        targets = [locked]
+        if posix:
+            (root / 'real').mkdir()
+            targets.append(root / 'real' / 'locked target.txt')
+            (root / 'locked link.txt').symlink_to(Path('real') / 'locked target.txt')
+        for path in targets:
+            path.write_text('old', encoding='utf-8')
+            path.chmod(0o444 if posix else stat.S_IREAD)
+        try:
+            if os.access(locked, os.W_OK):
+                print('stdlib: read-only target check skipped: this process may write a read-only file')
+                return
+            # atomic_write.spr writes the first path with write_utf8 and the others atomically.
+            paths = [locked, locked] + ([root / 'locked link.txt'] if posix else [])
+            result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/atomic_write.spr'), '--',
+                                     *map(str, paths)],
+                                    cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
+            assert result.returncode == 0, (result.stdout, result.stderr)
+            assert result.stdout.splitlines() == [f'cannot write {path}: access denied' for path in paths], \
+                result.stdout
+            for path in targets:
+                assert path.read_text(encoding='utf-8') == 'old', path
+                if posix:
+                    assert stat.S_IMODE(os.lstat(path).st_mode) == 0o444, path
+            if posix:
+                assert (root / 'locked link.txt').is_symlink()
+            leftovers = [path.name for path in root.rglob('*') if path.name.endswith('.tmp')]
+            assert leftovers == [], leftovers
+        finally:
+            for path in targets:
+                path.chmod(stat.S_IREAD | stat.S_IWRITE)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--launcher', type=Path, default=ROOT / 'bin' / ('sprig.cmd' if os.name == 'nt' else 'sprig'))
@@ -167,6 +209,7 @@ def main():
             '2',
         ], repr(errors.stdout)
     check_atomic_write(launcher)
+    check_read_only_target(launcher)
     result = subprocess.run([launcher, 'run', str(ROOT / 'tests/stdlib/json.spr')], cwd=ROOT, text=True, encoding='utf-8', capture_output=True)
     expected = '{"ok":true,"nested":[null,12.50,"a\\nb",{"x":-2e3}]}\n"你好"\nrejected trailing comma\nrejected duplicate key\nrejected leading zero\nrejected trailing text\n'
     assert result.returncode == 0, result.stderr
@@ -337,7 +380,7 @@ def main():
             ], (timezone, repr(lines))
             practical_outputs.append(lines)
     assert practical_outputs[0] == practical_outputs[1], practical_outputs
-    print('stdlib: UTF-8/path/file operations/temp file, file failure messages, UTC parse/format across timezones, text.join, list/null/text helpers, test checks and runner, process input/output/exit/run, sets/random/regex/dates and recursive JSON contracts passed')
+    print('stdlib: UTF-8/path/file operations/temp file, file failure messages, atomic writes (permissions, links, read-only targets), UTC parse/format across timezones, text.join, list/null/text helpers, test checks and runner, process input/output/exit/run, sets/random/regex/dates and recursive JSON contracts passed')
 
 if __name__ == '__main__':
     main()

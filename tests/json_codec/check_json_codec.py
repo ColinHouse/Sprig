@@ -127,6 +127,13 @@ func field_error(reader: codec.Reader, name: String) -> String:
     catch problem: Error:
         return problem.message
 
+func unknown_error(reader: codec.Reader, allowed: List[String]) -> String:
+    try:
+        codec.reject_unknown_fields(reader, allowed)
+        return "allowed"
+    catch problem: Error:
+        return problem.message
+
 func decimal_error(reader: codec.Reader, name: String) -> String:
     try:
         return "decoded: " + codec.required_decimal(reader, name).toString()
@@ -173,6 +180,9 @@ print(optional_string_error(flat, "a"))
 print(field_error(flat, "a"))
 let nested = codec.root(codec.object([codec.member("meta", duplicate)]))
 print(int_error(codec.required_object(nested, "meta"), "a"))
+# reject_unknown_fields reports a duplicate key in the same words.
+print(unknown_error(flat, ["a"]))
+print(unknown_error(codec.required_object(nested, "meta"), ["a", "b"]))
 
 # Valid JSON numbers whose exponent no Decimal can hold.
 let big = codec.root(json.parse("{\\"n\\": 1e9999999999, \\"m\\": -2.5E-9999999999, \\"ok\\": 1e3}"))
@@ -195,6 +205,8 @@ print("done")
         expected = ("$: duplicate object key: a\n"
                     "$: duplicate object key: a\n"
                     "$: duplicate object key: a\n"
+                    "$: duplicate object key: a\n"
+                    "$.meta: duplicate object key: a\n"
                     "$: duplicate object key: a\n"
                     "$.meta: duplicate object key: a\n"
                     "$.n: expected decimal in range, found number 1e9999999999\n"

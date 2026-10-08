@@ -28,7 +28,8 @@ func read_utf8(path: String) -> String throws Error:
 
 # Writes the text as UTF-8, creating the file or replacing its content in
 # place, so a reader can see it half written (see atomic_write_utf8). An Error
-# when the parent directory does not exist or the path is a directory.
+# when the parent directory does not exist, the path is a directory or the
+# file may not be written ("access denied").
 func write_utf8(path: String, value: String) -> Unit throws Error:
     try:
         HostFiles.writeUtf8(path, value)
@@ -126,9 +127,12 @@ func remove_file(path: String) -> Unit throws Error:
 # Like write_utf8, but via a temporary sibling renamed over the target,
 # atomically where the filesystem allows; no fsync. A symbolic link at the
 # path is followed, as write_utf8 follows it: the file it leads to is
-# replaced and the link stays. A replaced file keeps its permissions where
-# the filesystem has POSIX ones, and a new file gets what write_utf8 would
-# give it; either way the file then belongs to the user who wrote it.
+# replaced and the link stays. A file write_utf8 may not write, such as a
+# read-only one, is the same Error ("access denied") here, and nothing is
+# written, although a rename would only need the directory's permission. A
+# replaced file keeps its permissions where the filesystem has POSIX ones,
+# and a new file gets what write_utf8 would give it; either way the file
+# then belongs to the user who wrote it.
 func atomic_write_utf8(path: String, value: String) -> Unit throws Error:
     try:
         HostFiles.atomicWriteUtf8(path, value)

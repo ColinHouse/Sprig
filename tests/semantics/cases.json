@@ -639,6 +639,12 @@
     "source": "#166: cases of one variant compare at the variant's type; cases of two variants still cannot be compared"
   },
   {
+    "file": "literal_left_out_of_range.spr",
+    "expected_diagnostic": "SPR-NUM-RANGE",
+    "status": "implemented",
+    "source": "#212: a literal on the left takes the other operand's width, so 3000000000 + big with big: Int32 is out of range, as big + 3000000000 is"
+  },
+  {
     "file": "equality_cases_type_arguments.spr",
     "expected_diagnostic": "SPR-TYPE-MISMATCH",
     "status": "implemented",
@@ -883,5 +889,23 @@
     "expected_diagnostic": "SPR-TYPE-MISMATCH",
     "status": "implemented",
     "source": "#187: a task's result cannot be nullable; the mismatch says why and how to keep it non-null"
+  },
+  {
+    "file": "generic_map_key_inferred.spr",
+    "expected_diagnostic": "SPR-NUM-CONVERSION",
+    "status": "implemented",
+    "source": "#212: a map literal keyed by T inside generic code is checked when T = Float"
+  },
+  {
+    "file": "generic_map_key_nested.spr",
+    "expected_diagnostic": "SPR-NUM-CONVERSION",
+    "status": "implemented",
+    "source": "#212: generic code passing T on to sets.of is checked when T = Float"
+  },
+  {
+    "file": "generic_map_key_method.spr",
+    "expected_diagnostic": "SPR-NUM-CONVERSION",
+    "status": "implemented",
+    "source": "#212: a generic class whose method keys a map by T is checked when T = Float32"
   }
 ]

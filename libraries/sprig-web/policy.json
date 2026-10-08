@@ -7,7 +7,7 @@
   "behavior": {
     "handler": "fn(Request) -> Response throws Error; synchronous; an escaping BadRequest (Request.json) answers 400, any other escaping Error 500",
     "matching": "registration order wins; exact segments or one {name} per segment; encoded slashes stay inside a parameter; trailing slash is significant",
-    "query": "first value wins; null absent; empty distinct; plus-as-space",
+    "query": "decoded once by the server, before routing, into Request.query_values (malformed: 400); first value wins; null absent; empty distinct; plus-as-space; query(name) is a lookup that cannot fail",
     "request": "read-only method, decoded path and UTF-8 body; path_param/query/header return String?",
     "response": "Response(status, body, content_type, headers); status 200..599; transport owns framing",
     "errors": {

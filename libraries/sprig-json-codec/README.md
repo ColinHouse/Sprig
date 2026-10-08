@@ -85,8 +85,8 @@ Unknown fields are allowed unless the application asks otherwise:
 `codec.reject_unknown_fields(reader, allowed)` rejects any key outside the
 explicit list and also detects duplicate keys in manually constructed values.
 (`json.parse` already rejects duplicate keys while parsing.) Reading any field
-of such an object fails as well, with the object's path:
-`$: duplicate object key: a`.
+of such an object fails as well, with the same message: the object's path, then
+the words `@std/json` uses, as in `$: duplicate object key: a`.
 
 ## Error path format
 
@@ -102,7 +102,6 @@ $.meta: expected array, found object
 $.items[0]: expected object to read field 'name', found number
 $.amount: expected decimal in range, found number 1e9999999999
 $: unknown field 'extra'
-$: duplicate field 'a'
 $: duplicate object key: a
 ```
 

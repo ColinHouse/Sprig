@@ -1,0 +1,15 @@
+# A method of a generic class that builds a map keyed by T rejects the class
+# constructed with T = Float32 (#212).
+generic T:
+    class Tally:
+        let items: List[T]
+
+        func first_seen() -> Int:
+            if items.isEmpty():
+                return 0
+            let seen = {items[0]: 1}
+            return seen.size()
+
+let zero: Float32 = 0.0
+let tally = Tally(items=[zero])
+print(tally.first_seen())

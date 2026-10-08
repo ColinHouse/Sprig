@@ -13,18 +13,23 @@ func required(value: String?) -> String:
 func decode(value: String, plus: Bool) -> String:
     return required(HostCodec.decode(value, plus))
 
-func query(raw_query: String?, name: String) -> String?:
+# Each decoded query name with its first decoded value ("+" is a space, a
+# name without "=" has ""). Every name and value is decoded, so a malformed
+# escape or UTF-8 anywhere throws BadRequest, as decoding the whole query does.
+func query_values(raw_query: String) -> Map[String, String] throws Error:
+    let values: MutableMap[String, String] = {}
     try:
-        let raw = required(raw_query)
-        for part in strings.split(raw, "&"):
+        for part in strings.split(raw_query, "&"):
             let pair = strings.split(part, "=")
-            if decode(pair.get(0), true) == name:
-                if pair.size() == 1:
-                    return ""
-                return decode(part.substring(pair.get(0).length() + 1, part.length()), true)
-        return null
+            let name = decode(pair.get(0), true)
+            var value = ""
+            if pair.size() > 1:
+                value = decode(part.substring(pair.get(0).length() + 1, part.length()), true)
+            if not values.containsKey(name):
+                values[name] = value
     catch problem: Error:
         throw BadRequest("Malformed query")
+    return values
 
 func parse_json(body: String) -> jsonlib.Value throws Error:
     try:

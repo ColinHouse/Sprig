@@ -1,6 +1,5 @@
 package sprig.compiler.tooling;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -8,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import sprig.compiler.ast.Decl;
 import sprig.compiler.ast.Module;
-import sprig.compiler.project.DepError;
 import sprig.compiler.project.StdLibrary;
 import sprig.compiler.sem.ImportNames;
 import sprig.compiler.sem.Symbol;
@@ -105,12 +103,9 @@ public final class SprigApi {
      * stay relative to the facade.
      */
     private static String originModule(Path facade, Path origin) {
+        String bundled = StdLibrary.importName(origin);
+        if (bundled != null) return bundled;
         Path absolute = origin.toAbsolutePath().normalize();
-        try {
-            if (absolute.getParent().equals(StdLibrary.root().toRealPath())) return "@std/" + absolute.getFileName();
-        } catch (DepError | IOException e) {
-            // No bundled std in this launch, so the origin is an ordinary file.
-        }
         String relative = facade.toAbsolutePath().getParent().relativize(absolute).toString().replace('\\','/');
         return relative.startsWith(".") ? relative : "./" + relative;
     }

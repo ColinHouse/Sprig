@@ -116,6 +116,19 @@ then `Box[String?]` is rejected with `SPR-TYPE-GENERIC-NULLABLE`, because the de
 
 When the compiler works the type out, it follows the same rule. A `String?` passed where the declaration writes `T?` makes `T` a `String`, so `Box(value=maybe)` is a `Box[String]`. Passed for a plain `T`, it makes `T` a `String?`, unless the declaration writes `T?` somewhere else; then `T` is `String`, and the nullable argument is reported as it would be with `[String]` written out.
 
+## Checked again at your call
+
+A generic function or class is checked once, with `T` standing for any type. Rules that depend on the actual type are checked again at each call or construction with the types it gets, written or worked out, and that includes what the body does with `T`. A map literal keyed by `T`, or a `List[T]` handed to `sets.of`, makes `T` a `Map` key, so a `Float` is rejected at your call:
+
+<<< @/snippets/guide/generics_float_key.spr
+
+```text
+SPR-NUM-CONVERSION [TYPE] main.spr:6:7: Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality
+  hint: Rejected inside 'seen_before' with T = Float, at main.spr:3:20. Use an explicit quantized Int key or Decimal key.
+```
+
+The hint says where inside the generic code the type ends up, even when that's in a library such as `@std/sets.spr`. The nullable rule above works the same way: a `String?` that reaches a declaration writing `T?` is rejected at your call.
+
 ## Generic variants
 
 Variants can be generic too. A case with a payload works out its type arguments from the payload, like a constructor; a case without one, such as `Option[Int].None`, needs them written. In a `match` branch you write only the case name:

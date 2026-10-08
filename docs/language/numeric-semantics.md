@@ -88,7 +88,11 @@ binary float require explicit conversion. No operand is silently narrowed.
 | `Decimal`, `Decimal` | `Decimal`, exact | compile error | compile error | exact | numeric decimal comparison |
 
 An unsuffixed literal is not an `Int` or `Float` operand: it adopts the width
-of the other operand (the contextual literal rule above). `a32 + 1` with
+of the other operand (the contextual literal rule above), on either side and
+whether or not it is negated, so swapping the operands never changes a result:
+`0.1 == f32` is `f32 == 0.1`, `1.0 + f32` is `f32 + 1.0`, and `3000000000 + a32`
+is out of range like `a32 + 3000000000`. On the left of `in`, a literal takes
+the element (or key) type, as the argument of `contains` does. `a32 + 1` with
 `a32: Int32` is `Int32` arithmetic and overflows where `a32 + one` with
 `one: Int` widens to `Int`; `f32 + 1.0` with `f32: Float32` is `Float32`
 arithmetic, so it prints `1.1` where Java's `(double) 0.1f + 1.0` prints
@@ -131,7 +135,14 @@ round-trip decimal formatting; it does not round away `0.1 + 0.2` error.
 `Map`/`MutableMap` reject `Float` and `Float32` keys because Java hashing and
 IEEE equality disagree for NaN and signed zero. A `Set` from `@std/sets.spr`
 and `lists.distinct` keep their items as map keys, so they reject `Float` and
-`Float32` items the same way. Distinct lists and variant values compare their
+`Float32` items the same way. The rule holds through generic code: a generic
+function or class that makes a type parameter a map key, written
+(`MutableMap[T, Bool]`) or inferred (a map literal `{value: true}` keyed by
+`T`, or a call such as `sets.of(values)` that passes `T` on), is rejected
+with `T = Float` or `Float32` at the call or construction that gives that
+type argument, with the same `SPR-NUM-CONVERSION`; the hint names the place
+inside the generic code (`Rejected inside 'of' with T = Float, at
+@std/sets.spr:7:33`). Distinct lists and variant values compare their
 floating elements/fields with Sprig equality; structural equality currently
 short-circuits on object identity, so a list containing NaN compares equal to
 itself. List membership and search use the same equality as `==`: `x in xs`,
@@ -195,7 +206,8 @@ Example: assigning an `Int` variable to `Float` reports
 to choose exact or explicitly lossy conversion. Runtime numeric failures use
 `SprigNumericError` and are reported as `SPR-RUNTIME-EXCEPTION` when uncaught,
 wrapped as `Numeric error: <message>` with the nearest statement range and
-`data.origin="checked-arithmetic"`; `sprig run --stacktrace` restores the raw
-JVM stack. Run
-`python3 tests/numeric/check_numeric.py` or `./scripts/test.sh` from the
-repository root.
+`data.origin="checked-arithmetic"`; a failure inside an `@std` function, such
+as an overflowing `concurrent.Counter.add`, gets the range of the program's
+own line that called it. `sprig run --stacktrace` restores the raw JVM
+stack. Run `python3 tests/numeric/check_numeric.py` or `./scripts/test.sh`
+from the repository root.

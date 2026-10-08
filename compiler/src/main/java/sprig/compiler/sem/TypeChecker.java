@@ -142,6 +142,11 @@ public final class TypeChecker {
     private final Deque<List<Type>> lambdaEffects = new ArrayDeque<>();
     /** v0.8 lexical generic parameters of the declaration being checked. */
     private Map<String, Type> activeTypeParams = Map.of();
+    /** What generic bodies infer and the generic uses made, checked again with type arguments. */
+    private final GenericUses genericUses = new GenericUses();
+
+    /** The hint for a Float or Float32 map key that a map literal gives it. */
+    static final String FLOAT_MAP_KEY_HINT = "Use an explicit quantized Int key or Decimal key.";
 
     public TypeChecker(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
@@ -257,6 +262,16 @@ public final class TypeChecker {
         narrowing.push(new HashMap<>());
         checkSequence(module.topStatements);
         narrowing.pop();
+        // Every body this module's generic uses reach is checked by now: its
+        // own declarations above, the modules it imports before it.
+        genericUses.verify(typeResolver, diagnostics);
+    }
+
+    /** A generic use with known type arguments, checked again once the module is done; see {@link GenericUses}. */
+    private void recordGenericUse(Decl target, List<Type> args, Span span) {
+        if (probing == 0) {
+            genericUses.use(target, args, module, span);
+        }
     }
 
     private Decl.Field collectingDefault;
@@ -1618,6 +1633,7 @@ public final class TypeChecker {
             checkArgsUnchecked(call);
             return NativeType.ERROR;
         }
+        recordGenericUse(decl, args, subscript.span);
         ClassType classType = new ClassType(decl, args);
         subscript.applicationType = classType;
         ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.CLASS_CTOR, classType);
@@ -1651,6 +1667,7 @@ public final class TypeChecker {
             checkArgsUnchecked(call);
             return NativeType.ERROR;
         }
+        recordGenericUse(func, args, subscript.span);
         Map<TypeParameterType, Type> map = Substitution.forFunction(func, args);
         checkComparableArguments(func, map, subscript.span);
         Type returnType = Substitution.apply(func.returnType, map);
@@ -1852,17 +1869,19 @@ public final class TypeChecker {
         // operand's type, as an initializer takes the declared type, so
         // `xs == []` needs no annotation. A literal on the left is typed after
         // the right operand; only the checking order changes, not evaluation.
+        // An unsuffixed number, negated or not, takes the width of the other
+        // operand on either side (#212), so 0.1 == f32 and f32 == 0.1 agree.
         boolean equality = op.equals("==") || op.equals("!=");
+        boolean leftLiteral = isNumericLiteral(binary.left) || (equality && isCollectionLiteral(binary.left));
+        boolean rightLiteral = isNumericLiteral(binary.right) || (equality && isCollectionLiteral(binary.right));
         Type left;
         Type right;
-        if (equality && isCollectionLiteral(binary.left) && !isCollectionLiteral(binary.right)) {
+        if (leftLiteral && (!rightLiteral || standsAloneOnlyOnTheRight(binary))) {
             right = checkExpr(binary.right, null);
             left = checkExpr(binary.left, right);
         } else {
             left = checkExpr(binary.left, null);
-            right = checkExpr(binary.right, binary.right instanceof Expr.IntLit
-                    || binary.right instanceof Expr.FloatLit
-                    || (equality && isCollectionLiteral(binary.right)) ? left : null);
+            right = checkExpr(binary.right, rightLiteral ? left : null);
         }
         // v0.8: a bare type parameter guarantees no operators. Null checks are
         // the one universally valid comparison and stay allowed.
@@ -1897,6 +1916,24 @@ public final class TypeChecker {
             case "<", "<=", ">", ">=" -> checkOrdering(binary, left, right);
             default -> NativeType.ERROR;
         };
+    }
+
+    /** An unsuffixed number literal, negated or not: its width comes from where it goes. */
+    private static boolean isNumericLiteral(Expr expr) {
+        if (expr instanceof Expr.Unary unary && unary.op.equals("-")) {
+            return isNumericLiteral(unary.operand);
+        }
+        return expr instanceof Expr.IntLit || expr instanceof Expr.FloatLit;
+    }
+
+    /**
+     * Two collection literals compared with == or !=: the one that cannot be
+     * typed alone ([[]]) takes the type of the one that can ([[1]]), whichever
+     * side each is on.
+     */
+    private boolean standsAloneOnlyOnTheRight(Expr.Binary binary) {
+        return isCollectionLiteral(binary.left) && isCollectionLiteral(binary.right)
+                && probe(binary.left).hasErrors() && !probe(binary.right).hasErrors();
     }
 
     /** A list or map literal: its type can come from where it goes. */
@@ -1937,8 +1974,19 @@ public final class TypeChecker {
     }
 
     private Type checkIn(Expr.Binary binary) {
-        Type left = checkExpr(binary.left, null);
-        Type right = checkExpr(binary.right, null);
+        Type left;
+        Type right;
+        if (isNumericLiteral(binary.left) || isCollectionLiteral(binary.left)) {
+            // A literal on the left takes the element (or key) type, as in
+            // xs.contains(0.5): 0.5 in xs with xs: List[Float32] is Float32.
+            right = checkExpr(binary.right, null);
+            Type searched = right.nonNull();
+            left = checkExpr(binary.left, searched instanceof ListType list ? list.element
+                    : searched instanceof MapType map ? map.key : null);
+        } else {
+            left = checkExpr(binary.left, null);
+            right = checkExpr(binary.right, null);
+        }
         if (right.isNullable()) {
             diagnostics.add(Diagnostic.error(Codes.TYPE_NULLABLE, Phase.TYPE,
                     "Right side of 'in' may be null", module.uri, binary.span));
@@ -2151,6 +2199,9 @@ public final class TypeChecker {
         if (expr instanceof Expr.Name name) {
             return name.name;
         }
+        if (expr instanceof Expr.IntLit literal) {
+            return literal.sourceText; // 1.toDecimal() is valid as written
+        }
         if (expr instanceof Expr.FieldAccess access && access.receiver instanceof Expr.Name receiver) {
             return receiver.name + "." + access.name;
         }
@@ -2202,6 +2253,12 @@ public final class TypeChecker {
         }
         if (isBinaryFloat(left) && isInteger(right)) {
             return "Convert the Int side: " + operandText(rightExpr, "value") + "." + toFloatCall(right) + ".";
+        }
+        if (isInteger(left) && right == NativeType.DECIMAL) {
+            return "Convert the Int side: " + operandText(leftExpr, "value") + ".toDecimal().";
+        }
+        if (left == NativeType.DECIMAL && isInteger(right)) {
+            return "Convert the Int side: " + operandText(rightExpr, "value") + ".toDecimal().";
         }
         return "Convert deliberately with an exact or explicitly lossy numeric method.";
     }
@@ -2324,9 +2381,12 @@ public final class TypeChecker {
         }
         if (keyType.nonNull() == NativeType.FLOAT || keyType.nonNull() == NativeType.FLOAT32) {
             diagnostics.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE,
-                    "Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality",
-                    module.uri, lit.span).withHint("Use an explicit quantized Int key or Decimal key."));
+                    TypeRefResolver.FLOAT_MAP_KEY, module.uri, lit.span).withHint(FLOAT_MAP_KEY_HINT));
             keyType = NativeType.ERROR;
+        } else if (probing == 0) {
+            // A key typed by a type parameter is checked for each use of the
+            // generic code with type arguments.
+            genericUses.key(keyType, module, lit.span);
         }
         lit.mutable = mutable;
         return new MapType(keyType, valueType, mutable);
@@ -2934,6 +2994,12 @@ public final class TypeChecker {
         TypeArgumentInference.Solution solution;
         List<Type> arguments;
         boolean valid;
+        /**
+         * Every type argument was inferred, but the declaration rejects them
+         * the way it rejects written ones; that rejection is reported at the
+         * call, now or on an earlier check of the same call.
+         */
+        boolean rejected;
     }
 
     /** Whether an expression's type follows from where it goes: a literal, a lambda, a match or an if. */
@@ -3010,6 +3076,7 @@ public final class TypeChecker {
                 inference.valid = true;
                 return inference;
             }
+            inference.rejected = true;
         }
         // Inferred arguments that are invalid like written ones count as unknown.
         List<Type> partial = new ArrayList<>();
@@ -3104,6 +3171,7 @@ public final class TypeChecker {
         if (inference.valid) {
             resolved.typeArgs = inference.arguments;
             resolved.substitution = map;
+            recordGenericUse(func, inference.arguments, call.span);
         }
         if (stopAfterInference(inference, errors, call.span)) {
             return returnType;
@@ -3151,6 +3219,7 @@ public final class TypeChecker {
             resolved.typeArgs = inference.arguments;
             resolved.substitution = Substitution.forClass(classType);
             resolved.instantiatedType = classType;
+            recordGenericUse(decl, inference.arguments, call.span);
         }
         if (stopAfterInference(inference, errors, call.span)) {
             return inference.valid ? classType : NativeType.ERROR;
@@ -3208,6 +3277,7 @@ public final class TypeChecker {
             resolved.typeArgs = inference.arguments;
             resolved.substitution = field.substitution;
             resolved.instantiatedType = field.type;
+            recordGenericUse(decl, inference.arguments, call.span);
         }
         if (stopAfterInference(inference, errors, call.span)) {
             return inference.valid ? field.type : NativeType.ERROR;
@@ -3284,7 +3354,7 @@ public final class TypeChecker {
      * was reported before the call.
      */
     private void requireAnError(Inference inference, int errorsBefore, String name, String form, Span span) {
-        if (inference.valid || diagnostics.errorCount() != errorsBefore) {
+        if (inference.valid || inference.rejected || diagnostics.errorCount() != errorsBefore) {
             return;
         }
         if (!inference.solution.blocked.isEmpty() && errorsBefore > 0) {

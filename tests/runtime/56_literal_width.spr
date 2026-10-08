@@ -1,0 +1,33 @@
+# An unsuffixed number takes the width of the other operand on either side,
+# negated or not (#212): swapping the operands never changes the result.
+let f32: Float32 = 0.1
+print(f32 == 0.1)
+print(0.1 == f32)
+print(f32 + 1.0)
+print(1.0 + f32)
+print(f32 + -0.5)
+print(-0.5 + f32)
+print(0.25 < f32)
+print(f32 > 0.25)
+
+func take32(value: Int32) -> Int32:
+    return value
+
+let small: Int32 = 7
+print(take32(1 + small))
+print(take32(small - 1))
+print(take32(10 - small))
+print(take32(-2 * small))
+
+# in: a literal on the left takes the element or key type, like contains.
+let floats: List[Float32] = [0.5, 0.25]
+print(0.5 in floats)
+print(floats.contains(0.5))
+let ints: List[Int32] = [1, 2]
+print(1 in ints)
+let counts: Map[Int32, String] = {3: "three"}
+print(3 in counts)
+
+# Two collection literals: the one that can be typed alone types the other.
+print([[1]] == [[]])
+print([[]] == [[1]])

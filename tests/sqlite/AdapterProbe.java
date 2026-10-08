@@ -78,6 +78,28 @@ public class AdapterProbe {
         db.execute("CREATE TRIGGER items_audit AFTER INSERT ON items BEGIN INSERT INTO audit(name) VALUES (NEW.name); "
                 + "INSERT INTO audit(name) VALUES (CASE WHEN NEW.name = 'x' THEN 'y; z' ELSE 'w' END); END;", empty());
         db.execute("DROP TRIGGER items_audit", empty());
+        // As SQLite's own sqlite3_complete decides, only an END that is the first token after a
+        // semicolon (or after BEGIN) ends a trigger body: the END of a CASE and a column named
+        // end do not, whatever the case, and neither do "end" in quotes or END in a comment.
+        db.execute("CREATE TABLE spans(id INTEGER PRIMARY KEY, start INTEGER NOT NULL, end INTEGER)", empty());
+        db.execute("CREATE TRIGGER spans_end AFTER INSERT ON spans BEGIN "
+                + "UPDATE spans SET end = CASE WHEN NEW.end IS NULL THEN NEW.start + 5 ELSE NEW.end END WHERE id = NEW.id; "
+                + "UPDATE spans SET End = \"end\" WHERE end = NEW.end; -- end; a comment\n end;", empty());
+        db.execute("INSERT INTO spans(start) VALUES (10)", empty());
+        db.execute("INSERT INTO spans(start, end) VALUES (20, 21)", empty());
+        Rows spans = db.query("SELECT end FROM spans ORDER BY id", empty());
+        check(spans.integer(0, "end") == 15 && spans.integer(1, "end") == 21, "trigger with a CASE and a column named end");
+        db.execute("DROP TRIGGER spans_end", empty());
+        // The END that does end the body still ends the statement, so a second one counts.
+        for (String twice : new String[]{
+                "CREATE TRIGGER spans_twice AFTER INSERT ON spans BEGIN UPDATE spans SET end = 1; END; DELETE FROM spans",
+                "CREATE TRIGGER spans_empty AFTER INSERT ON spans BEGIN END; DELETE FROM spans"}) {
+            try { db.execute(twice, empty()); throw new AssertionError("expected SqliteError: " + twice); }
+            catch (SqliteError expected) {
+                check(expected.getMessage().contains("2 statements"), "trigger, then a statement: " + expected.getMessage());
+            }
+        }
+        check(db.query("SELECT COUNT(*) AS n FROM spans", empty()).integer(0, "n") == 2, "a trigger and a second statement ran nothing");
         db.execute("DELETE FROM items WHERE name = 'semicolon; inside quotes'", empty());
         Batch committed = new Batch(); Parameters next = new Parameters(); next.text("committed");
         committed.add("INSERT INTO items(name) VALUES (?)",next); next.text("late mutation ignored");

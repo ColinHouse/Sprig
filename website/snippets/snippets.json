@@ -107,6 +107,7 @@
     "guide/generics_missing_args.spr",
     "guide/tooling_missing_case.spr",
     "guide/generics_comparable_bool.spr",
+    "guide/generics_float_key.spr",
     "book/ch02_division.spr",
     "book/ch02_let_assign.spr",
     "book/ch02_mixed.spr",

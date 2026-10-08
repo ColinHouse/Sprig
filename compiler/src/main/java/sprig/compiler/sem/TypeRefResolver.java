@@ -29,10 +29,21 @@ import sprig.compiler.types.VariantType;
  * declarations inside its {@code generic T:} block are resolved.
  */
 public final class TypeRefResolver {
-    private final Diagnostics diagnostics;
+    /** Where reports go; a scratch sink while a declaration's types are resolved again. */
+    private Diagnostics diagnostics;
     private final java.util.Map<Decl, List<Expr.Subscript>> applications = new java.util.HashMap<>();
     private Decl collecting;
     private final java.util.Set<Decl> validating = new java.util.HashSet<>();
+    /**
+     * Above zero while a declaration's written types are resolved again with
+     * type arguments: an instantiation they contain reports where the
+     * declaration writes it, and the outermost use moves the report to itself.
+     */
+    private int substituting;
+
+    /** Why Float and Float32 are not Map keys; the same words wherever the rule is applied. */
+    static final String FLOAT_MAP_KEY =
+            "Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality";
 
     public TypeRefResolver(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
@@ -342,7 +353,9 @@ public final class TypeRefResolver {
      * Resolves and validates explicit type arguments for a generic declaration.
      * Returns {@code null} after reporting a diagnostic. This is the single
      * arity/nullability implementation shared by type positions and expression
-     * sites such as {@code Box[Int](value=1)}.
+     * sites such as {@code Box[Int](value=1)}. An argument the declaration
+     * rejects inside, such as a Float that it uses as a Map key, is reported
+     * at {@code reportSpan}, the use, not inside the declaration.
      */
     public List<Type> resolveArguments(Module module, Decl decl, List<TypeRef> argRefs,
                                        Map<String, Type> typeParams,
@@ -392,6 +405,28 @@ public final class TypeRefResolver {
         return new TypeRefResolver(new Diagnostics()).validateArguments(module, decl, args, List.of(), span) != null;
     }
 
+    /**
+     * What validating type arguments for a generic use reports, without
+     * reporting anything: the nullable rule at the use, and every type the
+     * declaration writes, with the arguments substituted, where it writes
+     * it. {@link GenericUses} validates an instantiation made inside generic
+     * code again this way once that code has type arguments of its own.
+     */
+    List<Diagnostic> argumentErrors(Module module, Decl decl, List<Type> args,
+                                    sprig.compiler.diag.Span span) {
+        Diagnostics outer = diagnostics;
+        Diagnostics scratch = new Diagnostics();
+        diagnostics = scratch;
+        substituting++;
+        try {
+            validateArguments(module, decl, args, List.of(), span);
+        } finally {
+            substituting--;
+            diagnostics = outer;
+        }
+        return scratch.errors();
+    }
+
     private List<Type> validateArguments(Module module, Decl decl, List<Type> args, List<TypeRef> argRefs,
                                          sprig.compiler.diag.Span reportSpan) {
         for (int i = 0; i < args.size(); i++) {
@@ -415,27 +450,123 @@ public final class TypeRefResolver {
         // and function locals. Never mutate template TypeRefs with an instantiation.
         if (validating.add(decl)) {
             try {
-                Map<String, Type> bindings = new java.util.LinkedHashMap<>();
-                for (int i = 0; i < args.size(); i++) bindings.put(decl.typeParams.get(i), args.get(i));
-                Module owner = decl.symbol != null && decl.symbol.module != null ? decl.symbol.module : module;
-                int before = diagnostics.errorCount();
-                for (TypeRef annotation : declaredRefs(decl)) {
-                    resolveReturn(owner, copyRef(annotation), bindings);
+                List<Diagnostic> found = substitutedErrors(module, decl, bindings(decl, args));
+                if (found.isEmpty()) {
+                    return args;
                 }
-                for (Expr.Subscript use : applications.getOrDefault(decl, List.of())) {
-                    Symbol target = applicationSymbol(owner, use.base);
-                    if (target != null && target.decl != null && target.decl.isGeneric()) {
-                        List<TypeRef> copies = new ArrayList<>();
-                        for (TypeRef arg : use.typeArgs) copies.add(copyRef(arg));
-                        resolveArguments(owner, target.decl, copies, bindings, use.span, use.span);
+                if (substituting > 0) {
+                    // Inside another declaration's substituted types: the use of
+                    // that declaration reports them.
+                    for (Diagnostic diagnostic : found) diagnostics.add(diagnostic);
+                    return null;
+                }
+                // The use brought these in, so they are reported at the use. What
+                // the declaration reports with its own parameters is its own error,
+                // already reported where it is written.
+                List<Diagnostic> own = substitutedErrors(module, decl, bindings(decl, ownArguments(decl)));
+                boolean rejected = false;
+                for (Diagnostic diagnostic : found) {
+                    if (!containsReport(own, diagnostic)) {
+                        diagnostics.add(atUse(diagnostic, decl, args, module, reportSpan));
+                        rejected = true;
                     }
                 }
-                if (diagnostics.errorCount() != before) return null;
+                if (rejected) return null;
             } finally {
                 validating.remove(decl);
             }
         }
         return args;
+    }
+
+    /**
+     * What resolving the declaration's written annotations and generic
+     * applications again with these bindings reports, where the declaration
+     * writes them. Nothing is reported; an instantiation they contain reports
+     * the same way, so a failure deep inside keeps its own location.
+     */
+    private List<Diagnostic> substitutedErrors(Module module, Decl decl, Map<String, Type> bindings) {
+        Module owner = decl.symbol != null && decl.symbol.module != null ? decl.symbol.module : module;
+        Diagnostics outer = diagnostics;
+        Diagnostics scratch = new Diagnostics();
+        diagnostics = scratch;
+        substituting++;
+        try {
+            for (TypeRef annotation : declaredRefs(decl)) {
+                resolveReturn(owner, copyRef(annotation), bindings);
+            }
+            for (Expr.Subscript use : applications.getOrDefault(decl, List.of())) {
+                Symbol target = applicationSymbol(owner, use.base);
+                if (target != null && target.decl != null && target.decl.isGeneric()) {
+                    List<TypeRef> copies = new ArrayList<>();
+                    for (TypeRef arg : use.typeArgs) copies.add(copyRef(arg));
+                    resolveArguments(owner, target.decl, copies, bindings, use.span, use.span);
+                }
+            }
+        } finally {
+            substituting--;
+            diagnostics = outer;
+        }
+        return scratch.errors();
+    }
+
+    private static Map<String, Type> bindings(Decl decl, List<Type> args) {
+        Map<String, Type> bindings = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < args.size() && i < decl.typeParams.size(); i++) {
+            bindings.put(decl.typeParams.get(i), args.get(i));
+        }
+        return bindings;
+    }
+
+    /** The declaration's own type parameters, as its body sees them. */
+    static List<Type> ownArguments(Decl decl) {
+        List<Type> args = new ArrayList<>();
+        for (String name : decl.typeParams) args.add(new TypeParameterType(decl, name));
+        return args;
+    }
+
+    /** Whether the list holds the same report: code, message and location. */
+    static boolean containsReport(List<Diagnostic> reports, Diagnostic diagnostic) {
+        for (Diagnostic report : reports) {
+            if (report.code.equals(diagnostic.code) && report.message.equals(diagnostic.message)
+                    && java.util.Objects.equals(report.uri, diagnostic.uri)
+                    && java.util.Objects.equals(String.valueOf(report.span), String.valueOf(diagnostic.span))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A failure inside a generic declaration that its type arguments caused,
+     * reported at the use that gave them, with the same code and message. The
+     * hint says where inside the declaration it arises.
+     */
+    static Diagnostic atUse(Diagnostic inside, Decl decl, List<Type> args, Module module,
+                            sprig.compiler.diag.Span span) {
+        StringBuilder bindings = new StringBuilder();
+        for (int i = 0; i < args.size() && i < decl.typeParams.size(); i++) {
+            if (i > 0) bindings.append(", ");
+            bindings.append(decl.typeParams.get(i)).append(" = ").append(args.get(i).display());
+        }
+        String where = "Rejected inside '" + decl.name + "' with " + bindings + ", at "
+                + location(inside.uri, inside.span) + ".";
+        return Diagnostic.error(inside.code, inside.phase, inside.message, module.uri, span)
+                .withTypes(inside.expectedType, inside.actualType)
+                .withHint(inside.hint == null ? where : where + " " + inside.hint);
+    }
+
+    /** file.spr:line:column, or @std/name.spr:line:column for a bundled module. */
+    private static String location(String uri, sprig.compiler.diag.Span span) {
+        String file = uri;
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of(java.net.URI.create(uri));
+            String bundled = sprig.compiler.project.StdLibrary.importName(path);
+            file = bundled != null ? bundled : path.getFileName().toString();
+        } catch (IllegalArgumentException | java.nio.file.FileSystemNotFoundException e) {
+            // Not a file URI; keep it as it is.
+        }
+        return span == null ? file : file + ":" + span.display();
     }
 
     /**
@@ -596,8 +727,7 @@ public final class TypeRefResolver {
                 Type value = resolve(module, ref.args.get(1), typeParams, false);
                 if (key.nonNull() == NativeType.FLOAT || key.nonNull() == NativeType.FLOAT32) {
                     diagnostics.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE,
-                            "Float and Float32 cannot be Map keys: NaN and signed zero have no stable key equality",
-                            module.uri, ref.args.get(0).span)
+                            FLOAT_MAP_KEY, module.uri, ref.args.get(0).span)
                             .withHint("Use an explicit quantized Int key, or a Decimal key when decimal identity is intended."));
                     return NativeType.ERROR;
                 }

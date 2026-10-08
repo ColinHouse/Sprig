@@ -140,7 +140,11 @@ public final class Database {
 
     /**
      * Split SQLite text into statements without splitting quoted semicolons or trigger bodies;
-     * whitespace, semicolons and comments alone are not a statement.
+     * whitespace, semicolons and comments alone are not a statement. A trigger body ends as
+     * SQLite's own sqlite3_complete decides: only at an END that is the first token after one
+     * of its semicolons (or right after BEGIN, for an empty body) and is followed by a
+     * semicolon or the end of the text. So neither the END of a CASE expression nor a column
+     * named end ends it.
      */
     private static List<String> splitScript(String source) {
         List<String> statements = new ArrayList<>();
@@ -149,8 +153,9 @@ public final class Database {
         String first = "", second = "", third = "";
         char quote = 0;
         boolean lineComment = false, blockComment = false, trigger = false, triggerBody = false;
-        boolean triggerEnd = false;
-        int caseDepth = 0;
+        // In a trigger body, endMayFollow holds while the last token was BEGIN or a semicolon,
+        // and triggerEnd while it was an END that came right after one of those.
+        boolean endMayFollow = false, triggerEnd = false;
         for (int i = 0; i < source.length(); i++) {
             char c = source.charAt(i);
             char next = i + 1 < source.length() ? source.charAt(i + 1) : 0;
@@ -176,24 +181,27 @@ public final class Database {
                 String token = word.toString(); word.setLength(0);
                 if (first.isEmpty()) first = token; else if (second.isEmpty()) second = token; else if (third.isEmpty()) third = token;
                 if (first.equals("CREATE") && (second.equals("TRIGGER") || (second.equals("TEMP") || second.equals("TEMPORARY")) && third.equals("TRIGGER"))) trigger = true;
-                if (trigger && token.equals("BEGIN")) triggerBody = true;
-                if (triggerBody && token.equals("CASE")) caseDepth++;
-                if (triggerBody && token.equals("END")) { if (caseDepth > 0) caseDepth--; else triggerEnd = true; }
+                if (triggerBody) { triggerEnd = endMayFollow && token.equals("END"); endMayFollow = false; }
+                else if (trigger && token.equals("BEGIN")) triggerBody = endMayFollow = true;
             }
             if (c == '-' && next == '-') { current.append(c).append(next); i++; lineComment = true; continue; }
             if (c == '/' && next == '*') { current.append(c).append(next); i++; blockComment = true; continue; }
             if (c == '\'' || c == '"' || c == '`' || c == '[') {
-                current.append(c); quote = c == '[' ? ']' : c; continue;
+                // A quoted name or string is a token too, never the END keyword.
+                current.append(c); quote = c == '[' ? ']' : c; endMayFollow = triggerEnd = false; continue;
             }
             if (Character.isLetterOrDigit(c) || c == '_') { word.append(Character.toUpperCase(c)); current.append(c); continue; }
             if (c == ';') {
                 current.append(c);
                 if (!triggerBody || triggerEnd) {
                     addScriptStatement(statements, current);
-                    first = second = third = ""; trigger = triggerBody = triggerEnd = false; caseDepth = 0;
+                    first = second = third = ""; trigger = triggerBody = endMayFollow = triggerEnd = false;
+                } else {
+                    endMayFollow = true;
                 }
                 continue;
             }
+            if (!Character.isWhitespace(c)) endMayFollow = triggerEnd = false;
             current.append(c);
         }
         addScriptStatement(statements, current);

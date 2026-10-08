@@ -11,7 +11,12 @@ public final class SprigRuntime {
     /** Single-line transport markers for an uncaught failure; consumed by the CLI. */
     public static final String FAILURE_PREFIX = "sprig-runtime-failure:";
 
-    /** Generated-Java location of the first user frame, when one exists. */
+    /**
+     * Generated-Java location of a frame of generated code, one line per
+     * location, innermost first. The CLI maps them back to Sprig source and
+     * reports the innermost one in the program's own modules, so a failure
+     * inside an {@code @std} function points at the line that called it.
+     */
     public static final String FRAME_PREFIX = "sprig-runtime-frame:";
 
     /**
@@ -31,10 +36,14 @@ public final class SprigRuntime {
             out.append(": ").append(message.replace('\n', ' ').replace('\r', ' '));
         }
         System.err.println(out);
+        // A location repeats in a recursion; its first, innermost, line is enough.
+        java.util.Set<String> printed = new java.util.HashSet<>();
         for (StackTraceElement frame : failure.getStackTrace()) {
             if (frame.getClassName().startsWith("sprig.user.")) {
-                System.err.println(FRAME_PREFIX + " " + frame.getFileName() + ":" + frame.getLineNumber());
-                break;
+                String location = frame.getFileName() + ":" + frame.getLineNumber();
+                if (printed.add(location)) {
+                    System.err.println(FRAME_PREFIX + " " + location);
+                }
             }
         }
     }

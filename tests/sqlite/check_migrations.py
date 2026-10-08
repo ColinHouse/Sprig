@@ -93,6 +93,35 @@ def main():
         assert 'must roll back' not in retried.stdout
         assert retried.stdout.index('first; still quoted') < retried.stdout.index('retry succeeded')
 
+        # As SQLite's own sqlite3_complete decides, a trigger body ends only at an END
+        # that is the first token after a semicolon: neither the END of a CASE nor a
+        # column named end ends it, and an END in a comment or quotes is no token.
+        triggers = project / 'trigger bodies'
+        triggers.mkdir()
+        (triggers / '001_events.sql').write_text(
+            "CREATE TABLE messages (id INTEGER PRIMARY KEY, message TEXT NOT NULL);\n"
+            "CREATE TABLE events (id INTEGER PRIMARY KEY, start INTEGER NOT NULL, end INTEGER);\n"
+            "CREATE TRIGGER events_end AFTER INSERT ON events BEGIN\n"
+            "  UPDATE events SET end = NEW.start + 5 WHERE id = NEW.id AND end IS NULL;\n"
+            "  INSERT INTO messages(message) VALUES ('event ' || NEW.id || ' ends at ' || (SELECT end FROM events WHERE id = NEW.id));\n"
+            "  -- the body ends at the next END; not at this one\n"
+            "end;\n"
+            "CREATE TRIGGER events_label AFTER INSERT ON events BEGIN\n"
+            "  INSERT INTO messages(message) VALUES (CASE WHEN NEW.end IS NULL THEN 'event ' || NEW.id || ' open; end later'\n"
+            "    ELSE 'event ' || NEW.id || ' closed' END);\n"
+            "END;\n"
+            "INSERT INTO events(start) VALUES (10);\n"
+            "INSERT INTO events(start, end) VALUES (20, 21);\n", encoding='utf-8')
+        trigger_db = root / 'triggers.sqlite'
+        trigger_run = run(project, 'run', '--offline', '--', trigger_db, triggers)
+        lines = trigger_run.stdout.splitlines()
+        assert lines[0] == 'applied=1', trigger_run.stdout
+        # Both triggers fire for each row; sorted, since SQLite picks their order.
+        assert sorted(lines[1:]) == ['event 1 ends at 15', 'event 1 open; end later',
+                                     'event 2 closed', 'event 2 ends at 21'], trigger_run.stdout
+        with closing(sqlite3.connect(trigger_db)) as connection:
+            assert connection.execute('SELECT id, start, end FROM events ORDER BY id').fetchall() == [(1, 10, 15), (2, 20, 21)]
+
         malformed = project / 'bad names'
         malformed.mkdir()
         (malformed / "001_bad'; DROP TABLE messages;--.sql").write_text(
@@ -151,7 +180,8 @@ def main():
             "-- a closing note; with a semicolon\n/* and a block comment */\n", encoding='utf-8')
         trailing_run = run(project, 'run', '--offline', '--', root / 'trailing.sqlite', trailing)
         assert 'applied=1' in trailing_run.stdout and 'trailing comment ok' in trailing_run.stdout, trailing_run.stdout
-    print('SQLite migrations: order, idempotence, quoted semicolons/triggers, trailing comments, rollback/retry, '
+    print('SQLite migrations: order, idempotence, quoted semicolons, trigger bodies (CASE ... END, a column named end), '
+          'trailing comments, rollback/retry, '
           'whole-directory validation before running and transaction ownership passed')
 
 

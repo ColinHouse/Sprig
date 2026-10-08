@@ -21,13 +21,20 @@ def main():
         assert evidence[9:11] == ["PUT patch", "3"], evidence
         assert json.loads(evidence[11]) == {"type":"array", "items":{"type":"integer", "format":"int64"}}
         assert json.loads(evidence[12]) == {"type":"object", "properties":{"enabled":{"type":"boolean"}}}
-        assert evidence[13:] == ["cannot write the response as JSON: JSON at code point offset 0: expected number", "1"], evidence
+        assert evidence[13:15] == ["cannot write the response as JSON: JSON at code point offset 0: expected number", "1"], evidence
+        # A hand-built Request: query() looks up query_values and never decodes raw's query.
+        assert evidence[15:] == ["null", "sprig 你好", "true", "null"], evidence
         # Signatures say what can fail: Request.json and json_response throw Error,
-        # and a handler may let such an Error escape to the server.
+        # and a handler may let such an Error escape to the server. Request.query
+        # cannot fail: it reads query_values, which the server decodes once.
         api = json.loads(command(project, "api", "@web/web.spr", "--json"))
         declarations = {d["name"]: d for d in api["declarations"]}
         request_methods = {m["name"]: m for m in declarations["Request"]["methods"]}
         assert request_methods["json"].get("throws") == ["Error"], request_methods["json"]
+        assert request_methods["query"].get("throws") is None, request_methods["query"]
+        request_fields = {f["name"]: f for f in declarations["Request"]["fields"]}
+        assert request_fields["query_values"]["type"] == "Map[String, String]", request_fields
+        assert request_fields["query_values"]["required"] is False, request_fields
         assert declarations["json_response"].get("throws") == ["Error"], declarations["json_response"]
         assert declarations["text"].get("throws") is None, declarations["text"]
         handler = "fn(Request) -> Response throws Error"
@@ -55,6 +62,11 @@ def main():
             assert request(base, "/hello/a%2Fb?greeting=x%3Dy")[2] == "x=y, a/b!"
             assert request(base, "/hello/name?greeting=")[2] == ", name!"
             assert request(base, "/hello/name?greeting=first&greeting=second")[2] == "first, name!"
+            assert request(base, "/hello/name?greeting")[2] == ", name!"
+            assert request(base, "/hello/name?gr%65eting=a=b&greeting=c")[2] == "a=b, name!"
+            # A malformed query is a 400 even when the handler does not read it, or reads
+            # only the first, valid, occurrence of the name.
+            assert request(base, "/hello/name?greeting=ok&greeting=%E4")[0] == 400
             assert request(base, "/hello/%FF")[0] == 400
             assert request(base, "/?greeting=%ZZ")[0] == 400
             assert request(base, "/missing")[0] == 404

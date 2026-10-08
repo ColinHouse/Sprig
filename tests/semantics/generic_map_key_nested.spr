@@ -1,0 +1,9 @@
+# Generic code that passes its own T on to sets.of is rejected when it is
+# called with T = Float: the Set keeps its members as map keys (#212).
+import "@std/sets.spr" as sets
+
+generic T:
+    func count_unique(values: List[T]) -> Int:
+        return sets.of(values).size()
+
+print(count_unique([0.5, -0.5]))

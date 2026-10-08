@@ -182,6 +182,7 @@ CASES = [
     ("float-has-no-toint", "let x = 2.5\nprint(x.toInt())\n", "SPR-NAME-UNRESOLVED", "value.toIntExact()"),
     ("decimal-has-no-fromint", "print(Decimal.fromInt(3))\n", "SPR-NAME-UNRESOLVED", "value.toDecimal()"),
     ("int-has-no-parse", "print(Int.parse(\"12\"))\n", "SPR-NAME-UNRESOLVED", "text.toInt()"),
+    ("decimal-int-mix", "let price = Decimal.parse(\"1.50\")\nprint(price * 3)\n", "SPR-NUM-MIXED", "3.toDecimal()"),
     ("int32-mix-widens-exactly", "let a: Int32 = 3\nlet f = 1.5\nprint(f * a)\n", "SPR-NUM-MIXED", "a.toFloat()."),
     ("float-int-mix", "let count = 2\nlet total = 3.0\nprint(total / count)\n", "SPR-NUM-MIXED", "count.toFloatExact()"),
     ("int-division", "let sum = 1\nlet count = 2\nlet average: Float = sum / count\n", "SPR-NUM-DIVISION",

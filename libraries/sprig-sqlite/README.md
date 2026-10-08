@@ -57,7 +57,10 @@ BLOB and Decimal bindings are deliberately absent. INTEGER money uses minor unit
 
 Each SQL string passed to `execute`, `query` or a batch `Statement` holds one
 statement. A trailing `;`, empty statements and comments after it are fine, and
-a semicolon inside quotes, a comment or a trigger body does not count. A second
+a semicolon inside quotes, a comment or a trigger body does not count. A trigger
+body ends where SQLite's own `sqlite3_complete` ends it: at an `END` that is the
+first token after one of its semicolons, so the `END` of a `CASE` expression or
+a column named `end` inside the body does not end it. A second
 statement is an `Error`, and the call changes nothing (a batch rolls back), where
 JDBC would run the first statement and silently ignore the rest. Put a
 multi-statement script in a migration file instead.
