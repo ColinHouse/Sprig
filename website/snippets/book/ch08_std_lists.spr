@@ -1,6 +1,6 @@
 import "@std/lists.spr" as lists
 
-# lists.sorted 不改动输入：先 toList() 做一份只读快照再传进去。
+# 想不改动调用者的列表，就先 toList() 做只读快照再传给 lists.sorted。
 let words = ["pear", "fig", "banana", "fig"]
 print(lists.sorted(words.toList()))
 print(words)

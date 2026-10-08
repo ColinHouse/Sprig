@@ -123,7 +123,7 @@ true
 - `let doubled: MutableList[Int] = []` 先建一个空列表接结果。空字面量必须写元素类型，8.5 会看到不写会怎样。
 - `total += n` 是 `total = total + n` 的简写。`total` 必须声明成 `var` 才能改。
 - 第二个循环用 `range(0, numbers.size())` 生成下标 `0, 1, 2`；`i` 是 `Int`。
-- `i.toString()` 把 `Int` 变成 `String`，再用 `+` 和别的字符串拼起来。字符串和数字拼接时，非字符串那边要自己转成字符串。
+- `i.toString()` 把 `Int` 变成 `String`，再和别的字符串拼接。直接拼也行：`"n=" + i` 会得到 `n=2`，`+` 遇到字符串就做拼接；`i.toString()` 只是把"这里要文本"写得更明确。
 
 ## 8.4 下标越界的后果
 
@@ -300,7 +300,7 @@ true
 
 **练习 3** 给名字列表 `["Ada", "Bob", "Cyd"]` 打印带编号的名单：`1. Ada`、`2. Bob`、`3. Cyd`。
 
-提示：`for i in range(0, names.size())`，编号是 `i + 1`；拼接前先 `.toString()`。
+提示：`for i in range(0, names.size())`，编号是 `i + 1`；数字和字符串可以直接用 `+` 拼，参考答案显式写了 `.toString()`。
 
 ::: details 参考答案
 <<< @/snippets/book/ch08_ex3_answer.spr
