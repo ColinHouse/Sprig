@@ -157,6 +157,8 @@ sprig capabilities | Select-String "if expressions"
 2. 安装 Sprig 插件。插件目前没有发布到插件市场，需要从源码打包，步骤见[插件页面](/guide/editor)。装好以后，语法高亮、保存时检查、一键运行这些功能都会用上你刚构建的编译器。如果插件找不到编译器，在设置里把 **Sprig: Compiler Path** 指向 `bin/sprig`。
 3. 把代码文件保存成 `.spr` 后缀，例如 `hello.spr`。
 
+### 故意写错：用 Tab 缩进
+
 一个必须知道的规矩：**Sprig 的缩进只能用空格，不能用 Tab**。用 Tab 缩进的文件连检查都过不了，编译器会说：
 
 ```text
@@ -164,7 +166,7 @@ SPR-LEX-TAB [LEX] main.spr:2:1: Tabs are not allowed for indentation or inline w
   hint: Sprig code blocks use spaces only; replace the tab with spaces.
 ```
 
-在 VS Code 里看一眼窗口右下角的状态栏：显示 `Spaces: 4` 就对了（数字是几都行，一个文件里保持一致即可）。如果显示 `Tab Size`，点它，选择用空格缩进。第 5 章会讲缩进和代码块，现在只要记住“空格，不是 Tab”。
+`[LEX]` 说明错误出在读字符的阶段，`2:1` 指向第二行开头那个 Tab，`hint` 告诉你怎么改。在 VS Code 里看一眼窗口右下角的状态栏：显示 `Spaces: 4` 就对了（数字是几都行，一个文件里保持一致即可）。如果显示 `Tab Size`，点它，选择用空格缩进。第 5 章会讲缩进和代码块，现在只要记住“空格，不是 Tab”。
 
 ## 1.5 检查环境：`sprig doctor`
 

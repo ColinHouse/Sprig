@@ -157,6 +157,8 @@ You can write Sprig in any text editor, but a good one saves you work. Use [VS C
 2. Install the Sprig extension. It isn't on the Marketplace yet, so package it from source; see the [extension page](/en/guide/editor). Syntax highlighting, check-on-save and one-click run all use the compiler you just built. If the extension can't find it, set **Sprig: Compiler Path** to `bin/sprig`.
 3. Save your files with the `.spr` extension, for example `hello.spr`.
 
+### Deliberate mistake: indenting with a tab
+
 One rule you must know: **Sprig indents with spaces, never tabs**. A file indented with tabs fails even the check, and the compiler says:
 
 ```text
@@ -164,7 +166,7 @@ SPR-LEX-TAB [LEX] main.spr:2:1: Tabs are not allowed for indentation or inline w
   hint: Sprig code blocks use spaces only; replace the tab with spaces.
 ```
 
-In VS Code, look at the status bar in the bottom right: `Spaces: 4` is what you want (the number can be anything, as long as you're consistent in one file). If it says `Tab Size`, click it and switch to spaces. Chapter 5 explains indentation and code blocks; for now, just remember "spaces, not tabs".
+`[LEX]` means the error happened while reading characters, `2:1` points at the tab that starts the second line, and the `hint` says what to do. In VS Code, look at the status bar in the bottom right: `Spaces: 4` is what you want (the number can be anything, as long as you're consistent in one file). If it says `Tab Size`, click it and switch to spaces. Chapter 5 explains indentation and code blocks; for now, just remember "spaces, not tabs".
 
 ## 1.5 Check the environment: `sprig doctor`
 
