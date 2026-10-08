@@ -32,7 +32,7 @@ sprig {
 }
 ```
 
-For a Minecraft mod built with Loom, set `targetSourceSet` to `client`; [Fabric mods](/en/guide/fabric) walks through a complete project.
+For a Minecraft mod built with Loom, target `main` for content both sides need, such as items and blocks, and `client` only for a client-only mod. [Fabric mods](/en/guide/fabric) walks through a complete project.
 
 ## Everyday use
 

@@ -1,0 +1,18 @@
+class NotFound:
+    let text: String
+    let sku: String
+conform NotFound to Error(text)
+
+func find(sku: String) -> String throws NotFound:
+    if sku != "A1":
+        throw NotFound(text="no item " + sku, sku=sku)
+    return "found A1"
+
+try:
+    print(find("A1"))
+    print(find("ZZ"))
+catch problem: NotFound:
+    print(problem.text + " / " + problem.sku)
+    print("joined: " + problem)
+catch problem: Error:
+    print(problem.message)

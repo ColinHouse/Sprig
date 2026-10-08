@@ -1,0 +1,19 @@
+enum Season:
+    Spring
+    Summer
+    Autumn
+    Winter
+
+func is_warm(s: Season) -> Bool:
+    return match s:
+        case Season.Summer:
+            true
+        case Season.Spring:
+            true
+        case Season.Autumn:
+            false
+        case Season.Winter:
+            false
+
+print(is_warm(Season.Summer))
+print(is_warm(Season.Winter))

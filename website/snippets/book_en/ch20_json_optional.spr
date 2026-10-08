@@ -1,0 +1,7 @@
+# optional_int gives Int?, which cannot be used as Int directly.
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+let root = codec.root(json.parse("{}"))
+let stars: Int = codec.optional_int(root, "stars")
+print(stars)

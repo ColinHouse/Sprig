@@ -1,0 +1,5 @@
+# 主模块直接导入 d，又通过 b 间接导入 d。
+import "./b.spr" as b
+import "./d.spr" as d
+
+print("main done")

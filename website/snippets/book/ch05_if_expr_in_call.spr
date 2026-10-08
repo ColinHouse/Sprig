@@ -1,0 +1,5 @@
+let n = 3
+print(if n > 0:
+    "yes"
+else:
+    "no")

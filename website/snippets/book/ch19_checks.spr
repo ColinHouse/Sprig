@@ -1,0 +1,13 @@
+# 一个测试文件，用 sprig run 直接运行就能看到每项检查的结果。
+import "@std/test.spr" as testing
+
+# 被测试的函数：把文本解析成整数，失败就抛错。
+func parse_count(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+testing.check("parses a number", fn() => testing.equal_int(parse_count("42"), 42, "parse"))
+testing.check("rejects text", fn() => testing.check_error("rejects", fn() => parse_count("abc")))
+testing.finish()

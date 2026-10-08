@@ -1,0 +1,2 @@
+print(false and (1.divTrunc(0) == 0))
+print(true or (1.divTrunc(0) == 0))

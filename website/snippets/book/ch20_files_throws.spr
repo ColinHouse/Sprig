@@ -1,0 +1,7 @@
+# 函数里调用会抛错的文件操作，却忘了在签名上声明。
+import "@std/files.spr" as files
+
+func first_line(path: String) -> String:
+    return files.read_lines(path)[0]
+
+print(first_line("no-such-file.txt"))

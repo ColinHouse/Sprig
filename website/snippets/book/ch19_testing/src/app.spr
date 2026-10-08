@@ -1,0 +1,11 @@
+# 程序真正的工作。这里只有函数，没有顶层语句，测试可以放心导入。
+func greeting(name: String) -> String:
+    return "Hello, " + name + "!"
+
+# 处理一次命令行，返回退出码。
+func run(arguments: List[String]) -> Int:
+    if arguments.size() != 1:
+        print("usage: greet NAME")
+        return 2
+    print(greeting(arguments[0]))
+    return 0

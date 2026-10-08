@@ -1,0 +1,5 @@
+# Import a module in the same directory; reach its top-level names through the alias.
+import "./math_module.spr" as math
+
+print(math.square(7))
+print(math.pi_approx)

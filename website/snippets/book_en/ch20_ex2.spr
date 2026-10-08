@@ -1,0 +1,9 @@
+# Exercise 2: sum the amount of every item in a JSON array.
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+let text = "[{\"amount\": 12}, {\"amount\": 30}, {\"amount\": 5}]"
+var total = 0
+for row in codec.root_array(json.parse(text)):
+    total += codec.required_int(row, "amount")
+print(total)

@@ -1,0 +1,16 @@
+# 没有通配分支：每个 enum/variant case 都要写出来。
+enum Light:
+    Red
+    Yellow
+    Green
+
+func action(light: Light) -> String:
+    match light:
+        case Light.Red:
+            return "stop"
+        case Light.Yellow:
+            return "wait"
+        case Light.Green:
+            return "go"
+
+print(action(Light.Green))

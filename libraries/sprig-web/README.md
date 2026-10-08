@@ -1,8 +1,8 @@
 # sprig-web 0.1 development library
 
 A synchronous localhost HTTP library implemented in Sprig. JDK HTTP transport
-and UTF-8 decoding live behind a small Java boundary. This is a source checkout
-library, not a published registry package or a production framework.
+and UTF-8 decoding live behind a small Java boundary. It is listed in the default
+registry (`sprig add web`), but it is not a production framework.
 
 ## Install and run
 
@@ -19,7 +19,8 @@ sprig resolve
 sprig run
 ```
 
-Locks for local dependencies contain machine paths; resolve again after relocation.
+A relative local dependency stays valid when the checkout moves; re-resolve only
+after changing an absolute path.
 `app.run(port)` binds **127.0.0.1**; `app.run_on(host, port)` binds another
 address, such as `"0.0.0.0"` for every interface of a container (no TLS: put a
 reverse proxy in front). `0` asks the OS for an ephemeral port. `app.port()` reports the actual port. `app.stop()` stops
@@ -131,8 +132,7 @@ reflection or automatic class serialization is involved.
   (and `sprig api . --json` inside a depending project) after `sprig resolve`.
 
 The first host processes requests serially. Authentication, sessions, middleware,
-async, multipart, production limits and public interface binding are outside this
-small experiment.
+async, multipart, TLS and production limits are outside this small experiment.
 
 ## Stable facade
 

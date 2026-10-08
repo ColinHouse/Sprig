@@ -1,0 +1,4 @@
+# Sprig has no ++ or --.
+var count = 1
+count++
+print(count)

@@ -26,8 +26,9 @@ demo()
 ```
 
 Run `sprig resolve` once, then `sprig check --offline` / `sprig run --offline`.
-An existing lock/cache never silently downloads missing artifacts. Local package
-locks record canonical paths and must be re-resolved after relocating a checkout.
+An existing lock/cache never silently downloads missing artifacts. A lock records
+a relative local dependency relative to the project, so the checkout can move; an
+absolute path is recorded as written and needs `sprig resolve` after a move.
 
 ## API contract
 

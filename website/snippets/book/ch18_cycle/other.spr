@@ -1,0 +1,4 @@
+import "./main.spr" as main
+
+func beta() -> Int:
+    return 2

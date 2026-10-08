@@ -1,0 +1,10 @@
+func hint(secret: Int, guess: Int) -> String:
+    if guess < secret:
+        return "too low"
+    if guess > secret:
+        return "too high"
+    return "correct"
+
+print(hint(21, 10))
+print(hint(21, 50))
+print(hint(21, 21))

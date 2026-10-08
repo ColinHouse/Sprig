@@ -1,0 +1,2 @@
+let cents = 1250
+print(cents / 100)

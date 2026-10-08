@@ -124,8 +124,9 @@ invalid identifiers are refused too.
 
 Some diagnostics carry `suggestedEdits`: the mechanical rewrite their hint
 describes (see [diagnostic codes](diagnostic-codes.md)). Today that is a missing
-`@std` import, an undeclared `throws`, positional constructor arguments and
-`else if`.
+`@std` import, an undeclared `throws`, positional constructor arguments,
+`else if`, and the removed conversions `Int.toFloat()` and `Float.toInt()`
+(rewritten to `toFloatExact()` and `toIntExact()`).
 
 For a `textDocument/codeAction` request, the server checks the current text
 and takes every diagnostic of the document whose range overlaps the requested

@@ -1,0 +1,8 @@
+class Sink:
+    func write(line: String) -> Unit
+
+generic T:
+    func log_all(values: List[T]) -> Unit:
+        requires T: Sink
+        for value in values:
+            print(value)

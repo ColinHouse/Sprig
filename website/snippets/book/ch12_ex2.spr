@@ -1,0 +1,13 @@
+variant Temperature:
+    Celsius(degrees: Float)
+    Fahrenheit(degrees: Float)
+
+func to_celsius(t: Temperature) -> Float:
+    match t:
+        case Temperature.Celsius as c:
+            return c.degrees
+        case Temperature.Fahrenheit as f:
+            return (f.degrees - 32.0) * 5.0 / 9.0
+
+print(to_celsius(Temperature.Celsius(degrees=20.0)))
+print(to_celsius(Temperature.Fahrenheit(degrees=212.0)))

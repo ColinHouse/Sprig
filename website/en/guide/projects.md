@@ -99,28 +99,6 @@ version = "1.12.0"
 
 `name` is the name you import the package by in your own code. It has nothing to do with the `name` in the dependency's own `[project]`. Different packages can use the same name for a dependency, but one package can't use a name twice.
 
-## Using modules from a dependency
-
-A dependency lists, in its own `sprig.toml`, which modules other packages may import:
-
-```toml
-[project]
-name = "math"
-version = "0.1.0"
-language = "0.8"
-exports = ["vector.spr"]
-```
-
-In your project, import them with `@` and the dependency's name:
-
-```sprig
-import "@math/vector.spr" as vector
-
-print(vector.length_squared(3, 4))
-```
-
-Only modules listed in `exports` can be imported. Paths are normalized first, so `..` can't take you outside the dependency's source directory.
-
 ### Adding from a registry
 
 Without `--path`, `--git` or `--jvm`, `sprig add` looks the name up in a package registry:
@@ -147,6 +125,28 @@ sprig publish --registry ../Sprig/registry --tag v1.0.0 --license Apache-2.0 --o
 `publish` writes the entry into the local index directory and records the commit the tag points at; committing that file and opening the pull request is the next step. The default registry is strict: names are lowercase letters, digits and hyphens; every release is a tag pinned to a commit (no branches); `license` (an SPDX identifier) and `owners` (GitHub handles) are required; a published version is never changed or deleted, only withdrawn with `sprig publish --registry ../Sprig/registry --yank 1.0.0 --reason "why"`. A change to an existing entry comes from one of its owners or needs maintainer approval. The workflow clones each new release at its tag, checks the commit, and runs `sprig resolve`, `sprig check` and `sprig test` with the current SDK.
 
 An unlisted package or version is `SPR-DEP-REGISTRY`; `sprig search` shows what is there. The [dependency contract](/en/reference/projects/dependencies) has the details.
+
+## Using modules from a dependency
+
+A dependency lists, in its own `sprig.toml`, which modules other packages may import:
+
+```toml
+[project]
+name = "math"
+version = "0.1.0"
+language = "0.8"
+exports = ["vector.spr"]
+```
+
+In your project, import them with `@` and the dependency's name:
+
+```sprig
+import "@math/vector.spr" as vector
+
+print(vector.length_squared(3, 4))
+```
+
+Only modules listed in `exports` can be imported. Paths are normalized first, so `..` can't take you outside the dependency's source directory.
 
 ## The lock file
 

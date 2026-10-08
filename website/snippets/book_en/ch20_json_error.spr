@@ -1,0 +1,9 @@
+# A field with the wrong type: the Error message carries its path in the document.
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+let root = codec.root(json.parse("{\"stars\": \"12\"}"))
+try:
+    print(codec.required_int(root, "stars"))
+catch problem: Error:
+    print(problem.message)

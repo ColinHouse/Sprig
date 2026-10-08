@@ -1,0 +1,2 @@
+print("cat" in "concatenate")
+print("dog" in "concatenate")

@@ -1,0 +1,13 @@
+import "@std/sets.spr" as sets
+
+let fruits = sets.of(["apple", "pear", "apple"])
+print(fruits.size())
+print(fruits.has("apple"))
+print(fruits.add("fig"))
+print(fruits.has("fig"))
+print(fruits.remove("pear"))
+print(fruits.to_list())
+let more = sets.of(["fig", "kiwi"])
+print(sets.union(fruits, more).to_list())
+print(sets.intersection(fruits, more).to_list())
+print(sets.difference(fruits, more).to_list())

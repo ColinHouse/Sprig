@@ -1,0 +1,5 @@
+# 导入同目录的模块，用别名访问它的顶层名字。
+import "./math_module.spr" as math
+
+print(math.square(7))
+print(math.pi_approx)

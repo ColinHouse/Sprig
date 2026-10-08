@@ -1,0 +1,6 @@
+let rate = 3
+
+func triple(n: Int) -> Int:
+    return n * rate
+
+print(triple(5))

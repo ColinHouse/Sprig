@@ -1,0 +1,12 @@
+import "@std/lists.spr" as lists
+
+# To leave the caller's list alone, pass a read-only snapshot from toList() to lists.sorted.
+let words = ["pear", "fig", "banana", "fig"]
+print(lists.sorted(words.toList()))
+print(words)
+print(lists.reversed(words))
+print(lists.distinct(words))
+print(lists.index_of(words, "fig"))
+print(lists.sum([1, 2, 3]))
+print(lists.take(words, 2))
+print(lists.drop(words, 3))

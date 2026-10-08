@@ -1,0 +1,11 @@
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("bad number: " + text)
+    return value
+
+try:
+    print(parse("7"))
+    print(parse("seven"))
+catch problem: Error:
+    print("error: " + problem.message)

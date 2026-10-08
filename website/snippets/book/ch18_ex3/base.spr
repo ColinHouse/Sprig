@@ -1,0 +1,2 @@
+# 练习 3 的底层模块：它只会初始化一次。
+print("base initialized")

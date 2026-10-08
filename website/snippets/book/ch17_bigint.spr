@@ -1,0 +1,5 @@
+let big = BigInt.parse("99999999999999999999")
+print(big * big)
+print(big.divTrunc(BigInt.fromInt(7)))
+print(big % BigInt.fromInt(7))
+print(big.toFloatLossy())

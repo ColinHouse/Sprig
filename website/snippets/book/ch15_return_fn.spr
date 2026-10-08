@@ -1,0 +1,8 @@
+func multiplier(factor: Int) -> fn(Int) -> Int:
+    let scale = fn(n: Int) => n * factor
+    return scale
+
+let triple = multiplier(3)
+let tenfold = multiplier(10)
+print(triple(7))
+print(tenfold(7))

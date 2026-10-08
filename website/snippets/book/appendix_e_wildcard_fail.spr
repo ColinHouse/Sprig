@@ -1,0 +1,14 @@
+# 匹配不能写 case _: ——没有通配分支。
+enum Light:
+    Red
+    Yellow
+    Green
+
+func action(light: Light) -> String:
+    match light:
+        case Light.Red:
+            return "stop"
+        case _:
+            return "other"
+
+print(action(Light.Green))

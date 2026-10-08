@@ -1,0 +1,8 @@
+import "@std/process.spr" as process
+
+let args = process.arguments()
+if args.isEmpty():
+    print("no arguments; run me as: sprig run main.spr -- Ada Bob")
+else:
+    for name in args:
+        print("hello " + name)

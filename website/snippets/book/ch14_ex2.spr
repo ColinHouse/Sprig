@@ -1,0 +1,10 @@
+func divide(a: Int, b: Int) -> Int throws Error:
+    if b == 0:
+        throw Error("division by zero")
+    return a.divTrunc(b)
+
+try:
+    print(divide(6, 2))
+    print(divide(6, 0))
+catch problem: Error:
+    print("cannot divide: " + problem.message)

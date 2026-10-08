@@ -1,0 +1,5 @@
+# A plain module: one function and one top-level let binding.
+func square(x: Int) -> Int:
+    return x * x
+
+let pi_approx: Float = 3.14159

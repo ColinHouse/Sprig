@@ -1,0 +1,2 @@
+let s = "I love Sprig!"
+print(s.substring(7, 12))

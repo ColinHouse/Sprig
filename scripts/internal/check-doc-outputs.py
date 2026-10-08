@@ -13,6 +13,12 @@ snippet against its oracle; this check covers what the reader sees:
 
 A text block that does not come right after an include is prose, not output,
 and is not checked here.
+
+The English book shows the same programs as the Chinese one. A snippet whose
+comments are Chinese has an English twin under website/snippets/book_en/ at the
+same path: once full-line comments and blank lines are set aside, its code is
+the same line for line, and its oracle and role are the same, so the two
+editions cannot drift apart.
 """
 from pathlib import Path
 import json
@@ -56,6 +62,38 @@ def normalized(lines, file_name):
     return [line.rstrip().replace(file_name + ":", "main.spr:") for line in lines]
 
 
+def code_lines(path: Path):
+    """The program without its full-line comments and blank lines."""
+    return [line.rstrip() for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")]
+
+
+def twin_failures(executable, compile_fail):
+    failures = []
+    english = SNIPPETS / "book_en"
+    if not english.is_dir():
+        return failures
+    for twin in sorted(english.rglob("*.spr")):
+        relative = twin.relative_to(english)
+        original = SNIPPETS / "book" / relative
+        name = f"book_en/{relative.as_posix()}"
+        if not original.is_file():
+            failures.append(f"website/snippets/{name}: no website/snippets/book/{relative.as_posix()} to mirror")
+            continue
+        if code_lines(twin) != code_lines(original):
+            failures.append(f"website/snippets/{name}: its code differs from book/{relative.as_posix()}")
+        original_name = f"book/{relative.as_posix()}"
+        for role in (executable, compile_fail):
+            if (name in role) != (original_name in role):
+                failures.append(f"website/snippets/{name}: registered with a different role than {original_name}")
+        for suffix in (".out", ".expect.json"):
+            mine, theirs = twin.with_suffix(suffix), original.with_suffix(suffix)
+            if mine.is_file() != theirs.is_file() or (
+                    mine.is_file() and mine.read_bytes() != theirs.read_bytes()):
+                failures.append(f"website/snippets/{name}: its {suffix} differs from book/{relative.as_posix()}")
+    return failures
+
+
 def main() -> int:
     manifest = json.loads((SNIPPETS / "snippets.json").read_text(encoding="utf-8"))
     executable = set(manifest["executable"])
@@ -94,9 +132,12 @@ def main() -> int:
                         failures.append(f"{where}:{line}: {snippet} does not print {shown_line!r}")
                         break
                     position += 1
+    twins = twin_failures(executable, compile_fail)
+    failures += twins
     for failure in failures:
         print(failure)
-    print(f"documented outputs: {checked} checked, {len(failures)} differ")
+    print(f"documented outputs: {checked} checked, {len(failures) - len(twins)} differ; "
+          f"English snippet twins: {len(twins)} differ")
     return 1 if failures else 0
 
 

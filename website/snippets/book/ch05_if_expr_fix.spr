@@ -1,0 +1,6 @@
+let n = 3
+let label = if n > 0:
+    "yes"
+else:
+    "no"
+print(label)

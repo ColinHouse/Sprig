@@ -1,0 +1,15 @@
+class Empty:
+    let message: String
+    let name: String
+conform Empty to Error(message)
+
+func greeting(name: String) -> String throws Empty:
+    if name == "":
+        throw Empty(message="name is empty", name=name)
+    return "hello " + name
+
+try:
+    print(greeting("Ada"))
+    print(greeting(""))
+catch problem: Empty:
+    print(problem.message + " [" + problem.name + "]")

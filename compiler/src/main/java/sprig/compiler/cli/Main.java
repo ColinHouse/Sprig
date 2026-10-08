@@ -1854,7 +1854,11 @@ public final class Main {
                     + "with 'catch problem: ArithmeticException:'. See `sprig help numerics`.";
         }
         if (text.contains("is not an exact Int value")) {
-            return "toInt() and toIntExact() need a whole number. Use toIntTrunc() to drop the fraction, or "
+            if (text.contains("Decimal")) {
+                return "Decimal.toIntExact() needs a whole number. For a Decimal, convert with toFloatExact() "
+                        + "and then toIntTrunc(), or round through toJava() (a java.math.BigDecimal).";
+            }
+            return "toIntExact() needs a whole number. Use toIntTrunc() to drop the fraction, or "
                     + "Math.round(x) after 'import java.lang.Math as Math' to round to the nearest Int.";
         }
         if (text.contains("by zero")) {
@@ -2062,7 +2066,7 @@ public final class Main {
             printExplainBlock("Good", detail.get("goodExample"));
             printExplainBlock("Bad", detail.get("badExample"));
         }
-        return 0;
+        return Boolean.TRUE.equals(detail.get("known")) ? 0 : 2;
     }
 
     private static void printExplainList(String label, Object items) {

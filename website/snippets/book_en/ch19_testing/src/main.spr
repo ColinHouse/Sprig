@@ -1,0 +1,5 @@
+# The entry point only handles arguments: hand them to app.run and use its return as the exit code.
+import "@std/process.spr" as process
+import "./app.spr" as app
+
+process.exit(app.run(process.arguments()))

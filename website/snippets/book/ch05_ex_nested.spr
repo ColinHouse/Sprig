@@ -1,0 +1,9 @@
+let is_member = true
+let total = 120
+if is_member:
+    if total >= 100:
+        print("20% off")
+    else:
+        print("10% off")
+else:
+    print("no discount")

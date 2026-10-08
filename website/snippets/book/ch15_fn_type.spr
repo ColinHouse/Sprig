@@ -1,0 +1,8 @@
+func apply_twice(value: Int, step: fn(Int) -> Int) -> Int:
+    return step(step(value))
+
+func triple(n: Int) -> Int:
+    return n * 3
+
+print(apply_twice(5, fn(n: Int) => n + 1))
+print(apply_twice(5, triple))

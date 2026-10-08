@@ -1,0 +1,6 @@
+# 没有元组：一行类给字段起名字，取字段就相当于解构。
+class Pair(first: Int, second: Int)
+
+let p = Pair(first=1, second=2)
+print(p.first)
+print(p.second)

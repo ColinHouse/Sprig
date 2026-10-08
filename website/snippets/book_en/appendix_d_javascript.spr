@@ -1,0 +1,27 @@
+# Coming from JavaScript: let/const, template strings, arrays and objects.
+# Sprig's let binds once; var is the reassignable one.
+var count = 0
+let name = "Ada"
+count += 1
+print(name + " has " + count)
+
+# JS's undefined does not exist; absence is T? plus null.
+func lookup(ages: Map[String, Int], who: String) -> Int?:
+    return ages.get(who)
+
+let maybe = lookup({"ada": 36}, "bob")
+if maybe == null:
+    print("missing")
+else:
+    print(maybe)
+
+# A JS array's length is a property; Sprig uses size() and [] for elements.
+let numbers = [3, 1, 2]
+print(numbers.size())
+print(numbers[0])
+print(numbers.contains(2))
+
+# A JS object literal is a Map here; read fields with get.
+let person = {"name": "Grace", "city": "London"}
+print(person.get("name"))
+print("city" in person)

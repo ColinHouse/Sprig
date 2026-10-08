@@ -1,0 +1,8 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.add("ada")
+names.add("alan")
+names.add("bob")
+names.removeIf(fn(name: String) => name.startsWith("a"))
+print(names)

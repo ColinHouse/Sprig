@@ -1,0 +1,4 @@
+# 没有字符串插值：+ 把值变成文字连起来。
+let name = "Ada"
+let age = 36
+print("name: " + name + ", age: " + age)

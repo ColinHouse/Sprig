@@ -1,12 +1,14 @@
 # Example programs
 
-Once you've done the [tutorial](/en/tutorial), these fuller programs are a good next step. They all live in the repository's `examples/` directory, and each one's README explains how to run it, what it depends on and what its limits are.
+Once you've done the [tutorial](/en/tutorial/), these fuller programs are a good next step. They all live in the repository's `examples/` directory, and each one's README explains how to run it, what it depends on and what its limits are.
 
 ## Start with small local tools
 
 - [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker): a command-line task list that keeps its data in a local JSON file. It shows file I/O, a typed data model and reading JSON fields with `@std/json_codec`, with no network access.
 - [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select): a command-line tool for picking fields out of JSON, split across several files, using the `sprig-cli` library for options.
+- [tasks](https://github.com/ColinHouse/Sprig/tree/main/examples/tasks): a todo CLI with subcommands over a JSON file (`sprig-cli`, `@std/json_codec`).
 - [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary): reads a small JSON configuration file and prints a summary in a fixed format, with clear errors for bad input.
+- [blog](https://github.com/ColinHouse/Sprig/tree/main/examples/blog): a static blog generator that turns posts with front matter into HTML pages and an index, with exit codes for bad input (`@std/files`, `@std/text`, `@std/lists`).
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools): three small tools written in Sprig that read the compiler's JSON output to query Java and Sprig APIs, summarize errors and compare APIs.
 
 ## Applications that use Java libraries
@@ -14,7 +16,9 @@ Once you've done the [tutorial](/en/tutorial), these fuller programs are a good 
 - [application_foundation](https://github.com/ColinHouse/Sprig/tree/main/examples/application_foundation): HTTP, JSON encoding and decoding, UTC time and file handling.
 - [sqlite](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite) and [sqlite_migrations](https://github.com/ColinHouse/Sprig/tree/main/examples/sqlite_migrations): JDBC through Maven, with transactions, persistence and database migrations.
 - [parallel_words](https://github.com/ColinHouse/Sprig/tree/main/examples/parallel_words): counts words in parallel with `@std/concurrent`, using a scope, tasks, a pool, a channel, a counter and a lock once each; see [Concurrency](/en/guide/concurrency).
+- [crawler](https://github.com/ColinHouse/Sprig/tree/main/examples/crawler): a concurrent crawler over local pages with scopes, tasks, a channel, a counter and a lock (`@std/concurrent`).
 - [ledger](https://github.com/ColinHouse/Sprig/tree/main/examples/ledger): a compact bookkeeping HTTP backend whose data survives a restart. See [Web and SQLite](/en/guide/web-sqlite).
+- [todo](https://github.com/ColinHouse/Sprig/tree/main/examples/todo): a todo list stored in SQLite behind a small HTTP API (`sprig-sqlite`, `sprig-web`); its test drives the live server over HTTP.
 - [mini_web](https://github.com/ColinHouse/Sprig/tree/main/examples/mini_web): typed routes, JSON and OpenAPI documentation.
 
 Third-party Java libraries are added with ordinary Maven coordinates and pinned by the lock file; see [projects](/en/guide/projects) and [JVM interop](/en/guide/jvm-interop). The libraries Sprig maintains itself are in the [`libraries/`](https://github.com/ColinHouse/Sprig/tree/main/libraries) directory.

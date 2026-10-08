@@ -23,7 +23,7 @@ features:
   - title: 空值要先检查
     details: 可能为空的值写成 T?，用之前必须判断。Java 方法返回的对象也一样。
   - title: 报错可以直接拿来修
-    details: 每个错误都有固定的错误码、准确的位置和修改提示，还能输出成 JSON，交给编辑器或 AI 助手处理。
+    details: 每个错误都有固定的错误码和准确的位置，很多还附带修改提示；也能输出成 JSON，交给编辑器或 AI 助手处理。
 ---
 
 ## 先看一眼
@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## 现在能用吗？
 
-Sprig 还在早期。当前发布的版本是实验性的 v0.7.1-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它没有继承，泛型没有协变和逆变，也不建议用在生产环境。契约类（方法没有函数体的类）和按实参推断类型参数比 v0.7.1-beta.1 新，见[发布状态](/project/release-status)。完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
+Sprig 还在早期。当前发布的版本是实验性的 v0.7.1-beta.1：上面列的事情都已经能做，每一项都有能直接运行的例子。不过它没有继承，泛型没有协变和逆变，也不建议用在生产环境。网站按 `main` 分支来写，契约类、`if` 表达式、函数引用、`@std/concurrent` 这些功能比 v0.7.1-beta.1 新，完整清单见[发布状态](/project/release-status)。限制的完整清单见[已知限制](/en/reference/language/known-limitations)（英文）。
 
 ## 五分钟跑起来
 

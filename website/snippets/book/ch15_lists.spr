@@ -1,0 +1,8 @@
+import "@std/lists.spr" as lists
+
+print(lists.sort_by(["pear", "fig", "apple"], fn(w: String) => w.length()))
+print(lists.fold([1, 2, 3, 4], 0, fn(total: Int, n: Int) => total + n))
+print(lists.any([2, 4, 5], fn(n: Int) => n % 2 == 1))
+print(lists.all([2, 4, 5], fn(n: Int) => n % 2 == 0))
+print(lists.find([3, 8, 5], fn(n: Int) => n > 4))
+print(lists.count([1, 2, 3, 4], fn(n: Int) => n % 2 == 0))

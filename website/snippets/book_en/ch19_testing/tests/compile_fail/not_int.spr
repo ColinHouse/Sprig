@@ -1,0 +1,2 @@
+# This file must fail to compile.
+let n: Int = null

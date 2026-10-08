@@ -1,0 +1,12 @@
+import "@std/concurrent.spr" as concurrent
+
+func nap(label: String) -> String:
+    concurrent.sleep(10)
+    return label
+
+func both(s: concurrent.Scope) -> String throws Error:
+    let first = concurrent.spawn(s, fn() => nap("tick"))
+    let second = concurrent.spawn(s, fn() => nap("tack"))
+    return first.await() + " " + second.await()
+
+print(concurrent.scope(both))

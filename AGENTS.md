@@ -120,7 +120,8 @@ change touches, as applicable:
 - Documented examples are executed by `scripts/internal/verify-doc-snippets.py`; keep
   snippets compiling and their `.out` files current. Every `website/snippets/`
   `.spr` file has an explicit role in `website/snippets/snippets.json`
-  (`executable` with an oracle or `import-only`); tutorial programs belong
+  (`executable` with an oracle, `import-only`, or `compile-fail` with a
+  sibling `.expect.json` naming the expected codes); tutorial programs belong
   there, application programs belong in `examples/`, regression fixtures in
   `tests/`.
 - Only claim tests you actually ran.

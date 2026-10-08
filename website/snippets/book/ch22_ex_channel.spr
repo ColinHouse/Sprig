@@ -1,0 +1,22 @@
+import "@std/concurrent.spr" as concurrent
+
+let numbers = concurrent.channel[Int](8)
+
+func produce() -> Unit:
+    numbers.send(10)
+    numbers.send(20)
+    numbers.send(30)
+    numbers.close()
+
+func total(s: concurrent.Scope) -> Int throws Error:
+    let job = concurrent.run(s, produce)
+    var sum = 0
+    while true:
+        let next = numbers.receive()
+        if next == null:
+            break
+        sum += next
+    job.await()
+    return sum
+
+print(concurrent.scope(total))

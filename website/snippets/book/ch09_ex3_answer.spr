@@ -1,0 +1,11 @@
+let left: MutableMap[String, Int] = {"a": 1, "b": 2}
+let right: MutableMap[String, Int] = {"b": 3, "c": 4}
+for key in right.keys():
+    let other = right[key]
+    let old = left[key]
+    if other != null:
+        if old == null:
+            left[key] = other
+        else:
+            left[key] = old + other
+print(left)

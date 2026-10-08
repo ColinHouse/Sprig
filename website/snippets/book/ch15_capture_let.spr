@@ -1,0 +1,3 @@
+let base = 10
+let add_base = fn(n: Int) => n + base
+print(add_base(5))

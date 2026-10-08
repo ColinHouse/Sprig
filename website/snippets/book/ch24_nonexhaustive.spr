@@ -1,0 +1,13 @@
+variant Category:
+    Food
+    Transport
+    Other
+
+func label(category: Category) -> String:
+    return match category:
+        case Category.Food:
+            "Food"
+        case Category.Transport:
+            "Transport"
+
+print(label(Category.Food))

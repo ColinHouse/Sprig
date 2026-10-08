@@ -1,0 +1,4 @@
+import "@std/concurrent.spr" as concurrent
+
+let doubled = concurrent.parallel_map([1, 2, 3], fn(n: Int) => n * 2)
+print(doubled)

@@ -1,0 +1,3 @@
+let stock: MutableMap[String, Int] = {"tea": 12}
+let coffee = stock["coffee"]
+print(coffee + 1)

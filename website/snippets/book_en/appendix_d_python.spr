@@ -1,0 +1,28 @@
+# Coming from Python: f-strings, None, mutable lists, // and %.
+# Sprig joins text with + and marks missing values with T?.
+let cups = 3
+let price = 2.5
+let total = cups.toFloatExact() * price
+print("total: " + total)
+
+func find(parts: List[String], name: String) -> String?:
+    for part in parts:
+        if part == name:
+            return part
+    return null
+
+let found = find(["bolt", "nut"], "nut")
+if found != null:
+    print("found " + found)
+else:
+    print("not found")
+
+# Python lists are mutable by default; Sprig chooses MutableList explicitly.
+let items: MutableList[String] = ["a", "b"]
+items.append("c")
+print(items)
+
+# Python's // is divTrunc; % on negatives also differs from Python.
+print(7.divTrunc(2))
+print(-7 % 3)
+print(7.toFloatExact() / 2.toFloatExact())

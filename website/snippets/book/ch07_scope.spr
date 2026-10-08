@@ -1,0 +1,6 @@
+func setup() -> Unit:
+    let hidden = 1
+    print("set " + hidden)
+
+setup()
+print(hidden)

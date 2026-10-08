@@ -1,0 +1,18 @@
+class Greeter:
+    func greet(name: String) -> String
+
+class Friendly:
+    func greet(name: String) -> String:
+        return "hello, " + name
+conform Friendly to Greeter
+
+class Formal:
+    func greet(name: String) -> String:
+        return "Good day, " + name
+conform Formal to Greeter
+
+func welcome(greeter: Greeter, name: String) -> Unit:
+    print(greeter.greet(name))
+
+welcome(Friendly(), "Ada")
+welcome(Formal(), "Bo")

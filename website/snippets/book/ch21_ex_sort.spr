@@ -1,0 +1,8 @@
+import java.util.ArrayList as ArrayList
+
+let numbers = ArrayList[Int]()
+numbers.add(3)
+numbers.add(1)
+numbers.add(2)
+numbers.sort(fn(a: Int, b: Int) => b - a)
+print(numbers)

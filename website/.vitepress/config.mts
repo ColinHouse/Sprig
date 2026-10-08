@@ -93,34 +93,53 @@ export default defineConfig({
           '/tutorial': [
             { text: 'Sprig 程序设计语言', items: [{ text: '前言', link: '/tutorial/' }] },
             {
-              text: '第一部分：基础',
+              text: '第一部分：从零开始写程序',
               items: [
-                { text: '1. 入门', link: '/tutorial/ch01-getting-started' },
-                { text: '2. 值与类型', link: '/tutorial/ch02-values' },
-                { text: '3. 控制流', link: '/tutorial/ch03-control-flow' },
-                { text: '4. 函数', link: '/tutorial/ch04-functions' },
-                { text: '5. 集合', link: '/tutorial/ch05-collections' }
+                { text: '1. 准备工具', link: '/tutorial/ch01-tools' },
+                { text: '2. 第一个程序与读懂报错', link: '/tutorial/ch02-first-program' },
+                { text: '3. 值、变量和算术', link: '/tutorial/ch03-values' },
+                { text: '4. 文字', link: '/tutorial/ch04-text' },
+                { text: '5. 做决定：if', link: '/tutorial/ch05-if' },
+                { text: '6. 重复：循环', link: '/tutorial/ch06-loops' },
+                { text: '7. 函数', link: '/tutorial/ch07-functions' },
+                { text: '8. 列表', link: '/tutorial/ch08-lists' },
+                { text: '9. 映射和集合', link: '/tutorial/ch09-maps-sets' },
+                { text: '10. 小项目：猜数字', link: '/tutorial/ch10-project-guess' }
               ]
             },
             {
-              text: '第二部分：类型系统',
+              text: '第二部分：用类型描述世界',
               items: [
-                { text: '6. 类', link: '/tutorial/ch06-classes' },
-                { text: '7. 枚举、variant 和 match', link: '/tutorial/ch07-enums-variants' },
-                { text: '8. 可空值', link: '/tutorial/ch08-nullable' },
-                { text: '9. 错误处理', link: '/tutorial/ch09-errors' },
-                { text: '10. 泛型', link: '/tutorial/ch10-generics' },
-                { text: '11. 函数作为值', link: '/tutorial/ch11-functions-as-values' }
+                { text: '11. 类和对象', link: '/tutorial/ch11-classes' },
+                { text: '12. 枚举、variant 和 match', link: '/tutorial/ch12-enums-variants' },
+                { text: '13. 可空值', link: '/tutorial/ch13-nullable' },
+                { text: '14. 错误处理', link: '/tutorial/ch14-errors' },
+                { text: '15. 函数作为值', link: '/tutorial/ch15-functions-as-values' },
+                { text: '16. 泛型与契约类', link: '/tutorial/ch16-generics-contracts' },
+                { text: '17. 数字进阶', link: '/tutorial/ch17-numbers' }
               ]
             },
             {
-              text: '第三部分：工程与生态',
+              text: '第三部分：做真正的程序',
               items: [
-                { text: '12. 模块与项目', link: '/tutorial/ch12-modules-projects' },
-                { text: '13. 调用 Java', link: '/tutorial/ch13-java' },
-                { text: '14. 并发', link: '/tutorial/ch14-concurrency' },
-                { text: '15. 工具链与 AI 助手', link: '/tutorial/ch15-tooling' },
-                { text: '16. 项目：记账小工具', link: '/tutorial/ch16-project-ledger' }
+                { text: '18. 模块、项目和依赖', link: '/tutorial/ch18-modules-projects' },
+                { text: '19. 测试', link: '/tutorial/ch19-testing' },
+                { text: '20. 标准库实用篇', link: '/tutorial/ch20-stdlib' },
+                { text: '21. 调用 Java', link: '/tutorial/ch21-java' },
+                { text: '22. 并发', link: '/tutorial/ch22-concurrency' },
+                { text: '23. 工具链与 AI 助手', link: '/tutorial/ch23-tooling' },
+                { text: '24. 综合项目：记账', link: '/tutorial/ch24-project-ledger' }
+              ]
+            },
+            {
+              text: '附录',
+              items: [
+                { text: 'A. 运算符与优先级', link: '/tutorial/appendix-a-operators' },
+                { text: 'B. 报错码速查', link: '/tutorial/appendix-b-error-codes' },
+                { text: 'C. 关键字和内置函数', link: '/tutorial/appendix-c-keywords' },
+                { text: 'D. 从 Python、JavaScript、Java 过来', link: '/tutorial/appendix-d-from-other-languages' },
+                { text: 'E. Sprig 没有的东西', link: '/tutorial/appendix-e-not-in-sprig' },
+                { text: 'F. Java 互操作进阶', link: '/tutorial/appendix-f-advanced-java' }
               ]
             }
           ],
@@ -129,6 +148,7 @@ export default defineConfig({
               text: '指南',
               items: [
                 { text: '快速开始', link: '/guide/getting-started' },
+                { text: '安装与升级（英文）', link: '/en/reference/projects/install' },
                 { text: '语言速查', link: '/guide/language-tour' },
                 { text: '泛型', link: '/guide/generics' },
                 { text: '项目', link: '/guide/projects' },
@@ -178,7 +198,7 @@ export default defineConfig({
       head: [['meta', { property: 'og:locale', content: 'en_US' }]],
       themeConfig: {
         nav: [
-          { text: 'Tutorial', link: '/en/tutorial', activeMatch: '^/en/tutorial' },
+          { text: 'Tutorial', link: '/en/tutorial/', activeMatch: '^/en/tutorial' },
           {
             text: 'Guide',
             link: '/en/guide/getting-started',
@@ -197,8 +217,58 @@ export default defineConfig({
           }
         ],
         sidebar: {
-          '/en/tutorial': [
-            { text: 'Start here', items: [{ text: 'Tutorial: expense tracker', link: '/en/tutorial' }] }
+          '/en/tutorial/': [
+            { text: 'The Sprig Programming Language', items: [{ text: 'Preface', link: '/en/tutorial/' }] },
+            {
+              text: 'Part 1: Writing programs from scratch',
+              items: [
+                { text: '1. Getting set up', link: '/en/tutorial/ch01-tools' },
+                { text: '2. Your first program, and reading errors', link: '/en/tutorial/ch02-first-program' },
+                { text: '3. Values, variables and arithmetic', link: '/en/tutorial/ch03-values' },
+                { text: '4. Text', link: '/en/tutorial/ch04-text' },
+                { text: '5. Making decisions: if', link: '/en/tutorial/ch05-if' },
+                { text: '6. Repeating: loops', link: '/en/tutorial/ch06-loops' },
+                { text: '7. Functions', link: '/en/tutorial/ch07-functions' },
+                { text: '8. Lists', link: '/en/tutorial/ch08-lists' },
+                { text: '9. Maps and sets', link: '/en/tutorial/ch09-maps-sets' },
+                { text: '10. Project: guess the number', link: '/en/tutorial/ch10-project-guess' }
+              ]
+            },
+            {
+              text: 'Part 2: Describing the world with types',
+              items: [
+                { text: '11. Classes and objects', link: '/en/tutorial/ch11-classes' },
+                { text: '12. Enums, variants and match', link: '/en/tutorial/ch12-enums-variants' },
+                { text: '13. Values that may be missing', link: '/en/tutorial/ch13-nullable' },
+                { text: '14. Handling errors', link: '/en/tutorial/ch14-errors' },
+                { text: '15. Functions as values', link: '/en/tutorial/ch15-functions-as-values' },
+                { text: '16. Generics and contract classes', link: '/en/tutorial/ch16-generics-contracts' },
+                { text: '17. More about numbers', link: '/en/tutorial/ch17-numbers' }
+              ]
+            },
+            {
+              text: 'Part 3: Building real programs',
+              items: [
+                { text: '18. Modules, projects and dependencies', link: '/en/tutorial/ch18-modules-projects' },
+                { text: '19. Testing', link: '/en/tutorial/ch19-testing' },
+                { text: '20. The standard library at work', link: '/en/tutorial/ch20-stdlib' },
+                { text: '21. Calling Java', link: '/en/tutorial/ch21-java' },
+                { text: '22. Concurrency', link: '/en/tutorial/ch22-concurrency' },
+                { text: '23. Tools and AI assistants', link: '/en/tutorial/ch23-tooling' },
+                { text: '24. Project: an expense tracker', link: '/en/tutorial/ch24-project-ledger' }
+              ]
+            },
+            {
+              text: 'Appendices',
+              items: [
+                { text: 'A. Operators and precedence', link: '/en/tutorial/appendix-a-operators' },
+                { text: 'B. Error codes and where to read about them', link: '/en/tutorial/appendix-b-error-codes' },
+                { text: 'C. Keywords and built-in functions', link: '/en/tutorial/appendix-c-keywords' },
+                { text: 'D. Coming from Python, JavaScript or Java', link: '/en/tutorial/appendix-d-from-other-languages' },
+                { text: 'E. What Sprig leaves out', link: '/en/tutorial/appendix-e-not-in-sprig' },
+                { text: 'F. Java interop in depth', link: '/en/tutorial/appendix-f-advanced-java' }
+              ]
+            }
           ],
           '/en/guide/': [
             {
@@ -236,10 +306,10 @@ export default defineConfig({
             {
               text: 'Project',
               items: [
+                { text: 'Release status', link: '/en/project/release-status' },
                 { text: 'Contributing', link: '/en/project/contributing' },
                 { text: 'AI-assisted development', link: '/en/project/contributing/ai-disclosure' },
                 { text: 'License', link: '/en/project/contributing/license-status' },
-                { text: 'Release status', link: '/en/project/release-status' },
                 { text: 'Third-party notices', link: '/en/project/contributing/third-party-notices' }
               ]
             }

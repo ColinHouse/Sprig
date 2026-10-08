@@ -1,6 +1,6 @@
 # Language quick reference
 
-This page walks through Sprig's syntax from top to bottom. It's meant for people who already know another programming language and want to get going quickly. If Sprig is your first contact with the language, do the [tutorial](/en/tutorial) first and come back here to look things up.
+This page walks through Sprig's syntax from top to bottom. It's meant for people who already know another programming language and want to get going quickly. If Sprig is your first contact with the language, do the [tutorial](/en/tutorial/) first and come back here to look things up.
 
 Every piece of code on this page is a real file under `website/snippets/` in the repository, and the docs check compiles and runs each one. To find out whether a feature is implemented, the [feature status](/en/reference/language/feature-status) page has the final word.
 
@@ -117,7 +117,7 @@ true
 - Returning early works as well: after `if x == null: return ...`, the rest of the code treats `x` as present. An `if/elif` chain whose earlier branches all return works the same way.
 - Using a possibly-null value where a value is required is rejected with `SPR-TYPE-NULLABLE`.
 - A `var` local or a class field never narrows, whether or not a function is called in between: copy it into a `let` (`let current = name`) and check that.
-- Objects returned by Java methods are always treated as possibly `null`, except a `toString()` result; see [JVM interop](/en/guide/jvm-interop).
+- Objects returned by Java methods are treated as possibly `null`, except a `toString()` result and results the library annotates as non-null; see [JVM interop](/en/guide/jvm-interop).
 
 When all you want is a fallback value or an error, `@std/nulls` (new in v0.6.0-beta.1) saves the `if`:
 

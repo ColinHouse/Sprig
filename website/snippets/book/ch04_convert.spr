@@ -1,0 +1,4 @@
+print("42".toInt() + 8)
+print("12".toIntOrNull())
+print("abc".toIntOrNull())
+print("2.5".toFloat() + 0.5)

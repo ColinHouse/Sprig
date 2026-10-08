@@ -292,8 +292,9 @@ resolve through the receiver and its inherited hierarchy. The profile is
 deliberately bounded: no wildcard syntax in Sprig (an imported wildcard keeps
 its bound and cannot be written through) and no capture conversion; a method's
 own type parameters are inferred when the plain arguments fix every one of them
-exactly and are written otherwise (see JVM interop), and recursive/intersection
-bounds or generic arrays are rejected before codegen.
+exactly and are written otherwise (see JVM interop), and intersection bounds or
+generic arrays are rejected before codegen (a single recursive bound is
+accepted and checked at each call).
 Java reference results remain conservatively nullable. See
 [JVM interop](../jvm/interop.md) for arrays and collection adapters.
 

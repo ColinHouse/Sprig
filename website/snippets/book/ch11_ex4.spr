@@ -1,0 +1,8 @@
+class Point(x: Int, y: Int)
+
+let a = Point(x=1, y=2)
+let b = Point(x=1, y=2)
+let c = a
+print(a == b)
+print(a == c)
+print(a.x == b.x)

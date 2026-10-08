@@ -61,8 +61,6 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-NAME-IMPORT-CYCLE | Sprig modules form an import cycle. |
 | SPR-NAME-LET-ASSIGN | let bindings and let fields cannot be reassigned. |
 | SPR-NAME-FORWARD-REFERENCE | Top-level code uses a top-level binding before its declaration runs. |
-| SPR-NAME-MODULE | Module import/alias problem. |
-| SPR-NAME-NOT-A-TYPE | A value name was used where a type is required. |
 | SPR-NAME-NOT-A-VALUE | A type or module name was used as a value. |
 | SPR-NAME-UNRESOLVED | A name has no declaration in the current scope chain. |
 | SPR-NUM-RANGE | A numeric literal is outside its target range or underflows to zero. |
@@ -128,8 +126,10 @@ same zero-based positions as `range`, a zero-length range for an insertion,
 and `newText` replacing exactly that range. Applying an edit moves the program
 past the diagnostic; whether it is what the author meant (adding `throws Error`
 to a function, say) is still theirs to judge. Edits exist today for a missing
-`@std` import, an undeclared `throws`, positional constructor arguments and
-`else if`. In an editor, `sprig lsp` offers the same edits as quick fixes; see
+`@std` import, an undeclared `throws`, positional constructor arguments,
+`else if`, and the removed conversions `Int.toFloat()` and `Float.toInt()`
+(rewritten to `toFloatExact()` and `toIntExact()`). In an editor, `sprig lsp`
+offers the same edits as quick fixes; see
 [language server](lsp.md#quick-fixes).
 
 `machineApplicable` is true only for a correction that is semantics-preserving

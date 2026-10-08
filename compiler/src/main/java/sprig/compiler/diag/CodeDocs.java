@@ -24,9 +24,7 @@ public final class CodeDocs {
             Map.entry(Codes.NAME_FIELD_SHADOW, "A parameter/local cannot shadow a current-class field."),
             Map.entry(Codes.NAME_LET_ASSIGN, "let bindings and let fields cannot be reassigned."),
             Map.entry(Codes.NAME_FORWARD_REFERENCE, "Top-level code uses a top-level binding before its declaration runs."),
-            Map.entry(Codes.NAME_NOT_A_TYPE, "A value name was used where a type is required."),
             Map.entry(Codes.NAME_NOT_A_VALUE, "A type or module name was used as a value."),
-            Map.entry(Codes.NAME_MODULE, "Module import/alias problem."),
             Map.entry(Codes.NAME_IMPORT, "An imported file or class cannot be resolved."),
             Map.entry(Codes.NAME_IMPORT_CYCLE, "Sprig modules form an import cycle."),
             Map.entry(Codes.TYPE_MISMATCH, "Expected and actual types are not compatible."),
@@ -37,7 +35,7 @@ public final class CodeDocs {
             Map.entry(Codes.TYPE_RETURN, "Returned value does not match the declared return type."),
             Map.entry(Codes.TYPE_ASSIGN, "Assignment value does not match the target type."),
             Map.entry(Codes.TYPE_INFER, "The type cannot be inferred without an annotation."),
-            Map.entry(Codes.TYPE_NOT_CALLABLE, "The callee is not callable (or a method name was used as a value)."),
+            Map.entry(Codes.TYPE_NOT_CALLABLE, "The callee is not callable, or a Java or built-in method, print or a generic function was used as a value where it cannot be one."),
             Map.entry(Codes.TYPE_UNIT, "Unit is only valid as a function/method result; it cannot be used as a field, parameter, collection element, or ordinary value."),
             Map.entry(Codes.TYPE_FUNCTION_ARITY, "Function types and lambdas support zero to three explicitly typed parameters."),
             Map.entry(Codes.TYPE_CAPTURE, "A lambda captures a var local; copy it into a let binding first."),
@@ -86,7 +84,7 @@ public final class CodeDocs {
             Map.entry(Codes.FLOW_BREAK, "break is only valid inside a loop."),
             Map.entry(Codes.FLOW_CONTINUE, "continue is only valid inside a loop."),
             Map.entry(Codes.FLOW_THROWS, "A recoverable error must be declared with throws or caught."),
-            Map.entry(Codes.FLOW_RETHROWS, "rethrows needs a parameter whose function type declares throws Error, and the function may throw nothing of its own."),
+            Map.entry(Codes.FLOW_RETHROWS, "rethrows needs a parameter whose function type declares throws Error; a function that also throws on its own declares throws Error instead."),
             Map.entry(Codes.FLOW_CATCH_NEVER_THROWN, "A catch names a checked Java exception that nothing in its try block can throw."),
             Map.entry(Codes.FLOW_THROWS_UNUSED, "A function declares a checked Java exception that its body can never throw."),
             Map.entry(Codes.CONFORM_SOURCE, "The conform source must be a non-generic Sprig class with method bodies, declared in this module; there is no retroactive conformance and a contract never conforms."),
@@ -108,13 +106,13 @@ public final class CodeDocs {
             Map.entry(Codes.BUNDLE_TOOLS, "sprig build --bundle needs jdeps and jlink from a full JDK; the Java installation in use has none (a JRE)."),
             Map.entry(Codes.BUNDLE_JDEPS, "jdeps could not analyze the bundle's JARs to find the Java modules the program needs."),
             Map.entry(Codes.BUNDLE_LAYOUT, "The Java installation or the classpath has a layout the bundle cannot use: no packaged modules and no linkable runtime for jlink, a jlink failure, a previous bundle that cannot be removed, or a classpath entry that does not exist."),
-            Map.entry(Codes.PROGRAM_EXIT, "The Sprig program exited with a non-zero process status."));
+            Map.entry(Codes.PROGRAM_EXIT, "The program ended with a non-zero exit status, or a sprig test program ran past 30 seconds."));
 
     private CodeDocs() {
     }
 
     public static String describe(String code) {
-        return DOCS.getOrDefault(code, "Unknown diagnostic code.");
+        return DOCS.getOrDefault(code, "Unknown diagnostic code " + code + "; run sprig codes.");
     }
 
     /** All codes in stable code order (used by {@code sprig codes}). */

@@ -1,0 +1,9 @@
+class Score:
+    var points: Int = 0
+
+    func add(points_to_add: Int) -> Unit:
+        points += points_to_add
+
+let score = Score()
+score.add(3)
+print(score.points)

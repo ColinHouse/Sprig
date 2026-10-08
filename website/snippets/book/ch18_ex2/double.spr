@@ -1,0 +1,3 @@
+# 练习 2 的模块。
+func double(x: Int) -> Int:
+    return x * 2

@@ -1,0 +1,12 @@
+{Ada: 90, Bob: 72}
+2
+90
+{Ada: 95, Bob: 72, Cyd: 85}
+[Ada, Bob, Cyd]
+[95, 72, 85]
+true
+false
+72
+{Ada: 95, Cyd: 85}
+null
+false

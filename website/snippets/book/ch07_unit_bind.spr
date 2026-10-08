@@ -1,0 +1,4 @@
+func greet(name: String) -> Unit:
+    print("Hello, " + name + "!")
+
+let message = greet("Ada")

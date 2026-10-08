@@ -1,0 +1,4 @@
+# The entry point for exercise 2.
+import "./facade.spr" as facade
+
+print(facade.double(4))

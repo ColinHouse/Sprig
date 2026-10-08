@@ -1,0 +1,9 @@
+func inc(n: Int) -> Int:
+    return n + 1
+
+let maybe: (fn(Int) -> Int)? = inc
+if maybe != null:
+    print(maybe(2))
+
+let missing: (fn(Int) -> Int)? = null
+print(missing == null)

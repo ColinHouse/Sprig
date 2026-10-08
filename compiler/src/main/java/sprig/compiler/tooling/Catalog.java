@@ -40,7 +40,34 @@ public final class Catalog {
     }
 
     public static List<String> list(String key) {
-        return List.of(get(key).split(key.equals("collectionTypes") ? "\\s*;\\s*" : "\\s*,\\s*"));
+        return splitOutsideParentheses(get(key), key.equals("collectionTypes") ? ';' : ',');
+    }
+
+    /**
+     * Splits a catalog value on its separator where the separator stands outside
+     * parentheses and brackets, so a parenthesized aside that holds the separator
+     * stays one entry; each entry is trimmed.
+     */
+    static List<String> splitOutsideParentheses(String value, char separator) {
+        List<String> out = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int depth = 0;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '(' || c == '[') {
+                depth++;
+            } else if ((c == ')' || c == ']') && depth > 0) {
+                depth--;
+            }
+            if (c == separator && depth == 0) {
+                out.add(current.toString().trim());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        out.add(current.toString().trim());
+        return out;
     }
 
     public static List<String> topics() {
@@ -58,7 +85,7 @@ public final class Catalog {
         result.put("languageVersion", LANGUAGE_VERSION);
         result.put("topic", topic);
         result.put("syntax", splitLines(get("help." + topic + ".syntax")));
-        result.put("rules", List.of(get("help." + topic + ".rules").split(";\\s*")));
+        result.put("rules", splitOutsideParentheses(get("help." + topic + ".rules"), ';'));
         Map<String, List<String>> methods = builtinMethods(topic);
         if (!methods.isEmpty()) {
             result.put("methods", methods);
@@ -187,7 +214,8 @@ public final class Catalog {
      */
     private static Map<String, Object> featureGuidance() {
         Map<String, Object> out = new LinkedHashMap<>();
-        guidance(out, "inheritance", "classes", "a contract class (methods without bodies) that classes conform to", "composition", "narrow Java host adapter");
+        guidance(out, "inheritance", "classes", "a contract class (methods without bodies) that classes conform to", "composition",
+                "conform C to JavaClass(fields) as parent to extend a Java class", "narrow Java host adapter");
         out.put("interfaces", Map.of("supported", true, "helpTopic", "classes",
                 "rules", List.of("a class whose methods all have no body is a contract: no fields, no default bodies, not constructible",
                         "conform C to Contract (or alias.Contract from an imported module) requires every method with the same parameter and result types, throwing no more than the contract",
@@ -203,7 +231,7 @@ public final class Catalog {
                         "never from the expected type, the assignment target or the result; a type position still writes Type[Arg]",
                         "written [Type] arguments still work and win; write all of them or none",
                         "an unannotated numeric literal, or a list or map literal passed for a bare T, counts only when no other argument says what the parameter is; null, [] and {} say nothing",
-                        "Java generic types keep explicit type arguments; a Java method's own type parameters are inferred when the plain arguments fix every one of them exactly, and written otherwise")));
+                        "Java generic types write their type arguments, as in ArrayList[Int](), and without them the value is a raw type whose elements are Object?; a Java method's own type parameters are inferred when the plain arguments fix every one of them exactly, and written otherwise")));
         out.put("matchExpression", Map.of("supported", true, "helpTopic", "match",
                 "rules", List.of("one expression per case", "strict result typing", "no block expressions")));
         out.put("ifExpression", Map.of("supported", true, "helpTopic", "language",
@@ -217,10 +245,10 @@ public final class Catalog {
                 "parallel_map, await_all, pool(threads) and spawn_on(scope, pool, work) for bounded CPU-bound work",
                 "channel[T](capacity) for values between threads; counter, lock and latch for shared state");
         out.put("errorClasses", Map.of("supported", true, "helpTopic", "errors",
-                "rules", List.of("a class with a let message: String field becomes an error type through conform C to Error(message)",
+                "rules", List.of("a class with a String field, whatever its name, becomes an error type through conform C to Error(field); that field is its message",
                         "throw it with named fields, declare throws C (or several, comma separated), catch it by name or as Error",
                         "catch clauses match top to bottom, so the specific class goes before Error",
-                        "a class never extends another class; Error is the only conformance that adds a supertype")));
+                        "a Sprig class never extends another Sprig class; conform C to Error(message) makes C an Error, as conform C to JavaClass(...) makes it extend that Java class")));
         guidance(out, "arrays", "jvm", "foreign JVM array pass-through with exact classes", "byte[] helpers via sprig.runtime.jvm.HostBytes", "List[T] and @std/jvm adapters");
         out.put("varargs", Map.of("supported", true, "helpTopic", "jvm",
                 "rules", List.of("trailing arguments are packed into the final array parameter; zero of them is allowed",
@@ -243,7 +271,8 @@ public final class Catalog {
                         "a rethrows function throws exactly what its callable arguments throw",
                         "only Error crosses a function value; checked Java exceptions stay in named functions")));
         guidance(out, "reflectionDerivedSchemas", "jvm", "explicit typed schema and JSON construction");
-        guidance(out, "async", "jvm", "synchronous host adapter");
+        guidance(out, "async", "concurrency", "@std/concurrent.spr tasks (spawn, await) around a blocking host call",
+                "synchronous host adapter");
         guidance(out, "genericVariance", "generics", "invariant generics", "explicit conversion helpers");
         guidance(out, "operatorOverloading", "language", "named methods");
         guidance(out, "pipeline", "language", "ordinary statements");
@@ -258,7 +287,8 @@ public final class Catalog {
                         "sprig search [TEXT] lists packages; sprig publish --tag T records the entry with the commit, a published version never changes (publish a new one or --yank V --reason TEXT)",
                         "[[registry]] tables name registries by path or Git url; without any, the Sprig repository's registry directory is the default, which is strict: tags pinned to commits, license and owners required, validated by the Registry workflow on pull requests to registry/",
                         "there is no central hosted registry, no authentication and no upload: publishing is a pull request that changes only registry/packages/NAME.toml")));
-        guidance(out, "centralSprigRegistry", "dependencies", "local path dependencies", "Git dependencies");
+        guidance(out, "centralSprigRegistry", "dependencies", "a [[registry]] index (the Sprig repository's registry/ is the default)",
+                "local path dependencies", "Git dependencies");
         return out;
     }
 

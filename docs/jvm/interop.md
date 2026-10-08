@@ -1,4 +1,4 @@
-# Implemented JVM interop (v0.7.1-beta.1)
+# Implemented JVM interop (main, after v0.7.1-beta.1)
 
 Import a public class with an alias, then call public constructors, static
 methods, instance methods, or fields. The class must live in a named package:
@@ -83,8 +83,9 @@ Sprig operation. See `docs/language/numeric-semantics.md`.
 ## Nullability annotations
 
 Java reference results are nullable and reference parameters non-null by
-default. Annotations that are visible at run time change that, matched by
-simple name so every library's spelling counts:
+default. Nullability annotations change that, whether they are kept at run
+time or only in the class file, matched by simple name so every library's
+spelling counts:
 
 - a result or a public field annotated `NotNull`, `NonNull` or `Nonnull` (as a
   declaration or a type-use annotation) is a plain `T`; `Nullable` or
@@ -137,7 +138,8 @@ mapping: parameters must match exactly, `void` accepts any result, an
 run-time range check, as a parameter is), a wildcard
 inside the interface's type arguments reads as its bound (a lambda implementing
 `Consumer<String>` satisfies `Consumer<? super String>`), and type variables are
-bound only through the receiver or explicit `method[Type]` arguments. A value
+bound through the receiver, explicit `method[Type]` arguments or the other
+plain arguments, never through the lambda itself. A value
 whose type declares `throws Error` is rejected with `SPR-TYPE-CALLABLE-THROWS`,
 because Java cannot see the clause. The generated code is a Java lambda with
 explicitly typed parameters that calls the Sprig `Fn` object; a `null` passed

@@ -50,7 +50,7 @@ Here's how the compiler works them out:
 - `null`, `[]` and `{}` say nothing. A list or map literal with elements counts by its elements. Passed for a plain `T`, a literal counts as a whole, and only when nothing else says what `T` is: on its own, `identity([1])` gives a `MutableList[Int]`, as `let xs = [1]` does, but next to a `List[Int]` value the literal becomes a `List[Int]` too.
 - A lambda's parameter types are written, so they count as written; its body gives the result type.
 - When arguments give different types, the one the others fit into wins: `Int32` and `Int` make `Int`, and two cases of one variant make the variant. If there's no such type, the call is an error.
-- Java methods and Java generic types such as `ArrayList[String]` always take written type arguments.
+- Java generic types such as `ArrayList[String]` always take written type arguments. A Java generic method infers its own type arguments when its arguments fix them (`Collections.sort(names)`); one that only the result or a lambda would fix is written out; see [JVM interop](/en/guide/jvm-interop).
 
 After that, every argument is checked against the types the compiler found, exactly as if you had written them. When the arguments can't say, the compiler stops and asks you to write them:
 

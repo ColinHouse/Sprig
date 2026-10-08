@@ -1,0 +1,15 @@
+let scores: MutableMap[String, Int] = {"Ada": 90, "Bob": 72}
+print(scores)
+print(scores.size())
+print(scores["Ada"])
+scores["Cyd"] = 85
+scores["Ada"] = 95
+print(scores)
+print(scores.keys())
+print(scores.values())
+print(scores.containsKey("Bob"))
+print("Zoe" in scores)
+print(scores.remove("Bob"))
+print(scores)
+print(scores.remove("Bob"))
+print(scores.isEmpty())

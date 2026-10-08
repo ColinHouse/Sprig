@@ -1,0 +1,5 @@
+func double(n: Int) -> Int:
+    return n * 2
+
+print(double(4))
+print(double(10))

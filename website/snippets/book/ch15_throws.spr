@@ -1,0 +1,25 @@
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+let parser = fn(text: String) => parse(text)
+
+func twice(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:
+    return step(step(value))
+
+try:
+    print(parser("21"))
+    print(parser("two"))
+catch problem: Error:
+    print("caught: " + problem.message)
+print(twice(fn(n: Int) => n * 3, 2))
+let failing = fn(n: Int) => if n > 0:
+    parse("x")
+else:
+    n
+try:
+    print(twice(failing, 1))
+catch problem: Error:
+    print("second: " + problem.message)

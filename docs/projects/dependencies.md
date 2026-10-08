@@ -1,8 +1,10 @@
-# Dependency contract — Sprig v0.7.1-beta.1
+# Dependency contract (main, after v0.7.1-beta.1)
 
 `sprig resolve`, `sprig add` and `sprig remove` are explicit dependency
-resolution commands: they may write `sprig.lock` and perform Git/Maven requests.
-`check/build/run/api/doctor` consume one verified project classpath.
+resolution commands: they may write `sprig.lock` and follow branches and tags.
+`check/build/run/api/doctor` consume one verified project classpath and never
+change the lock; when the Git cache lacks a locked commit, they clone exactly
+that commit (`--offline` makes that an error instead).
 A source file explicitly outside the discovered project source root remains standalone.
 The public v0.2 release did not implement Maven. These rules describe the
 Maven/JVM dependency support first shipped in v0.4.0-alpha.1 and remains part of

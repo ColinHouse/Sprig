@@ -1,0 +1,8 @@
+func largest(xs: List[Int]) -> Int:
+    var best = xs[0]
+    for x in xs:
+        if x > best:
+            best = x
+    return best
+
+print(largest([4, 9, 2, 7]))

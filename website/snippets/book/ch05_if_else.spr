@@ -1,0 +1,5 @@
+let age = 15
+if age >= 18:
+    print("welcome")
+else:
+    print("not yet")

@@ -148,8 +148,9 @@ compilation replaces review of user-visible behavior.
 
 ## Protected main
 
-Main requires a PR, an up-to-date branch, resolved review conversations and
-Linux/macOS × JDK21/26 plus Documentation site checks. Rules also apply to
+Main requires a PR, resolved review conversations and Linux/macOS × JDK21/26
+plus Documentation site checks; a branch does not need to be up to date with
+main before it merges. Rules also apply to
 administrators; force pushes and deletion are disabled. Required approval count
 is currently zero for this small maintainer team; this does not replace patch
 review or the submitter's AI-disclosure responsibility. Windows preview is not

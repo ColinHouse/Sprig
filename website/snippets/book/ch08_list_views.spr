@@ -1,0 +1,20 @@
+let grades = [90, 72]
+let view: List[Int] = grades
+grades.append(85)
+print(view)
+
+let snapshot = grades.toList()
+grades.append(60)
+print(snapshot)
+print(grades)
+
+let frozen: List[Int] = [1, 2]
+let copy = frozen.toMutableList()
+copy.append(3)
+print(frozen)
+print(copy)
+
+let same = grades.toMutableList()
+same.append(100)
+print(grades)
+print(same)

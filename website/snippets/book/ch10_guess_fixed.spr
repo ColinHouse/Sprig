@@ -1,0 +1,27 @@
+import "@std/random.spr" as random
+
+func hint(secret: Int, guess: Int) -> String:
+    if guess < secret:
+        return "too low"
+    if guess > secret:
+        return "too high"
+    return "correct"
+
+func play(secret: Int, guesses: List[String]) -> Int:
+    var tries = 0
+    for text in guesses:
+        let guess = text.toIntOrNull()
+        if guess == null:
+            print("skipped: " + text)
+            continue
+        tries += 1
+        print(text + ": " + hint(secret, guess))
+        if guess == secret:
+            return tries
+    print("out of guesses; the number was " + secret)
+    return tries
+
+let secret = random.seeded(7).next_int(100) + 1
+print("secret is " + secret)
+let used = play(secret, ["50", "10", "oops", "21", "99"])
+print("finished after " + used + " guesses")

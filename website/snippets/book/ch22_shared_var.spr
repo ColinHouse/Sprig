@@ -1,0 +1,13 @@
+import "@std/concurrent.spr" as concurrent
+
+var greeting = "hello"
+
+func set_hello() -> Unit:
+    greeting = "HELLO"
+
+func set_it(s: concurrent.Scope) -> Unit throws Error:
+    let job = concurrent.run(s, fn() => set_hello())
+    job.await()
+    print(greeting)
+
+concurrent.scope_run(set_it)

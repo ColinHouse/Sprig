@@ -36,8 +36,9 @@ IEEE/decimal semantics; none is currently performed.
 1. **JVM boundary audit.** Java calls may return null or perform unchecked
    arithmetic, and generic/array element types are not fully represented in
    Sprig. A Java `long` return maps to `Int`, but a *boxed* `Long` result may
-   still be null. Future work needs explicit nullable adapters and array/list
-   conversion APIs. Java `short`/`byte` returns are mapped to `Int32`, but
+   still be null. List and map conversion is explicit through `@std/jvm.spr`,
+   and `byte[]` has `sprig.runtime.jvm.HostBytes`; other arrays stay opaque
+   values without conversion helpers. Java `short`/`byte` returns are mapped to `Int32`, but
    passing Sprig variables to `short`/`byte` formals requires an explicit
    checked adapter not yet offered.
 2. **Runtime diagnostics.** Static `SPR-NUM-*` errors have source ranges and
@@ -68,9 +69,10 @@ IEEE/decimal semantics; none is currently performed.
 
 Old Sprig code using integer `/` must choose `divTrunc` or convert to a
 numeric family with explicit precision policy. `(3.9).toIntExact()` requires an
-integral value; use `toIntTrunc()` to request truncation. Calls from `Int`
-variables to Java `int` methods and from `Float` variables to Java `float`
-methods now fail at type checking; declare an appropriately sized Sprig value
-or call an explicit checked conversion. Existing standard arithmetic literals,
+integral value; use `toIntTrunc()` to request truncation. Calls from `Float`
+variables to Java `float` methods fail at type checking; convert with
+`toFloat32Exact()` or `toFloat32Lossy()` first. An `Int` variable passed to a
+Java `int` or `Integer` parameter is narrowed with a run-time range check and
+fails with `SPR-RUNTIME-EXCEPTION` outside the `Int32` range. Existing standard arithmetic literals,
 recursion, AST visitors, and JVM overloads taking matching widths continue to
 work. Original root design files and grammars were not modified.

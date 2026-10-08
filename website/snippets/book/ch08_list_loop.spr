@@ -1,0 +1,10 @@
+let numbers = [4, 1, 3]
+var total = 0
+let doubled: MutableList[Int] = []
+for n in numbers:
+    total += n
+    doubled.append(n * 2)
+print(total)
+print(doubled)
+for i in range(0, numbers.size()):
+    print(i.toString() + ": " + numbers[i].toString())

@@ -1,0 +1,11 @@
+import java.nio.file.Files as Files
+import java.nio.file.Paths as Paths
+
+func read_text(name: String) -> String throws Error:
+    let path = Paths.get(name)
+    if path == null:
+        return ""
+    let text = Files.readString(path)
+    if text == null:
+        return ""
+    return text

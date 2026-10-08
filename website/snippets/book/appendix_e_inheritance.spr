@@ -1,0 +1,11 @@
+# 没有继承：契约类规定方法，conform 把实现接上去。
+class Greeter:
+    func greet(name: String) -> String
+
+class English:
+    func greet(name: String) -> String:
+        return "Hello, " + name
+
+conform English to Greeter
+let greeter: Greeter = English()
+print(greeter.greet("Ada"))

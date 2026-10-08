@@ -1,0 +1,6 @@
+import java.lang.StringBuilder as StringBuilder
+
+let builder = StringBuilder()
+builder.append("Sprig")
+builder.append("!")
+print(builder.toString())

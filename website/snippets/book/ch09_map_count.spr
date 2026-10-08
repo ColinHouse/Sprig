@@ -1,0 +1,10 @@
+let words = ["tea", "fig", "tea", "pear", "tea"]
+let counts: MutableMap[String, Int] = {}
+for word in words:
+    let old = counts[word]
+    if old == null:
+        counts[word] = 1
+    else:
+        counts[word] = old + 1
+print(counts)
+print(counts["tea"])

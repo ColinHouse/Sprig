@@ -1,0 +1,11 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.add("ada")
+names.add("bob")
+names.add("cy")
+# removeIf 收 Predicate，replaceAll 收 UnaryOperator：都是函数式接口。
+names.removeIf(fn(name: String) => name.length() < 3)
+print(names)
+names.replaceAll(fn(name: String) => name.toUpperCase())
+print(names)

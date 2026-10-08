@@ -1,0 +1,5 @@
+# 一个普通模块：一个函数和一个顶层 let 绑定。
+func square(x: Int) -> Int:
+    return x * x
+
+let pi_approx: Float = 3.14159

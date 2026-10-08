@@ -1,0 +1,4 @@
+# Sprig 没有 ++ 和 --。
+var count = 1
+count++
+print(count)

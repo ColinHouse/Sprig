@@ -1,0 +1,13 @@
+variant Tree:
+    Leaf(value: Int)
+    Node(left: Tree, right: Tree)
+
+func total(tree: Tree) -> Int:
+    match tree:
+        case Tree.Leaf as leaf:
+            return leaf.value
+        case Tree.Node as node:
+            return total(node.left) + total(node.right)
+
+let tree: Tree = Tree.Node(left=Tree.Leaf(value=1), right=Tree.Node(left=Tree.Leaf(value=2), right=Tree.Leaf(value=3)))
+print(total(tree))

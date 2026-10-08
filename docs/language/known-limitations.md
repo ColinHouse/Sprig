@@ -1,4 +1,4 @@
-# Known limitations — v0.7.1-beta.1
+# Known limitations (main, after v0.7.1-beta.1)
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the historical design kit in `docs/history/design-kit/`.
@@ -59,8 +59,12 @@ by the historical design kit in `docs/history/design-kit/`.
   the entry). A hosted central registry, authentication, upload, Maven plugins
   and non-JAR runtime artifacts remain unsupported. See
   [dependencies](../projects/dependencies.md).
-- The small `std/` slice covers UTF-8 filesystem/path, arguments/environment,
-  text/time and a typed JSON model. The first-party libraries add a small
+- The bundled `std/` modules cover UTF-8 files and paths, process arguments,
+  environment and standard input, text, time and ISO dates, lists, sets,
+  nullable values, integer math, random values, regular expressions, a JSON
+  model with typed field access, Java collection adapters, a test helper and
+  structured concurrency (see [standard library](../projects/standard-library.md)).
+  The first-party libraries add a small
   synchronous JDK HTTP client (`sprig-http`), a synchronous HTTP server with
   explicit OpenAPI metadata (`sprig-web`) and SQLite access (`sprig-sqlite`).
   Concurrency is the bundled `@std/concurrent.spr`: structured scopes over JDK 21
@@ -81,15 +85,16 @@ by the historical design kit in `docs/history/design-kit/`.
   trailing arguments or one opaque array of its element class; a
   type-variable element (`T...`) stays unsupported. Concrete
   generic arguments are preserved for explicit `Type[Arg]` application on
-  imported classes and methods; inference, recursive and intersection bounds,
-  generic arrays and Short/Byte/Character generic arguments are rejected with
-  structured reasons; a wildcard keeps its bound (reads at the upper bound, no
+  imported classes and methods; intersection bounds, generic arrays and
+  Short/Byte/Character generic arguments are rejected with structured reasons
+  (a single recursive bound such as `T extends Comparable<? super T>` is
+  accepted); a wildcard keeps its bound (reads at the upper bound, no
   writes through `? extends`, no wildcard syntax in Sprig); class bounds are validated,
   raw evidence never promotes to concrete arguments, and raw boundaries stay
   erased. Collection conversion is explicit through `@std/jvm.spr`; there is no
   implicit Java/Sprig collection conversion. Java reference results are
   conservatively nullable and reference parameters non-null, except where a
-  nullability annotation visible at run time says otherwise (`NotNull`,
+  nullability annotation says otherwise (`NotNull`,
   `NonNull`, `Nonnull`, `Nullable`, `CheckForNull`, and the `NullMarked`,
   `NonNullApi` and `MethodsReturnNonnullByDefault` defaults), read through
   reflection or, for annotations kept only in class files such as
@@ -142,8 +147,9 @@ by the historical design kit in `docs/history/design-kit/`.
   It also does not pin bundled `@std` bytes: `@std` comes from the installed SDK,
   whose published archive is checked separately through release checksums and
   extracted-archive smoke tests.
-  Manifest semantic errors can point to line 1. Cache tree verification adds IO;
-  OS locks have no timeout. Git submodules are unsupported. Offline Git builds
+  Manifest semantic errors can point to line 1. Cache tree verification adds IO.
+  The Git cache lock waits up to five seconds and then reports `SPR-DEP-GIT`;
+  the Maven cache lock waits without a timeout. Git submodules are unsupported. Offline Git builds
   require Git and a complete verified cache. Concurrent hostile mutation after
   validation is outside the cooperative cache model.
 - `sprig fmt` is canonical and comment-preserving, without configuration or
@@ -176,8 +182,9 @@ by the historical design kit in `docs/history/design-kit/`.
   non-ASCII text). `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- Sprig targets v0.7.1-beta.1, an experimental Beta under Apache-2.0 (`LICENSE`, `NOTICE`),
-  not a production stability or numerical correctness guarantee.
+- This is the development line after v0.7.1-beta.1, an experimental Beta under
+  Apache-2.0 (`LICENSE`, `NOTICE`), not a production stability or numerical
+  correctness guarantee.
 
 ## Callable boundary
 

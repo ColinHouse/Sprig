@@ -1,0 +1,8 @@
+class Counter:
+    var count: Int = 0
+
+    func add(count: Int) -> Unit:
+        print(count)
+
+let counter = Counter()
+counter.add(2)

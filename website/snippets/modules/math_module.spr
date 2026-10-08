@@ -1,4 +1,4 @@
 func square(x: Int) -> Int:
     return x * x
 
-let PI_APPROX: Float = 3.14159
+let pi_approx: Float = 3.14159

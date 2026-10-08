@@ -1,0 +1,18 @@
+func first_seen(names: List[String?]) -> String:
+    for name in names:
+        if name == null:
+            continue
+        return name
+    return "none"
+
+func sum_until_missing(values: List[Int?]) -> Int:
+    var total = 0
+    for value in values:
+        if value == null:
+            break
+        total += value
+    return total
+
+print(first_seen([null, "Ada", "Bo"]))
+print(first_seen([null]))
+print(sum_until_missing([1, 2, null, 4]))

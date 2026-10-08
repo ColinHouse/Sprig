@@ -1,0 +1,6 @@
+print(Decimal.parse("2.5").divide(1.toDecimal(), 0, "HALF_UP"))
+print(Decimal.parse("2.5").divide(1.toDecimal(), 0, "HALF_EVEN"))
+print(Decimal.parse("0.30") == Decimal.parse("0.3"))
+print(Decimal.parse("0.30").compareTo(Decimal.parse("0.3")))
+print(1.toDecimal().divide(3.toDecimal(), 4, "DOWN"))
+print(Decimal.parse("19.99") * 3.toDecimal())

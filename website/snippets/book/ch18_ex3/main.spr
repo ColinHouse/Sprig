@@ -1,0 +1,5 @@
+# 练习 3：同一个模块用两个别名各导入一次。
+import "./base.spr" as first
+import "./base.spr" as second
+
+print("main done")

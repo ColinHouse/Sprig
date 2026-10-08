@@ -1,0 +1,7 @@
+# A function calls a throwing file operation but forgets to declare it.
+import "@std/files.spr" as files
+
+func first_line(path: String) -> String:
+    return files.read_lines(path)[0]
+
+print(first_line("no-such-file.txt"))

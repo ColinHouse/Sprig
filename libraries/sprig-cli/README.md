@@ -11,7 +11,8 @@ path = "../../libraries/sprig-cli"
 
 Define `OptionSpec(name, short_name, kind, description)` values, where `kind` is
 `OptionKind.FLAG` or `OptionKind.VALUE`, and pass them, with
-`std.process.arguments()`, to `cli.parse(arguments, specs)`. A parsed result
+`process.arguments()` (after `import "@std/process.spr" as process`), to
+`cli.parse(arguments, specs)`. A parsed result
 exposes the methods `value(name) -> String? throws Error` and
 `flag(name) -> Bool throws Error` and the field `positionals: List[String]`.
 The closed `OptionValue` variant distinguishes

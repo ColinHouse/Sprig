@@ -115,8 +115,9 @@ Run `./gradlew sprigInfo` for concise machine-readable build context. Use
 diagnostics. `javac` errors identify the generated source directory and Java
 boundary source as usual.
 
-This release is verified with Sprig 0.7.1-beta.1, Gradle 9.7.1 and a JDK 26
-host running the compiler's Java 21 bytecode. The Fabric starter additionally
+This plugin is verified with the compiler built from this source (Java 21
+bytecode), Gradle 9.7.1 and a JDK 26 host; Sprig 0.7.1-beta.1, which builds
+Java 17 bytecode, was verified the same way. The Fabric starter additionally
 uses Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3 and Loom
 1.18.2. This is a tested combination, not a promise of compatibility with
 every Gradle, JDK, Loom or Minecraft release. A host Gradle build can use any

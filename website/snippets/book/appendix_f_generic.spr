@@ -1,0 +1,14 @@
+import java.util.ArrayList as ArrayList
+import java.util.Collections as Collections
+
+# sort 的约束是 T extends Comparable<...>，T 可以从实参推出来。
+let names = ArrayList[String]()
+names.add("grace")
+names.add("ada")
+Collections.sort(names)
+print(names)
+
+# 没有任何实参能定出 T 时，要自己写出类型实参。
+let empty = Collections.emptyList[String]()
+if empty != null:
+    print(empty.size())

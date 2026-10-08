@@ -1,0 +1,5 @@
+import "@std/process.spr" as process
+
+print("before exit")
+process.exit(0)
+print("this never prints")

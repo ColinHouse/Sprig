@@ -1,4 +1,4 @@
-# Implemented quick reference (v0.7.1-beta.1)
+# Implemented quick reference (main, after v0.7.1-beta.1)
 
 `sprig help <topic> --json` is the versioned machine-readable reference.
 `sprig capabilities --json` is the implemented feature inventory. This page
@@ -97,9 +97,10 @@ literal takes the other operand's type (`xs == []`). `in`, `contains`,
 never found and `-0.0` finds `0.0`. `a.compareTo(b)` on
 `Int`, `Int32`, `Float`, `Float32`, `Decimal`, `BigInt` and `String` takes the
 receiver's own type and returns `Int32`, so `fn(a: Int, b: Int) => a.compareTo(b)`
-is a Java `Comparator`. Nullable
-`Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?` comparisons are null-safe and widen
-to the common type (`Int32?` → `Int?`, `Float32?` → `Float?`). A `T?` value is
+is a Java `Comparator`. `==` and `!=` on nullable
+`Int?`/`Int32?`/`Float?`/`Float32?`/`Bool?` values are null-safe and widen
+to the common type (`Int32?` → `Int?`, `Float32?` → `Float?`); `<` and the
+other orderings need a non-null value, so check for `null` first. A `T?` value is
 not joined into a `String`; check it or give it a fallback with `or_else` first.
 `for x in range(...)` counts without building a list; `range(...)` used as a
 value is a `MutableList[Int]`. Binary operands evaluate left to right, each exactly
@@ -112,7 +113,7 @@ field plus `conform NotFound to Error(message)`. It is thrown, declared with
 `Error`; a lambda that throws one has `throws Error`.
 `Int` is checked signed 64-bit, `Int32` checked signed 32-bit, `Float` is IEEE
 binary64, and `Float32` binary32. No implicit lossy numeric conversion occurs.
-See `sprig help numerics` for syntax and `NUMERIC_SEMANTICS.md` for details.
+See `sprig help numerics` for syntax and [numeric semantics](numeric-semantics.md) for details.
 Generic declarations sit in a `generic T:` block. A generic call, constructor
 or variant case with a payload infers its type arguments from its arguments
 (`Box(value=1)` is a `Box[Int]`, `lists.sort_by(orders, fn(o: Order) => o.cents)`

@@ -1,0 +1,5 @@
+# Conditions must be Bool: there is no "non-zero is true".
+let count = 3
+let open = count > 0 and count < 10
+print(open)
+print(not open or count == 3)

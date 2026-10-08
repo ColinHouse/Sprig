@@ -1,0 +1,27 @@
+# 从 JavaScript 过来：let/const、模板字符串、数组和对象。
+# Sprig 的 let 只能绑定一次，var 才能重新赋值。
+var count = 0
+let name = "Ada"
+count += 1
+print(name + " has " + count)
+
+# JS 的 undefined 不存在；缺失用 T? 加 null。
+func lookup(ages: Map[String, Int], who: String) -> Int?:
+    return ages.get(who)
+
+let maybe = lookup({"ada": 36}, "bob")
+if maybe == null:
+    print("missing")
+else:
+    print(maybe)
+
+# JS 数组的 length 是属性；Sprig 用 size() 方法，元素用 [] 取。
+let numbers = [3, 1, 2]
+print(numbers.size())
+print(numbers[0])
+print(numbers.contains(2))
+
+# JS 的对象字面量在这里是 Map，读字段用 get。
+let person = {"name": "Grace", "city": "London"}
+print(person.get("name"))
+print("city" in person)

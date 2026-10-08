@@ -1,0 +1,9 @@
+func max3(a: Int, b: Int, c: Int) -> Int:
+    var best = a
+    if b > best:
+        best = b
+    if c > best:
+        best = c
+    return best
+
+print(max3(3, 9, 5))

@@ -1,0 +1,10 @@
+import "@std/concurrent.spr" as concurrent
+
+func announce(line: String) -> Unit:
+    print("> " + line)
+
+func announce_all(s: concurrent.Scope) -> Unit throws Error:
+    let job = concurrent.run(s, fn() => announce("ready"))
+    job.await()
+
+concurrent.scope_run(announce_all)

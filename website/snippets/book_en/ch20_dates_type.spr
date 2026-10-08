@@ -1,0 +1,4 @@
+# The second argument of plus_days is a day count (Int), not text.
+import "@std/dates.spr" as dates
+
+print(dates.plus_days("2026-01-01", "3"))

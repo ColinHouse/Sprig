@@ -1,0 +1,27 @@
+# Coming from Java: main, int overflow, interfaces, integer division.
+# Sprig's top-level statements are the program; main is not called automatically.
+class Account:
+    let owner: String
+    var balance: Int = 0
+
+    func deposit(amount: Int) -> Unit:
+        balance += amount
+
+let account = Account(owner="Ada")
+account.deposit(100)
+print(account.owner + ": " + account.balance)
+
+# No inheritance: a contract class (methods without bodies) plus conform replaces interfaces.
+class Sink:
+    func write(line: String) -> Unit
+
+class Console:
+    func write(line: String) -> Unit:
+        print(line)
+
+conform Console to Sink
+let sink: Sink = Console()
+sink.write("through the contract")
+
+# Java's integer / truncates; Sprig rejects it and asks for intent.
+print(7.divTrunc(2))

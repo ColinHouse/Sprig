@@ -1,0 +1,14 @@
+import java.lang.Math as Math
+import java.lang.Integer as Integer
+import java.lang.Float as JFloat
+import java.util.Collections as Collections
+
+# An Int variable narrows to an int formal with a range check; a long overload wins.
+let n: Int = 5
+print(Integer.toBinaryString(n))
+print(Collections.nCopies[String](n, "ab"))
+let big: Int = 4294967296
+print(Math.abs(big))
+# Float never becomes float by itself: say whether it must be exact or may round.
+let ratio: Float = 0.1
+print(JFloat.valueOf(ratio.toFloat32Lossy()))

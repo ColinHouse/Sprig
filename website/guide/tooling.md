@@ -2,7 +2,7 @@
 
 Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。它没有常驻后台的进程，连语言服务器也是一个子命令 `sprig lsp`，由编辑器自己启动。VS Code 里的支持见 [VS Code 插件](/guide/editor)。
 
-这页列出的命令，已发布的 v0.7.1-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
+这页按 `main` 分支来写。`sprig build --bundle`、`sprig search`、`sprig publish` 和 `run --no-cache` 比已发布的 v0.7.1-beta.1 新，其他命令在 v0.7.1-beta.1 里都有。你装的 SDK 具体支持哪些功能，以 `sprig capabilities --json` 的输出为准。
 
 ## 命令一览
 
@@ -60,7 +60,7 @@ Sprig 只有一个命令行程序 `sprig`，所有功能都是它的子命令。
 - **`run --stacktrace`**：程序运行时出了没被捕获的错误，Sprig 会报 `SPR-RUNTIME-ERROR` 或 `SPR-RUNTIME-EXCEPTION`，并指出是源码的哪一行；错误出在 `@std` 的函数里时，指的是你调用它的那一行。需要完整的 JVM 堆栈时，加上这个选项。
 - **`build -d <目录>`**：`build` 默认输出到 `sprig-build/`，`-d` 可以换个目录。检查没通过时不会生成 class 文件。
 - **`build --emit-java-only`**：只做静态检查和生成 Java，不调用 javac。加 `--json` 时，结果里会有 `javaSources`、`mainClass` 和 `javacInvoked: false`。
-- **`build --bundle`**：在 `build` 的输出目录里再写一个 `<名字>/` 目录（名字是 `--bin`、项目名或文件名），交给没装 Java 的人也能运行：`bin/<名字>` 是 POSIX sh 启动器，`bin/<名字>.cmd` 是 Windows 启动器；`lib/` 里是程序的 jar、Sprig 运行时和锁文件里的全部 jar（Maven 依赖也在，按坐标命名）；`runtime/` 是用 jlink 从这些 jar 实际用到的模块做出来的 Java 运行时镜像，`runtime/legal/` 里的 JDK 许可声明原样保留（OpenJDK 的 GPLv2 + Classpath Exception 允许连同声明一起分发）。启动器在你当前的目录里运行程序，原样转发参数和退出码，并把程序自己的类做成 class-data-sharing 归档放在用户缓存目录里，第二次启动更快。两个启动器的标准输出和标准错误都是 UTF-8（Windows 的旧控制台显示乱码时先 `chcp 65001`）；从别的程序启动 `bin\<名字>.cmd` 时直接传启动器路径和参数，不要套一层 `cmd /c` 再逐个加引号，那样 cmd.exe 会按它自己的规则去掉首尾的引号。打包时不会运行你的程序。**镜像只能在构建它的操作系统和 CPU 架构上运行**，命令输出会写明是哪个平台；要给别的平台就在那个平台上构建。加 `--archive` 会在旁边再写一个 `<名字>.zip`，解压后启动器照样可执行。需要完整的 JDK（有 `jdeps`、`jlink` 和 `jmods/`）：缺工具报 `SPR-BUNDLE-TOOLS`，`jdeps` 分析失败报 `SPR-BUNDLE-JDEPS`，没有 `jmods/` 或 jlink 失败报 `SPR-BUNDLE-LAYOUT`，每个都带修法。详见 [bundle 说明（英文）](/en/reference/projects/bundle)。
+- **`build --bundle`**：在 `build` 的输出目录里再写一个 `<名字>/` 目录（名字是 `--bin`、项目名或文件名），交给没装 Java 的人也能运行：`bin/<名字>` 是 POSIX sh 启动器，`bin/<名字>.cmd` 是 Windows 启动器；`lib/` 里是程序的 jar、Sprig 运行时和锁文件里的全部 jar（Maven 依赖也在，按坐标命名）；`runtime/` 是用 jlink 从这些 jar 实际用到的模块做出来的 Java 运行时镜像，`runtime/legal/` 里的 JDK 许可声明原样保留（OpenJDK 的 GPLv2 + Classpath Exception 允许连同声明一起分发）。启动器在你当前的目录里运行程序，原样转发参数和退出码，并把程序自己的类做成 class-data-sharing 归档放在用户缓存目录里，第二次启动更快。两个启动器的标准输出和标准错误都是 UTF-8（Windows 的旧控制台显示乱码时先 `chcp 65001`）；从别的程序启动 `bin\<名字>.cmd` 时直接传启动器路径和参数，不要套一层 `cmd /c` 再逐个加引号，那样 cmd.exe 会按它自己的规则去掉首尾的引号。打包时不会运行你的程序。**镜像只能在构建它的操作系统和 CPU 架构上运行**，命令输出会写明是哪个平台；要给别的平台就在那个平台上构建。加 `--archive` 会在旁边再写一个 `<名字>.zip`，解压后启动器照样可执行。需要完整的 JDK：有 `jdeps` 和 `jlink`，再加上 `jmods/` 目录，或者是 jlink 能直接取用的 JDK 24+ 运行时（Temurin 的 JDK 26 没有 `jmods/`，也能用）。缺工具报 `SPR-BUNDLE-TOOLS`，`jdeps` 分析失败报 `SPR-BUNDLE-JDEPS`，jlink 用不了这个 JDK 或者 jlink 失败报 `SPR-BUNDLE-LAYOUT`，每个都带修法。详见 [bundle 说明（英文）](/en/reference/projects/bundle)。
 
 如果程序定义了 `func main`，但运行时没有输出，也没有任何顶层语句或其嵌套代码块调用 `main`，`run` 会给出提示；嵌套的 `if`、`try` 等代码块里的调用也会计入。
 
@@ -140,7 +140,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:6:12: Missing case: Shape.Square
 ## 给 AI 助手用
 
 - 运行之前先跑 `sprig check --json`。它只做解析、名字和类型检查，不生成也不执行代码，是最快、最可靠的一道检查。
-- 每个错误都带着固定的错误码、所属阶段（`LEX`、`SYNTAX`、`NAME`、`TYPE`、`FLOW`、`JVM`、`RUNTIME`）和准确的位置，很多还带有 `hint`，说明下一步该怎么改。
+- 每个错误都带着固定的错误码和所属阶段：命令、项目和依赖的问题是 `CLI`，其余是 `LEX`、`SYNTAX`、`NAME`、`TYPE`、`FLOW`、`JVM`、`RUNTIME`。源码里的错误有准确的位置，很多还带有 `hint`，说明下一步该怎么改。
 - `run --json` 把程序输出和错误分开，程序运行失败时也能拿到可以解析的结果。
 
 完整的工作方式见[和 AI 助手一起写代码](/guide/agent-workflow)。

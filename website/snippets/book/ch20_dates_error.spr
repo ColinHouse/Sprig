@@ -1,0 +1,7 @@
+# 2 月 30 日不是真实日期：parse 在运行时拒绝它。
+import "@std/dates.spr" as dates
+
+try:
+    print(dates.parse("2026-02-30"))
+catch problem: Error:
+    print(problem.message)

@@ -1,0 +1,21 @@
+# 列目录：在系统临时目录里建一个自己的目录，list 排序列出，walk 递归列出，最后清掉文件。
+import "@std/files.spr" as files
+
+let anchor = files.temp_file()
+let parent = files.parent(anchor)
+if parent == null:
+    throw Error("no parent directory")
+let dir = files.join(parent, "sprig-book-" + files.file_name(anchor))
+files.remove_file(anchor)
+
+files.make_directory(dir)
+files.write_utf8(files.join(dir, "a.txt"), "one\n")
+files.write_utf8(files.join(dir, "notes.txt"), "two\n")
+
+print(files.list(dir).size())
+for entry in files.walk(dir):
+    print(files.file_name(entry))
+
+files.remove_file(files.join(dir, "a.txt"))
+files.remove_file(files.join(dir, "notes.txt"))
+print(files.list(dir).size())

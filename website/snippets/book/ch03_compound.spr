@@ -1,0 +1,8 @@
+var total = 6.0
+total *= 2.0
+total /= 4.0
+print(total)
+var count = 7
+count += 3
+count -= 1
+print(count)

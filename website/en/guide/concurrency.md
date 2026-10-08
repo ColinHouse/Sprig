@@ -25,7 +25,7 @@ print(concurrent.scope(count_all))
 - **The first failure cancels its siblings** and is rethrown by `scope()` as an `Error`, so `scope` declares `throws Error`. That holds even when the body fails because it was awaiting a sibling the failure cancelled: you get the failure, not "task was cancelled". A failure inside a task is also reported by that task's `await()`; catching it there does not undo the scope's failure. To tolerate a failure, handle it inside the task body, for example by returning a variant such as `Ok`/`Failed`. `await_or(fallback)` doesn't tolerate anything: it gives the fallback for a failed or cancelled task without a `throws` clause, so one task body can wait on another, but the scope still fails.
 - A task cancelled on purpose (`task.cancel()`, `s.cancel_all()`, a pool's `shutdown_now()`) is not a failure. Cancellation interrupts the task's thread and takes effect at its blocking points: `sleep`, `await`, a channel `receive`, Java I/O that honors interruption. A loop that never blocks runs to its end. So `is_done()` is true right after `cancel()`, even while the body is still running up to its next blocking point; the scope still waits for the body to end.
 - There is no unscoped `spawn`: a task always belongs to the scope it was started in, and starting one after the body returned is an `Error`.
-- A task body is a plain function value, so it captures only `let` bindings and parameters: the data races on locals that other languages have cannot be written. Shared `MutableList`/`MutableMap` values and `var` fields are not protected; see locks and channels below.
+- A task body is a plain function value, so it can't capture a function's `var` locals: the data races on locals that other languages have can't be written. Everything else that's shared is unprotected: a module-level `var` (a task body can read it, and a function it calls can change it), shared `MutableList`/`MutableMap` values and `var` fields. To share between tasks, use a counter, a lock or a channel, below.
 
 ## Work with no result: run and scope_run
 
@@ -129,7 +129,7 @@ A task body is a `fn() -> T` without a throws clause, so it cannot call a functi
 - `try`/`catch` inside a named function the body calls, and return a `variant` (`Ok`/`Failed`);
 - let it fail: `await()` reports it where you wait, and the scope reports it when it ends. `await_or(fallback)` has no throws clause, so one task body can wait on another.
 
-The module functions a task body is likely to call (`send`, `receive`, `receive_within`, `sleep`, `run`, `locked`) have no throws clause either; invalid arguments fail at run time with an `Error`. That is the difference between `concurrent.sleep(millis)` and `time.sleep`: a sleeping task that is cancelled ends at once.
+What a task body is likely to call has no throws clause either: a channel's `send`, `receive` and `receive_within`, `concurrent.sleep`, a lock's `run` and `concurrent.locked`. Invalid arguments fail at run time with an `Error`. `concurrent.spawn` and `concurrent.run` do declare `throws Error`, so a task body can't call them directly. That is the difference between `concurrent.sleep(millis)` and `time.sleep`: a sleeping task that is cancelled ends at once.
 
 ## Why not async/await
 

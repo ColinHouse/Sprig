@@ -1,0 +1,4 @@
+var maybe: Int? = 4
+let value = maybe
+if value != null:
+    print(value * 10)
