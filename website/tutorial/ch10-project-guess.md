@@ -121,6 +121,10 @@ correct in 3 tries
 
 直接运行 `sprig run guess.spr` 也可以，程序会等你输入：每行一个猜测，最后用 Ctrl-D（macOS、Linux）或 Ctrl-Z 回车（Windows）表示"没有更多输入"。
 
+::: tip 学过其他语言？
+Python 的 `input()` 在输入结束时抛 `EOFError`，要写 `try` 接住；Sprig 把输入结束变成 `null`，用 `if line == null:` 判断。随机数和 Python 的 `random.seed(s)` 一样可复现，区别是 Sprig 把随机源拿在手里（`let dice = random.seeded(7)`），要接着用同一个；再调一次 `random.seeded(7)` 会从头开始。命令行参数不是全局的 `sys.argv`，而是 `process.arguments()`，并且只有 `--` 后面的词才会传进来。
+:::
+
 ### 故意写错：忘了 `throws Error`
 
 把函数头里的 `throws Error` 删掉，只留下最小的一段：
