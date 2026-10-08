@@ -5306,8 +5306,14 @@ public final class TypeChecker {
             if (arg.isNullable() || expected == null || !expected.equals(arg)) return -1;
             return 4;
         }
-        if (arg.nonNull() instanceof FunctionType && JavaTypes.functionalMethod(raw[index]) != null) {
-            return scoreJavaCallable(generic[index], raw[index], arg, bindings);
+        if (arg.nonNull() instanceof FunctionType) {
+            // The formal may be a type variable erased to Object and bound by
+            // the receiver: AtomicReference[Runnable].set(V) is Runnable here.
+            Class<?> functionalClass = JavaTypes.boundFormalClass(generic[index], raw[index], bindings);
+            if (JavaTypes.functionalMethod(functionalClass) != null) {
+                return scoreJavaCallable(JavaTypes.boundFormalType(generic[index], bindings),
+                        functionalClass, arg, bindings);
+            }
         }
         if (JavaTypes.capturedWrite(generic[index], bindings)) {
             // add(E) or addAll(Collection<? extends E>) on a List<? extends Number>

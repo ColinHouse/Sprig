@@ -638,6 +638,28 @@ print(Interop.accepted(fn(value: String) => fail(value)))
                throwing.returncode == 1 and throwing_json and throwing_json["code"] == "SPR-TYPE-CALLABLE-THROWS",
                f"exit={throwing.returncode} {throwing.stdout}{throwing.stderr}")
 
+        # A functional-interface formal that is erased to Object but bound by
+        # the receiver's type argument takes a Sprig fn value: every Fabric
+        # Event<T>.register(T) has this shape.
+        _, bound_callables = run_file("java-bound-callables.spr", '''import java.util.concurrent.atomic.AtomicReference as AtomicReference
+import java.util.function.Consumer as Consumer
+import java.lang.Runnable as Runnable
+let task = AtomicReference[Runnable]()
+task.set(fn() => print("ran"))
+let stored = task.get()
+if stored != null:
+    stored.run()
+let sink = AtomicReference[Consumer[String]]()
+sink.set(fn(value: String) => print("got " + value))
+let consumer = sink.get()
+if consumer != null:
+    consumer.accept("x")
+''')
+        verify("run-java-bound-functional-interface",
+               bound_callables.returncode == 0
+               and bound_callables.stdout.splitlines() == ["ran", "got x"],
+               f"exit={bound_callables.returncode} {bound_callables.stdout}{bound_callables.stderr}")
+
         # ----------------------------------------------- classpath file
         listing = directory / "classpath.txt"
         listing.write_text("# the fixture classes\n" + cp + "\n\n", encoding="utf-8")

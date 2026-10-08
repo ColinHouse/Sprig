@@ -661,6 +661,61 @@ public final class JavaTypes {
     }
 
     /**
+     * The reflection type of a formal after receiver and explicit bindings:
+     * a type variable bound to a Java type becomes that type, so the erased
+     * {@code V} of {@code AtomicReference<V>.set(V)} reads as its {@code Runnable}
+     * argument and a Sprig function value can be adapted for it.
+     */
+    public static java.lang.reflect.Type boundFormalType(java.lang.reflect.Type generic,
+            Map<TypeVariable<?>, Type> bindings) {
+        Type bound = generic instanceof TypeVariable<?> variable && bindings != null
+                ? bindings.get(variable) : null;
+        return bound != null && bound.nonNull() instanceof JavaType javaType ? reflectionType(javaType) : generic;
+    }
+
+    /** The raw class of {@link #boundFormalType}. */
+    public static Class<?> boundFormalClass(java.lang.reflect.Type generic, Class<?> raw,
+            Map<TypeVariable<?>, Type> bindings) {
+        java.lang.reflect.Type resolved = boundFormalType(generic, bindings);
+        return resolved instanceof Class<?> clazz ? clazz
+                : resolved instanceof ParameterizedType applied && applied.getRawType() instanceof Class<?> rawClass
+                        ? rawClass : raw;
+    }
+
+    /** The reflection type a Sprig Java type stands for; the raw class outside the concrete profile. */
+    private static java.lang.reflect.Type reflectionType(JavaType type) {
+        if (type.args.isEmpty()) {
+            return type.clazz;
+        }
+        java.lang.reflect.Type[] arguments = new java.lang.reflect.Type[type.args.size()];
+        for (int i = 0; i < arguments.length; i++) {
+            Type argument = type.args.get(i);
+            java.lang.reflect.Type reflected = argument instanceof JavaType inner ? reflectionType(inner)
+                    : boxedFor(argument);
+            if (reflected == null) {
+                return type.clazz;
+            }
+            arguments[i] = reflected;
+        }
+        return new ParameterizedType() {
+            @Override
+            public java.lang.reflect.Type[] getActualTypeArguments() {
+                return arguments.clone();
+            }
+
+            @Override
+            public java.lang.reflect.Type getRawType() {
+                return type.clazz;
+            }
+
+            @Override
+            public java.lang.reflect.Type getOwnerType() {
+                return type.clazz.getDeclaringClass();
+            }
+        };
+    }
+
+    /**
      * The Sprig function type a functional-interface formal expects, or null
      * when a type argument or a method parameter stays unresolved, so nothing
      * is guessed. {@code void} is {@code Unit}; a lambda with any result
