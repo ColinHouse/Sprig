@@ -1,0 +1,11 @@
+generic T:
+    func same(a: T, b: T) -> Bool:
+        requires T: Equatable
+        return a == b
+
+generic U:
+    func forwarded(a: U?, b: U?) -> Bool:
+        return same[U?](a, b)
+
+let f = fn(x: Int) => x + 1
+print(forwarded[fn(Int) -> Int](f, f))

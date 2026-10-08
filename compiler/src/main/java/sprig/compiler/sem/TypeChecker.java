@@ -224,7 +224,14 @@ public final class TypeChecker {
         // Conformance edges must exist before any expression is checked,
         // including the unannotated-global inference prepass below.
         new ConformanceChecker(diagnostics).check(module);
-        TypeChecker inference = new TypeChecker(diagnostics);
+        // Binding types module bodies need are inferred in top-level statement
+        // order with the early-exit narrowing of a function body. This pass is
+        // silent: the default effects below and the function-body effects after
+        // them are not known yet, and a diagnostic that depends on them (a
+        // catch that could never run, a callback missing its throws clause)
+        // would be wrong. Its inferred types stay on the symbols for
+        // prepareDefaultEffects and for the bodies checked next.
+        TypeChecker inference = new TypeChecker(new Diagnostics());
         inference.module = module;
         inference.globalInitializers = new LinkedHashMap<>();
         for (Stmt statement : module.topStatements) {
@@ -233,17 +240,18 @@ public final class TypeChecker {
                 inference.globalInitializers.put(declaration.symbol, declaration);
             }
         }
-        // An initializer that fails gives its binding the error type, which is
-        // silent afterwards, so the rest of the module is still checked and
-        // reports its own errors in the same round. The statements are checked
-        // here in source order with the same early-exit narrowing as the real
-        // pass, so an unannotated global after `if d == null: throw` infers the
-        // narrowed type too. The statement-order check below repeats the same
-        // reports, which the sink drops.
         inference.narrowing.push(new HashMap<>());
         inference.checkSequence(module.topStatements);
         inference.narrowing.pop();
-        prepareDefaultEffects();
+        if (prepareDefaultEffects()) {
+            // A field default can throw, so a callback inferred above may be
+            // missing that clause: infer the bindings the bodies read again,
+            // still silently, before those bodies are checked.
+            clearInferredBindings(module.topStatements);
+            inference.narrowing.push(new HashMap<>());
+            inference.checkSequence(module.topStatements);
+            inference.narrowing.pop();
+        }
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
                 for (Decl.Field field : classDecl.fields) {
@@ -266,6 +274,13 @@ public final class TypeChecker {
         caughtStack.clear();
         tryThrown.clear();
         effectCollectors.clear();
+        // The reporting statement-order pass: every effect is known by now, and
+        // each unannotated binding is inferred again from scratch, so neither a
+        // silent pass's report nor its cached type can make this one misreport.
+        // An initializer that fails gives its binding the error type, which is
+        // silent afterwards, so the rest of the module is still checked and
+        // reports its own errors in the same round.
+        clearInferredBindings(module.topStatements);
         // The base frame a function body also gets: early-exit narrowing
         // (if x == null: throw ...) records into it for the statements after.
         narrowing.push(new HashMap<>());
@@ -274,6 +289,46 @@ public final class TypeChecker {
         // Every body this module's generic uses reach is checked by now: its
         // own declarations above, the modules it imports before it.
         genericUses.verify(typeResolver, diagnostics);
+    }
+
+    /**
+     * Forgets what an earlier silent pass inferred for unannotated bindings in
+     * the top-level statements, so the reporting pass infers each again with
+     * every effect known. An explicit type annotation is kept; only the
+     * inferred binding types are dropped.
+     */
+    private static void clearInferredBindings(List<Stmt> body) {
+        for (Stmt statement : body) {
+            if (statement instanceof Stmt.VarDecl declaration) {
+                if (declaration.typeRef == null && declaration.symbol != null) {
+                    declaration.symbol.type = null;
+                }
+            } else if (statement instanceof Stmt.IfStmt ifStmt) {
+                clearInferredBindings(ifStmt.thenBody);
+                for (Stmt.IfStmt.Elif elif : ifStmt.elifs) {
+                    clearInferredBindings(elif.body);
+                }
+                if (ifStmt.elseBody != null) {
+                    clearInferredBindings(ifStmt.elseBody);
+                }
+            } else if (statement instanceof Stmt.WhileStmt whileStmt) {
+                clearInferredBindings(whileStmt.body);
+            } else if (statement instanceof Stmt.ForStmt forStmt) {
+                clearInferredBindings(forStmt.body);
+            } else if (statement instanceof Stmt.Try tryStmt) {
+                clearInferredBindings(tryStmt.body);
+                for (Stmt.Try.CatchClause clause : tryStmt.catches) {
+                    clearInferredBindings(clause.body);
+                }
+                if (tryStmt.finallyBody != null) {
+                    clearInferredBindings(tryStmt.finallyBody);
+                }
+            } else if (statement instanceof Stmt.Match match) {
+                for (Stmt.Match.Branch branch : match.branches) {
+                    clearInferredBindings(branch.body);
+                }
+            }
+        }
     }
 
     /** A generic use with known type arguments, checked again once the module is done; see {@link GenericUses}. */
@@ -305,12 +360,15 @@ public final class TypeChecker {
                 "field default");
     }
 
-    /** Resolve the finite default-effect graph before checking any caller body.
+    /**
+     * Resolve the finite default-effect graph before checking any caller body.
      * A later class's omitted defaults must be visible to an earlier caller.
      * Discovery diagnostics are discarded; normal checking below validates each
      * expression with the completed effects, including lambda restrictions.
+     * Returns whether any field default can throw, the one way an inferred
+     * binding type (a callback's throws clause) depends on these effects.
      */
-    private void prepareDefaultEffects() {
+    private boolean prepareDefaultEffects() {
         TypeChecker discovery = new TypeChecker(new Diagnostics());
         discovery.module = module;
         discovery.defaultDependencies = new LinkedHashMap<>();
@@ -344,6 +402,15 @@ public final class TypeChecker {
                 if (changed) work.addLast(caller);
             }
         }
+        boolean throwing = false;
+        for (Decl declaration : module.decls) {
+            if (declaration instanceof Decl.ClassDecl owner) {
+                for (Decl.Field field : owner.fields) {
+                    throwing |= !field.defaultThrowsTypes.isEmpty();
+                }
+            }
+        }
+        return throwing;
     }
 
     // ------------------------------------------------------------------
@@ -948,7 +1015,8 @@ public final class TypeChecker {
             // No substitution: a call from inside the generic declaration itself.
             if (argument == null) argument = activeTypeParams.get(requires.parameter);
             if (argument == null || argument == NativeType.ERROR || isEquatableType(argument)) continue;
-            if (argument instanceof TypeParameterType parameter) {
+            Type argumentBase = argument.nonNull();
+            if (argumentBase instanceof TypeParameterType parameter) {
                 diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
                         "Type parameter '" + parameter.name + "' is not Equatable here, but '" + func.name
                                 + "' requires an Equatable type argument",
@@ -970,15 +1038,18 @@ public final class TypeChecker {
     /**
      * Equatable is every value type whose values compare with {@code ==}, except
      * a function value, which has no value equality; a type parameter is
-     * Equatable where its function declares {@code requires X: Equatable}.
+     * Equatable where its function declares {@code requires X: Equatable}. A
+     * nullable argument is judged by its base, so {@code U?} needs the same
+     * guarantee {@code U} does.
      */
     private boolean isEquatableType(Type type) {
-        if (type instanceof TypeParameterType parameter) {
+        Type base = type.nonNull();
+        if (base instanceof TypeParameterType parameter) {
             return currentFunction != null
                     && currentFunction.equatableParams.contains(parameter.name)
                     && activeTypeParams.containsKey(parameter.name);
         }
-        return !(type.nonNull() instanceof FunctionType);
+        return !(base instanceof FunctionType);
     }
 
     /** Whether equality on this parameter is justified by a requires clause. */
