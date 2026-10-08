@@ -4,6 +4,8 @@ Approved scope (0.3.0): the 0.2.0 extension, now a client of the Sprig language
 server. When the compiler reports `"languageServer": true` in
 `sprig capabilities --json`, `sprig lsp` answers diagnostics as you type,
 hover, completion, definition, references, rename, formatting and the outline;
+updated compilers also advertise signature help and full semantic tokens,
+registered automatically by the same client;
 otherwise the 0.2.0 CLI queries do. Compiler 0.4.0-alpha.1+ remains the
 semantic authority (0.5.0-beta.1+ for the Testing view). Publication to the
 Visual Studio Marketplace and Open VSX is an owner action, described below. No
@@ -61,6 +63,11 @@ unit tests.
   `ThirdPartyNotices.txt` matching the production dependencies in
   `package-lock.json`. After changing them, run
   `python3 scripts/check-editor.py --write-notices`.
+- [x] Compiler integration: Extension Host checks parameter hints for an
+  imported function while its closing parenthesis is missing, resolved semantic
+  tokens, and absence of both compiler-backed providers in Restricted Mode.
+  The JSON-RPC suite also checks nested calls, strings, Java overloads, UTF-16
+  positions and the exact-fit/overflow reference-analysis boundary.
 
 Production files: package.json and language-configuration.json register the
 language/editor behavior; syntaxes/sprig.tmLanguage.json scopes source;

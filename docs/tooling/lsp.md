@@ -70,7 +70,9 @@ server.
 | Diagnostics | The errors `sprig check` reports for the open file, with their stable codes. They are refreshed 300 ms after you stop typing, right away on open and save, and for open files that import a changed file. An error inside an imported file is shown on the `import` that leads to it, with a link to the real location. Each diagnostic's `data.relatedHelp` names the `sprig help` topic about it, the `relatedHelp` of `sprig check --json`. |
 | Hover | The declaration in Sprig syntax with its type, plus comment lines written directly above it. A local that a null check narrowed also shows its type at that point. Built-in methods show their result type. |
 | Go to definition | Functions, methods, classes, enums, variants and their cases, fields, parameters and locals, across modules. On an `import` it opens the imported file. |
-| References | Every use of a declaration. Locals and parameters are searched in their file. Other declarations are also searched in the open files and in the files of the same project that mention the name, up to 200 files. |
+| References | Uses of a declaration. Locals and parameters are searched in their file. Other declarations are also searched in the open files and in the files of the same project that mention the name, up to 200 additional analyses. If a matching project file is omitted by this limit, a warning says the results are incomplete. |
+| Signature help | Parameter names and types for Sprig declarations and public Java overloads, with the active parameter. Triggered by `(` and `,`, including a call with no closing parenthesis. See below. |
+| Semantic tokens | Resolved types, functions, methods, fields, parameters and variables, with declaration and readonly modifiers. Colors follow the editor's theme. |
 | Document symbols | Classes with fields and methods, enums and variants with their cases, functions and top-level variables. |
 | Completion | After `.`: members of the value's type, a module's declarations, enum and variant cases, built-in methods and public Java members. Elsewhere: names in scope, module declarations, imports, built-ins and keywords. In a type position, it offers types and the module names that qualify them. |
 | Formatting | The output of `sprig fmt`, as one edit. A file that does not parse is left unchanged. A CRLF document (common on Windows) keeps CRLF line endings, and needs no edit when only its line endings differ from `sprig fmt`. |
@@ -106,6 +108,42 @@ rule and does not guess:
   cursor. If the rest of the program does not resolve, it offers members only
   for receivers whose type is written down: parameters, fields, annotated
   variables, modules and type names.
+- Signature help completes only the call around the cursor in a temporary
+  analysis. Missing closing parentheses on that call and surrounding calls
+  are allowed; unrelated syntax errors can still prevent an answer. The
+  original text and its diagnostics are not replaced by the temporary text.
+- Semantic tokens use the current symbol index. When parsing or name
+  resolution fails, they return an empty list rather than stale positions;
+  the editor can keep its lexical highlighting.
+
+## Signature help
+
+`textDocument/signatureHelp` displays written parameter names and types for
+Sprig functions and methods, including imported declarations, and the fields
+of named class and variant constructors. A function value uses its static
+callable type and placeholder parameter names. Nested calls, list and map
+literals, strings containing commas and escaped quotes do not advance the
+outer call's active parameter. Named constructor arguments select their field
+even when written out of declaration order. Positions use UTF-16, including
+text after an emoji.
+
+Public Java methods and constructors show every supported overload as a
+candidate, using the compiler's JVM type mapping. When bytecode does not
+retain a parameter's name, it is displayed as `arg0`, `arg1`, and so on.
+Varargs keep the final parameter active for additional arguments. Candidates
+are not ranked by argument types or complex generic inference. Sprig generic
+declarations display their written type parameters. Built-in functions and
+native collection/string methods do not yet provide parameter signatures.
+
+## Semantic highlighting
+
+`textDocument/semanticTokens/full` returns resolved identifier tokens, not a
+capitalization heuristic. For example, a lowercase class and an uppercase
+local variable still receive their correct categories. The legend includes
+`namespace`, `class`, `enum`, `enumMember`, `function`, `method`, `parameter`,
+`variable`, `property`, `type` and `typeParameter`, with `declaration` and
+`readonly` modifiers. Built-in types and members and Java types and members
+are included. Range and delta requests are not implemented.
 
 ## Rename
 
@@ -165,6 +203,6 @@ emoji lines up in the editor.
 
 ## Not supported yet
 
-Incremental document sync, workspace symbols, signature help, code actions
-other than these quick fixes (refactorings, organize imports), semantic tokens
-and renaming names that other files can use.
+Incremental document sync, workspace symbols, code actions other than these
+quick fixes (refactorings, organize imports), semantic-token range/delta
+requests and renaming names that other files can use.

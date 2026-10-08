@@ -848,6 +848,176 @@ def check_project(directory):
     check("project-shutdown", client.stop() == 0, "".join(client.stderr))
 
 
+def check_signature_help(directory):
+    """A live call, even without its closing paren, exposes its declaration and active argument."""
+    source = '''import java.lang.Math as Math
+import java.lang.StringBuilder as StringBuilder
+import "./signature_helper.spr" as helper
+func add(left: Int, right: Int) -> Int:
+    return left + right
+func echo(text: String) -> String:
+    return text
+func lengths(items: List[Int], extra: Int) -> Int:
+    return items.size() + extra
+func flags(flag: Bool, count: Int) -> Int:
+    return count
+generic T:
+    func identity(value: T) -> T:
+        return value
+variant Choice:
+    Value(item: Int)
+class Box:
+    let width: Int
+    let label: String = "box"
+    func grow(amount: Int, extra: Int) -> Int:
+        return width + amount + extra
+let box = Box(width=1)
+let builder = StringBuilder()
+'''
+    path = directory / "signatures.spr"
+    (directory / "signature_helper.spr").write_text("func imported(first: Int, second: String) -> Int:\n    return first\n", encoding="utf-8")
+    path.write_text(source, encoding="utf-8")
+    client = Client(directory)
+    try:
+        caps = initialize(client, directory)["capabilities"]
+        check("signature-help-capability", caps.get("signatureHelpProvider", {}).get("triggerCharacters") == ["(", ","], caps)
+        client.open(path, source)
+        for version, (tail, expected, active) in enumerate([
+            ("add(", "func add(left: Int, right: Int) -> Int", 0),
+            ("add(1, ", "func add(left: Int, right: Int) -> Int", 1),
+            ('add(echo("a,b").length(), ', "func add(left: Int, right: Int) -> Int", 1),
+            ("add(add(1, 2), ", "func add(left: Int, right: Int) -> Int", 1),
+            ("print(add(1, ", "func add(left: Int, right: Int) -> Int", 1),
+            ("box.grow(1, ", "func grow(amount: Int, extra: Int) -> Int", 1),
+            ('Box(label="hello", width=', "Box(width: Int, label: String)", 0),
+            ('add(echo("a\\\"b,c").length(), ', "func add(left: Int, right: Int) -> Int", 1),
+            ("lengths([1, 2], ", "func lengths(items: List[Int], extra: Int) -> Int", 1),
+            ("identity[Int](", "func identity(value: T) -> T", 0),
+            ("Choice.Value(item=", "Value(item: Int)", 0),
+            ("helper.imported(1, ", "func imported(first: Int, second: String) -> Int", 1),
+            ("add(\n    1, ", "func add(left: Int, right: Int) -> Int", 1),
+            ("flags(count == 1", "func flags(flag: Bool, count: Int) -> Int", 0),
+            ("\nprint(\"😀\" + add(1, ", "func add(left: Int, right: Int) -> Int", 1),
+        ], 2):
+            client.change(path, source + tail + "\n", version)
+            line = source.count("\n") + tail.count("\n")
+            column = len(tail.rsplit("\n", 1)[-1].encode("utf-16-le")) // 2
+            response = client.at("textDocument/signatureHelp", path, line, column)
+            result = response.get("result")
+            check("signature-help-" + str(version), result is not None and result["signatures"][0]["label"] == expected
+                  and result["activeParameter"] == active, response)
+        for version, (tail, name, minimum) in enumerate([
+            ("Math.max(1, ", "max", 2),
+            ("StringBuilder(", "StringBuilder", 2),
+            ("builder.append(", "append", 2),
+            ("let another = 0\n(builder).append(", "append", 2),
+        ], 50):
+            client.change(path, source + tail + "\n", version)
+            response = client.at("textDocument/signatureHelp", path, source.count("\n") + tail.count("\n"), len(tail.rsplit("\n", 1)[-1]))
+            result = response.get("result")
+            check("signature-java-" + name, result is not None and len(result["signatures"]) >= minimum
+                  and all(name + "(" in s["label"] for s in result["signatures"]), response)
+            check("signature-java-parameter-labels-" + name, all(all(": " in p["label"] for p in s["parameters"]) for s in result["signatures"]), result)
+        # Existing closing parentheses and CRLF text must not move the active argument.
+        closed = source.replace("\n", "\r\n") + "add(1, 2)\r\n"
+        client.change(path, closed, 60)
+        response = client.at("textDocument/signatureHelp", path, source.count("\n"), 7)
+        check("signature-closed-crlf", response.get("result", {}).get("activeParameter") == 1, response)
+        for version, tail in enumerate(['# add(', 'echo("add(', 'let unrelated = ('], 70):
+            client.change(path, source + tail + "\n", version)
+            response = client.at("textDocument/signatureHelp", path, source.count("\n"), len(tail))
+            check("signature-not-a-call-" + str(version), response.get("result") is None, response)
+        check("signature-shutdown", client.stop() == 0)
+    finally:
+        stop_quietly(client)
+
+
+def semantic_tokens(client, path, legend):
+    response = client.request("textDocument/semanticTokens/full", {"textDocument": {"uri": uri(path)}})
+    data = response.get("result", {}).get("data", [])
+    tokens, line, character = [], 0, 0
+    for index in range(0, len(data), 5):
+        delta, column, length, kind, modifiers = data[index:index + 5]
+        character = column if delta else character + column
+        line += delta
+        tokens.append((line, character, length, legend["tokenTypes"][kind], modifiers))
+    return tokens
+
+
+def check_semantic_tokens(directory):
+    """Resolved symbols, rather than capitalization, distinguish a variable from a type or field."""
+    source = '''class box:
+    let value: Int
+    func get(amount: Int) -> Int:
+        let total = value + amount
+        return total
+let Uppercase = box(value=2)
+print("😀" + Uppercase.get(3).toString())
+# Uppercase and amount are not references here.
+'''
+    path = directory / "tokens.spr"
+    path.write_text(source, encoding="utf-8")
+    client = Client(directory)
+    try:
+        caps = initialize(client, directory)["capabilities"]
+        provider = caps.get("semanticTokensProvider", {})
+        check("semantic-tokens-capability", provider.get("full") is True and "legend" in provider, caps)
+        client.open(path, source)
+        check("semantic-fixture-checks", client.wait_diagnostics(path) == [])
+        tokens = semantic_tokens(client, path, provider["legend"])
+        expected = [(0, 6, 3, "class"), (1, 8, 5, "property"), (2, 9, 3, "method"),
+                    (2, 13, 6, "parameter"), (3, 12, 5, "variable"), (5, 4, 9, "variable"),
+                    (6, 13, 9, "variable"), (6, 23, 3, "method"), (1, 15, 3, "type")]
+        for token in expected:
+            check("semantic-symbol-" + str(token), any(t[:4] == token for t in tokens), tokens)
+        check("semantic-no-comment", all(t[0] != 7 for t in tokens), tokens)
+        declaration = 1 << provider["legend"]["tokenModifiers"].index("declaration")
+        check("semantic-declaration-modifier", any(t[:4] == (0, 6, 3, "class") and t[4] & declaration for t in tokens), tokens)
+        extended = 'import java.lang.Math as Math\n' + source + '''generic T:
+    func identity(value: T) -> T:
+        return value
+let values: List[Int] = [1, 2]
+print(Math.max(1, 2))
+'''
+        client.change(path, extended, 2)
+        check("semantic-extended-fixture-checks", client.wait_diagnostics(path) == [])
+        tokens = semantic_tokens(client, path, provider["legend"])
+        for token in [(10, 25, 1, "typeParameter"), (12, 12, 4, "type"),
+                      (13, 6, 4, "class"), (13, 11, 3, "method")]:
+            check("semantic-extended-symbol-" + str(token), any(t[:4] == token for t in tokens), tokens)
+        client.change(path, source + "let broken = (\n", 3)
+        check("semantic-no-stale-positions", semantic_tokens(client, path, provider["legend"]) == [])
+        check("semantic-shutdown", client.stop() == 0)
+    finally:
+        stop_quietly(client)
+
+
+def check_reference_limit(directory):
+    """A bounded search warns when it omits actual candidates, but not at an exact-fit boundary."""
+    subprocess.run([str(SPRIG), "init"], cwd=directory, check=True, capture_output=True)
+    path = directory / "src/shared.spr"
+    path.write_text("func shared() -> Int:\n    return 1\n", encoding="utf-8")
+    for number in range(200):
+        (directory / f"src/use_{number:03}.spr").write_text('import "./shared.spr" as shared\nprint(shared.shared())\n', encoding="utf-8")
+    subprocess.run([str(SPRIG), "resolve", "--offline"], cwd=directory, check=True, capture_output=True)
+    client = Client(directory)
+    try:
+        initialize(client, directory)
+        client.open(path, path.read_text(encoding="utf-8"))
+        check("reference-limit-fixture-checks", client.wait_diagnostics(path) == [])
+        result = client.at("textDocument/references", path, 0, 7, context={"includeDeclaration": False})
+        check("reference-limit-exact-fit", len(result["result"]) == 200, result)
+        check("reference-limit-exact-fit-no-warning", not any(n.get("method") == "window/showMessage" for n in client.notifications))
+        (directory / "src/overflow.spr").write_text('import "./shared.spr" as shared\nprint(shared.shared())\n', encoding="utf-8")
+        result = client.at("textDocument/references", path, 0, 7, context={"includeDeclaration": False})
+        messages = [n["params"] for n in client.notifications if n.get("method") == "window/showMessage"]
+        check("reference-limit-result-stays-bounded", len(result["result"]) == 200, result)
+        check("reference-limit-warns", any(m["type"] == 2 and "incomplete" in m["message"] and "200" in m["message"] for m in messages), messages)
+        check("reference-limit-shutdown", client.stop() == 0)
+    finally:
+        stop_quietly(client)
+
+
 def main():
     if not SPRIG.exists():
         print("Build first: python3 scripts/build.py", file=sys.stderr)
@@ -872,6 +1042,11 @@ def main():
         parent_view.mkdir()
         check_parent_view_completion(parent_view)
         check_project(Path(temp).resolve())
+        for name, suite in [("signatures", check_signature_help), ("tokens", check_semantic_tokens),
+                            ("reference limit", check_reference_limit)]:
+            directory = Path(temp).resolve() / name
+            directory.mkdir()
+            suite(directory)
     print(f"language server: {COUNT} passed, 0 failed")
 
 

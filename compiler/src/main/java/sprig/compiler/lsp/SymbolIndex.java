@@ -74,7 +74,7 @@ final class SymbolIndex {
     }
 
     /** Hover facts for a name that has no Sprig declaration (built-ins, Java). */
-    record Info(String code, String note) {
+    record Info(String code, String note, String semanticKind) {
     }
 
     static final class Occurrence {
@@ -515,7 +515,7 @@ final class SymbolIndex {
                 case BUILTIN_TYPE -> builtinTypeInfo(symbol.name, symbol.type);
                 case JAVA_TYPE -> symbol.javaClass == null ? null : javaTypeInfo(symbol.javaClass);
                 case FUNCTION -> symbol.decl == null
-                        ? new Info("func " + symbol.name + "(...)", "Built-in function.") : null;
+                        ? new Info("func " + symbol.name + "(...)", "Built-in function.", "function") : null;
                 default -> null;
             };
             return info == null ? null : reference(span, null, info);
@@ -536,15 +536,16 @@ final class SymbolIndex {
                 case VARIANT_CASE_VALUE -> reference(access.nameSpan, byNode.get(resolved.variantCase), null);
                 case BUILTIN_METHOD -> reference(access.nameSpan, null, new Info(
                         access.name + "(...)",
-                        "Built-in method of `" + display(resolved.receiverType) + "`."));
+                        "Built-in method of `" + display(resolved.receiverType) + "`.", "method"));
                 case JVM_METHOD, JAVA_FIELD -> reference(access.nameSpan, null, new Info(
                         resolved.jvm == null ? access.name : resolved.jvm.owner.getSimpleName() + "." + access.name,
                         "Java " + (resolved.kind == ResolvedField.Kind.JAVA_FIELD ? "field" : "method")
-                                + (resolved.jvm == null ? "." : " of `" + resolved.jvm.owner.getName() + "`.")));
+                                + (resolved.jvm == null ? "." : " of `" + resolved.jvm.owner.getName() + "`."),
+                        resolved.kind == ResolvedField.Kind.JAVA_FIELD ? "property" : "method"));
                 case ERROR_MESSAGE -> reference(access.nameSpan, null,
                         new Info("message: " + display(resolved.type), resolved.type instanceof NullableType
                                 ? "The exception's message from Java's getMessage(), which may be null."
-                                : "The error's message."));
+                                : "The error's message.", "property"));
             };
         }
 
@@ -627,20 +628,20 @@ final class SymbolIndex {
             String name = type.display();
             int bracket = name.indexOf('[');
             return new Info(bracket < 0 ? name : name.substring(0, bracket),
-                    "Built-in collection type.");
+                    "Built-in collection type.", "type");
         }
         if (type instanceof JavaType javaType) {
             return javaTypeInfo(javaType.clazz);
         }
         if (type instanceof TypeParameterType parameter) {
-            return new Info(parameter.display(), "Type parameter.");
+            return new Info(parameter.display(), "Type parameter.", "typeParameter");
         }
         return null;
     }
 
     static Info builtinTypeInfo(String name, Type type) {
         if (type instanceof JavaType javaType && javaType.clazz == sprig.runtime.SprigError.class) {
-            return new Info("Error", "Built-in error type; `catch problem: Error` catches it.");
+            return new Info("Error", "Built-in error type; `catch problem: Error` catches it.", "type");
         }
         String note = switch (name) {
             case "Int" -> "Signed 64-bit integer; overflow is a runtime error.";
@@ -654,12 +655,13 @@ final class SymbolIndex {
             case "Unit" -> "The result of a function that returns nothing.";
             default -> "Built-in type.";
         };
-        return new Info(name, note);
+        return new Info(name, note, "type");
     }
 
     static Info javaTypeInfo(Class<?> clazz) {
         String kind = clazz.isInterface() ? "interface" : clazz.isEnum() ? "enum" : "class";
-        return new Info(kind + " " + clazz.getName(), "Java " + kind + " from the classpath.");
+        return new Info(kind + " " + clazz.getName(), "Java " + kind + " from the classpath.",
+                clazz.isEnum() ? "enum" : "class");
     }
 
     static String display(Type type) {
