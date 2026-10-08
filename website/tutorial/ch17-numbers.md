@@ -1,6 +1,6 @@
 # 17. 数字进阶
 
-第 3 章你已经认识了 `Int` 和 `Float`：64 位整数、双精度浮点、整数不能直接 `/`、Int 和 Float 不混算。这一章把剩下的四种数字类型补上，并看清它们之间怎么转换：
+第 3 章你已经认识了 `Int` 和 `Float`：64 位整数、双精度浮点、整数不能直接 `/`、Int 和 Float 不混算。剩下的四种数字类型都在这一章，另外看清它们之间怎么转换。
 
 这一章你会学到：
 
@@ -240,7 +240,7 @@ SPR-RUNTIME-EXCEPTION [RUNTIME] modes.spr:1:1: Numeric error: Decimal division f
 - `big.divTrunc(BigInt.fromInt(7))` 和 `big % BigInt.fromInt(7)`：整数除法和取余用 `divTrunc` 和 `%`，除数为零会报错。
 - `big.toFloatLossy()`：转 `Float` 允许舍入，打印 `1.0E20`（科学计数法）。
 
-`BigInt` 转回 `Int` 用 `.toIntExact()`；数太大时运行时报 `Numeric error: BigInt outside Int range`（和所有 `Exact` 转换一样，宁可不结果也不悄悄截断）。`toDecimal()` 不会失败。
+`BigInt` 转回 `Int` 用 `.toIntExact()`；数太大时运行时报 `Numeric error: BigInt outside Int range`（和所有 `Exact` 转换一样，宁可报错也不悄悄截断）。`toDecimal()` 不会失败。
 
 ## 17.6 Float 的特殊值和工具方法
 
