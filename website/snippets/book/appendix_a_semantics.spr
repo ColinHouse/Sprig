@@ -1,0 +1,27 @@
+# 运算符的行为演示。
+# and/or 短路：右边的函数只在需要时才被调用。
+func loud_true() -> Bool:
+    print("called true")
+    return true
+
+func loud_false() -> Bool:
+    print("called false")
+    return false
+
+print(false and loud_true())
+print(true or loud_false())
+print(true and loud_true())
+# % 的结果符号跟着被除数，和 Java 一样，和 Python 不同。
+print(-7 % 3)
+print(7 % -3)
+# + 从左往右连：前两个 Int 先相加，之后才接到文字上。
+print(1 + 2 + " then " + 1 + 2)
+# 复合赋值和普通赋值一样，只对 var 和可变集合元素有效。
+var total = 7
+total += 3
+total -= 1
+total *= 2
+print(total)
+var ratio = 7.0
+ratio /= 2.0
+print(ratio)

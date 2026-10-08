@@ -1,0 +1,13 @@
+# 没有运算符重载：给运算起一个方法名。
+class Vec:
+    let x: Int
+    let y: Int
+
+    func plus(other: Vec) -> Vec:
+        return Vec(x=x + other.x, y=y + other.y)
+
+    func show() -> String:
+        return "(" + x + ", " + y + ")"
+
+let v = Vec(x=1, y=2).plus(Vec(x=3, y=4))
+print(v.show())

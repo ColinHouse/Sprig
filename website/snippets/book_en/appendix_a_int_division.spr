@@ -1,0 +1,2 @@
+# Integer division must state its intent: / is only for Float and Float32.
+print(7 / 2)

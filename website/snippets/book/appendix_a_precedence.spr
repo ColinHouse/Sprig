@@ -1,0 +1,18 @@
+# 优先级演示：每一行都靠括号之外的规则决定结果。
+# 乘除先于加减。
+print(1 + 2 * 3)
+print(2 * 3 + 1)
+# 同一级从左往右算。
+print(10 - 2 - 3)
+print(2 * 3 % 4)
+# 负号是前缀，先作用在紧跟的数上。
+print(-2 * 3)
+print(- -3)
+# not 作用在比较结果上；and 比 or 紧。
+print(not 1 == 2)
+print(true or false and false)
+print((true or false) and false)
+# in 和比较同级；加法和 in 在一起时先算加法。
+print(1 + 1 in [2])
+print("a" in "abc")
+print("a" in {"a": 1})

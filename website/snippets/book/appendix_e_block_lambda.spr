@@ -1,0 +1,6 @@
+# 没有块状 lambda：传给 map 的命名函数就是函数值。
+func square(x: Int) -> Int:
+    return x * x
+
+let squares = [1, 2, 3].map(square)
+print(squares)

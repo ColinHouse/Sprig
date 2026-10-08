@@ -1,0 +1,6 @@
+# No Char type: a text element is a String of exactly one code point.
+let text = "A😀東"
+print(text.length())
+print(text[0])
+print(text[1])
+print(text.charAt(2))

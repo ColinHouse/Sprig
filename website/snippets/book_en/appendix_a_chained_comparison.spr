@@ -1,0 +1,2 @@
+# Comparisons do not chain: there is no 1 < x < 3.
+print(1 < 2 < 3)

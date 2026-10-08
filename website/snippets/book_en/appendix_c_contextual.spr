@@ -1,0 +1,5 @@
+# export and to are contextual words, usable as ordinary names.
+let export = 1
+let to = 2
+let main = 4
+print(export + to + main)

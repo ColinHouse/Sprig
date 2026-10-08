@@ -1,0 +1,6 @@
+# 没有 Char 类型：一个文字元素就是只有一个码点的 String。
+let text = "A😀東"
+print(text.length())
+print(text[0])
+print(text[1])
+print(text.charAt(2))

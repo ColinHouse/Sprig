@@ -1,0 +1,18 @@
+# Precedence demo: each line's result comes from a rule other than parentheses.
+# Multiplication and division bind before addition and subtraction.
+print(1 + 2 * 3)
+print(2 * 3 + 1)
+# Same level evaluates left to right.
+print(10 - 2 - 3)
+print(2 * 3 % 4)
+# The minus sign is a prefix and applies to the value right after it.
+print(-2 * 3)
+print(- -3)
+# not applies to the comparison result; and binds tighter than or.
+print(not 1 == 2)
+print(true or false and false)
+print((true or false) and false)
+# in has the comparison level; with + it evaluates the addition first.
+print(1 + 1 in [2])
+print("a" in "abc")
+print("a" in {"a": 1})

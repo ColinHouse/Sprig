@@ -1,0 +1,16 @@
+# No wildcard branch: every enum/variant case is written out.
+enum Light:
+    Red
+    Yellow
+    Green
+
+func action(light: Light) -> String:
+    match light:
+        case Light.Red:
+            return "stop"
+        case Light.Yellow:
+            return "wait"
+        case Light.Green:
+            return "go"
+
+print(action(Light.Green))

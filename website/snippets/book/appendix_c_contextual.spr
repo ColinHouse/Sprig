@@ -1,0 +1,5 @@
+# export 和 to 是上下文词，可以当普通名字用。
+let export = 1
+let to = 2
+let main = 4
+print(export + to + main)

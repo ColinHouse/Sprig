@@ -1,0 +1,6 @@
+# No block lambdas: a named function passed to map is a function value.
+func square(x: Int) -> Int:
+    return x * x
+
+let squares = [1, 2, 3].map(square)
+print(squares)
