@@ -32,7 +32,7 @@ Bad:
   let q = 7 / 2
 ```
 
-`sprig explain <CODE> --json` 给出同一份信息，还带上出错阶段、相关章节（`relatedHelp`，可以直接 `sprig help 该主题`）和 `repair` 建议，适合编辑器和 AI 助手读取。`sprig check file.spr --json` 则把一次检查的全部诊断按结构化 JSON 输出。
+`sprig explain <CODE> --json` 给出同一份信息，还带上相关章节（`relatedHelp`，可以直接 `sprig help 该主题`）和 `repair` 建议，适合编辑器和 AI 助手读取。`sprig check file.spr --json` 则把一次检查的全部诊断按结构化 JSON 输出。
 
 下表按前缀分类；每条只写"什么时候出现"。怎么修、为什么这样设计，用 `sprig explain` 看。
 
