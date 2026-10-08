@@ -1,0 +1,28 @@
+# 从 Python 过来：f-string、None、可变的 list、// 和 %。
+# Sprig 用 + 连接文字，用 T? 表示可能缺失的值。
+let cups = 3
+let price = 2.5
+let total = cups.toFloatExact() * price
+print("total: " + total)
+
+func find(parts: List[String], name: String) -> String?:
+    for part in parts:
+        if part == name:
+            return part
+    return null
+
+let found = find(["bolt", "nut"], "nut")
+if found != null:
+    print("found " + found)
+else:
+    print("not found")
+
+# Python 的 list 默认可变；Sprig 要显式选择 MutableList。
+let items: MutableList[String] = ["a", "b"]
+items.append("c")
+print(items)
+
+# Python 的 // 在 Sprig 里叫 divTrunc；% 的负数取法也和 Python 不同。
+print(7.divTrunc(2))
+print(-7 % 3)
+print(7.toFloatExact() / 2.toFloatExact())

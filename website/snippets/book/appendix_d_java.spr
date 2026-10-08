@@ -1,0 +1,27 @@
+# 从 Java 过来：main、int 溢出、接口、整数除法。
+# Sprig 的顶层语句就是程序，main 不会被自动调用。
+class Account:
+    let owner: String
+    var balance: Int = 0
+
+    func deposit(amount: Int) -> Unit:
+        balance += amount
+
+let account = Account(owner="Ada")
+account.deposit(100)
+print(account.owner + ": " + account.balance)
+
+# 没有继承：用契约类（方法没有函数体的类）加 conform 代替接口。
+class Sink:
+    func write(line: String) -> Unit
+
+class Console:
+    func write(line: String) -> Unit:
+        print(line)
+
+conform Console to Sink
+let sink: Sink = Console()
+sink.write("through the contract")
+
+# Java 的整数 / 会截断；Sprig 拒绝它，要求写出意图。
+print(7.divTrunc(2))
