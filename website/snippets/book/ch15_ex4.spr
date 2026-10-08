@@ -1,0 +1,14 @@
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("bad: " + text)
+    return value
+
+func twice(step: fn(Int) -> Int throws Error, value: Int) -> Int rethrows:
+    return step(step(value))
+
+print(twice(fn(n: Int) => n + 10, 1))
+try:
+    print(twice(fn(n: Int) => parse("x"), 1))
+catch problem: Error:
+    print("caught: " + problem.message)
