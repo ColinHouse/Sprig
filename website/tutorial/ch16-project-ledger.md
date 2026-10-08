@@ -212,7 +212,7 @@ Total: 111.50
 not an amount: 45.5
 ```
 
-想读你自己的记录，就把 `temp_file()` 和 `write_utf8` 那两行去掉，把 `path` 换成你的文件路径。
+想读你自己的记录，就把 `temp_file()`、`write_utf8` 和最后清理临时文件的 `files.remove_file(path)` 这三行去掉，再把自己的路径赋给 `path`。只删前两行、留着 `remove_file` 的话，程序会把你的记录文件删掉。
 :::
 
 ## 16.9 接下来可以做的

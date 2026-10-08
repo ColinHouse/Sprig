@@ -254,7 +254,7 @@ The complete program is [on GitHub](https://github.com/ColinHouse/Sprig/blob/mai
 not an amount: 45.5
 ```
 
-To read your own expenses, delete the `temp_file()` and `write_utf8` lines and set `path` to your file.
+To read your own expenses, delete the `temp_file()`, `write_utf8` and the cleanup `files.remove_file(path)` lines, then set `path` to your file. Deleting only the first two leaves the program deleting your expense file.
 :::
 
 ## 8. When you're stuck
