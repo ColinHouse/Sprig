@@ -26,8 +26,9 @@ func new_counter() -> Counter:
 # `parent.use(...)` runs the inherited implementation. Minecraft declares its
 # nullability (JSpecify, @NullMarked on every package), so Component.literal
 # and Item.use are plain values here and need no null check. Registration
-# stays in Java (SprigItems), because Registry.register's generic bound is
-# outside Sprig's interop profile.
+# stays in Java (SprigItems) to keep this starter small; a Sprig module can
+# register as well through Registry.register's String overload, as
+# examples/fabric_waypoints does.
 class Wand:
     let properties: Properties
     var uses: Int = 0
