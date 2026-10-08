@@ -1,0 +1,17 @@
+import "@std/concurrent.spr" as concurrent
+
+let letters = concurrent.channel[Int](1)
+letters.close()
+
+func send_anyway() -> Int:
+    letters.send(1)
+    return 0
+
+func body(s: concurrent.Scope) -> Int throws Error:
+    let task = concurrent.spawn(s, send_anyway)
+    return task.await()
+
+try:
+    print(concurrent.scope(body))
+catch problem: Error:
+    print("caught: " + problem.message)

@@ -1,0 +1,15 @@
+import "@std/concurrent.spr" as concurrent
+
+func work(id: Int) -> Int:
+    return id * 10
+
+func run_all(s: concurrent.Scope) -> List[Int] throws Error:
+    let pool = concurrent.pool(2)
+    let tasks: MutableList[concurrent.Task[Int]] = []
+    for id in [1, 2, 3]:
+        tasks.append(concurrent.spawn_on(s, pool, fn() => work(id)))
+    let results = concurrent.await_all(tasks)
+    pool.shutdown()
+    return results
+
+print(concurrent.scope(run_all))
