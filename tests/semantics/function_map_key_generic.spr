@@ -1,0 +1,4 @@
+import "@std/sets.spr" as sets
+let f = fn(x: Int) => x + 1
+let s = sets.of([f])
+print(s.size())

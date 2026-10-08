@@ -1,0 +1,3 @@
+let f = fn(x: Int) => x + 1
+let m = {f: "one"}
+print(m.size())

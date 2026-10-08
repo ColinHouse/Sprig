@@ -148,6 +148,10 @@ public final class TypeChecker {
     /** The hint for a Float or Float32 map key that a map literal gives it. */
     static final String FLOAT_MAP_KEY_HINT = "Use an explicit quantized Int key or Decimal key.";
 
+    /** The hint for a function-valued Map key, written or inferred. */
+    static final String FUNCTION_MAP_KEY_HINT =
+            "Use a String, Int, enum or variant key, or key the map by a value the function computes.";
+
     public TypeChecker(Diagnostics diagnostics) {
         this.diagnostics = diagnostics;
         this.reported = diagnostics;
@@ -932,6 +936,51 @@ public final class TypeChecker {
         }
     }
 
+    /** Each {@code requires X: Equatable} of the callee must hold for its type argument at this use. */
+    private void checkEquatableArguments(Decl.Func func, Map<TypeParameterType, Type> map, Span span) {
+        for (Stmt stmt : func.body) {
+            if (!(stmt instanceof Stmt.Requires requires)) break;
+            if (!requires.capability.equals("Equatable")) continue;
+            Type argument = null;
+            for (Map.Entry<TypeParameterType, Type> entry : map.entrySet()) {
+                if (entry.getKey().name.equals(requires.parameter)) argument = entry.getValue();
+            }
+            // No substitution: a call from inside the generic declaration itself.
+            if (argument == null) argument = activeTypeParams.get(requires.parameter);
+            if (argument == null || argument == NativeType.ERROR || isEquatableType(argument)) continue;
+            if (argument instanceof TypeParameterType parameter) {
+                diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                        "Type parameter '" + parameter.name + "' is not Equatable here, but '" + func.name
+                                + "' requires an Equatable type argument",
+                        module.uri, span)
+                        .withTypes("Equatable type", argument.display())
+                        .withHint("Begin this function with 'requires " + parameter.name + ": Equatable'."));
+                continue;
+            }
+            diagnostics.add(Diagnostic.error(Codes.GENERIC_CONSTRAINT, Phase.TYPE,
+                    "Type argument '" + argument.display() + "' for " + requires.parameter
+                            + " is not Equatable, which '" + func.name + "' requires",
+                    module.uri, span)
+                    .withTypes("Equatable type", argument.display())
+                    .withHint("Every value type is Equatable except a function value; compare what the functions "
+                            + "compute instead."));
+        }
+    }
+
+    /**
+     * Equatable is every value type whose values compare with {@code ==}, except
+     * a function value, which has no value equality; a type parameter is
+     * Equatable where its function declares {@code requires X: Equatable}.
+     */
+    private boolean isEquatableType(Type type) {
+        if (type instanceof TypeParameterType parameter) {
+            return currentFunction != null
+                    && currentFunction.equatableParams.contains(parameter.name)
+                    && activeTypeParams.containsKey(parameter.name);
+        }
+        return !(type.nonNull() instanceof FunctionType);
+    }
+
     /** Whether equality on this parameter is justified by a requires clause. */
     private boolean isEquatableParameter(Type type) {
         if (!(type instanceof TypeParameterType parameter)) {
@@ -1675,6 +1724,7 @@ public final class TypeChecker {
         recordGenericUse(func, args, subscript.span);
         Map<TypeParameterType, Type> map = Substitution.forFunction(func, args);
         checkComparableArguments(func, map, subscript.span);
+        checkEquatableArguments(func, map, subscript.span);
         Type returnType = Substitution.apply(func.returnType, map);
         ResolvedCall resolved = resolvedCall(call,
                 func.isMethod() ? ResolvedCall.Kind.METHOD : ResolvedCall.Kind.FUNCTION, returnType);
@@ -2384,7 +2434,12 @@ public final class TypeChecker {
                 valueType = inferredValue == null ? NativeType.ERROR : inferredValue;
             }
         }
-        if (keyType.nonNull() == NativeType.FLOAT || keyType.nonNull() == NativeType.FLOAT32) {
+        if (keyType.nonNull() instanceof FunctionType) {
+            diagnostics.add(Diagnostic.error(Codes.TYPE_OPERAND, Phase.TYPE,
+                    TypeRefResolver.FUNCTION_MAP_KEY, module.uri, lit.span)
+                    .withHint(FUNCTION_MAP_KEY_HINT));
+            keyType = NativeType.ERROR;
+        } else if (keyType.nonNull() == NativeType.FLOAT || keyType.nonNull() == NativeType.FLOAT32) {
             diagnostics.add(Diagnostic.error(Codes.NUM_CONVERSION, Phase.TYPE,
                     TypeRefResolver.FLOAT_MAP_KEY, module.uri, lit.span).withHint(FLOAT_MAP_KEY_HINT));
             keyType = NativeType.ERROR;
@@ -2762,6 +2817,7 @@ public final class TypeChecker {
                         return inferFunctionCall(func, symbol, call, ResolvedCall.Kind.METHOD);
                     }
                     checkComparableArguments(func, Map.of(), call.span);
+                    checkEquatableArguments(func, Map.of(), call.span);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, func.returnType);
                     resolved.symbol = symbol;
                     resolved.methodDecl = func;
@@ -2864,6 +2920,7 @@ public final class TypeChecker {
                     Decl.Func func = field.methodDecl;
                     Map<TypeParameterType, Type> map = field.substitution;
                     checkComparableArguments(func, map, call.span);
+                    checkEquatableArguments(func, map, call.span);
                     Type returnType = Substitution.apply(func.returnType, map);
                     ResolvedCall resolved = resolvedCall(call, ResolvedCall.Kind.METHOD, returnType);
                     resolved.symbol = func.symbol;
@@ -3183,6 +3240,7 @@ public final class TypeChecker {
         }
         if (inference.valid) {
             checkComparableArguments(func, map, calleeSpan(call));
+            checkEquatableArguments(func, map, calleeSpan(call));
         } else if (call.args.size() == func.params.size() && !call.hasNamedArgs()) {
             // A wrong argument count or named arguments explain a missing type argument themselves.
             reportUninferred(func, inference, callee, typeArgs -> callee + typeArgs + "(...)", call.span);

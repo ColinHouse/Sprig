@@ -913,5 +913,29 @@
     "expected_diagnostic": "SPR-CONFORM-SOURCE",
     "status": "implemented",
     "source": "contract guardrails: a contract never conforms, to a Java interface either (it checked clean and had no effect)"
+  },
+  {
+    "file": "equatable_function_argument.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "#222: requires T: Equatable is checked on the type argument, and a function value is not Equatable"
+  },
+  {
+    "file": "function_map_key_written.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "#222: a function value cannot be a Map key, written in the annotation"
+  },
+  {
+    "file": "function_map_key_inferred.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "#222: a function value cannot be a Map key, inferred from a map literal"
+  },
+  {
+    "file": "function_map_key_generic.spr",
+    "expected_diagnostic": "SPR-TYPE-OPERAND",
+    "status": "implemented",
+    "source": "#222: a function value cannot reach a Map key through generic code such as sets.of"
   }
 ]
