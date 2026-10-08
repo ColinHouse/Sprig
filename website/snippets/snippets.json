@@ -23,6 +23,16 @@
     "book/ch06_identity.spr",
     "book/ch07_enum_match.spr",
     "book/ch07_variant.spr",
+    "book/ch08_ex1_answer.spr",
+    "book/ch08_ex2_answer.spr",
+    "book/ch08_ex3_answer.spr",
+    "book/ch08_ex4_answer.spr",
+    "book/ch08_list_basics.spr",
+    "book/ch08_list_compare.spr",
+    "book/ch08_list_loop.spr",
+    "book/ch08_list_methods.spr",
+    "book/ch08_list_views.spr",
+    "book/ch08_std_lists.spr",
     "book/ch08_narrowing.spr",
     "book/ch08_nullable.spr",
     "book/ch08_nulls.spr",
@@ -92,6 +102,7 @@
     "variants.spr"
   ],
   "import-only": [
+    "book/ch08_oob.spr",
     "book/ch12_testing/src/app.spr",
     "book/ch12_testing/src/main.spr",
     "modules/math_module.spr"
@@ -118,6 +129,7 @@
     "book/ch06_missing_field.spr",
     "book/ch07_nonexhaustive.spr",
     "book/ch08_deref.spr",
+    "book/ch08_empty_list.spr",
     "book/ch08_var_narrowing.spr",
     "book/ch09_unhandled.spr",
     "book/ch10_constraint.spr",

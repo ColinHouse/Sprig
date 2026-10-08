@@ -1,0 +1,8 @@
+[banana, fig, fig, pear]
+[pear, fig, banana, fig]
+[fig, banana, fig, pear]
+[pear, fig, banana]
+1
+6
+[pear, fig]
+[fig]
