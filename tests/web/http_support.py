@@ -3,8 +3,10 @@ from contextlib import contextmanager
 import os
 from pathlib import Path
 import queue
+import socket
 import subprocess
 import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -37,6 +39,7 @@ def server(project, build=None, entry=None):
 
     thread = threading.Thread(target=reader, daemon=True)
     thread.start()
+    port = None
     try:
         # The application reports its bound ephemeral port only after start().
         while True:
@@ -46,12 +49,25 @@ def server(project, build=None, entry=None):
                 raise AssertionError("server readiness timeout: " + "".join(captured))
             assert line is not None, "server exited: " + "".join(captured)
             if line.startswith("PORT="):
-                yield "http://127.0.0.1:" + str(int(line.removeprefix("PORT=")))
+                port = int(line.removeprefix("PORT="))
+                yield "http://127.0.0.1:" + str(port)
                 break
     finally:
         if os.name == "nt":
             # Terminating sprig.cmd alone would orphan the compiler and program JVMs.
             subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True)
+            # taskkill returns once TerminateProcess was issued to each process of the
+            # tree, not once they have gone; the program's listening socket is closed
+            # during its teardown a moment later. Give that teardown a bounded time, so
+            # the caller's orphan check sees a server that is still alive, not one that
+            # is still dying.
+            deadline = time.time() + 5
+            while port is not None and time.time() < deadline:
+                with socket.socket() as probe:
+                    probe.settimeout(1)
+                    if probe.connect_ex(("127.0.0.1", port)) != 0:
+                        break
+                time.sleep(0.1)
         else:
             proc.terminate()
         try:
