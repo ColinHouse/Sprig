@@ -1,0 +1,2 @@
+greeting: expected "Hi, Ada!", got "Hello, Ada!"
+sum: expected 4, got 3

@@ -1,0 +1,12 @@
+# A failed equal throws an Error carrying both values, so you can catch it and look.
+import "@std/test.spr" as testing
+
+try:
+    testing.equal_text("Hello, Ada!", "Hi, Ada!", "greeting")
+catch problem: Error:
+    print(problem.message)
+
+try:
+    testing.equal_int(3, 4, "sum")
+catch problem: Error:
+    print(problem.message)

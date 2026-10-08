@@ -1,0 +1,10 @@
+# 练习 3：接住 equal 抛出的 Error，读出它写明了哪两个值。
+import "@std/test.spr" as testing
+
+func greet(name: String) -> String:
+    return "Hello, " + name + "!"
+
+try:
+    testing.equal_text(greet("Ada"), "Hi, Ada!", "greeting")
+catch problem: Error:
+    print(problem.message)

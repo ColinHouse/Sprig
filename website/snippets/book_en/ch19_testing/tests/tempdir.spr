@@ -1,0 +1,18 @@
+# temp_dir is the directory sprig test makes for each test file; it is deleted when the test ends.
+import "@std/files.spr" as files
+import "@std/test.spr" as testing
+
+let dir = testing.temp_dir()
+
+testing.check("writes a file", fn() => testing.equal_bool(
+    files.exists(files.join(dir, "note.txt")),
+    false,
+    "before write"
+))
+files.write_utf8(files.join(dir, "note.txt"), "hi")
+testing.check("reads it back", fn() => testing.equal_text(
+    files.read_utf8(files.join(dir, "note.txt")),
+    "hi",
+    "content"
+))
+testing.finish()
