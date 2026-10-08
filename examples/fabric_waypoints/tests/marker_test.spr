@@ -1,0 +1,48 @@
+# The two marker actions against a world folder on disk, the way main.spr
+# calls them from Minecraft.
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "../src/waypoints.spr" as waypoints
+import "../src/store.spr" as store
+import "../src/marker.spr" as marker
+
+func at(x: Int, y: Int, z: Int) -> waypoints.Position:
+    return waypoints.Position(dimension="minecraft:overworld", x=x, y=y, z=z)
+
+func new_world(name: String) -> String throws Error:
+    let folder = files.join(test.temp_dir(), name)
+    files.make_directory(folder)
+    return store.world_file(folder)
+
+func use_and_list() -> Unit throws Error:
+    let file = new_world("survival")
+    let fresh = marker.list_from(file, at(0, 64, 0))
+    assert(fresh[0].startsWith("No waypoints yet."), "a new world has none")
+    assert(not files.exists(file), "listing writes nothing")
+    test.equal(marker.record_at(file, null, at(5, 64, 5)), ["Saved Waypoint 1 at 5, 64, 5 (overworld)."], "unnamed marker")
+    test.equal(marker.record_at(file, "Home", at(100, 70, -100)), ["Saved Home at 100, 70, -100 (overworld)."], "named marker")
+    test.equal(marker.list_from(file, at(0, 64, 0)), [
+        "2 waypoints, nearest first:",
+        "  Waypoint 1: 7 blocks south-east",
+        "  Home: 141 blocks north-east, 6 up"
+    ], "listed from the saved file")
+    test.equal(marker.record_at(file, " home", at(0, 64, -3)), ["Moved home to 0, 64, -3 (overworld)."], "same name moves")
+    let saved = files.read_utf8(file)
+    test.equal(marker.record_at(file, "HOME", at(0, 64, -3)), ["home is already saved here."], "same spot")
+    test.equal_text(files.read_utf8(file), saved, "nothing changed")
+    test.equal_int(store.load(file).size(), 2, "still two waypoints")
+
+func damaged_file() -> Unit throws Error:
+    let file = new_world("damaged")
+    files.write_utf8(file, "{\"version\": 1, \"waypoints\": [{\"name\": \"Home\"}]}")
+    try:
+        marker.record_at(file, "Mine", at(1, 2, 3))
+    catch problem: Error:
+        assert(problem.message.contains("$.waypoints[0].dimension: required field is missing"), problem.message)
+        test.equal_text(files.read_utf8(file), "{\"version\": 1, \"waypoints\": [{\"name\": \"Home\"}]}", "not overwritten")
+        return
+    throw Error("a damaged file must stop the save")
+
+test.check("saves, moves and lists through the world file", use_and_list)
+test.check("never writes over a file it cannot read", damaged_file)
+test.finish()

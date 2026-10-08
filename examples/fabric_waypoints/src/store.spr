@@ -1,0 +1,81 @@
+# The world's waypoint file, sprig_waypoints.json in the save folder:
+#
+#     {"version": 1, "waypoints": [
+#     {"name":"Home","dimension":"minecraft:overworld","x":10,"y":64,"z":-20}
+#     ]}
+#
+# One waypoint per line, so the file reads well and is easy to edit by hand
+# while the world is closed. Reading is strict: a file this module cannot
+# read is an Error naming the file and the JSON path, and marker.spr reads
+# before it writes, so such a file is never overwritten.
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+import "@std/files.spr" as files
+import "@std/text.spr" as text
+import "./waypoints.spr" as waypoints
+
+let file_name = "sprig_waypoints.json"
+let format_version = 1
+# Minecraft's world border ends at 29,999,984; a coordinate beyond this is
+# a typo in a hand-edited file.
+let coordinate_limit = 30000000
+
+# The waypoint file inside a world's save folder. Minecraft names the folder
+# like "saves/New World/.", so the result is normalized for messages.
+func world_file(world_folder: String) -> String throws Error:
+    return files.normalize(files.join(world_folder, file_name))
+
+func coordinate(item: codec.Reader, field: String) -> Int throws Error:
+    let value = codec.required_int(item, field)
+    if value > coordinate_limit or value < -coordinate_limit:
+        throw Error(item.path + "." + field + ": " + value + " is outside the world (limit " + coordinate_limit + ")")
+    return value
+
+func decode(source: String) -> List[waypoints.Waypoint] throws Error:
+    let root = codec.root(json.parse(source))
+    let version = codec.required_int(root, "version")
+    if version != format_version:
+        throw Error("$.version: expected " + format_version + ", found " + version)
+    let list: MutableList[waypoints.Waypoint] = []
+    for item in codec.required_array(root, "waypoints"):
+        codec.reject_unknown_fields(item, ["name", "dimension", "x", "y", "z"])
+        let name = waypoints.clean_name(codec.required_string(item, "name"))
+        if name == null:
+            throw Error(item.path + ".name: a waypoint needs a name")
+        if waypoints.find(list, name) != null:
+            throw Error(item.path + ".name: '" + name + "' is already the name of another waypoint")
+        let at = waypoints.Position(dimension=codec.required_string(item, "dimension"), x=coordinate(item, "x"), y=coordinate(item, "y"), z=coordinate(item, "z"))
+        list.append(waypoints.Waypoint(name=name, at=at))
+    return list.toList()
+
+func waypoint_json(waypoint: waypoints.Waypoint) -> json.Value:
+    return codec.object([
+        codec.member("name", codec.text(waypoint.name)),
+        codec.member("dimension", codec.text(waypoint.at.dimension)),
+        codec.member("x", codec.int(waypoint.at.x)),
+        codec.member("y", codec.int(waypoint.at.y)),
+        codec.member("z", codec.int(waypoint.at.z))
+    ])
+
+func encode(list: List[waypoints.Waypoint]) -> String throws Error:
+    let lines: MutableList[String] = []
+    for waypoint in list:
+        lines.append(json.stringify(waypoint_json(waypoint)))
+    if lines.size() == 0:
+        return "{\"version\": " + format_version + ", \"waypoints\": []}\n"
+    return "{\"version\": " + format_version + ", \"waypoints\": [\n" + text.join(lines, ",\n") + "\n]}\n"
+
+# The waypoints in the file; a world without the file has none.
+func load(path: String) -> List[waypoints.Waypoint] throws Error:
+    if not files.exists(path):
+        return []
+    let source = files.read_utf8(path)
+    try:
+        return decode(source)
+    catch problem: Error:
+        throw Error("cannot read " + path + ": " + problem.message + "; fix or remove the file, it is left as it is")
+
+# Replaces the file through a temporary sibling, so a crash mid-write never
+# leaves half a file behind.
+func save(path: String, list: List[waypoints.Waypoint]) -> Unit throws Error:
+    files.atomic_write_utf8(path, encode(list))

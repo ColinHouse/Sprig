@@ -1,0 +1,99 @@
+# Distance and direction from the player to each waypoint, as chat lines:
+# "Home: 120 blocks north-east, 5 up". Minecraft's +x is east and +z is
+# south, so north is -z.
+import "@std/lists.spr" as lists
+import "./waypoints.spr" as waypoints
+
+# The list action shows at most this many waypoints, nearest first.
+let list_limit = 8
+
+# Horizontal distance in whole blocks, rounded to the nearest block. Saved
+# coordinates are within 30,000,000 (store.spr checks), so the squares stay
+# exact in a Float.
+func distance(from: waypoints.Position, to: waypoints.Position) -> Int:
+    let dx = to.x - from.x
+    let dz = to.z - from.z
+    return (Float.sqrt((dx * dx + dz * dz).toFloatExact()) + 0.5).toIntTrunc()
+
+# One of eight directions for a step of dx blocks east and dz blocks south;
+# each covers 45 degrees. The sector edges are 22.5 degrees off an axis, and
+# tan(22.5°) = √2 − 1, so the comparisons below stay in integers:
+# |dx| < (√2 − 1)|dz| exactly when dx² + 2|dx||dz| < dz².
+func direction(dx: Int, dz: Int) -> String:
+    let across = Int.abs(dx)
+    let along = Int.abs(dz)
+    let north_south = if dz < 0:
+        "north"
+    else:
+        "south"
+    let east_west = if dx > 0:
+        "east"
+    else:
+        "west"
+    if across * across + 2 * across * along < along * along:
+        return north_south
+    if along * along + 2 * across * along < across * across:
+        return east_west
+    return north_south + "-" + east_west
+
+func blocks(count: Int) -> String:
+    if count == 1:
+        return "1 block"
+    return count + " blocks"
+
+# "Home: 120 blocks north-east, 5 up", "Home: 3 blocks down", "Home: here", or
+# "Home: in the_nether" for a waypoint in another dimension.
+func describe(from: waypoints.Position, waypoint: waypoints.Waypoint) -> String:
+    let to = waypoint.at
+    if to.dimension != from.dimension:
+        return waypoint.name + ": in " + waypoints.dimension_name(to.dimension)
+    let rise = to.y - from.y
+    let flat = distance(from, to)
+    if flat == 0:
+        if rise == 0:
+            return waypoint.name + ": here"
+        if rise > 0:
+            return waypoint.name + ": " + blocks(rise) + " up"
+        return waypoint.name + ": " + blocks(-rise) + " down"
+    var text = waypoint.name + ": " + blocks(flat) + " " + direction(to.x - from.x, to.z - from.z)
+    if rise > 0:
+        text += ", " + rise + " up"
+    elif rise < 0:
+        text += ", " + (-rise) + " down"
+    return text
+
+# Waypoints in the player's dimension nearest first, then the others by
+# dimension; names (in any case) break ties.
+func nearest_first(list: List[waypoints.Waypoint], from: waypoints.Position) -> List[waypoints.Waypoint]:
+    let by_name = lists.sort_by(list, fn(waypoint: waypoints.Waypoint) => waypoint.name.toLowerCase())
+    let here: MutableList[waypoints.Waypoint] = []
+    let elsewhere: MutableList[waypoints.Waypoint] = []
+    for waypoint in by_name:
+        if waypoint.at.dimension == from.dimension:
+            here.append(waypoint)
+        else:
+            elsewhere.append(waypoint)
+    let ordered = lists.sort_by(here.toList(), fn(waypoint: waypoints.Waypoint) => distance(from, waypoint.at)).toMutableList()
+    for waypoint in lists.sort_by(elsewhere.toList(), fn(waypoint: waypoints.Waypoint) => waypoint.at.dimension):
+        ordered.append(waypoint)
+    return ordered.toList()
+
+# The chat lines for the list action: a header, at most list_limit
+# waypoints nearest first, and how many were left out.
+func report(list: List[waypoints.Waypoint], from: waypoints.Position) -> List[String]:
+    if list.size() == 0:
+        return ["No waypoints yet. Use a Waypoint Marker to save this spot; rename it in an anvil to choose the name."]
+    let lines: MutableList[String] = []
+    if list.size() == 1:
+        lines.append("1 waypoint:")
+    else:
+        lines.append(list.size() + " waypoints, nearest first:")
+    var shown = 0
+    for waypoint in nearest_first(list, from):
+        if shown == list_limit:
+            break
+        lines.append("  " + describe(from, waypoint))
+        shown += 1
+    if list.size() > shown:
+        lines.append("  ...and " + (list.size() - shown) + " more")
+    return lines.toList()

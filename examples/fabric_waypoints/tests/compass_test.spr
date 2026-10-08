@@ -1,0 +1,72 @@
+import "@std/test.spr" as test
+import "../src/waypoints.spr" as waypoints
+import "../src/compass.spr" as compass
+
+func at(x: Int, y: Int, z: Int) -> waypoints.Position:
+    return waypoints.Position(dimension="minecraft:overworld", x=x, y=y, z=z)
+
+func point(name: String, x: Int, y: Int, z: Int) -> waypoints.Waypoint:
+    return waypoints.Waypoint(name=name, at=at(x, y, z))
+
+func distances() -> Unit throws Error:
+    test.equal_int(compass.distance(at(0, 64, 0), at(3, 0, 4)), 5, "3-4-5, height ignored")
+    test.equal_int(compass.distance(at(0, 64, 0), at(1, 64, 1)), 1, "1.41 rounds down")
+    test.equal_int(compass.distance(at(0, 64, 0), at(2, 64, 2)), 3, "2.83 rounds up")
+    test.equal_int(compass.distance(at(-29999984, 0, -29999984), at(29999984, 0, 29999984)), 84852768, "corner to corner of the world")
+
+func directions() -> Unit throws Error:
+    test.equal_text(compass.direction(0, -10), "north", "-z is north")
+    test.equal_text(compass.direction(0, 10), "south", "+z is south")
+    test.equal_text(compass.direction(10, 0), "east", "+x is east")
+    test.equal_text(compass.direction(-10, 0), "west", "-x is west")
+    test.equal_text(compass.direction(10, -10), "north-east", "diagonal")
+    test.equal_text(compass.direction(-10, 10), "south-west", "opposite diagonal")
+    test.equal_text(compass.direction(-3, -7), "north-west", "23.2 degrees west of north")
+    test.equal_text(compass.direction(2, -5), "north", "21.8 degrees stays north")
+    test.equal_text(compass.direction(5, -12), "north-east", "22.6 degrees turns north-east")
+    test.equal_text(compass.direction(12, -5), "north-east", "67.4 degrees stays north-east")
+    test.equal_text(compass.direction(5, -2), "east", "68.2 degrees turns east")
+
+func descriptions() -> Unit throws Error:
+    let here = at(0, 64, 0)
+    test.equal_text(compass.describe(here, point("Home", 100, 69, -100)), "Home: 141 blocks north-east, 5 up", "far away")
+    test.equal_text(compass.describe(here, point("Well", 0, 58, 1)), "Well: 1 block south, 6 down", "one block")
+    test.equal_text(compass.describe(here, point("Cellar", 0, 60, 0)), "Cellar: 4 blocks down", "straight down")
+    test.equal_text(compass.describe(here, point("Roof", 0, 65, 0)), "Roof: 1 block up", "straight up")
+    test.equal_text(compass.describe(here, point("Spawn", 0, 64, 0)), "Spawn: here", "same block")
+    let portal = waypoints.Waypoint(name="Portal", at=waypoints.Position(dimension="minecraft:the_nether", x=0, y=64, z=0))
+    test.equal_text(compass.describe(here, portal), "Portal: in the_nether", "other dimension")
+
+func reports() -> Unit throws Error:
+    let here = at(0, 64, 0)
+    let empty = compass.report([], here)
+    test.equal_int(empty.size(), 1, "one hint line")
+    assert(empty[0].startsWith("No waypoints yet."), "empty list explains the marker")
+    test.equal(compass.report([point("Home", 0, 64, -3)], here), ["1 waypoint:", "  Home: 3 blocks north"], "singular")
+    let portal = waypoints.Waypoint(name="Portal", at=waypoints.Position(dimension="minecraft:the_nether", x=1, y=1, z=1))
+    let list = [portal, point("far", 50, 64, 0), point("beta", 0, 64, 10), point("Alpha", -10, 64, 0), point("mid", 0, 64, -30)]
+    test.equal(compass.report(list, here), [
+        "5 waypoints, nearest first:",
+        "  Alpha: 10 blocks west",
+        "  beta: 10 blocks south",
+        "  mid: 30 blocks north",
+        "  far: 50 blocks east",
+        "  Portal: in the_nether"
+    ], "nearest first, names break ties, other dimensions last")
+
+func long_lists() -> Unit throws Error:
+    let list: MutableList[waypoints.Waypoint] = []
+    for index in range(1, 11):
+        list.append(point("Spot " + index, index, 64, 0))
+    let lines = compass.report(list.toList(), at(0, 64, 0))
+    test.equal_int(lines.size(), 1 + compass.list_limit + 1, "header, the limit and a tail")
+    test.equal_text(lines[0], "10 waypoints, nearest first:", "header counts all")
+    test.equal_text(lines[8], "  Spot 8: 8 blocks east", "last shown")
+    test.equal_text(lines[9], "  ...and 2 more", "the rest is counted")
+
+test.check("measures the flat distance in whole blocks", distances)
+test.check("names eight directions with exact sector edges", directions)
+test.check("describes where each waypoint is", descriptions)
+test.check("lists waypoints nearest first", reports)
+test.check("caps the list and counts the rest", long_lists)
+test.finish()

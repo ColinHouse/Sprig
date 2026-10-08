@@ -1,0 +1,5 @@
+{
+  "item.sprig_waypoints.waypoint_marker": "Waypoint Marker",
+  "item.sprig_waypoints.waypoint_marker.use": "Use: save this spot under the marker's name",
+  "item.sprig_waypoints.waypoint_marker.sneak_use": "Sneak + use: list waypoints, nearest first"
+}

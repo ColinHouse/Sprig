@@ -1,0 +1,92 @@
+# The Minecraft side of the mod, and the only module that imports Minecraft
+# or Fabric classes. It turns a right-click into a block position, the
+# world's waypoint file and the marker's name, lets marker.spr do the work,
+# and shows the lines it returns in chat.
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents as CreativeModeTabEvents
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.ModifyOutput as ModifyOutput
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTabOutput as FabricCreativeModeTabOutput
+import net.minecraft.core.Registry as Registry
+import net.minecraft.core.component.DataComponents as DataComponents
+import net.minecraft.core.registries.BuiltInRegistries as BuiltInRegistries
+import net.minecraft.core.registries.Registries as Registries
+import net.minecraft.network.chat.Component as Component
+import net.minecraft.resources.Identifier as Identifier
+import net.minecraft.resources.ResourceKey as ResourceKey
+import net.minecraft.world.InteractionHand as InteractionHand
+import net.minecraft.world.InteractionResult as InteractionResult
+import net.minecraft.world.entity.player.Player as Player
+import net.minecraft.world.item.CreativeModeTabs as CreativeModeTabs
+import net.minecraft.world.item.Item as Item
+import net.minecraft.world.item.Item.Properties as Properties
+import net.minecraft.world.item.ItemStack as ItemStack
+import net.minecraft.world.item.component.ItemLore as ItemLore
+import net.minecraft.world.level.Level as Level
+import net.minecraft.world.level.storage.LevelResource as LevelResource
+import "./waypoints.spr" as waypoints
+import "./store.spr" as store
+import "./marker.spr" as marker
+
+# The item. Its class extends Item, so the object Minecraft registers is
+# this Sprig object, and use overrides Item.use.
+class WaypointMarker:
+    let properties: Properties
+
+    func use(level: Level, player: Player, hand: InteractionHand) -> InteractionResult:
+        if not level.isClientSide():
+            for line in act(level, player, hand):
+                player.sendSystemMessage(Component.literal(line))
+        return InteractionResult.SUCCESS
+
+conform WaypointMarker to Item(properties)
+
+# Puts the marker in the Tools & Utilities tab. Fabric events take their
+# listener through Event<T>.register(T), which accepts this conforming
+# class but not a Sprig fn value.
+class TabEntry:
+    let item: WaypointMarker
+
+    func modifyOutput(output: FabricCreativeModeTabOutput) -> Unit:
+        output.accept(ItemStack(item))
+
+conform TabEntry to ModifyOutput
+
+# Server side only: the client has no world folder. Errors (a damaged file,
+# a folder that cannot be written) become a chat line; the game goes on.
+func act(level: Level, player: Player, hand: InteractionHand) -> List[String]:
+    let server = level.getServer()
+    if server == null:
+        return ["Waypoints are kept by the server, and this world has none."]
+    let block = player.blockPosition()
+    let here = waypoints.Position(dimension=level.dimension().identifier().toString(), x=block.getX().toInt(), y=block.getY().toInt(), z=block.getZ().toInt())
+    try:
+        let file = store.world_file(server.getWorldPath(LevelResource.ROOT).toString())
+        if player.isSecondaryUseActive():
+            return marker.list_from(file, here)
+        return marker.record_at(file, anvil_name(player.getItemInHand(hand)), here)
+    catch problem: Error:
+        return ["Waypoints: " + problem.message]
+
+func anvil_name(stack: ItemStack) -> String?:
+    let name = stack.getCustomName()
+    if name == null:
+        return null
+    return name.getString()
+
+# The two tooltip lines, as lore: Item.appendHoverText is deprecated in
+# favour of data components. The texts are in assets/sprig_waypoints/lang.
+func usage_lore() -> ItemLore:
+    return ItemLore.EMPTY.withLineAdded(Component.translatable("item.sprig_waypoints.waypoint_marker.use")).withLineAdded(Component.translatable("item.sprig_waypoints.waypoint_marker.sneak_use"))
+
+# Called once from SprigWaypoints.onInitialize. Item ids must be set on the
+# Properties before the Item exists, and the registry key must be the same.
+func register_marker() -> Unit throws Error:
+    let id = Identifier.fromNamespaceAndPath("sprig_waypoints", "waypoint_marker")
+    let properties = Properties().setId(ResourceKey.create[Item](Registries.ITEM, id)).stacksTo(1).component(DataComponents.LORE, usage_lore())
+    let item = WaypointMarker(properties=properties)
+    # The String overload: the ResourceKey and Identifier overloads declare
+    # <V, T extends V>, a bound Sprig's Java interop does not take.
+    Registry.register[Item](BuiltInRegistries.ITEM, id.toString(), item)
+    let tools = CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES)
+    if tools == null:
+        throw Error("Fabric API returned no creative tab event")
+    tools.register(TabEntry(item=item))
