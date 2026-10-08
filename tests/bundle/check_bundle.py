@@ -191,9 +191,15 @@ if args.size() > 2:
         arguments = ["two words", "hello world", "--flag=x", ""] if WINDOWS else ["two words", "你好 世界", "--flag=ü", ""]
         result = run_launcher(launcher_of(cli_bundle, "args"), arguments, env, elsewhere)
         out, err = decoded(result)
-        expected = "count 4\n" + "".join(f"[{a}]\n" for a in arguments) + f"cwd {elsewhere.resolve()}\n"
-        check("cli-arguments-cwd-exit", result.returncode == 3 and out == expected and err == "warned 4\n",
-              f"exit={result.returncode} out={out!r} err={err!r} expected={expected!r}")
+        expected = "count 4\n" + "".join(f"[{a}]\n" for a in arguments)
+        # The program prints its working directory as the system handed it over; on a
+        # Windows runner TEMP is spelled with an 8.3 short name (C:\Users\RUNNER~1\...),
+        # so the directory is compared, not the spelling.
+        lines, _, cwd_line = out.rpartition("cwd ")
+        reported = Path(cwd_line.rstrip("\n")) if cwd_line else None
+        check("cli-arguments-cwd-exit", result.returncode == 3 and lines == expected and err == "warned 4\n"
+              and reported is not None and reported.resolve() == elsewhere.resolve(),
+              f"exit={result.returncode} out={out!r} err={err!r} expected={expected!r} cwd={elsewhere.resolve()}")
         result = run_launcher(launcher_of(cli_bundle, "args"), ["a"], env, elsewhere)
         out, err = decoded(result)
         check("cli-exit-zero", result.returncode == 0 and out.startswith("count 1\n[a]\n") and err == "warned 1\n",
