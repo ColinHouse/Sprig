@@ -1,0 +1,9 @@
+# 练习 4：写一个带空行的临时文件，数数读回来有几行、第二个是不是空行。
+import "@std/files.spr" as files
+
+let path = files.temp_file()
+files.write_utf8(path, "one\n\ntwo\n")
+let lines = files.read_lines(path)
+print(lines.size())
+print(lines[1] == "")
+files.remove_file(path)

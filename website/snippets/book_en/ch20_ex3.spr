@@ -1,0 +1,6 @@
+# Exercise 3: the date in 30 days and the days until the end of the year.
+import "@std/dates.spr" as dates
+
+let start = "2026-10-08"
+print(dates.plus_days(start, 30))
+print(dates.days_between(start, "2026-12-31"))

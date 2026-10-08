@@ -1,0 +1,6 @@
+# 练习 3：算 30 天后的日期和到年底的天数。
+import "@std/dates.spr" as dates
+
+let start = "2026-10-08"
+print(dates.plus_days(start, 30))
+print(dates.days_between(start, "2026-12-31"))

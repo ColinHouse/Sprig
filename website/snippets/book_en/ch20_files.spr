@@ -1,0 +1,13 @@
+# Read and write a temp file: a quick draft, an atomic replace, then read it back and delete it.
+import "@std/files.spr" as files
+
+let path = files.temp_file()
+files.write_utf8(path, "first draft\n")
+files.atomic_write_utf8(path, "first\nsecond\n")
+
+print(files.exists(path))
+print(files.read_lines(path).size())
+print(files.read_utf8(path).trim())
+
+files.remove_file(path)
+print(files.exists(path))

@@ -1,0 +1,9 @@
+# 字段不是期望的类型：Error 的消息带着它在文档里的路径。
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+let root = codec.root(json.parse("{\"stars\": \"12\"}"))
+try:
+    print(codec.required_int(root, "stars"))
+catch problem: Error:
+    print(problem.message)

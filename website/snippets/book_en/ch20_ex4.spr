@@ -1,0 +1,9 @@
+# Exercise 4: write a temp file with a blank line; count the lines and check the second one.
+import "@std/files.spr" as files
+
+let path = files.temp_file()
+files.write_utf8(path, "one\n\ntwo\n")
+let lines = files.read_lines(path)
+print(lines.size())
+print(lines[1] == "")
+files.remove_file(path)

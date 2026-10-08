@@ -1,0 +1,5 @@
+# find may find nothing and returns String?, which cannot be used as String directly.
+import "@std/regex.spr" as regex
+
+let first: String = regex.find("[0-9]+", "abc")
+print(first)

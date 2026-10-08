@@ -1,0 +1,13 @@
+# 临时文件里的读写：先随便写一版，再原子替换，最后读回来删掉。
+import "@std/files.spr" as files
+
+let path = files.temp_file()
+files.write_utf8(path, "first draft\n")
+files.atomic_write_utf8(path, "first\nsecond\n")
+
+print(files.exists(path))
+print(files.read_lines(path).size())
+print(files.read_utf8(path).trim())
+
+files.remove_file(path)
+print(files.exists(path))
