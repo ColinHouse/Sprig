@@ -67,7 +67,7 @@ true
 - The first line of output is the object's current fields (note that `note` was already changed to `morning` before the `print`); the second is the string `describe()` builds: `Coffee: 1250 (morning)`.
 - `is_big()` asks whether the amount is over 10000. `coffee` is 1250, so `false`; `rent` is 120000, so `true`.
 
-One detail: **method arguments are positional**, like plain functions. Construction writes field names (`Expense(item=..., cents=...)`) — only object construction and variant cases do that. Calling a method writes `coffee.describe()` or `c.add(4)`, never `c.add(amount=4)`; the latter gives `SPR-CALL-POSITIONAL-REQUIRED`.
+One detail: **method arguments are positional**, like plain functions. Construction writes field names (`Expense(item=..., cents=...)`) — only object construction does that, and chapter 12's variant construction too. Calling a method writes `coffee.describe()` or `c.add(4)`, never `c.add(amount=4)`; the latter gives `SPR-CALL-POSITIONAL-REQUIRED`.
 
 There are no custom constructors, no static members and no visibility modifiers: everything in a class is public. The tool for hiding internals is the module (chapter 18).
 

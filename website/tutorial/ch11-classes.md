@@ -67,7 +67,7 @@ true
 - 第一行输出是对象当前的字段值（`note` 在 `print` 之前已经被改成 `morning`），第二行是 `describe()` 拼出来的字符串：`Coffee: 1250 (morning)`。
 - `is_big()` 判断金额是否大于 10000。`coffee` 是 1250，所以 `false`；`rent` 是 120000，所以 `true`。
 
-一个细节：**方法按位置传参数**，和普通函数一样。`Expense(item=..., cents=...)` 要写字段名（只有创建对象和构造 variant 时才这样），但调用方法写 `coffee.describe()`、`c.add(4)`，不写 `c.add(amount=4)`；后者会报 `SPR-CALL-POSITIONAL-REQUIRED`。
+一个细节：**方法按位置传参数**，和普通函数一样。`Expense(item=..., cents=...)` 要写字段名（只有创建对象时这样，第 12 章构造 variant 也一样），但调用方法写 `coffee.describe()`、`c.add(4)`，不写 `c.add(amount=4)`；后者会报 `SPR-CALL-POSITIONAL-REQUIRED`。
 
 没有自定义构造函数，没有静态成员，没有可见性修饰符：类里的一切都是公开的。想隐藏内部细节要用模块（第 18 章）。
 

@@ -159,6 +159,12 @@ This "eager" evaluation means that if the second argument is expensive, or has a
 
 `@std/nulls` also has `require(value, message)`: it returns the value, and throws an error carrying the message when the value is `null`. Its signature says `throws`, which belongs to the next chapter.
 
+::: tip Coming from another language?
+- Sprig has no `?.`, `??` or `?:` nullable operators; the check has to be written as an `if`, so where a `null` was handled is visible at a glance.
+- "Optional value" is a library type in many languages (such as `Optional`); Sprig's question mark is built into the language.
+- Objects returned by Java methods are treated as nullable in Sprig; chapter 21 shows how to work with them.
+:::
+
 ## Summary
 
 - `T?` may be `null`; `T` always has a value; the two are not interchangeable, and `null` cannot go into a type without the question mark.
