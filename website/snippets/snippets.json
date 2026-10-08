@@ -76,6 +76,7 @@
     "book/ch14_counter.spr",
     "book/ch14_scope.spr",
     "book/ch14_tolerate.spr",
+    "book_en/ch05_readonly.spr",
     "book_en/ch08_std_lists.spr",
     "callable_throws.spr",
     "classes.spr",

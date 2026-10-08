@@ -1,6 +1,6 @@
 import "@std/lists.spr" as lists
 
-# lists.sorted leaves its input alone: pass a read-only snapshot from toList().
+# To leave the caller's list alone, pass a read-only snapshot from toList() to lists.sorted.
 let words = ["pear", "fig", "banana", "fig"]
 print(lists.sorted(words.toList()))
 print(words)

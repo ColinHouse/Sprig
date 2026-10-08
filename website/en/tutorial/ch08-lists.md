@@ -123,7 +123,7 @@ The output `8` and `[8, 2, 6]` is `total` and `doubled` when the loop ends.
 - `let doubled: MutableList[Int] = []` starts an empty list for the result. An empty literal must write its element type; section 8.5 shows what happens when it does not.
 - `total += n` is shorthand for `total = total + n`. `total` must be declared `var` to change.
 - The second loop uses `range(0, numbers.size())` to produce the indexes `0, 1, 2`; `i` is an `Int`.
-- `i.toString()` turns an `Int` into a `String` so it can be concatenated with another string. When you join a string and a number, convert the number yourself.
+- `i.toString()` turns an `Int` into a `String` before joining it to other strings. Joining directly works too: `"n=" + i` gives `n=2`, because `+` concatenates as soon as a string is involved; `i.toString()` just makes the intent explicit.
 
 ## 8.4 What an out-of-bounds index does
 
@@ -170,7 +170,7 @@ Once the type is written, whatever you put in later is checked; a wrong element 
 
 Sprig puts "can change" and "cannot change" in the types: `MutableList[T]` is mutable, `List[T]` is read-only. Many functions only need to read, so they write `List` in the signature and promise the caller "I will not change your list". A `MutableList` can be passed where a `List` is expected: it is the same data, seen read-only.
 
-<<< @/snippets/book/ch05_readonly.spr
+<<< @/snippets/book_en/ch05_readonly.spr
 
 ```text
 6
@@ -300,7 +300,7 @@ Hint: start with `xs[0]` as the running maximum; replace it whenever the loop se
 
 **Exercise 3** Given the names `["Ada", "Bob", "Cyd"]`, print a numbered list: `1. Ada`, `2. Bob`, `3. Cyd`.
 
-Hint: `for i in range(0, names.size())`; the number is `i + 1`; call `.toString()` before joining.
+Hint: `for i in range(0, names.size())`; the number is `i + 1`; a number joins a string directly with `+`, and the answer writes `.toString()` explicitly.
 
 ::: details Answer
 <<< @/snippets/book/ch08_ex3_answer.spr
