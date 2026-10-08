@@ -156,6 +156,7 @@
     "book/ch21_checked.spr",
     "book/ch21_lambda_types.spr",
     "book/ch21_no_import.spr",
+    "book/ch23_broken.spr",
     "book/ch02_literal_range.spr"
   ]
 }
