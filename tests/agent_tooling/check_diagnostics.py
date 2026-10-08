@@ -145,8 +145,9 @@ def main():
             missing_steering.append((code, marker))
     check("high-value-explanations-steer-to-tools", not missing_steering, missing_steering)
 
-    unknown = explain("SPR-NOT-A-REAL-CODE")
-    check("unknown-code-honest", unknown["known"] is False
+    unknown_proc = sprig("explain", "SPR-NOT-A-REAL-CODE", "--json")
+    unknown = json.loads(unknown_proc.stdout)
+    check("unknown-code-honest", unknown_proc.returncode == 2 and unknown["known"] is False
           and "Unknown" in unknown["meaning"] and unknown["documentationTopic"] in topic_ok,
           unknown)
 

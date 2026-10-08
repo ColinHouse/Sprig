@@ -76,7 +76,7 @@ public final class Explanations {
                 out.put("commonCauses", List.of("Implicit conversion could lose range, precision, or numeric meaning."));
                 out.put("safeFixes", List.of("Use an explicit exact conversion (toIntExact, toFloatExact) or an explicitly lossy one after deciding the precision.",
                         "Float to Int: toIntExact() requires a whole value, toIntTrunc() drops the fraction, java.lang.Math.round(x) rounds to the nearest Int.",
-                        "Int to Float: toFloat() fails on precision loss; toFloatLossy() rounds."));
+                        "Int to Float: toFloatExact() fails on precision loss; toFloatLossy() rounds."));
                 out.put("relatedCodes", List.of(Codes.NUM_RANGE, Codes.NUM_DIVISION));
             }
             case Codes.COLLECTION_IMMUTABLE -> {
@@ -134,8 +134,8 @@ public final class Explanations {
                 out.put("confusedWith", List.of("Java checked exceptions", "Python uncaught exceptions"));
                 out.put("commonCauses", List.of("A call may throw Error or a checked Java exception that this function neither catches nor declares."));
                 out.put("safeFixes", List.of("Wrap the call in try/catch, or add throws to the function signature and propagate."));
-                out.put("badExample", "func load(path: String) -> String:\n    return files.read_utf8(path)");
-                out.put("goodExample", "func load(path: String) -> String throws Error, IOException:\n    return files.read_utf8(path)");
+                out.put("badExample", "import \"@std/files.spr\" as files\nfunc load(path: String) -> String:\n    return files.read_utf8(path)");
+                out.put("goodExample", "import \"@std/files.spr\" as files\nfunc load(path: String) -> String throws Error:\n    return files.read_utf8(path)");
                 out.put("relatedCodes", List.of(Codes.NAME_IMPORT, Codes.TYPE_MISMATCH));
             }
             case Codes.NAME_UNRESOLVED -> {
@@ -153,12 +153,11 @@ public final class Explanations {
                 out.put("whyMatters", "Java calls are resolved against real signatures; unsupported boundaries are reported instead of guessed.");
                 out.put("confusedWith", List.of("Java automatic boxing", "Kotlin SAM conversion"));
                 out.put("commonCauses", List.of("The argument types or arity match no declared overload.",
-                        "A nullable Sprig value was passed to a non-null Java parameter.",
-                        "The signature needs an array, varargs or a raw generic boundary that Sprig cannot bind.",
+                        "The signature needs a type-variable varargs (T...), an intersection bound or another shape sprig api marks unusable.",
                         "Two overloads are equally applicable, so the call is ambiguous."));
                 out.put("safeFixes", List.of("Run sprig api <fully.qualified.Class> --json and read the reported candidates.",
                         "Choose a supported signature and convert explicitly (toIntExact(), toString(), ...).",
-                        "Narrow or restructure nullable arguments before the call."));
+                        "Adapt the value at the boundary the way sprig api's interopReasonCodes report it."));
                 out.put("relatedCodes", List.of(Codes.TYPE_NULLABLE, Codes.JVM_CLASS));
             }
             case Codes.JVM_CLASSPATH -> {
@@ -216,7 +215,7 @@ public final class Explanations {
                 out.put("safeFixes", List.of("Group parameters into a class or variant, then pass one value."));
             }
             case Codes.TYPE_CAPTURE -> {
-                out.put("whyMatters", "Lambdas capture immutable bindings, avoiding shared mutable state surprises.");
+                out.put("whyMatters", "A lambda captures the locals of its function by value, so it may only capture let bindings; top-level variables are shared, not captured.");
                 out.put("confusedWith", List.of("Java effectively-final captures", "JavaScript closures over let"));
                 out.put("commonCauses", List.of("A lambda body reads a var local."));
                 out.put("safeFixes", List.of("Copy the var into a let binding before the lambda."));
@@ -269,7 +268,7 @@ public final class Explanations {
                 out.put("whyMatters", "An expression match has one result type; every branch must produce a value assignable to it without implicit conversion.");
                 out.put("confusedWith", List.of("Java switch statement fallthrough", "Rust match arm coercion"));
                 out.put("commonCauses", List.of("A branch returns a different type than the contextual or first non-null branch.",
-                        "Branches mix Int/Int32 or Int/Float without an explicit conversion.",
+                        "A branch would narrow the first non-null branch's type (an Int after an Int32 is SPR-NUM-CONVERSION; an Int32 after an Int widens and is accepted).",
                         "A branch yields null but the result type is not nullable."));
                 out.put("safeFixes", List.of("Make every branch produce the declared result type.",
                         "Annotate the target (let value: T = match ...) so the contextual type is explicit.",
@@ -278,8 +277,8 @@ public final class Explanations {
             }
             case Codes.MATCH_INFERENCE -> {
                 out.put("whyMatters", "An expression match needs a result type; all-null or unresolved branches cannot supply one.");
-                out.put("commonCauses", List.of("Every branch is null or an unannotated empty collection.",
-                        "Branch results do not agree on one type."));
+                out.put("commonCauses", List.of("Every branch is null.",
+                        "Every branch is an unannotated empty list or map."));
                 out.put("safeFixes", List.of("Annotate the target: let name: String? = match ...",
                         "Give at least one branch a value of the intended type."));
                 out.put("relatedCodes", List.of(Codes.MATCH_RESULT, Codes.TYPE_INFER));
@@ -315,40 +314,37 @@ public final class Explanations {
             case Codes.TYPE_RETURN -> {
                 out.put("whyMatters", "The declared result type is the function's contract at every call site.");
                 out.put("commonCauses", List.of("The returned value has a different type.",
-                        "A generic argument differs from the declared result type.",
-                        "A nullable value is returned from a non-null function."));
+                        "A generic argument differs from the declared result type."));
                 out.put("safeFixes", List.of("Return the declared type, converting explicitly if needed.",
-                        "Change the declared result type if the contract should be different.",
-                        "Handle null before returning when the result is non-null."));
+                        "Change the declared result type if the contract should be different."));
                 out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.TYPE_NULLABLE, Codes.FLOW_MISSING_RETURN));
             }
             case Codes.TYPE_ASSIGN -> {
                 out.put("whyMatters", "Assignment never converts implicitly; every visible type change is deliberate.");
-                out.put("commonCauses", List.of("The value has a different type than the target.",
-                        "A nullable value is assigned to a non-null target.",
-                        "An immutable binding is reassigned (also reports SPR-NAME-LET-ASSIGN)."));
+                out.put("commonCauses", List.of("The value has a different type than the target, in an initializer, assignment, field write or map entry.",
+                        "A let is reassigned with a value of another type (SPR-NAME-LET-ASSIGN reports the reassignment itself)."));
                 out.put("safeFixes", List.of("Convert explicitly or change the target's declared type.",
-                        "Check for null, or declare the target as T?.",
                         "Use var when the binding should be reassignable."));
                 out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.TYPE_NULL, Codes.NAME_LET_ASSIGN));
             }
             case Codes.TYPE_OPERAND -> {
                 out.put("whyMatters", "Operators and methods exist only for types that define them; there is no implicit coercion.");
-                out.put("commonCauses", List.of("Arithmetic or ordering on a type that does not support it (String, Bool, nullable).",
-                        "A method name that does not exist on the value's type.",
+                out.put("commonCauses", List.of("An operator used on a type that does not define it, such as + on Bool or < between String and Int.",
+                        "A value that may be null used with an ordering or arithmetic operator (see SPR-TYPE-NULLABLE).",
                         "Mixed numeric kinds that need an explicit conversion (see SPR-NUM-MIXED)."));
-                out.put("safeFixes", List.of("Use an operation the type defines; check sprig help types --json.",
+                out.put("safeFixes", List.of("Use an operation the type defines; sprig help strings, numerics and collections list the built-in methods.",
                         "Convert explicitly (toFloatExact(), toIntTrunc(), ...) before the operation.",
                         "Narrow nullable values before calling methods on them."));
                 out.put("relatedCodes", List.of(Codes.TYPE_MISMATCH, Codes.NUM_MIXED, Codes.TYPE_NULLABLE));
             }
             case Codes.TYPE_NOT_CALLABLE -> {
-                out.put("whyMatters", "Call syntax requires a function value or callable type; method names are not first-class values.");
+                out.put("whyMatters", "Call syntax requires a function value or a callable type; a Java or built-in method is called, never used as a value.");
                 out.put("commonCauses", List.of("Calling a non-function value, or a field/lambda without the call.",
-                        "Using a method name as a value (named function references are not implemented).",
+                        "Using a Java or built-in method, print or a generic function as a value where no function type is expected.",
                         "The callee resolved to an error, which then reports as not callable."));
                 out.put("safeFixes", List.of("Call the target with matching arguments.",
-                        "Wrap a named function in a lambda: fn(x: Int) => named(x)."));
+                        "Write a lambda for a Java or built-in method: fn(text: String) => text.length().",
+                        "Write the type arguments: identity[Int]."));
                 out.put("relatedCodes", List.of(Codes.TYPE_FUNCTION_ARITY, Codes.NAME_NOT_A_VALUE));
             }
             case Codes.TYPE_UNIT -> {
@@ -386,9 +382,8 @@ public final class Explanations {
                 out.put("commonCauses", List.of("Missing [project] section or a required key.",
                         "Unknown or duplicate keys, or a value of the wrong kind.",
                         "An entry/source path that does not exist."));
-                out.put("safeFixes", List.of("Compare with the manifest produced by sprig init.",
-                        "Run sprig project --json to inspect the resolved model.",
-                        "See sprig help projects --json for the accepted keys."));
+                out.put("safeFixes", List.of("Compare with the manifest sprig init writes; [project] accepts name, version, language, source, entry, exports and license, and [[bin]] accepts name and entry.",
+                        "Run sprig project --json to inspect the resolved model."));
                 out.put("relatedCodes", List.of(Codes.PROJECT_ENTRY, Codes.PROJECT_LOCK_MISSING));
             }
             case Codes.PROJECT_ENTRY -> {
@@ -435,8 +430,9 @@ public final class Explanations {
             }
             case Codes.DEP_CHECKSUM -> {
                 out.put("whyMatters", "Locked artifacts are content-addressed; a mismatch means the cache entry is not the locked bytes.");
-                out.put("commonCauses", List.of("A corrupted or truncated cache entry.",
-                        "An upstream branch or tag moved and the lock references different bytes."));
+                out.put("commonCauses", List.of("A cached Maven artifact or model does not match the SHA-256 in sprig.lock.",
+                        "The downloaded artifact's checksum does not match the resolver's metadata.",
+                        "Resolver staging bytes changed while an artifact was being written."));
                 out.put("safeFixes", List.of("Discard the corrupted cache entry and run sprig resolve again with network access.",
                         "Do not edit sprig.lock or the cache by hand."));
                 out.put("relatedCodes", List.of(Codes.DEP_OFFLINE, Codes.DEP_GIT));
@@ -454,7 +450,7 @@ public final class Explanations {
             case Codes.DEP_NOT_FOUND -> {
                 out.put("whyMatters", "Dependency paths and aliases are resolved explicitly; nothing is found by accident.");
                 out.put("commonCauses", List.of("A [[dependency]] path is wrong or missing.",
-                        "An @alias/module.spr import names a module the dependency does not export.",
+                        "An @alias/module.spr import names an alias that is not a [[dependency]], or @std/NAME.spr names no bundled module.",
                         "Only direct dependency aliases are visible; transitive aliases are package-local."));
                 out.put("safeFixes", List.of("Run sprig project --json and sprig deps --json to inspect the resolved graph.",
                         "Check the manifest path/name and the dependency's exports list."));
@@ -471,6 +467,7 @@ public final class Explanations {
                 out.put("whyMatters", "Git dependencies are locked to a revision; resolution never moves branches by itself.");
                 out.put("commonCauses", List.of("git is unavailable or the remote/ref cannot be reached.",
                         "The requested branch/tag/revision does not exist.",
+                        "A cached Git checkout is corrupted or modified.",
                         "Another Sprig process still holds the repository cache lock."));
                 out.put("safeFixes", List.of("Verify the remote URL and branch/ref in sprig.toml.",
                         "Ensure git is installed and the network is reachable for the first resolve.",
@@ -487,6 +484,22 @@ public final class Explanations {
                         "Add the missing --classpath entry or resolve the manifest dependency.",
                         "Move unnamed-package classes into a named package."));
                 out.put("relatedCodes", List.of(Codes.JVM_CLASSPATH, Codes.JVM_MEMBER));
+            }
+            case Codes.JVM_COMPILE -> {
+                out.put("whyMatters", "The generated Java comes from a program that already passed type checking; when javac rejects it, the failure is in the compiler, not the Sprig source.");
+                out.put("commonCauses", List.of("The generated Java uses a construct the running JDK rejects.",
+                        "The generated sources and the bundled Sprig runtime are out of step."));
+                out.put("safeFixes", List.of("Keep the reported Java under sprig-build/java/ and report it with the javac output.",
+                        "Re-run sprig doctor and rebuild the compiler if the failure repeats."));
+                out.put("relatedCodes", List.of(Codes.JVM_INTERNAL));
+            }
+            case Codes.JVM_INTERNAL -> {
+                out.put("whyMatters", "The compiler reached a state the source cannot explain; the failure is in the tool, not in the program.");
+                out.put("commonCauses", List.of("An internal invariant of the compiler or a tooling helper failed.",
+                        "A cache, lock or generated file is unreadable or half-written."));
+                out.put("safeFixes", List.of("Re-run once; if it repeats, report the exact command and Sprig source with the diagnostic.",
+                        "Run sprig doctor to record the environment, and clear the reported cache path if one is named."));
+                out.put("relatedCodes", List.of(Codes.JVM_COMPILE));
             }
             case Codes.SYNTAX_ERROR -> {
                 out.put("whyMatters", "The grammar is small and explicit; fixing the first syntax error removes most later ones.");
@@ -520,6 +533,12 @@ public final class Explanations {
                         "Move the competing declaration into another module if both are needed."));
                 out.put("relatedCodes", List.of(Codes.NAME_FIELD_SHADOW, Codes.NAME_UNRESOLVED));
             }
+            case Codes.NAME_FIELD_SHADOW -> {
+                out.put("whyMatters", "Inside a method a bare name always means the field, so a same-named parameter or local would silently hide it.");
+                out.put("commonCauses", List.of("A parameter or local has the same name as a field of the current class."));
+                out.put("safeFixes", List.of("Rename the parameter or local; inside a method a field is used by its bare name."));
+                out.put("relatedCodes", List.of(Codes.NAME_DUPLICATE, Codes.NAME_UNRESOLVED));
+            }
             case Codes.NAME_FORWARD_REFERENCE -> {
                 out.put("whyMatters", "Top-level statements run once, in source order; reading a binding before its "
                         + "declaration would observe 0, false or null instead of its value.");
@@ -543,12 +562,10 @@ public final class Explanations {
             }
             case Codes.NAME_IMPORT -> {
                 out.put("whyMatters", "Every import resolves to a real file, bundled module, or class; nothing is implicit.");
-                out.put("commonCauses", List.of("A relative module path is wrong or missing.",
-                        "An @alias module is not exported by the dependency.",
-                        "A Java class import cannot be loaded (name or classpath)."));
-                out.put("safeFixes", List.of("Check the path relative to the importing file, or @std/@alias spelling.",
-                        "Run sprig project --json / sprig deps --json for dependency aliases and exports.",
-                        "For Java, confirm the class name and classpath."));
+                out.put("commonCauses", List.of("The imported .spr file does not exist at the path relative to the importing file.",
+                        "No alias can be derived; add 'as name'."));
+                out.put("safeFixes", List.of("Check the path relative to the importing file.",
+                        "Add 'as name' when the alias cannot be derived."));
                 out.put("relatedCodes", List.of(Codes.PROJECT_NOT_EXPORTED, Codes.JVM_CLASS, Codes.NAME_IMPORT_CYCLE));
             }
             case Codes.MATCH_SCRUTINEE -> {
@@ -589,7 +606,7 @@ public final class Explanations {
                 out.put("relatedCodes", List.of(Codes.API_MEMBER, Codes.PROJECT_LOCK_STALE));
             }
             case Codes.CONFORM_SOURCE, Codes.CONFORM_TARGET -> {
-                out.put("whyMatters", "conform declares a foreign JVM contract for an existing local class; it adds no methods and performs no adaptation.");
+                out.put("whyMatters", "conform declares, next to the class, the one contract, Java interface or Java class it stands for; the checker matches every required method exactly instead of adapting anything.");
                 out.put("commonCauses", List.of("The left name is not a class declared in this module (imported, dependency or value name): there is no retroactive conformance.",
                         "The class is generic, or is itself a contract: neither conforms in the 0.8 language.",
                         "The target alias is not an imported public Java interface, or the interface is generic, sealed or an annotation.",
@@ -703,7 +720,7 @@ public final class Explanations {
                         "A constructor call is missing."));
                 out.put("safeFixes", List.of("Construct a value: Person(name=\"Ada\"), Expr.Literal(value=1).",
                         "Reference a declared value or call a function instead."));
-                out.put("relatedCodes", List.of(Codes.TYPE_NOT_CALLABLE, Codes.NAME_NOT_A_TYPE));
+                out.put("relatedCodes", List.of(Codes.TYPE_NOT_CALLABLE, Codes.NAME_UNRESOLVED));
             }
             case Codes.GENERIC_NULLABLE -> {
                 out.put("whyMatters", "A type parameter declared with '?' must be instantiated with a non-nullable type.");
@@ -721,6 +738,15 @@ public final class Explanations {
                         "Narrow Java reference results before use; the diagnostic origin names the failing category.",
                         "Re-run with `sprig run --stacktrace` when the raw JVM stack is needed for debugging."));
                 out.put("relatedCodes", List.of(Codes.FLOW_THROWS, Codes.TYPE_NULLABLE));
+            }
+            case Codes.PROGRAM_EXIT -> {
+                out.put("whyMatters", "A non-zero status is how a program or test reports failure to the shell and to CI.");
+                out.put("commonCauses", List.of("process.exit was called with a non-zero status.",
+                        "A test called test.finish() after a failed check.",
+                        "A sprig test program ran longer than 30 seconds."));
+                out.put("safeFixes", List.of("Read the program's output and the reported status.",
+                        "Fix the failing check, or keep the test run under 30 seconds."));
+                out.put("relatedCodes", List.of(Codes.RUNTIME_ERROR));
             }
             case Codes.WRAP_CHECK -> {
                 out.put("whyMatters", "The wrapper generator must emit ordinary Sprig source that checks under the same classpath; a failed check means no file was written.");
@@ -781,7 +807,7 @@ public final class Explanations {
         if (code.startsWith("SPR-DEP-")) return "dependencies";
         if (code.startsWith("SPR-PROJECT-")) return "projects";
         if (code.startsWith("SPR-MODULE-") || code.equals(Codes.NAME_IMPORT)
-                || code.equals(Codes.NAME_IMPORT_CYCLE) || code.equals(Codes.NAME_MODULE)) return "modules";
+                || code.equals(Codes.NAME_IMPORT_CYCLE)) return "modules";
         if (code.startsWith("SPR-BUNDLE-")) return "build";
         if (code.startsWith("SPR-API-") || code.startsWith("SPR-CLI-") || code.startsWith("SPR-WRAP-")) return "agents";
         if (code.startsWith("SPR-LEX-") || code.startsWith("SPR-SYNTAX-")) return "language";

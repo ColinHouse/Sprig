@@ -1,6 +1,6 @@
 # Appendix B. Error codes and where to read about them
 
-Every diagnostic from the compiler carries a fixed error code that starts with `SPR-`. A code's meaning never changes: new behavior gets a new code. This appendix lists the compiler's current 102 codes by category, one line each; the codes and the count change as the compiler does, so `sprig codes` always has the latest list.
+Every diagnostic from the compiler carries a fixed error code that starts with `SPR-`. A code's meaning never changes: new behavior gets a new code. This appendix lists the compiler's current 100 codes by category, one line each; the codes and the count change as the compiler does, so `sprig codes` always has the latest list.
 
 ## B.1 How to read an error code
 
@@ -74,8 +74,6 @@ The tables below group the codes by prefix. Each line says only when the code ap
 | `SPR-NAME-IMPORT` | An imported file or class cannot be resolved. |
 | `SPR-NAME-IMPORT-CYCLE` | Sprig modules import each other in a cycle. |
 | `SPR-NAME-LET-ASSIGN` | A `let` binding or `let` field cannot be reassigned. |
-| `SPR-NAME-MODULE` | A module import or alias is wrong. |
-| `SPR-NAME-NOT-A-TYPE` | A value was used where a type is required. |
 | `SPR-NAME-NOT-A-VALUE` | A type or module name was used as a value. |
 | `SPR-NAME-UNRESOLVED` | A name has no declaration in the current scope chain. |
 

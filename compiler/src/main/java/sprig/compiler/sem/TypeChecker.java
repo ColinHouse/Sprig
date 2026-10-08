@@ -6226,7 +6226,7 @@ public final class TypeChecker {
                     + "or java.lang.Math.round(x) to round to the nearest Int.";
         }
         if (actual == NativeType.INT && target == NativeType.FLOAT) {
-            return "Use toFloat() (fails if precision would be lost) or toFloatLossy() to round to the nearest Float.";
+            return "Use toFloatExact() (fails if precision would be lost) or toFloatLossy() to round to the nearest Float.";
         }
         if (actual == NativeType.INT && target == NativeType.INT32) {
             return "Use toInt32Exact(), which fails outside the Int32 range.";
