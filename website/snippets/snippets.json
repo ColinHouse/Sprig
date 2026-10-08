@@ -1,6 +1,8 @@
 {
   "schemaVersion": 1,
   "executable": [
+    "book/appendix_a_precedence.spr",
+    "book/appendix_a_semantics.spr",
     "book/ch01_hello.spr",
     "book/ch02_bindings.spr",
     "book/ch02_bool.spr",
@@ -108,6 +110,10 @@
     "guide/tooling_missing_case.spr",
     "guide/generics_comparable_bool.spr",
     "guide/generics_float_key.spr",
+    "book/appendix_a_assign_chain.spr",
+    "book/appendix_a_chained_comparison.spr",
+    "book/appendix_a_increment.spr",
+    "book/appendix_a_int_division.spr",
     "book/ch02_division.spr",
     "book/ch02_let_assign.spr",
     "book/ch02_mixed.spr",
