@@ -1,0 +1,4 @@
+# 这个模块导入 d，自己再打印一行。
+import "./d.spr" as d
+
+print("b done")

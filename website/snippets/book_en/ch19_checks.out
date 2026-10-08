@@ -1,0 +1,4 @@
+ok parses a number
+ok rejects
+ok rejects text
+3 passed, 0 failed

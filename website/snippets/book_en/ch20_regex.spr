@@ -1,0 +1,11 @@
+# Regex: find, replace, whole-text match, groups, split.
+import "@std/regex.spr" as regex
+
+let text = "a1 b22 c333"
+
+print(regex.find_all("[a-z][0-9]+", text))
+print(regex.replace_all("[0-9]+", text, "#"))
+print(regex.matches("[a-z][0-9]+( [a-z][0-9]+)*", text))
+print(regex.find_groups("([a-z])([0-9]+)", text))
+print(regex.split("\\s+", text))
+print(regex.find("z+", text) == null)

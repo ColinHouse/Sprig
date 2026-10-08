@@ -1,0 +1,12 @@
+# equal 失败时抛出的 Error 带着两个值，可以接住看个明白。
+import "@std/test.spr" as testing
+
+try:
+    testing.equal_text("Hello, Ada!", "Hi, Ada!", "greeting")
+catch problem: Error:
+    print(problem.message)
+
+try:
+    testing.equal_int(3, 4, "sum")
+catch problem: Error:
+    print(problem.message)

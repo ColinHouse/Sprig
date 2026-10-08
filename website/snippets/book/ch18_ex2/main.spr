@@ -1,0 +1,4 @@
+# 练习 2 的入口。
+import "./facade.spr" as facade
+
+print(facade.double(4))

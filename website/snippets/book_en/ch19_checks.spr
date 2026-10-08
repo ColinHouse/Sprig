@@ -1,0 +1,13 @@
+# A test file: run it directly with sprig run to see each check's result.
+import "@std/test.spr" as testing
+
+# The function under test: turns text into an integer, or throws.
+func parse_count(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+testing.check("parses a number", fn() => testing.equal_int(parse_count("42"), 42, "parse"))
+testing.check("rejects text", fn() => testing.check_error("rejects", fn() => parse_count("abc")))
+testing.finish()

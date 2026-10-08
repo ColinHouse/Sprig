@@ -1,0 +1,4 @@
+import "./other.spr" as other
+
+func alpha() -> Int:
+    return 1

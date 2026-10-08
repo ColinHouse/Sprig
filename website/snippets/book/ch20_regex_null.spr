@@ -1,0 +1,5 @@
+# find 可能找不到，返回 String?，不能直接当 String 用。
+import "@std/regex.spr" as regex
+
+let first: String = regex.find("[0-9]+", "abc")
+print(first)

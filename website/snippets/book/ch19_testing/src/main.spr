@@ -1,0 +1,5 @@
+# 入口只做参数处理：交给 app.run，把返回值当作退出码。
+import "@std/process.spr" as process
+import "./app.spr" as app
+
+process.exit(app.run(process.arguments()))

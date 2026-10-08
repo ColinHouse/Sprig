@@ -1,0 +1,4 @@
+# A facade module: it re-exports another module's name.
+import "./math_module.spr" as math
+
+export math.square

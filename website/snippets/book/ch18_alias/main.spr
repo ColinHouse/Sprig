@@ -1,0 +1,4 @@
+# 导入时起了别名 math，却没有通过别名访问。
+import "./math_module.spr" as math
+
+print(square(7))

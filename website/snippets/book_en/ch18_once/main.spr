@@ -1,0 +1,5 @@
+# The main module imports d directly and also gets it through b.
+import "./b.spr" as b
+import "./d.spr" as d
+
+print("main done")

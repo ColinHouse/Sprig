@@ -1,0 +1,15 @@
+# Dates are ISO text; times are milliseconds since 1970 or ISO-8601 UTC text.
+import "@std/dates.spr" as dates
+import "@std/time.spr" as time
+
+let start = dates.parse("2026-10-05")
+
+print(start)
+print(dates.plus_days(start, 10))
+print(dates.days_between(start, "2026-10-19"))
+print(dates.day_of_week(start))
+print(dates.is_valid("2026-02-30"))
+
+print(time.format_utc(0))
+print(time.format_utc(1500))
+print(time.parse_utc("2026-10-08T17:15:30+08:00"))

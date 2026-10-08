@@ -1,0 +1,4 @@
+# The facade re-exports only square, so pi_approx is not visible.
+import "./facade.spr" as facade
+
+print(facade.pi_approx)

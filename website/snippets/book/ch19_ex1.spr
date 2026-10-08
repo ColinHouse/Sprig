@@ -1,0 +1,8 @@
+# 练习 1：给一个函数写一条通过的检查。
+import "@std/test.spr" as testing
+
+func double(x: Int) -> Int:
+    return x * 2
+
+testing.check("doubles 3", fn() => testing.equal_int(double(3), 6, "double"))
+testing.finish()

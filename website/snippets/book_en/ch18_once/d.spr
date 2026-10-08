@@ -1,0 +1,2 @@
+# A base module imported by two other modules.
+print("d initialized")

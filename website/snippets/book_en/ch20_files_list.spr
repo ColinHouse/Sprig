@@ -1,0 +1,22 @@
+# Listing a directory: make a directory of our own in the system temp area, list it
+# in sorted order, walk the tree, and clean the files up at the end.
+import "@std/files.spr" as files
+
+let anchor = files.temp_file()
+let parent = files.parent(anchor)
+if parent == null:
+    throw Error("no parent directory")
+let dir = files.join(parent, "sprig-book-" + files.file_name(anchor))
+files.remove_file(anchor)
+
+files.make_directory(dir)
+files.write_utf8(files.join(dir, "a.txt"), "one\n")
+files.write_utf8(files.join(dir, "notes.txt"), "two\n")
+
+print(files.list(dir).size())
+for entry in files.walk(dir):
+    print(files.file_name(entry))
+
+files.remove_file(files.join(dir, "a.txt"))
+files.remove_file(files.join(dir, "notes.txt"))
+print(files.list(dir).size())

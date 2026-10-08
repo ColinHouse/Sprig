@@ -1,0 +1,3 @@
+# A plain module: one function and one top-level let binding.
+func square(x: Int) -> Int:
+    return x * x

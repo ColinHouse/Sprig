@@ -1,0 +1,13 @@
+# 练习 2：用 check_error 断言"这种情况下必须失败"。
+import "@std/test.spr" as testing
+
+func parse_count(text: String) -> Int throws Error:
+    if text == "":
+        throw Error("empty text")
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+testing.check_error("rejects empty", fn() => parse_count(""))
+testing.finish()

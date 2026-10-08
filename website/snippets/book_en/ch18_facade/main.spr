@@ -1,0 +1,4 @@
+# Import the facade and use it like any other module.
+import "./facade.spr" as facade
+
+print(facade.square(5))

@@ -1,0 +1,4 @@
+# 导入门面，用和导入普通模块一样的方式使用它。
+import "./facade.spr" as facade
+
+print(facade.square(5))

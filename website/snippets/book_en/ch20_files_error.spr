@@ -1,0 +1,7 @@
+# Reading a file that does not exist: the Error message says what, which file, and why.
+import "@std/files.spr" as files
+
+try:
+    print(files.read_utf8("no-such-file.txt"))
+catch problem: Error:
+    print(problem.message)

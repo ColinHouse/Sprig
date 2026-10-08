@@ -1,0 +1,12 @@
+# 解析一段 JSON，读类型化字段，再打印回紧凑 JSON。
+import "@std/json.spr" as json
+import "@std/json_codec.spr" as codec
+
+let doc = "{\"name\": \"sprig\", \"stars\": 12, \"tags\": [\"small\", \"typed\"]}"
+let root = codec.root(json.parse(doc))
+
+print(codec.required_string(root, "name"))
+print(codec.required_int(root, "stars"))
+print(codec.required_string_array(root, "tags"))
+print(codec.optional_string(root, "license"))
+print(json.stringify(json.parse(doc)))

@@ -1,0 +1,2 @@
+# 被两个模块共同导入的底层模块。
+print("d initialized")
