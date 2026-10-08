@@ -225,7 +225,7 @@ SPR-RUNTIME-EXCEPTION [RUNTIME] overflow.spr:2:1: Numeric error: Int addition ov
 1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-`hint` 建议在运算前先检查范围，或者捕获异常（`try`/`catch` 第 14 章讲）。这条报错属于**运行时错误**：程序通过了检查，跑到这一行才失败，文件名后面没有 `--stacktrace` 时看不到 Java 调用栈。`Float` 不一样：`1.0 / 0.0` 得到 `Infinity`，`0.0 / 0.0` 得到 `NaN`，不报错，跟 IEEE 754 标准一致。
+`hint` 建议在运算前先检查范围，或者捕获异常（`try`/`catch` 第 14 章讲）。这条报错属于**运行时错误**：程序通过了检查，跑到这一行才失败；加 `--stacktrace` 运行才能看到 JVM 调用栈。`Float` 不一样：`1.0 / 0.0` 得到 `Infinity`，`0.0 / 0.0` 得到 `NaN`，不报错，跟 IEEE 754 标准一致。
 
 ## 本章小结
 

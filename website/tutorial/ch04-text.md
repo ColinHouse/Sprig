@@ -198,7 +198,7 @@ null
 
 - `"42".toInt()` 得到整数 42，加 8 得 50。`toInt()` 要求整段文字**就是**一个整数；像 `"abc"` 这样的文本会让程序在运行时停下，报 `SPR-RUNTIME-ERROR`，消息是 `Uncaught Error: not an integer: "abc"`。
 - `"12".toIntOrNull()` 得到 12；`"abc".toIntOrNull()` 得到 `null`（没有值）。它不报错，把“转不了”的情况用 `null` 表示。它的类型是 `Int?`——可能没有值的 `Int`，第 13 章专门讲。
-- `"2.5".toFloat()` 得到 2.5，乘 2.0 得 3.0。
+- `"2.5".toFloat()` 得到 2.5，加 0.5 得 3.0。
 
 `"abc".toIntOrNull()` 打印出 `null`，这是唯一一个你暂时不用懂的类型谜题；先记住 `toIntOrNull` 是“转得成就给我值，转不成给 null”。
 
