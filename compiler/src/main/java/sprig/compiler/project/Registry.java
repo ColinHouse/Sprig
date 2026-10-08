@@ -75,7 +75,7 @@ public final class Registry {
     public record Index(String name, String description, boolean strict, String movedTo, String movedToSubdir) {
     }
 
-    /** One package of an index. The last release listed is the newest. */
+    /** One package of an index. Its newest release is the highest SemVer version that is not yanked ({@link #latest()}), whatever the listing order. */
     public static final class Entry {
         public final String registry;
         public final String name;

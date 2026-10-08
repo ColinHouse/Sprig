@@ -89,6 +89,74 @@ def main():
           and "stdlib-sha256" not in " ".join(dependency_help["rules"]))
     check("help-unknown-json", obj(run("help", "invalid", "--json"))["exitCode"] == 2)
 
+    # The catalog is a properties file: a repeated key silently loses its first
+    # value (help dependencies once lost its manifest example that way).
+    catalog_lines = (ROOT / "compiler/src/main/resources/sprig/compiler/tooling/catalog.properties").read_text(
+        encoding="utf-8").splitlines()
+    catalog_keys = [line.split("=", 1)[0].strip() for line in catalog_lines
+                    if line.strip() and not line.lstrip().startswith(("#", "!")) and "=" in line]
+    check("catalog-keys-unique", len(catalog_keys) == len(set(catalog_keys)))
+    # Rules split on ';' and lists on ',': an entry cut inside a parenthesis reads
+    # as a fragment ("and print" / "as values"), so every entry balances its
+    # parentheses and brackets and none is empty.
+    def balanced(entry):
+        return (entry.strip() and entry.count("(") == entry.count(")")
+                and entry.count("[") == entry.count("]"))
+    fragments = [item for key in ("supportedSyntax", "unsupportedSyntax", "commands", "nativeTypes")
+                 for item in catalog[key] if not balanced(item)]
+    for topic in topics:
+        fragments += [f"{topic}: {rule}" for rule in obj(run("help", topic, "--json"))["rules"] if not balanced(rule)]
+    check("catalog-entries-balanced", not fragments)
+    check("capabilities-function-references-one-entry",
+          any(item.startswith("function references to named") for item in catalog["supportedSyntax"]))
+    classes_rules = obj(run("help", "classes", "--json"))["rules"]
+    check("help-classes-contract-bound-rule-whole",
+          any("(take Sink as the parameter type, since requires accepts only Equatable and Comparable)" in rule
+              for rule in classes_rules))
+    # The dependencies topic shows one manifest line or one command per syntax line.
+    check("help-dependencies-syntax-lines",
+          all(line.startswith(("[[", "sprig ")) or " = " in line for line in dependency_help["syntax"])
+          and any(line.startswith("[[registry]]") for line in dependency_help["syntax"])
+          and not any("|" in line or ";" in line for line in dependency_help["syntax"]))
+    dependency_rules = " ".join(dependency_help["rules"])
+    check("help-dependencies-registry-rules",
+          "highest SemVer version that is not yanked" in dependency_rules
+          and "the last listed is the newest" not in dependency_rules
+          and "--yank VERSION --reason TEXT" in dependency_rules)
+    # Corrections the audit of the help texts asked for: each names what the compiler does.
+    language_rules = " ".join(obj(run("help", "language", "--json"))["rules"])
+    check("help-language-operators", ", in, +" in language_rules and "/=" in language_rules
+          and "no %=, ++ or --" in language_rules and "toFloatExact()" in language_rules
+          and "toFloat()" not in language_rules)
+    modules_rules = " ".join(obj(run("help", "modules", "--json"))["rules"])
+    check("help-modules-import-alias-optional", "without one a Java class is used by its simple name" in modules_rules
+          and "Java class imports use aliases" not in modules_rules
+          and "concurrent (scope" in modules_rules and "arguments, argument," in modules_rules)
+    check("help-api-member-codes", "SPR-API-MEMBER for a Sprig module" in " ".join(obj(run("help", "api", "--json"))["rules"]))
+    check("help-testing-equal", "equal (any value that supports ==" in " ".join(obj(run("help", "testing", "--json"))["rules"]))
+    check("help-match-case-type", "matches only that case" in " ".join(obj(run("help", "match", "--json"))["rules"]))
+    check("help-errors-error-class-field", "whatever its name" in " ".join(obj(run("help", "errors", "--json"))["rules"]))
+    jvm_rules = " ".join(obj(run("help", "jvm", "--json"))["rules"])
+    check("help-jvm-raw-generic", "raw type whose elements are Object?" in jvm_rules)
+    concurrency = obj(run("help", "concurrency", "--json"))
+    concurrency_rules = " ".join(concurrency["rules"])
+    check("help-concurrency-rules", "receive_within(millis) waits at most millis" in concurrency_rules
+          and "captures only immutable bindings" not in concurrency_rules
+          and "top-level vars stay shared" in concurrency_rules)
+    guidance_rules = catalog["featureGuidance"]
+    check("feature-guidance-texts",
+          "Error is the only conformance" not in " ".join(guidance_rules["errorClasses"]["rules"])
+          and any("conform C to JavaClass(fields) as parent" in item for item in guidance_rules["inheritance"]["alternatives"])
+          and any("@std/concurrent.spr" in item for item in guidance_rules["async"]["alternatives"])
+          and any("[[registry]]" in item for item in guidance_rules["centralSprigRegistry"]["alternatives"]))
+    # The concurrency topic's syntax is a complete program: it runs on its own.
+    with tempfile.TemporaryDirectory(prefix="sprig-help-syntax-") as tmp:
+        program = Path(tmp) / "concurrency.spr"
+        program.write_text("\n".join(concurrency["syntax"]) + "\n", encoding="utf-8")
+        executed = run("run", program, "--json")
+        check("help-concurrency-program-runs", executed.returncode == 0
+              and obj(executed)["programOutput"].replace("\r\n", "\n") == "[3, 2]\nhello\n")
+
     # Every advertised capability must point to executable evidence; every
     # deliberately unsupported one must have canonical guidance.
     # The gates of scripts/test.py are the keys of tests/test-map.json; a suite
