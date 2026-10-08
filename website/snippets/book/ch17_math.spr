@@ -1,0 +1,9 @@
+import "@std/math.spr" as math
+
+print(math.abs(-5))
+print(math.min(3, 7))
+print(math.max(3, 7))
+print(math.sign(-5))
+print(math.clamp(12, 0, 10))
+print(math.floor_div(-7, 2))
+print(math.isqrt(17))

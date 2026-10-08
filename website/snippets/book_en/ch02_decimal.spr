@@ -1,0 +1,8 @@
+# Decimal is arbitrary-precision base 10 and BigInt is an arbitrary-size integer; neither mixes with Int or Float.
+let price = Decimal.parse("19.99")
+let total = price * 3.toDecimal()
+print(total)
+print(1.toDecimal().divide(3.toDecimal(), 4, "HALF_EVEN"))
+let huge = BigInt.parse("123456789012345678901234567890")
+print(huge + BigInt.fromInt(1))
+print(huge.compareTo(BigInt.fromInt(1)))

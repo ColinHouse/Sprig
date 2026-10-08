@@ -1,0 +1,5 @@
+let a: Float32 = 0.1
+print(a + 1.0)
+let b: Float32 = 0.1
+let c = 1.0
+print(b + c)

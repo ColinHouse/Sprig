@@ -1,0 +1,8 @@
+generic T:
+    func last_or(items: List[T], fallback: T) -> T:
+        if items.size() == 0:
+            return fallback
+        return items[items.size() - 1]
+
+print(last_or([1, 2, 3], 0))
+print(last_or([], "none"))

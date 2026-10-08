@@ -1,0 +1,5 @@
+var hits = 0
+let peek = fn() => hits + 1
+print(peek())
+hits = 5
+print(peek())

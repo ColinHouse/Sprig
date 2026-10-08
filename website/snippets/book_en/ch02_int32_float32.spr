@@ -1,0 +1,10 @@
+# Int32 and Float32 are mainly for talking to Java; narrow values widen for free, not the other way.
+let small: Int32 = 2000000000
+let wide: Int = small
+print(wide + 1)
+print(small + wide)
+let narrow: Float32 = 0.1
+print(narrow)
+print(narrow.toFloat())
+let whole: Float = 1
+print(whole)

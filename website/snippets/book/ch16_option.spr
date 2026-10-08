@@ -1,0 +1,17 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+func read(option: Option[Int]) -> Int:
+    match option:
+        case Option.Some as some:
+            return some.value
+        case Option.None:
+            return 0
+
+print(read(Option.Some(value=42)))
+print(read(Option[Int].None))
+let kiwi = Option.Some(value="kiwi")
+print(kiwi.value)

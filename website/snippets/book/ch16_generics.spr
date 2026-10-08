@@ -1,0 +1,19 @@
+generic T:
+    class Box:
+        let value: T
+
+generic T:
+    func identity(value: T) -> T:
+        return value
+
+generic K, V:
+    class Entry:
+        let key: K
+        let value: V
+
+let box = Box(value=42)
+print(box.value)
+let named = Box[String](value="x")
+print(identity(named.value))
+let entry = Entry(key="age", value=18)
+print(entry.key + ":" + entry.value)

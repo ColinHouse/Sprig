@@ -1,0 +1,5 @@
+let n = 12345
+print(n.toInt32Exact())
+print(n.toFloatLossy())
+let f = 2.5
+print(f.toIntTrunc())

@@ -1,0 +1,3 @@
+import "@std/lists.spr" as lists
+
+print(lists.sort_by(["bb", "aa", "c", "dd"], fn(w: String) => w.length()))

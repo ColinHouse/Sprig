@@ -1,0 +1,7 @@
+func half(n: Int) -> Int:
+    return n.divTrunc(2)
+
+func apply_twice(value: Int, step: fn(Int) -> Int) -> Int:
+    return step(step(value))
+
+print(apply_twice(20, half))
