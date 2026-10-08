@@ -202,7 +202,7 @@ SPR-RUNTIME-ERROR [RUNTIME] main.spr:2:5: Uncaught Error: boom: x
 1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-两条诊断都提示你：加上 `--stacktrace` 会多打印一段 JVM 调用栈，底部能看到从哪个 Sprig 函数开始。语法是 `sprig run --stacktrace 文件.spr`。
+两条诊断都提示你：加上 `--stacktrace` 会多打印一段 JVM 调用栈，里面能看到编译出的类和 JVM 的调用链。语法是 `sprig run --stacktrace 文件.spr`。
 
 ::: tip 学过其他语言？
 - 没有隐藏的抛出路径：函数签名写着 `throws Error`，调用者就必须处理或声明，编译器不会让你忘。

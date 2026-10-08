@@ -202,7 +202,7 @@ SPR-RUNTIME-ERROR [RUNTIME] main.spr:2:5: Uncaught Error: boom: x
 1 error(s); run 'sprig explain <code>' for details on a diagnostic code.
 ```
 
-Both diagnostics tell you: adding `--stacktrace` prints a JVM stack, and its bottom shows which Sprig function started the call. The syntax is `sprig run --stacktrace file.spr`.
+Both diagnostics tell you: adding `--stacktrace` prints a JVM stack showing the compiled classes and the JVM call chain. The syntax is `sprig run --stacktrace file.spr`.
 
 ::: tip Coming from another language?
 - There are no hidden throw paths: the signature says `throws Error`, and the caller must handle or declare it. The compiler does not let you forget.
