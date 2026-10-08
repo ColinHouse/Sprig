@@ -1,0 +1,23 @@
+generic T:
+    func largest(items: List[T]) -> T throws Error:
+        requires T: Comparable
+        if items.size() == 0:
+            throw Error("no items")
+        var best = items[0]
+        for item in items:
+            if item > best:
+                best = item
+        return best
+
+generic T:
+    func contains(items: List[T], wanted: T) -> Bool:
+        requires T: Equatable
+        for item in items:
+            if item == wanted:
+                return true
+        return false
+
+print(largest([3, 9, 4]))
+print(largest(["pear", "apple"]))
+print(contains([1, 2, 3], 2))
+print(contains(["a", "b"], "c"))

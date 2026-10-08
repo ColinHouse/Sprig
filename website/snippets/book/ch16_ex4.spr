@@ -1,0 +1,15 @@
+generic T:
+    variant Option:
+        Some:
+            value: T
+        None:
+
+func unwrap_or(option: Option[Int], fallback: Int) -> Int:
+    match option:
+        case Option.Some as some:
+            return some.value
+        case Option.None:
+            return fallback
+
+print(unwrap_or(Option.Some(value=7), 0))
+print(unwrap_or(Option[Int].None, 0))

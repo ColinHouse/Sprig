@@ -1,0 +1,8 @@
+generic A, B:
+    class Pair:
+        let first: A
+        let second: B
+
+let pair = Pair(first=1, second="one")
+print(pair.first)
+print(pair.second)
