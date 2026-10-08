@@ -28,10 +28,10 @@ npm ci
 npm run package
 ```
 
-会生成 `dist/sprig-language-0.3.0.vsix`。在 VS Code 的扩展面板里点 `…` → **Install from VSIX…** 选中它，或者在命令行运行：
+会生成 `dist/sprig-language-0.3.1.vsix`。在 VS Code 的扩展面板里点 `…` → **Install from VSIX…** 选中它，或者在命令行运行：
 
 ```sh
-code --install-extension dist/sprig-language-0.3.0.vsix
+code --install-extension dist/sprig-language-0.3.1.vsix
 ```
 
 装好以后，语法高亮、大纲和代码片段马上就能用，不需要 Java 和编译器。
@@ -58,7 +58,7 @@ code --install-extension dist/sprig-language-0.3.0.vsix
 
 两种情况下，停在关键字上都会显示 `sprig help` 的说明，**Go to Symbol in Workspace** 可以在整个工作区里搜，点错误码可以打开错误码文档。代码片段：输入 `func`、`class`、`variant`、`match`、`ifnn`、`try`、`importj` 等前缀，按 Tab 展开。
 
-参数提示和语义着色由更新后的编译器提供，插件 0.3.0 会自动注册，无需为这两项功能重新发布插件。嵌套调用和字符串里的逗号不会弄错当前参数；命名构造参数可以按任意顺序填写。Java 没保留参数名时显示 `arg0`、`arg1` 等占位名。Java 重载暂不按实参类型排序，Sprig 泛型显示声明里的类型参数；内置函数和原生字符串、集合方法暂不提供参数签名。调用之外的语法错误仍可能让提示失效。语法或名字解析失败时会清空语义着色，保留词法高亮。
+参数提示和语义着色由更新后的编译器提供，插件 0.3.1 随它一起发布，会自动注册这两项功能。嵌套调用和字符串里的逗号不会弄错当前参数；命名构造参数可以按任意顺序填写。Java 没保留参数名时显示 `arg0`、`arg1` 等占位名。Java 重载暂不按实参类型排序，Sprig 泛型显示声明里的类型参数；内置函数和原生字符串、集合方法暂不提供参数签名。调用之外的语法错误仍可能让提示失效。语法或名字解析失败时会清空语义着色，保留词法高亮。
 
 ## 命令
 

@@ -1,4 +1,4 @@
-# Known limitations (main, after v0.7.1-beta.1)
+# Known limitations (main, after v0.8.0-beta.1)
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the historical design kit in `docs/history/design-kit/`.
@@ -182,7 +182,7 @@ by the historical design kit in `docs/history/design-kit/`.
   non-ASCII text). `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- This is the development line after v0.7.1-beta.1, an experimental Beta under
+- This is the development line after v0.8.0-beta.1, an experimental Beta under
   Apache-2.0 (`LICENSE`, `NOTICE`), not a production stability or numerical
   correctness guarantee.
 

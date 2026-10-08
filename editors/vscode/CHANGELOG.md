@@ -1,15 +1,15 @@
 # Changelog
 
-## Unreleased compiler integration
+## 0.3.1
 
 - Compilers that advertise signature help now provide parameter hints for
   Sprig declarations and Java overloads, including calls missing a closing
-  parenthesis. The existing 0.3.0 LSP client registers this automatically.
+  parenthesis. The LSP client registers this automatically.
 - Compilers that advertise semantic tokens add resolved identifier highlighting
   on top of TextMate scopes, using the user's theme.
 - Find References warns when the compiler's analysis limit makes its results
-  incomplete. These capabilities require the updated compiler, not a new
-  extension package.
+  incomplete. The capabilities come from the updated compiler; 0.3.1 packages
+  them together with it for the 0.8.0-beta.1 release.
 
 ## 0.3.0
 

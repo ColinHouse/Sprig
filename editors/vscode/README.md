@@ -8,7 +8,7 @@ same parser and type checker as `sprig check`. The extension does not
 implement a second type checker. It also runs programs and tests, shows the
 generated Java, and highlights Sprig without any compiler.
 
-Extension version **0.3.0** is independent of the compiler version.
+Extension version **0.3.1** is independent of the compiler version.
 
 ## Install / 安装
 
@@ -177,7 +177,7 @@ Server**; its own log is the **Sprig Language Server** output.
 - The language server re-checks the whole program on each change, renames only
   locals and parameters, and has no workspace symbols or code actions other
   than quick fixes. Signature help and semantic tokens require a compiler that
-  advertises them; extension 0.3.0 registers them automatically.
+  advertises them; extension 0.3.1 registers them automatically.
 - Signature help completes the call being typed, including nested calls and
   strings with commas; unrelated syntax errors can still prevent an answer.
   Java overloads are candidates, not ranked by argument types. Missing Java
@@ -227,7 +227,7 @@ locals, member completion, cross-module definition, references, rename,
 formatting, restart and the fall back; and a separate Restricted Mode run. The
 host tests use isolated temporary profiles; they do not install into or change
 your usual VS Code settings. `npm run package` writes
-`dist/sprig-language-0.3.0.vsix`, and `python3 scripts/check-editor.py` at the
+`dist/sprig-language-0.3.1.vsix`, and `python3 scripts/check-editor.py` at the
 repository root also checks its contents. Publishing is described in
 [DEVELOPMENT.md](https://github.com/ColinHouse/Sprig/blob/main/editors/vscode/DEVELOPMENT.md).
 

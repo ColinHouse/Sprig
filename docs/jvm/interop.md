@@ -1,4 +1,4 @@
-# Implemented JVM interop (main, after v0.7.1-beta.1)
+# Implemented JVM interop (main, after v0.8.0-beta.1)
 
 Import a public class with an alias, then call public constructors, static
 methods, instance methods, or fields. The class must live in a named package:

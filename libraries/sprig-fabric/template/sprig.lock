@@ -1,4 +1,4 @@
 lock-version = 5
 language = "0.8"
-compiler = "0.7.1-beta.1"
+compiler = "0.8.0-beta.1"
 manifest-sha256 = "a7fd1827d548be90077ec97fac7097c37b84bb09414560d16841a82feb25ce09"
