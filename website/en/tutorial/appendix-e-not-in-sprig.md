@@ -141,7 +141,7 @@ What to write instead: **named methods**. `a.plus(b)` is longer than `a + b`, bu
 
 | Not in Sprig | What to write instead |
 |---|---|
-| the pipeline operator `|>` | ordinary statements, or nested calls |
+| the pipeline operator `\|>` | ordinary statements, or nested calls |
 | annotations `@Foo` | explicit typed data, or ordinary functions |
 | decorators | ordinary functions and modules |
 | macros | ordinary functions and modules |

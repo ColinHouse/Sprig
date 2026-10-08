@@ -129,8 +129,8 @@ Two nullable scalars can be compared directly with `==`, and two `null`s are equ
 |---|---|---|
 | `x++`, `x--` | syntax error | `x += 1`, `x -= 1` |
 | `a ** b` | no power operator | `Float.sqrt` (or Java's `Math.pow`, Chapter 21) |
-| `<<` `>>` `&` `|` `^` `~` | no bitwise operators | `floor_div` and friends from `@std/math`; bitwise work goes through Java (Chapter 21) |
-| `&&` `||` `!` | syntax errors | `and`, `or`, `not` |
+| `<<` `>>` `&` `\|` `^` `~` | no bitwise operators | `floor_div` and friends from `@std/math`; bitwise work goes through Java (Chapter 21) |
+| `&&` `\|\|` `!` | syntax errors | `and`, `or`, `not` |
 | `a ? b : c`, `a if c else b` | no ternary expression | an if expression (Chapter 5) |
 | `x ?? y`, `x?.y` | syntax errors | `if x != null:`, or `or_else`/`require` from `@std/nulls` (Chapter 13) |
 | `1 < x < 3` | comparisons do not chain | `1 < x and x < 3` |
