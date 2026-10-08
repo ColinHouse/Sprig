@@ -1,0 +1,119 @@
+# A match expression merges a boxed nullable branch with a primitive branch
+# without unboxing (#219): a branch yielding an Int?/Int32?/Bool?/Float?/Float32?
+# value beside a primitive literal or local keeps null null, and the value
+# unchanged.
+enum Choice:
+    Left
+    Right
+
+func null_int(choice: Choice) -> Int?:
+    let absent: Int? = null
+    let forty: Int = 42
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            forty
+
+func null_int_literal(choice: Choice) -> Int?:
+    let absent: Int? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            42
+
+func null_int32(choice: Choice) -> Int32?:
+    let absent: Int32? = null
+    let seven: Int32 = 7
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            seven
+
+func null_int32_literal(choice: Choice) -> Int32?:
+    let absent: Int32? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            9
+
+func null_bool(choice: Choice) -> Bool?:
+    let absent: Bool? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            true
+
+func null_float(choice: Choice) -> Float?:
+    let absent: Float? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            1.5
+
+func null_float32(choice: Choice) -> Float32?:
+    let absent: Float32? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            2.5
+
+func some_text(yes: Bool) -> String?:
+    if yes:
+        return "text"
+    return null
+
+func null_string(choice: Choice) -> String?:
+    let absent: String? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            some_text(true)
+
+func null_calc(choice: Choice) -> Int?:
+    let absent: Int? = null
+    return match choice:
+        case Choice.Left:
+            absent
+        case Choice.Right:
+            1 + 1
+
+func nested(choice: Choice) -> Int?:
+    let absent: Int? = null
+    return match choice:
+        case Choice.Left:
+            match choice:
+                case Choice.Left:
+                    absent
+                case Choice.Right:
+                    3
+        case Choice.Right:
+            4
+
+print(null_int(Choice.Left))
+print(null_int(Choice.Right))
+print(null_int_literal(Choice.Left))
+print(null_int_literal(Choice.Right))
+print(null_int32(Choice.Left))
+print(null_int32(Choice.Right))
+print(null_int32_literal(Choice.Left))
+print(null_int32_literal(Choice.Right))
+print(null_bool(Choice.Left))
+print(null_bool(Choice.Right))
+print(null_float(Choice.Left))
+print(null_float(Choice.Right))
+print(null_float32(Choice.Left))
+print(null_float32(Choice.Right))
+print(null_string(Choice.Left))
+print(null_string(Choice.Right))
+print(null_calc(Choice.Left))
+print(null_calc(Choice.Right))
+print(nested(Choice.Left))
+print(nested(Choice.Right))

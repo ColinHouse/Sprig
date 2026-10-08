@@ -1345,10 +1345,18 @@ public final class JavaGenerator {
         return "((" + resultJava + ") (" + convertedExpression(value, resultType) + "))";
     }
 
+    /**
+     * A Java switch expression over one block, one if per branch. Every yield
+     * is first converted to the Java type of the result, exactly as an if
+     * expression's branches are: otherwise javac infers a primitive type when
+     * one branch is primitive and another is boxed, and unboxes the boxed
+     * branch, throwing on a null it should have yielded.
+     */
     private String emitMatchExpression(Expr.Match expr) {
         Stmt.Match match = expr.cases;
+        String resultJava = javaType(expr.type);
         String temp = freshTemp("matchExpr");
-        StringBuilder code = new StringBuilder("((").append(javaType(expr.type)).append(") (switch (0) { default -> { ")
+        StringBuilder code = new StringBuilder("((").append(resultJava).append(") (switch (0) { default -> { ")
             .append(javaType(match.scrutinee.type)).append(" ").append(temp).append(" = ").append(emitExpr(match.scrutinee)).append("; ");
         boolean concrete = match.matchedType instanceof VariantCaseType;
         for (var branch : match.branches) {
@@ -1362,7 +1370,7 @@ public final class JavaGenerator {
             }
             if (concrete && branch.binderSymbol != null) code.append(javaType(branch.binderType)).append(" ").append(localName(branch.binderSymbol)).append(" = ").append(temp).append("; ");
             Expr value = ((Stmt.ExprStmt)branch.body.get(0)).expr;
-            code.append(yieldStatement(convertedExpression(value, expr.type), javaType(expr.type))).append("} ");
+            code.append(yieldStatement(ifBranchValue(value, expr.type, resultJava), resultJava)).append("} ");
         }
         if (!concrete) code.append("throw new java.lang.IllegalStateException(\"exhaustive match failed at runtime\"); ");
         return code.append("} }))").toString();
