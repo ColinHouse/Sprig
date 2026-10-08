@@ -1,0 +1,27 @@
+# How the operators behave.
+# and/or short-circuit: the right-hand function is called only when needed.
+func loud_true() -> Bool:
+    print("called true")
+    return true
+
+func loud_false() -> Bool:
+    print("called false")
+    return false
+
+print(false and loud_true())
+print(true or loud_false())
+print(true and loud_true())
+# The sign of % follows the dividend, as in Java and unlike Python.
+print(-7 % 3)
+print(7 % -3)
+# + chains left to right: the first two Ints add before the text joins.
+print(1 + 2 + " then " + 1 + 2)
+# Compound assignment works on var and mutable collection elements, like =.
+var total = 7
+total += 3
+total -= 1
+total *= 2
+print(total)
+var ratio = 7.0
+ratio /= 2.0
+print(ratio)

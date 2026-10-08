@@ -1,0 +1,11 @@
+# No inheritance: a contract class names the methods, conform attaches an implementation.
+class Greeter:
+    func greet(name: String) -> String
+
+class English:
+    func greet(name: String) -> String:
+        return "Hello, " + name
+
+conform English to Greeter
+let greeter: Greeter = English()
+print(greeter.greet("Ada"))

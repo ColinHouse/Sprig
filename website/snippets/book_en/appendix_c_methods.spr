@@ -1,0 +1,28 @@
+# Built-in methods: a few common ones from numbers, strings, lists and maps.
+# Numbers
+print(Int.abs(-7))
+print(Int.min(3, 9))
+print(Float.sqrt(9.0))
+print(7.toFloatExact())
+print(2.5.toIntTrunc())
+print(7.divTrunc(3))
+# Strings
+let text = "  Sprig  "
+print(text.trim())
+print(text.trim().toUpperCase())
+print("a-b-c".split("-"))
+print("ab".repeat(2))
+print(String.join(["x", "y"], ","))
+print("3".toInt() + 1)
+print("x".toIntOrNull())
+# Lists and maps
+let xs: MutableList[Int] = [3, 1, 2]
+xs.append(4)
+xs.sort()
+print(xs)
+print(xs.contains(2))
+print(xs.indexOf(4))
+let ages: Map[String, Int] = {"ada": 36}
+print(ages.get("ada"))
+print("ada" in ages)
+print(ages.keys())

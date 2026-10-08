@@ -1,0 +1,6 @@
+# No tuples: a one-line class names the fields, and field access is the destructuring.
+class Pair(first: Int, second: Int)
+
+let p = Pair(first=1, second=2)
+print(p.first)
+print(p.second)
