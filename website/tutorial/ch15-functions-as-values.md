@@ -134,7 +134,7 @@ SPR-TYPE-NOT-CALLABLE [TYPE] main.spr:1:9: print as a value needs the parameter 
 另外两条相关限制，见到不用惊讶：Java 方法和内置方法（`names.add`、`text.length`）也不能这样摘下来，写 lambda；报错是 `SPR-TYPE-NOT-CALLABLE`，提示里写着 `Built-in method 'length' is not a value`。
 
 ::: tip 学过其他语言？
-`fn(n: Int) => n * 2` 对应 Python 的 `lambda n: n * 2`、JS 的 `n => n * 2`，但 Sprig 要求参数写类型；`...` 对应的"多行 lambda"不存在，编译器叫它 block lambda，明确不支持。函数类型 `fn(Int) -> Int` 类似 Java 的 `Function<Integer, Integer>`，但最多 3 个参数，而且没有装箱烦恼。
+`fn(n: Int) => n * 2` 对应 Python 的 `lambda n: n * 2`、JS 的 `n => n * 2`，但 Sprig 要求参数写类型；别的语言里那种多行 lambda 不存在，编译器叫它 block lambda，明确不支持。函数类型 `fn(Int) -> Int` 类似 Java 的 `Function<Integer, Integer>`，但最多 3 个参数，而且类型写在签名上，不靠泛型参数堆出来。
 :::
 
 ## 15.4 lambda 体里的 if 表达式
@@ -265,7 +265,7 @@ true
 SPR-TYPE-NULLABLE [TYPE] main.spr:2:7: Cannot invoke a nullable function value; check for null first (expected fn(Int) -> Int, actual (fn(Int) -> Int)?)
 ```
 
-`actual (fn(Int) -> Int)?` 里的问号就是问题。按提示先 `if missing != null:`，或者给它一个默认值（比如 `let f = if ...`）。这和可空数字、可空字符串是同一条规则。
+`actual (fn(Int) -> Int)?` 里的问号就是问题。按提示先 `if missing != null:` 再调用。这和可空数字、可空字符串是同一条规则。
 
 ## 15.8 用 lambda 武装 `@std/lists`
 
@@ -288,7 +288,7 @@ false
 - `find`：第一个满足的值，找不到返回 `null`；这里打印 `8`。
 - `count`：满足的个数，偶数有 `2` 和 `4`，共 `2`。
 
-这些函数的 key/step/accept 参数的类型都写着 `throws Error`：如果传进去的 lambda 会失败，编译器会要求你在调用处处理或声明。这也解释了为什么 `find` 的返回类型是 `T?`——找不到时它没有值可给。
+这些函数的 key/step/accept 参数的类型都写着 `throws Error`，函数本身还带 `rethrows`：传进去的 lambda 会失败时，在具名函数里调用它们就要 `try` 或声明 `throws`（顶层语句例外——没接住的错误会在运行时停下程序）。这也解释了为什么 `find` 的返回类型是 `T?`——找不到时它没有值可给。
 
 ## 15.9 本章小结
 

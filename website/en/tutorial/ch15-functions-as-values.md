@@ -134,7 +134,7 @@ The right-hand side of `let p = print` has no "place to go", so the compiler doe
 Two related limits should not surprise you: Java methods and built-in methods (`names.add`, `text.length`) cannot be detached either — write a lambda. The error is `SPR-TYPE-NOT-CALLABLE`; its hint says `Built-in method 'length' is not a value`.
 
 ::: tip Coming from another language?
-`fn(n: Int) => n * 2` is Python's `lambda n: n * 2` or JS's `n => n * 2`, but Sprig requires parameter types; there is no multi-line lambda (the compiler calls it a block lambda and does not support it). A function type like `fn(Int) -> Int` resembles Java's `Function<Integer, Integer>`, but takes at most three parameters and has no boxing ceremony at the source level.
+`fn(n: Int) => n * 2` is Python's `lambda n: n * 2` or JS's `n => n * 2`, but Sprig requires parameter types; there is no multi-line lambda (the compiler calls it a block lambda and does not support it). A function type like `fn(Int) -> Int` resembles Java's `Function<Integer, Integer>`, but takes at most three parameters and writes its types in the signature instead of in type-argument plumbing.
 :::
 
 ## 15.4 if expressions inside a lambda body
@@ -265,7 +265,7 @@ true
 SPR-TYPE-NULLABLE [TYPE] main.spr:2:7: Cannot invoke a nullable function value; check for null first (expected fn(Int) -> Int, actual (fn(Int) -> Int)?)
 ```
 
-The `?` in `actual (fn(Int) -> Int)?` is the problem. Do what the hint says: `if missing != null:` first, or give it a default. It is the same rule as for nullable numbers and strings.
+The `?` in `actual (fn(Int) -> Int)?` is the problem. Do what the hint says and check `if missing != null:` first. It is the same rule as for nullable numbers and strings.
 
 ## 15.8 Arming `@std/lists` with lambdas
 
@@ -288,7 +288,7 @@ false
 - `find`: the first matching item, or `null` when none does; here it prints `8`.
 - `count`: how many pass; the even numbers are `2` and `4`, so `2`.
 
-The key/step/accept parameters of these functions are typed `throws Error`: if the lambda you pass can fail, the compiler makes the call handle or declare it. That is also why `find` returns `T?` — when nothing matches, there is no value to give.
+The key/step/accept parameters of these functions are typed `throws Error`, and each function is `rethrows`: when the lambda you pass can fail, a call inside a named function must handle it or declare `throws` (top-level statements are the exception — an uncaught error stops the program at run time). That is also why `find` returns `T?` — when nothing matches, there is no value to give.
 
 ## 15.9 Summary
 
