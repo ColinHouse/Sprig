@@ -28,7 +28,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         if body:
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+                pass  # the client gave up first (the timeout case); Windows reports it as an error
 
     def do_GET(self):
         if self.path == "/unicode":

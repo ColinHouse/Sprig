@@ -38,7 +38,16 @@ reduced to letters, digits, `.`, `_` and `-`. A directory passed with
 
 The launcher runs the program from the caller's working directory, forwards
 every argument unchanged (spaces and UTF-8 included) and exits with the
-program's status. Standard output and error are UTF-8.
+program's status. Standard output and error are UTF-8 on every platform: the
+Windows launcher passes `-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8` like
+the POSIX one, so output through a pipe or a redirect is UTF-8 rather than the
+console code page; a legacy console that shows non-ASCII text garbled needs
+`chcp 65001`. A program that starts `bin\<name>.cmd` passes the launcher path
+and the arguments directly to the system (`subprocess.run([launcher, *args])`,
+`ProcessBuilder`); wrapping them in `cmd /c` with every argument quoted makes
+cmd.exe strip the first and the last quote of the command line, which is
+cmd's own rule, not the launcher's. `java.exe` reads its command line in the
+ANSI code page, so non-ASCII arguments are a Windows limit.
 
 ## The runtime image
 
