@@ -112,9 +112,10 @@ stable for tests and agents.
 
 ## Reading nested data
 
-There is no generic combinator (Sprig has no generic methods and lambdas cannot
-carry checked effects). Arrays return a `List[Reader]` whose elements already
-carry `$.field[index]` paths, so an explicit loop stays short and precise:
+The codec has no generic combinator. You can write one, a generic function that
+takes `fn(codec.Reader) -> T throws Error`, but arrays already return a
+`List[Reader]` whose elements carry `$.field[index]` paths, so an explicit loop
+stays short and precise:
 
 ```sprig
 let root = codec.root(json.parse(text))

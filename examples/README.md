@@ -40,6 +40,9 @@ used by examples are in [`libraries/`](../libraries/).
 - [fabric_waypoints](fabric_waypoints/README.md) — Minecraft mod built from
   the Fabric starter: a waypoint item whose rules, compass text and per-world
   JSON file are Sprig modules tested without Minecraft; Loom builds the jar.
+- [parallel_words](parallel_words/src/main.spr) — word counts in parallel: a
+  scope with one task per text, a pool, a channel, a counter and a lock
+  (`@std/concurrent`).
 - [test_runner](test_runner/README.md) — runtime, table, temporary-file,
   subprocess and expected-diagnostic tests using `sprig test`.
 
