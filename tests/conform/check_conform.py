@@ -522,6 +522,13 @@ child.b()
 }
 
 NEGATIVE = {
+    # A contract (a class whose methods have no body) never conforms: not to a
+    # contract, not to a Java interface, not to a Java class. Before the check
+    # existed, 'conform Runner to Runnable' passed and did nothing.
+    "contract_source_interface": (IMPORTS + "class Runner:\n    func run() -> Unit\n\nconform Runner to Runnable\n",
+                                  "SPR-CONFORM-SOURCE"),
+    "contract_source_class": (IMPORTS + "class Runner:\n    func run() -> Unit\n\nconform Runner to ClassPlain()\n",
+                              "SPR-CONFORM-SOURCE"),
     "class_final": (IMPORTS + "class X:\n    pass\n\nconform X to ClassLocked()\n", "SPR-CONFORM-TARGET"),
     "class_generic": (IMPORTS + "class X:\n    pass\n\nconform X to ClassGeneric()\n", "SPR-CONFORM-TARGET"),
     "class_without_parentheses": (IMPORTS + "class X:\n    let name: String\n    func describe() -> String:\n"
