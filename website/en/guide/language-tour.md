@@ -1,6 +1,6 @@
 # Language quick reference
 
-This page walks through Sprig's syntax from top to bottom. It's meant for people who already know another programming language and want to get going quickly. If Sprig is your first contact with the language, do the [tutorial](/en/tutorial) first and come back here to look things up.
+This page walks through Sprig's syntax from top to bottom. It's meant for people who already know another programming language and want to get going quickly. If Sprig is your first contact with the language, do the [tutorial](/en/tutorial/) first and come back here to look things up.
 
 Every piece of code on this page is a real file under `website/snippets/` in the repository, and the docs check compiles and runs each one. To find out whether a feature is implemented, the [feature status](/en/reference/language/feature-status) page has the final word.
 

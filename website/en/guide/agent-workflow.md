@@ -50,7 +50,7 @@ The error from `sprig check --json` includes these fields (the rest are left out
 
 `expectedType` and `actualType` spell it out: an `Int` is needed here, but a `String` was given. How to fix it depends on what you meant: either change the value to an integer or declare the variable as a `String`. Don't add a conversion just to make the build pass.
 
-The tutorial has several deliberate mistakes like this one, starting with [step 1](/en/tutorial#_1-values-and-types), and the docs check verifies every one of them. The same goes for new Sprig features: add programs that should pass and programs that should be rejected, so the tests prove that the compiler really refuses the wrong code.
+The tutorial has several deliberate mistakes like this one, starting with [chapter 3](/en/tutorial/ch03-values), and the docs check verifies every one of them. The same goes for new Sprig features: add programs that should pass and programs that should be rejected, so the tests prove that the compiler really refuses the wrong code.
 
 ## How well does AI write Sprig?
 

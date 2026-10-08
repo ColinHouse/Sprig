@@ -1,6 +1,6 @@
 # Getting started: install Sprig
 
-This page gets Sprig installed and your first project running. When you're done, continue with the [tutorial](/en/tutorial).
+This page gets Sprig installed and your first project running. When you're done, continue with the [tutorial](/en/tutorial/).
 
 ## Install a JDK first
 

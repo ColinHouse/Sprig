@@ -1,6 +1,6 @@
 # Example programs
 
-Once you've done the [tutorial](/en/tutorial), these fuller programs are a good next step. They all live in the repository's `examples/` directory, and each one's README explains how to run it, what it depends on and what its limits are.
+Once you've done the [tutorial](/en/tutorial/), these fuller programs are a good next step. They all live in the repository's `examples/` directory, and each one's README explains how to run it, what it depends on and what its limits are.
 
 ## Start with small local tools
 

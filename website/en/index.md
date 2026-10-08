@@ -10,7 +10,7 @@ hero:
   actions:
     - theme: brand
       text: Start the tutorial
-      link: /en/tutorial
+      link: /en/tutorial/
     - theme: alt
       text: Install
       link: /en/guide/getting-started
@@ -68,7 +68,7 @@ sprig resolve
 sprig run
 ```
 
-When you see `Hello, Sprig!`, head to the [tutorial](/en/tutorial) and build a small expense tracker in about half an hour.
+When you see `Hello, Sprig!`, head to the [tutorial](/en/tutorial/) and build a small expense tracker in about half an hour.
 
 ## Get involved
 

@@ -56,7 +56,7 @@ SPR-TYPE-NULLABLE [TYPE] unchecked.spr:4:12: Cannot access 'getDayOfWeek' on a v
 
 ## Start here
 
-- [Beginner tutorial](https://colinhouse.github.io/Sprig/en/tutorial)
+- [Beginner tutorial](https://colinhouse.github.io/Sprig/en/tutorial/)
 - [中文教程](https://colinhouse.github.io/Sprig/tutorial)
 - [Try the local Task Tracker](examples/task-tracker/README.md)
 - [Browse application examples](examples/README.md) and [first-party libraries](libraries/README.md)
