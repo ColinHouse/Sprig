@@ -71,8 +71,12 @@
     "book/ch24_ex_label.spr",
     "book/ch24_ex_money.spr",
     "book/ch24_ledger.spr",
+    "book_en/appendix_f_ex_parent.spr",
+    "book_en/appendix_f_functional.spr",
+    "book_en/appendix_f_generic.spr",
     "book_en/ch13_bytes.spr",
     "book_en/ch13_collections.spr",
+    "book_en/ch13_conform_class.spr",
     "book_en/ch13_exceptions.spr",
     "book_en/ch13_java.spr",
     "book_en/ch13_numbers.spr",
@@ -80,6 +84,11 @@
     "book_en/ch14_counter.spr",
     "book_en/ch14_scope.spr",
     "book_en/ch14_tolerate.spr",
+    "book_en/ch24_bad_parse.spr",
+    "book_en/ch24_ex_count.spr",
+    "book_en/ch24_ex_label.spr",
+    "book_en/ch24_ex_money.spr",
+    "book_en/ch24_ledger.spr",
     "callable_throws.spr",
     "classes.spr",
     "collections.spr",
@@ -170,6 +179,8 @@
     "book/ch23_broken.spr",
     "book/ch02_literal_range.spr",
     "book/ch24_divide.spr",
-    "book/ch24_nonexhaustive.spr"
+    "book/ch24_nonexhaustive.spr",
+    "book_en/appendix_f_callable_throws.spr",
+    "book_en/appendix_f_generic_missing.spr"
   ]
 }

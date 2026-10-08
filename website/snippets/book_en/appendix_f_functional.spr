@@ -1,0 +1,11 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.add("ada")
+names.add("bob")
+names.add("cy")
+# removeIf takes a Predicate, replaceAll a UnaryOperator: both functional interfaces.
+names.removeIf(fn(name: String) => name.length() < 3)
+print(names)
+names.replaceAll(fn(name: String) => name.toUpperCase())
+print(names)

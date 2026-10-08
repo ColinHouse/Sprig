@@ -1,0 +1,5 @@
+import java.util.stream.Collectors as Collectors
+
+# toList's return type gets no information from arguments; without [Int] it cannot be called.
+let list = Collectors.toList()
+print(list)

@@ -1,0 +1,14 @@
+import java.util.ArrayList as ArrayList
+import java.util.Collections as Collections
+
+# sort's bound is T extends Comparable<...>; T is inferred from the argument.
+let names = ArrayList[String]()
+names.add("grace")
+names.add("ada")
+Collections.sort(names)
+print(names)
+
+# When no argument can fix T, write the type argument yourself.
+let empty = Collections.emptyList[String]()
+if empty != null:
+    print(empty.size())
