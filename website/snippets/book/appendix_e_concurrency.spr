@@ -1,0 +1,14 @@
+# 没有 async/await：@std/concurrent 用虚拟线程跑普通函数。
+import "@std/concurrent.spr" as concurrent
+
+func double(x: Int) -> Int:
+    return x * 2
+
+let results = concurrent.parallel_map([1, 2, 3], double)
+print(results)
+
+func count(s: concurrent.Scope) -> Int throws Error:
+    let task = concurrent.spawn(s, fn() => 21)
+    return task.await() * 2
+
+print(concurrent.scope(count))
