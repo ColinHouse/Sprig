@@ -1,0 +1,10 @@
+func report() -> Unit:
+    try:
+        print("working")
+        throw Error("boom")
+    catch problem: Error:
+        print("caught: " + problem.message)
+    finally:
+        print("cleanup")
+
+report()

@@ -1,0 +1,9 @@
+func sum_known(values: List[Int?]) -> Int:
+    var total = 0
+    for value in values:
+        if value == null:
+            continue
+        total += value
+    return total
+
+print(sum_known([1, null, 2, null, 3]))

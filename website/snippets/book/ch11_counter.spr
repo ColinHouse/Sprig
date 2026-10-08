@@ -1,0 +1,15 @@
+class Counter:
+    var count: Int = 0
+
+    func bump() -> Unit:
+        count += 1
+
+    func add(amount: Int) -> Unit:
+        count += amount
+
+let counter = Counter()
+print(counter.count)
+counter.bump()
+print(counter.count)
+counter.add(4)
+print(counter.count)

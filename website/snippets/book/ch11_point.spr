@@ -1,0 +1,7 @@
+class Point:
+    let x: Int
+    let y: Int
+
+let start = Point(x=3, y=4)
+print(start)
+print(start.x + start.y)

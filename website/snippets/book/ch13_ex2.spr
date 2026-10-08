@@ -1,0 +1,5 @@
+import "@std/nulls.spr" as nulls
+
+let ages: Map[String, Int] = {"Ada": 36}
+print(nulls.or_else(ages["Ada"], 0))
+print(nulls.or_else(ages["Bo"], 0))

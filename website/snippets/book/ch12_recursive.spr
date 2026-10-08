@@ -1,0 +1,17 @@
+variant Expr:
+    Num(value: Int)
+    Add(left: Expr, right: Expr)
+    Neg(value: Expr)
+
+func eval(expr: Expr) -> Int:
+    match expr:
+        case Expr.Num as n:
+            return n.value
+        case Expr.Add as a:
+            return eval(a.left) + eval(a.right)
+        case Expr.Neg as n:
+            return -eval(n.value)
+
+let tree: Expr = Expr.Add(left=Expr.Num(value=2), right=Expr.Neg(value=Expr.Num(value=3)))
+print(eval(tree))
+print(eval(Expr.Num(value=7)))

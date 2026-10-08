@@ -1,0 +1,11 @@
+import "@std/nulls.spr" as nulls
+
+let stock: Map[String, Int] = {"tea": 12}
+print(nulls.or_else(stock["tea"], 0))
+print(nulls.or_else(stock["milk"], 0))
+
+func fallback() -> Int:
+    print("computing the fallback")
+    return -1
+
+print(nulls.or_else(5, fallback()))

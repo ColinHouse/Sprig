@@ -1,0 +1,11 @@
+func first_long(words: List[String], min: Int) -> String?:
+    for word in words:
+        if word.length() >= min:
+            return word
+    return null
+
+let found = first_long(["a", "hello", "hi"], 3)
+if found != null:
+    print(found)
+else:
+    print("none")

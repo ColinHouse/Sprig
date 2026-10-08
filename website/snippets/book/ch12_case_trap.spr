@@ -1,0 +1,13 @@
+variant Shape:
+    Circle(radius: Float)
+    Dot
+
+var v = Shape.Dot
+v = Shape.Circle(radius=1.0)
+
+let s = Shape.Circle(radius=1.0)
+match s:
+    case Shape.Circle as c:
+        print(c.radius)
+    case Shape.Dot:
+        print("dot")
