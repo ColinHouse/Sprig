@@ -1,0 +1,36 @@
+# A top-level try sees the default effects of the classes it constructs, and an
+# unannotated binding keeps the throws clause of the callback inferred for it:
+# binding inference happens again once the default effects are known.
+import java.io.IOException as IOException
+
+func risky() -> Int throws IOException:
+    throw IOException("boom")
+
+class Checked:
+    let value: Int = risky()
+
+try:
+    let checked = Checked()
+    print("made " + checked.value)
+catch error: IOException:
+    print("caught io")
+
+func boom() -> Int throws Error:
+    throw Error("boom")
+
+class Example:
+    let value: Int = boom()
+
+let action = fn() => Example()
+try:
+    print(action())
+catch error: Error:
+    print("caught error")
+
+# The same for a callback binding local to a top-level branch.
+if true:
+    let branch_action = fn() => Example()
+    try:
+        print(branch_action())
+    catch error: Error:
+        print("caught branch")

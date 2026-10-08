@@ -17,6 +17,7 @@ CASES = {
     "function_map_key_written.spr": [("SPR-TYPE-OPERAND", 2)],
     "function_map_key_inferred.spr": [("SPR-TYPE-OPERAND", 2)],
     "function_map_key_generic.spr": [("SPR-TYPE-OPERAND", 3)],
+    "nullable_generic_equatable.spr": [("SPR-GENERIC-CONSTRAINT", 8)],
 }
 
 

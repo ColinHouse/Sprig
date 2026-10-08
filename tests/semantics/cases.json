@@ -937,5 +937,11 @@
     "expected_diagnostic": "SPR-TYPE-OPERAND",
     "status": "implemented",
     "source": "#222: a function value cannot reach a Map key through generic code such as sets.of"
+  },
+  {
+    "file": "nullable_generic_equatable.spr",
+    "expected_diagnostic": "SPR-GENERIC-CONSTRAINT",
+    "status": "implemented",
+    "source": "#226 review: a nullable type argument is Equatable through its base, so U? needs the same requires U does"
   }
 ]

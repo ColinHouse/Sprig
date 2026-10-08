@@ -1,0 +1,17 @@
+# A nullable type argument for requires T: Equatable is Equatable through its
+# base: forwarding U? where U is Equatable keeps null-safe value equality.
+generic T:
+    func same(a: T, b: T) -> Bool:
+        requires T: Equatable
+        return a == b
+
+generic U:
+    func forwarded(a: U?, b: U?) -> Bool:
+        requires U: Equatable
+        return same[U?](a, b)
+
+print(forwarded[Int](null, null))
+print(forwarded[Int](1, null))
+print(forwarded[Int](2, 2))
+print(forwarded[String]("a", "a"))
+print(forwarded[Bool](true, false))
