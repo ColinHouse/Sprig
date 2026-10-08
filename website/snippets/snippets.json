@@ -47,6 +47,13 @@
     "book/ch14_counter.spr",
     "book/ch14_scope.spr",
     "book/ch14_tolerate.spr",
+    "book/ch21_ex_builder.spr",
+    "book/ch21_ex_catch.spr",
+    "book/ch21_ex_hashmap.spr",
+    "book/ch21_ex_sort.spr",
+    "book/ch21_ex_sqrt.spr",
+    "book/ch21_first_java.spr",
+    "book/ch21_null_check.spr",
     "callable_throws.spr",
     "classes.spr",
     "collections.spr",
@@ -129,6 +136,9 @@
     "book/ch13_for_java_list.spr",
     "book/ch13_collection_mismatch.spr",
     "book/ch13_conform_shape.spr",
+    "book/ch21_checked.spr",
+    "book/ch21_lambda_types.spr",
+    "book/ch21_no_import.spr",
     "book/ch02_literal_range.spr"
   ]
 }

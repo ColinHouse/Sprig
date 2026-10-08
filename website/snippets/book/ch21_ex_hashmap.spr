@@ -1,0 +1,9 @@
+import java.util.HashMap as HashMap
+
+let ages = HashMap[String, Int]()
+ages.put("Ada", 36)
+ages.put("Grace", 45)
+print(ages.size())
+let ada = ages.get("Ada")
+if ada != null:
+    print(ada)
