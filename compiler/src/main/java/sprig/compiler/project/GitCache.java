@@ -262,6 +262,15 @@ public final class GitCache {
                     bare.toString(), tempCheckout.toString()), null) != 0) {
                 throw new DepError(Codes.DEP_GIT, "git checkout failed for " + redact(url), null);
             }
+            // A checkout holds the commit's blobs byte for byte, which is what
+            // validCheckout verifies. The dependency's own .gitattributes would
+            // otherwise convert files on the way out: the Sprig repository asks
+            // for CRLF in .bat files, so every checkout of it failed verification.
+            // info/attributes takes precedence over .gitattributes and turns off
+            // line-ending conversion, keyword expansion, filters and re-encoding.
+            Path attributes = tempCheckout.resolve(".git").resolve("info").resolve("attributes");
+            Files.createDirectories(attributes.getParent());
+            Files.writeString(attributes, "* -text -ident -filter -working-tree-encoding\n");
             if (run(List.of("-C", tempCheckout.toString(), "checkout", "--quiet", "--detach", revision),
                     null) != 0) {
                 throw new DepError(Codes.DEP_GIT, "git checkout failed for revision " + revision, null);
