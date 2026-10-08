@@ -2,7 +2,7 @@
   "name": "sprig-language",
   "displayName": "Sprig",
   "description": "Sprig language support through the Sprig language server: diagnostics as you type, hover, completion, navigation, references, rename, formatting, tests, Run and generated Java.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "ColinHouse",
   "license": "Apache-2.0",
   "preview": true,

@@ -28,10 +28,10 @@ npm ci
 npm run package
 ```
 
-That creates `dist/sprig-language-0.3.0.vsix`. In VS Code's Extensions view, choose `…` → **Install from VSIX…** and pick it, or run:
+That creates `dist/sprig-language-0.3.1.vsix`. In VS Code's Extensions view, choose `…` → **Install from VSIX…** and pick it, or run:
 
 ```sh
-code --install-extension dist/sprig-language-0.3.0.vsix
+code --install-extension dist/sprig-language-0.3.1.vsix
 ```
 
 Highlighting, the outline and snippets work right away, without Java or the compiler.
@@ -58,7 +58,7 @@ The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the ex
 
 In both cases, hovering over a keyword shows its `sprig help` text, **Go to Symbol in Workspace** searches all your files, and clicking an error code opens the diagnostic code reference. For snippets, type a prefix such as `func`, `class`, `variant`, `match`, `ifnn`, `try` or `importj` and press Tab.
 
-These new capabilities come from the updated compiler; extension 0.3.0 registers them automatically without a new extension release. Nested calls and commas inside strings do not advance the outer call's active parameter; named constructor fields can be written out of order. Java parameter names missing from bytecode use `arg0`, `arg1`, etc. Java candidates are not ranked by argument types, and Sprig generics display their written type parameters; built-in functions and native string/collection methods have no parameter signatures yet. Unrelated syntax errors can still prevent a hint. Syntax or name-resolution failures clear semantic tokens and leave lexical highlighting available.
+These new capabilities come from the updated compiler; extension 0.3.1 ships with it and registers them automatically. Nested calls and commas inside strings do not advance the outer call's active parameter; named constructor fields can be written out of order. Java parameter names missing from bytecode use `arg0`, `arg1`, etc. Java candidates are not ranked by argument types, and Sprig generics display their written type parameters; built-in functions and native string/collection methods have no parameter signatures yet. Unrelated syntax errors can still prevent a hint. Syntax or name-resolution failures clear semantic tokens and leave lexical highlighting available.
 
 ## Commands
 
