@@ -98,7 +98,8 @@ print(log_all(["a", "b"], Console()))
   so there is no retroactive conformance for an imported or dependency class
   (`SPR-CONFORM-SOURCE`; wrap it in a local class that forwards), and
   conformance is always declared: a class with the right methods is not a
-  `Sink` until it says so (`SPR-TYPE-MISMATCH` names the missing `conform`).
+  `Sink` until it says so (`SPR-TYPE-MISMATCH` as an argument, with a hint
+  that names the missing `conform`; `SPR-TYPE-ASSIGN` in a `let` initializer).
 - Three rules hold for the 0.8 language. They are decisions, not gaps, and
   each rejection names the alternative:
   - **A contract is never generic.** `Repository[T]` inside a `generic` block

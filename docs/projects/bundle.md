@@ -64,8 +64,10 @@ ANSI code page, so non-ASCII arguments are a Windows limit.
 3. The launcher adds `-XX:+AutoCreateSharedArchive
    -XX:SharedArchiveFile=<cache>/app.jsa` (JDK 19+) so the program's own classes
    are archived on the first run and mapped on the next ones. The archive lives
-   under the user's cache directory (`$XDG_CACHE_HOME` or `~/.cache/sprig/bundles/`,
-   `%LOCALAPPDATA%\sprig\bundles\` on Windows), keyed by the bundle's location,
+   under `sprig/bundles/` in the user's cache directory
+   (`$XDG_CACHE_HOME/sprig/bundles/`, or `~/.cache/sprig/bundles/` when
+   `XDG_CACHE_HOME` is unset, also on macOS; `%LOCALAPPDATA%\sprig\bundles\` on
+   Windows), keyed by the bundle's location,
    so copies of a bundle do not share one; without a writable cache the program
    runs without an archive. In that mode the JVM reports only errors, on
    standard error, and none about class-data sharing, so a missing or stale

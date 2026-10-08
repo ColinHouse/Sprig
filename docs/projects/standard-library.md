@@ -39,7 +39,7 @@ directory, with or without a project.
 | `dates` | ISO dates as text: `today_utc`, `parse`, `is_valid`, `plus_days`, `days_between`, `day_of_week`, `year`, `month`, `day` |
 | `nulls` | `or_else[T](T?, T) -> T`, `require[T](T?, String) -> T throws Error` |
 | `time` | `epoch_millis() -> Int`, `utc_now() -> String`, `format_utc(Int) -> String`, `parse_utc(String) -> Int`; `sleep(Int)`, `monotonic_nanos() -> Int` |
-| `json_codec` | typed field access over `json`: `root`, `root_array`, `required_*`, `optional_*`, `field`, `reject_unknown_fields`; builders `object`, `member`, `array`, `text`, `int`, `bool` |
+| `json_codec` | typed field access over `json`: `root`, `root_array`, `required_*`, `optional_*`, `field`, `reject_unknown_fields`; element readers `as_object`, `as_array`, `as_string`, `as_bool`, `as_int`, `as_decimal`, `as_number_text`, `as_value`; builders `object`, `member`, `array`, `string_array`, `text`, `int`, `bool`, `number` |
 | `json` | `parse(String) -> Value`, `stringify(Value) -> String`, `quote(String)`, `find_member(Value, String) -> Lookup` |
 | `test` | `check(name, body)`, `check_error[T](name, body)`, `finish()`; `equal_int`, `equal_bool`, `equal_text`, `equal[T]`; `temp_dir() -> String throws Error`; `run_process` is `process.run` under its earlier name |
 
@@ -348,8 +348,9 @@ when `counts` holds `Int` values.
   value is `null`. The fallback is an ordinary argument, so it is evaluated
   even when it is not used.
 - `require[T](value, message)` returns the value, or throws `Error(message)`
-  when it is `null`. An uncaught error is reported at the `throw` inside
-  `nulls.spr`, so the message should say which value was missing.
+  when it is `null`. An uncaught error is reported on your line that called
+  `require`, so the message should still say which value was missing: the line
+  alone does not tell a reader which of several `require` calls failed.
 
 The type argument must not be nullable itself: a written `or_else[String?]` is
 rejected with `SPR-TYPE-GENERIC-NULLABLE`, and an inferred one never is, because

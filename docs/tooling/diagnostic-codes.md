@@ -128,8 +128,10 @@ same zero-based positions as `range`, a zero-length range for an insertion,
 and `newText` replacing exactly that range. Applying an edit moves the program
 past the diagnostic; whether it is what the author meant (adding `throws Error`
 to a function, say) is still theirs to judge. Edits exist today for a missing
-`@std` import, an undeclared `throws`, positional constructor arguments and
-`else if`. In an editor, `sprig lsp` offers the same edits as quick fixes; see
+`@std` import, an undeclared `throws`, positional constructor arguments,
+`else if`, and the removed conversions `Int.toFloat()` and `Float.toInt()`
+(rewritten to `toFloatExact()` and `toIntExact()`). In an editor, `sprig lsp`
+offers the same edits as quick fixes; see
 [language server](lsp.md#quick-fixes).
 
 `machineApplicable` is true only for a correction that is semantics-preserving

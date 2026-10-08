@@ -19,8 +19,9 @@ metadata are the adapters the generator emits.
 
 ## Generated shape
 
-- A Sprig class holding the raw host reference: `class Client:` with
-  `let host: HostClient`.
+- A Sprig class holding the raw host reference: the Java class is imported as
+  `Host` (`Host2` if that name is taken), and `class Client:` holds it in
+  `let host: Host`.
 - Constructors become free functions (`client_new`, with parameter-type
   suffixes when overloaded).
 - Static methods and fields become free functions; instance methods and

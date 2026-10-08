@@ -111,8 +111,10 @@ runtime error. Decimal addition, subtraction and multiplication are exact.
 
 Ordering as a value: `a.compareTo(b)` is defined on `Int`, `Int32`, `Float`,
 `Float32`, `Decimal` and `BigInt` (as on `String`). The argument has the
-receiver's own type, with no implicit conversion (`SPR-NUM-CONVERSION` or
-`SPR-NUM-MIXED` otherwise), and the result is `Int32`: negative, zero or
+receiver's type: an `Int32` argument widens to an `Int` receiver and a
+`Float32` to a `Float`, exactly as for any parameter, and anything that would
+narrow or change family is rejected (`SPR-NUM-CONVERSION` or
+`SPR-NUM-MIXED`). The result is `Int32`: negative, zero or
 positive, so `fn(a: Int, b: Int) => a.compareTo(b)` is a Java `Comparator`.
 `Int`, `Int32`, `Float` and `Float32` use the JDK's `compare` (for `Float`,
 `-0.0 < 0.0` and `NaN` sorts last, as `Double.compare` does); `Decimal` and
@@ -180,8 +182,8 @@ narrowing are ambiguous. `Int` never narrows to `short`/`byte`, and `Float`
 never narrows to `float`, which would lose precision rather than range; those
 conversions stay explicit. Primitive Java results are non-null; reference and boxed
 primitive fields/results are nullable in Sprig and require a null check before
-dereference, unless a nullability annotation visible at run time declares the
-result non-null; a parameter annotated nullable accepts `T?` (see
+dereference, unless a nullability annotation, whether kept at run time or only
+in the class file, declares the result non-null; a parameter annotated nullable accepts `T?` (see
 `docs/jvm/interop.md`). Other Java parameter annotations are not interpreted. JVM calls
 are still direct Java calls: Java library arithmetic, unchecked exceptions,
 null returns, boxed generic collections, and arrays do not inherit Sprig's
