@@ -76,6 +76,8 @@
     "book/ch17_float_helpers.spr",
     "book/ch17_math.spr",
     "book/ch17_math_errors.spr",
+    "book_en/ch02_decimal.spr",
+    "book_en/ch02_int32_float32.spr",
     "callable_throws.spr",
     "classes.spr",
     "collections.spr",
