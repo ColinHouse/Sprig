@@ -1,0 +1,19 @@
+func parse(text: String) -> Int throws Error:
+    let value = text.toIntOrNull()
+    if value == null:
+        throw Error("not a number: " + text)
+    return value
+
+func load(text: String) -> Int throws Error:
+    try:
+        return parse(text)
+    catch problem: Error:
+        throw Error("cannot load amount: " + problem.message)
+
+try:
+    print(load("12"))
+    print(load("abc"))
+catch problem: Error:
+    print("failed: " + problem.message)
+finally:
+    print("done")

@@ -63,9 +63,17 @@
     "book/ch13_wildcards.spr",
     "book/ch14_channel.spr",
     "book/ch14_counter.spr",
+    "book/ch14_error_field.spr",
+    "book/ch14_ex1.spr",
+    "book/ch14_ex2.spr",
+    "book/ch14_ex3.spr",
+    "book/ch14_ex4.spr",
+    "book/ch14_ex5.spr",
+    "book/ch14_rethrow.spr",
     "book/ch14_scope.spr",
     "book/ch14_tolerate.spr",
     "book_en/ch08_narrowing.spr",
+    "book_en/ch09_error_classes.spr",
     "callable_throws.spr",
     "classes.spr",
     "collections.spr",
@@ -153,6 +161,7 @@
     "book/ch13_for_java_list.spr",
     "book/ch13_collection_mismatch.spr",
     "book/ch13_conform_shape.spr",
+    "book/ch14_bad_message.spr",
     "book/ch02_literal_range.spr"
   ]
 }
