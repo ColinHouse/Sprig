@@ -8,9 +8,13 @@ import java.util.List;
 public final class Diagnostics {
     private final List<Diagnostic> items = new ArrayList<>();
     private int errorCount;
+    private int errorReports;
     private int blockingErrorCount;
 
     public void add(Diagnostic diagnostic) {
+        if (diagnostic.isError()) {
+            errorReports++;
+        }
         // A phase may check one expression twice, such as a top-level
         // initializer that is typed once to establish the binding's type and
         // once more in statement order. The same report twice says nothing new.
@@ -55,6 +59,16 @@ public final class Diagnostics {
 
     public int errorCount() {
         return errorCount;
+    }
+
+    /**
+     * Every error report, duplicates included. {@link #errorCount()} counts the
+     * errors kept; a caller that only asks whether an error was reported (a
+     * failed inference must not stay silent when its own pass drops a repeat)
+     * uses this mark instead.
+     */
+    public int errorReportCount() {
+        return errorReports;
     }
 
     public List<Diagnostic> all() {

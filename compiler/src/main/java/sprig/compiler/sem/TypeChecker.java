@@ -231,9 +231,14 @@ public final class TypeChecker {
         }
         // An initializer that fails gives its binding the error type, which is
         // silent afterwards, so the rest of the module is still checked and
-        // reports its own errors in the same round. The statement-order check of
-        // the same initializer repeats its reports, which the sink drops.
-        for (Symbol symbol : inference.globalInitializers.keySet()) inference.inferGlobal(symbol);
+        // reports its own errors in the same round. The statements are checked
+        // here in source order with the same early-exit narrowing as the real
+        // pass, so an unannotated global after `if d == null: throw` infers the
+        // narrowed type too. The statement-order check below repeats the same
+        // reports, which the sink drops.
+        inference.narrowing.push(new HashMap<>());
+        inference.checkSequence(module.topStatements);
+        inference.narrowing.pop();
         prepareDefaultEffects();
         for (Decl decl : module.decls) {
             if (decl instanceof Decl.ClassDecl classDecl) {
@@ -3028,10 +3033,10 @@ public final class TypeChecker {
             @Override
             public Type typeOf(Expr part) {
                 if (part == current[0] && !takesExpectedType(part)) {
-                    int before = diagnostics.errorCount();
+                    int before = diagnostics.errorReportCount();
                     Type type = checkExpr(part, null);
                     inference.checked.put(part, type);
-                    if (diagnostics.errorCount() != before) {
+                    if (diagnostics.errorReportCount() != before) {
                         inference.broken.add(part);
                         return null;
                     }
@@ -3146,7 +3151,7 @@ public final class TypeChecker {
         if (probing == 0) {
             return false;
         }
-        if (!inference.valid && diagnostics.errorCount() == errorsBefore) {
+        if (!inference.valid && diagnostics.errorReportCount() == errorsBefore) {
             diagnostics.add(Diagnostic.error(Codes.GENERIC_ARGS_REQUIRED, Phase.TYPE,
                     "Cannot infer type arguments", module.uri, span));
         }
@@ -3155,7 +3160,7 @@ public final class TypeChecker {
 
     /** A generic function called without type arguments: lists.sorted(names). */
     private Type inferFunctionCall(Decl.Func func, Symbol symbol, Expr.Call call, ResolvedCall.Kind kind) {
-        int errors = diagnostics.errorCount();
+        int errors = diagnostics.errorReportCount();
         List<GenericSlot> slots = new ArrayList<>();
         int count = Math.min(call.args.size(), func.params.size());
         for (int i = 0; i < count; i++) {
@@ -3189,7 +3194,7 @@ public final class TypeChecker {
 
     /** A generic class constructed without type arguments: Box(value=42). */
     private Type inferClassConstruction(Decl.ClassDecl decl, Symbol symbol, Expr.Call call) {
-        int errors = diagnostics.errorCount();
+        int errors = diagnostics.errorReportCount();
         List<GenericSlot> slots = new ArrayList<>();
         Set<String> given = new HashSet<>();
         // Positional, unknown or missing fields explain a missing type argument themselves.
@@ -3239,7 +3244,7 @@ public final class TypeChecker {
     /** A case of a generic variant constructed without type arguments: Option.Some(value=1). */
     private Type inferVariantConstruction(Decl.VariantDecl decl, Decl.VariantCase variantCase,
                                           Expr.FieldAccess access, Expr.Call call) {
-        int errors = diagnostics.errorCount();
+        int errors = diagnostics.errorReportCount();
         if (access.receiver instanceof Expr.FieldAccess qualifier) {
             resolveFieldAccess(qualifier, false); // module.Variant: recorded for tooling, like any member
         }
@@ -3354,7 +3359,7 @@ public final class TypeChecker {
      * was reported before the call.
      */
     private void requireAnError(Inference inference, int errorsBefore, String name, String form, Span span) {
-        if (inference.valid || inference.rejected || diagnostics.errorCount() != errorsBefore) {
+        if (inference.valid || inference.rejected || diagnostics.errorReportCount() != errorsBefore) {
             return;
         }
         if (!inference.solution.blocked.isEmpty() && errorsBefore > 0) {
