@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "sprig_waypoints",
+  "version": "${version}",
+  "name": "Sprig Waypoints",
+  "description": "A Waypoint Marker item: use it to save the spot you stand on under the marker's anvil name, sneak and use it to list the world's waypoints with distance and direction. Written in Sprig.",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.sprig.waypoints.SprigWaypoints"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

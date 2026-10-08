@@ -1,0 +1,19 @@
+pluginManagement {
+    def selectedHome = providers.gradleProperty('sprigHome')
+            .orElse(providers.environmentVariable('SPRIG_HOME')).getOrNull()
+    if (!selectedHome) {
+        throw new GradleException('Set SPRIG_HOME to the Sprig SDK root (or a built checkout) or pass -PsprigHome=<path>.')
+    }
+    def pluginBuild = new File(selectedHome, 'libraries/sprig-gradle')
+    if (!new File(pluginBuild, 'settings.gradle').isFile()) {
+        throw new GradleException("No bundled dev.sprig Gradle plugin found under ${selectedHome}; use a complete Sprig SDK.")
+    }
+    includeBuild(pluginBuild)
+    repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'sprig-waypoints'

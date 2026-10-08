@@ -37,6 +37,9 @@ used by examples are in [`libraries/`](../libraries/).
   (`sprig-cli`, `@std/json_codec`).
 - [crawler](crawler/README.md) — concurrent crawler over local pages with
   scopes, tasks, a channel, a counter and a lock (`@std/concurrent`).
+- [fabric_waypoints](fabric_waypoints/README.md) — Minecraft mod built from
+  the Fabric starter: a waypoint item whose rules, compass text and per-world
+  JSON file are Sprig modules tested without Minecraft; Loom builds the jar.
 - [test_runner](test_runner/README.md) — runtime, table, temporary-file,
   subprocess and expected-diagnostic tests using `sprig test`.
 

@@ -1,0 +1,45 @@
+import "@std/test.spr" as test
+import "@std/nulls.spr" as nulls
+import "../src/waypoints.spr" as waypoints
+
+func at(x: Int, y: Int, z: Int) -> waypoints.Position:
+    return waypoints.Position(dimension="minecraft:overworld", x=x, y=y, z=z)
+
+func names(list: List[waypoints.Waypoint]) -> List[String]:
+    return list.map(fn(waypoint: waypoints.Waypoint) => waypoint.name)
+
+func naming() -> Unit throws Error:
+    test.equal_text(nulls.or_else(waypoints.clean_name("  Home  "), ""), "Home", "trimmed")
+    assert(waypoints.clean_name("   ") == null, "blank is no name")
+    assert(waypoints.clean_name(null) == null, "missing is no name")
+    var list: List[waypoints.Waypoint] = []
+    list = waypoints.record(list, null, at(0, 64, 0)).waypoints
+    list = waypoints.record(list, "", at(5, 64, 5)).waypoints
+    test.equal(names(list), ["Waypoint 1", "Waypoint 2"], "automatic names count up")
+    list = waypoints.record(list, "waypoint 1", at(9, 9, 9)).waypoints
+    list = waypoints.record(list, null, at(1, 1, 1)).waypoints
+    test.equal(names(list), ["waypoint 1", "Waypoint 2", "Waypoint 3"], "a taken number is skipped")
+
+func adds_and_moves() -> Unit throws Error:
+    let first = waypoints.record([], "Home", at(10, 64, -20))
+    test.equal_bool(waypoints.changed(first.outcome), true, "added")
+    test.equal_text(waypoints.outcome_line(first.outcome), "Saved Home at 10, 64, -20 (overworld).", "added line")
+    let second = waypoints.record(first.waypoints, "Mine", waypoints.Position(dimension="minecraft:the_nether", x=1, y=2, z=3))
+    test.equal_text(waypoints.outcome_line(second.outcome), "Saved Mine at 1, 2, 3 (the_nether).", "other dimension")
+    let moved = waypoints.record(second.waypoints, "  HOME ", at(11, 70, -25))
+    test.equal_text(waypoints.outcome_line(moved.outcome), "Moved HOME to 11, 70, -25 (overworld).", "duplicate name moves")
+    test.equal(names(moved.waypoints), ["HOME", "Mine"], "moved in place, new spelling")
+    test.equal_int(moved.waypoints[0].at.x, 11, "new position")
+    let again = waypoints.record(moved.waypoints, "home", at(11, 70, -25))
+    test.equal_bool(waypoints.changed(again.outcome), false, "same spot")
+    test.equal_text(waypoints.outcome_line(again.outcome), "HOME is already saved here.", "unchanged line")
+    test.equal_int(again.waypoints.size(), 2, "nothing added")
+
+func modded_dimension() -> Unit throws Error:
+    test.equal_text(waypoints.dimension_name("minecraft:the_end"), "the_end", "vanilla prefix dropped")
+    test.equal_text(waypoints.dimension_name("othermod:moon"), "othermod:moon", "modded namespace kept")
+
+test.check("names markers and numbers unnamed ones", naming)
+test.check("adds new names and moves existing ones", adds_and_moves)
+test.check("shortens vanilla dimension ids only", modded_dimension)
+test.finish()

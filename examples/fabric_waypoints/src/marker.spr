@@ -1,0 +1,19 @@
+# What using the Waypoint Marker does, given the world's waypoint file and
+# the player's position. main.spr gets both from Minecraft and shows the
+# returned lines in chat; the tests pass a temporary file instead.
+import "./waypoints.spr" as waypoints
+import "./compass.spr" as compass
+import "./store.spr" as store
+
+# Use: save the spot under the marker's name, or move the waypoint that has
+# that name. The file is read before anything is written, so a file that
+# cannot be read stops the action and stays untouched.
+func record_at(file: String, name: String?, at: waypoints.Position) -> List[String] throws Error:
+    let recorded = waypoints.record(store.load(file), name, at)
+    if waypoints.changed(recorded.outcome):
+        store.save(file, recorded.waypoints)
+    return [waypoints.outcome_line(recorded.outcome)]
+
+# Sneak + use: the world's waypoints, nearest first (compass.report).
+func list_from(file: String, at: waypoints.Position) -> List[String] throws Error:
+    return compass.report(store.load(file), at)

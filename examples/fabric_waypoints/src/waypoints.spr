@@ -1,0 +1,101 @@
+# The waypoints of one world and the rules for saving them. No Minecraft
+# types: a position is a dimension id such as "minecraft:overworld" and a
+# block's x, y and z, so the rules run (and are tested) without the game.
+import "@std/lists.spr" as lists
+
+class Position(dimension: String, x: Int, y: Int, z: Int)
+
+class Waypoint(name: String, at: Position)
+
+# What saving a position did, for the chat line and for deciding whether the
+# file needs writing.
+variant Outcome:
+    Added(waypoint: Waypoint)
+    Moved(waypoint: Waypoint)
+    Unchanged(waypoint: Waypoint)
+
+# The list after saving, and what happened.
+class Recorded(waypoints: List[Waypoint], outcome: Outcome)
+
+# The marker's anvil name without surrounding spaces, or null when it has no
+# name or only spaces; record then picks the next free "Waypoint N".
+func clean_name(raw: String?) -> String?:
+    if raw == null:
+        return null
+    let trimmed = raw.trim()
+    if trimmed.length() == 0:
+        return null
+    return trimmed
+
+# Names match whatever their case, so a marker named "home" moves "Home".
+func same_name(left: String, right: String) -> Bool:
+    return left.toLowerCase() == right.toLowerCase()
+
+func find(list: List[Waypoint], name: String) -> Waypoint?:
+    return lists.find(list, fn(waypoint: Waypoint) => same_name(waypoint.name, name))
+
+# "Waypoint 1", "Waypoint 2", ...: the lowest number no waypoint uses yet.
+func next_free_name(list: List[Waypoint]) -> String:
+    var number = 1
+    while find(list, "Waypoint " + number) != null:
+        number += 1
+    return "Waypoint " + number
+
+func same_place(left: Position, right: Position) -> Bool:
+    return left.dimension == right.dimension and left.x == right.x and left.y == right.y and left.z == right.z
+
+# Saves the position under the name, or under the next free "Waypoint N"
+# when the marker has no name. A waypoint that already has the name (in any
+# case) moves instead and keeps its place in the list; saving the same spot
+# again changes nothing.
+func record(list: List[Waypoint], name: String?, at: Position) -> Recorded:
+    let cleaned = clean_name(name)
+    let chosen = if cleaned == null:
+        next_free_name(list)
+    else:
+        cleaned
+    let existing = find(list, chosen)
+    if existing == null:
+        let added = Waypoint(name=chosen, at=at)
+        let grown = list.toMutableList()
+        grown.append(added)
+        return Recorded(waypoints=grown.toList(), outcome=Outcome.Added(waypoint=added))
+    if same_place(existing.at, at):
+        return Recorded(waypoints=list, outcome=Outcome.Unchanged(waypoint=existing))
+    let moved = Waypoint(name=chosen, at=at)
+    let updated: MutableList[Waypoint] = []
+    for waypoint in list:
+        if same_name(waypoint.name, chosen):
+            updated.append(moved)
+        else:
+            updated.append(waypoint)
+    return Recorded(waypoints=updated.toList(), outcome=Outcome.Moved(waypoint=moved))
+
+# Whether the outcome changed the list, so the file must be written.
+func changed(outcome: Outcome) -> Bool:
+    return match outcome:
+        case Outcome.Added:
+            true
+        case Outcome.Moved:
+            true
+        case Outcome.Unchanged:
+            false
+
+# "overworld" for "minecraft:overworld"; a modded dimension keeps its namespace.
+func dimension_name(dimension: String) -> String:
+    if dimension.startsWith("minecraft:"):
+        return dimension.substring("minecraft:".length())
+    return dimension
+
+func coordinates(at: Position) -> String:
+    return at.x + ", " + at.y + ", " + at.z + " (" + dimension_name(at.dimension) + ")"
+
+# The chat line for the outcome of a save.
+func outcome_line(outcome: Outcome) -> String:
+    return match outcome:
+        case Outcome.Added as added:
+            "Saved " + added.waypoint.name + " at " + coordinates(added.waypoint.at) + "."
+        case Outcome.Moved as moved:
+            "Moved " + moved.waypoint.name + " to " + coordinates(moved.waypoint.at) + "."
+        case Outcome.Unchanged as same:
+            same.waypoint.name + " is already saved here."
