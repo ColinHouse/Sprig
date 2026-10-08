@@ -1,0 +1,10 @@
+import "@std/math.spr" as math
+
+try:
+    print(math.isqrt(-1))
+catch problem: Error:
+    print("caught: " + problem.message)
+try:
+    print(math.clamp(5, 10, 0))
+catch problem: Error:
+    print("caught: " + problem.message)

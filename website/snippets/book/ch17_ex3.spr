@@ -1,0 +1,4 @@
+import "@std/math.spr" as math
+
+print(math.isqrt(50))
+print(math.clamp(12, 0, 10))

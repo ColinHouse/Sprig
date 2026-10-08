@@ -1,0 +1,2 @@
+caught: isqrt input must not be negative
+caught: clamp lower bound must not exceed upper bound

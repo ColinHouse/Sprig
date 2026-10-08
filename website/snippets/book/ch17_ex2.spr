@@ -1,0 +1,4 @@
+import "@std/math.spr" as math
+
+print((-7).divTrunc(2))
+print(math.floor_div(-7, 2))
