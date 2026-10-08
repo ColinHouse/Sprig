@@ -1,0 +1,8 @@
+enum Direction:
+    North
+    South
+
+func name(d: Direction) -> String:
+    match d:
+        case _:
+            return "somewhere"
