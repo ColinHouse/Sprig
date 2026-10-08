@@ -102,6 +102,19 @@ public final class Project {
     private Project(Path root, Path manifest, Toml toml) {
         this.root = root;
         this.manifest = manifest;
+        // The TOML reader is shared with registry index entries, so it also
+        // accepts that vocabulary; a manifest takes only its own tables.
+        for (String table : toml.tableNames()) {
+            if (!table.equals("project")) {
+                throw new Toml.TomlException(unknownManifestTable(table), toml.tableLine(table, ""));
+            }
+        }
+        for (String table : toml.tableArrays().keySet()) {
+            if (!Set.of("bin", "dependency", "jvm", "registry").contains(table)) {
+                throw new Toml.TomlException(unknownManifestTable(table),
+                        toml.entryLine(table, 0, ""));
+            }
+        }
         Map<String, String> project = toml.table("project");
         String declaredName = project.get("name");
         if (declaredName == null || declaredName.isBlank()) {
@@ -241,6 +254,20 @@ public final class Project {
                     entry.getOrDefault("branch", "main"), subdir));
         }
         this.registries = List.copyOf(sources);
+    }
+
+    /** One message for a table a manifest does not take, naming where it belongs. */
+    private static String unknownManifestTable(String table) {
+        if (table.equals("package") || table.equals("release")) {
+            return "Unknown table '" + table + "' in sprig.toml: [package] and [[release]] belong to a "
+                    + "registry index entry (packages/NAME.toml), not to a project manifest";
+        }
+        if (table.equals("registry")) {
+            return "Unknown table 'registry' in sprig.toml: write [[registry]], not [registry]; "
+                    + "[registry] names a registry index file";
+        }
+        return "Unknown table '" + table + "' in sprig.toml; only [project], [[bin]], [[dependency]], "
+                + "[[jvm]] and [[registry]] are accepted";
     }
 
     private static void validatePath(String text, String field, int line) {

@@ -176,6 +176,28 @@ def main():
               and "SPR-PROJECT-MANIFEST" in broken.stderr + broken.stdout,
               broken.stdout + broken.stderr)
 
+        # The TOML reader also serves registry index entries; a manifest that
+        # uses that vocabulary ([package], [[release]], a [registry] singleton)
+        # is rejected at the table's line instead of being silently ignored.
+        for name, table in (
+            ("manifest-rejects-package-table", '[project]\nname = "app"\n\n[package]\nname = "x"\n'),
+            ("manifest-rejects-release-array", '[project]\nname = "app"\n\n[[release]]\nversion = "1.0.0"\n'),
+            ("manifest-rejects-singleton-registry", '[project]\nname = "app"\n\n[registry]\nname = "x"\n'),
+        ):
+            (work / "sprig.toml").write_text(table)
+            rejected = run(work, "project", "--json")
+            rejected_data = json.loads(rejected.stdout)
+            rejected_diagnostic = rejected_data["diagnostics"][0]
+            check(name, rejected.returncode == 1
+                  and rejected_diagnostic["code"] == "SPR-PROJECT-MANIFEST"
+                  and rejected_diagnostic["range"]["start"]["line"] == 3,
+                  rejected.stdout + rejected.stderr)
+        (work / "sprig.toml").write_text(
+            '[project]\nname = "app"\n\n[[registry]]\nname = "mirror"\npath = "registry"\n')
+        array_registry = run(work, "project")
+        check("manifest-accepts-registry-array", array_registry.returncode == 0,
+              array_registry.stdout + array_registry.stderr)
+
         outside = Path(temp) / "outside"
         outside.mkdir()
         missing = run(outside, "project")

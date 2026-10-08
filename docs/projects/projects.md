@@ -6,22 +6,26 @@ without a source use its entry; an explicit file outside the source root bypasse
 the source root retain its dependency graph.
 
 ```toml
-exports = ["public.spr"]
 [project]
 name = "example"
 version = "0.1.0"
 language = "0.8"
 source = "src"
 entry = "src/main.spr"
+exports = ["public.spr"]
 
 [[bin]]
 name = "tool"
 entry = "src/tool.spr"
 ```
 
-Only `[project]`, `[[bin]]`, `[[dependency]]` and `[[jvm]]` are accepted.
-All fields shown above are strings; `exports` is a root-level string array
-and therefore appears before any table. `name` is required; defaults are
+Only `[project]`, `[[bin]]`, `[[dependency]]`, `[[jvm]]` and `[[registry]]`
+are accepted. `[project]` takes `name`, `version`, `language`, `source`,
+`entry`, `exports` and `license` (the SPDX id `sprig publish` records); see
+[dependencies](dependencies.md) for `[[registry]]`. All fields shown above are
+strings except `exports`, a string array. Write `exports` inside `[project]`,
+as the packages in `libraries/` do; a root-level `exports = [...]` before the
+first table is accepted too. `name` is required; defaults are
 version `0.1.0`, language `0.8`, source `src`, entry `<source>/main.spr`.
 Unknown keys/tables, duplicate fields/project tables, duplicate bin/dependency
 names and wrong value kinds are manifest errors. This intentionally small TOML

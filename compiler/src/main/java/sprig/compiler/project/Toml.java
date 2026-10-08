@@ -270,6 +270,11 @@ public final class Toml {
         return !tables.isEmpty() || !tableArrays.isEmpty();
     }
 
+    /** Names of the singleton tables declared in the document, in order. */
+    public Set<String> tableNames() {
+        return Set.copyOf(tables.keySet());
+    }
+
     public boolean rootScalarIsBare(String key) {
         return bareRootScalars.contains(key);
     }
