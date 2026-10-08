@@ -1,0 +1,10 @@
+# let binds once; var can be reassigned. A type can be written or inferred from the value.
+let name = "Ada"
+var visits = 0
+visits += 1
+visits = visits + 1
+let height: Float = 1.68
+let tall = height > 1.6
+print(name)
+print(visits)
+print(tall)

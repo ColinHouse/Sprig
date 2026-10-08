@@ -1,0 +1,5 @@
+let whole: Float = 1
+print(whole)
+print(1.toFloatExact() + 2.0)
+print(2.5 * 4.0)
+print(1.0 / 3.0)

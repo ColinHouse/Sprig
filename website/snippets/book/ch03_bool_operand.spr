@@ -1,0 +1,2 @@
+let ok = 1 and true
+print(ok)

@@ -1,0 +1,3 @@
+# 以 # 开头的整行都是注释，编译器会忽略它。
+print("Hello, Sprig")
+print("One file, two lines.")
