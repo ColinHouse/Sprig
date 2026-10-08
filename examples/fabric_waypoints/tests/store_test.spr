@@ -1,0 +1,72 @@
+import "@std/test.spr" as test
+import "@std/files.spr" as files
+import "../src/waypoints.spr" as waypoints
+import "../src/store.spr" as store
+
+func point(name: String, dimension: String, x: Int, y: Int, z: Int) -> waypoints.Waypoint:
+    return waypoints.Waypoint(name=name, at=waypoints.Position(dimension=dimension, x=x, y=y, z=z))
+
+func describe_all(list: List[waypoints.Waypoint]) -> List[String]:
+    return list.map(fn(waypoint: waypoints.Waypoint) => waypoint.name + "@" + waypoints.coordinates(waypoint.at))
+
+# The waypoint file of a new, empty world folder; temp_dir() is one folder
+# for the whole test file, so each check makes its own world inside it.
+func new_world(name: String) -> String throws Error:
+    let folder = files.join(test.temp_dir(), name)
+    files.make_directory(folder)
+    return store.world_file(folder)
+
+# Expects the Error that loading the file gives, and that the file keeps its bytes.
+func rejects(source: String, expected: String) -> Unit throws Error:
+    let path = new_world("damaged")
+    files.write_utf8(path, source)
+    try:
+        store.load(path)
+    catch problem: Error:
+        assert(problem.message.contains(expected), "expected '" + expected + "' in: " + problem.message)
+        assert(problem.message.contains(path), "the message names the file: " + problem.message)
+        test.equal_text(files.read_utf8(path), source, "the file is left as it is")
+        return
+    throw Error("loading should have failed: " + source)
+
+func round_trip() -> Unit throws Error:
+    let path = new_world("round trip")
+    let list = [
+        point("Home", "minecraft:overworld", 10, 64, -20),
+        point("Café \"Nord\" 家", "minecraft:the_nether", -30000000, -64, 30000000),
+        point("Moon base", "othermod:moon", 0, 320, 0)
+    ]
+    store.save(path, list)
+    test.equal_text(files.read_utf8(path), "{\"version\": 1, \"waypoints\": [\n{\"name\":\"Home\",\"dimension\":\"minecraft:overworld\",\"x\":10,\"y\":64,\"z\":-20},\n{\"name\":\"Café \\\"Nord\\\" 家\",\"dimension\":\"minecraft:the_nether\",\"x\":-30000000,\"y\":-64,\"z\":30000000},\n{\"name\":\"Moon base\",\"dimension\":\"othermod:moon\",\"x\":0,\"y\":320,\"z\":0}\n]}\n", "one waypoint per line")
+    test.equal(describe_all(store.load(path)), describe_all(list), "the same waypoints come back")
+
+func empty_lists() -> Unit throws Error:
+    let path = new_world("empty")
+    test.equal_int(store.load(path).size(), 0, "no file, no waypoints")
+    store.save(path, [])
+    test.equal_text(files.read_utf8(path), "{\"version\": 1, \"waypoints\": []}\n", "empty file text")
+    test.equal_int(store.load(path).size(), 0, "an empty list round-trips")
+    test.equal_int(store.decode("{\"waypoints\": [], \"version\": 1}").size(), 0, "key order does not matter")
+
+func bad_files() -> Unit throws Error:
+    rejects("{\"version\": 1, \"waypoints\": [", "cannot read")
+    rejects("", "cannot read")
+    rejects("[]", "$: expected object, found array")
+    rejects("{\"version\": 2, \"waypoints\": []}", "$.version: expected 1, found 2")
+    rejects("{\"version\": 1}", "$.waypoints: required field is missing")
+    rejects("{\"version\": 1, \"waypoints\": [{\"name\": \"Home\", \"dimension\": \"minecraft:overworld\", \"x\": \"10\", \"y\": 64, \"z\": 0}]}", "$.waypoints[0].x: expected integer, found string")
+    rejects("{\"version\": 1, \"waypoints\": [{\"name\": \"Home\", \"dimension\": \"minecraft:overworld\", \"x\": 1.5, \"y\": 64, \"z\": 0}]}", "$.waypoints[0].x: expected integer")
+    rejects("{\"version\": 1, \"waypoints\": [{\"name\": \"Home\", \"dimension\": \"minecraft:overworld\", \"x\": 0, \"y\": 64, \"z\": 30000001}]}", "$.waypoints[0].z: 30000001 is outside the world")
+    rejects("{\"version\": 1, \"waypoints\": [{\"name\": \"Home\", \"dimension\": \"minecraft:overworld\", \"x\": 0, \"y\": 64, \"z\": 0, \"colour\": \"red\"}]}", "$.waypoints[0]: unknown field 'colour'")
+    rejects("{\"version\": 1, \"waypoints\": [{\"name\": \"  \", \"dimension\": \"minecraft:overworld\", \"x\": 0, \"y\": 64, \"z\": 0}]}", "$.waypoints[0].name: a waypoint needs a name")
+
+func duplicate_names() -> Unit throws Error:
+    let home = "{\"name\": \"Home\", \"dimension\": \"minecraft:overworld\", \"x\": 0, \"y\": 64, \"z\": 0}"
+    let again = "{\"name\": \"home \", \"dimension\": \"minecraft:the_end\", \"x\": 5, \"y\": 70, \"z\": 5}"
+    rejects("{\"version\": 1, \"waypoints\": [" + home + ", " + again + "]}", "$.waypoints[1].name: 'home' is already the name of another waypoint")
+
+test.check("saves and loads waypoints, one per line", round_trip)
+test.check("treats a missing file and an empty list alike", empty_lists)
+test.check("reports a damaged file and leaves it alone", bad_files)
+test.check("rejects two waypoints with one name", duplicate_names)
+test.finish()

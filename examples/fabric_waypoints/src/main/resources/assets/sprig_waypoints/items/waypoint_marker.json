@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "sprig_waypoints:item/waypoint_marker"
+  }
+}

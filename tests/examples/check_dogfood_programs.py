@@ -4,10 +4,16 @@
 Each program is copied with the libraries it depends on, resolved, checked,
 run once as its README says, and its own `sprig test` suite is run; the blog
 output and the CLI's JSON file are checked as a user would see them. The todo
-test makes real HTTP requests through sprig-http, so no curl is needed."""
+test makes real HTTP requests through sprig-http, so no curl is needed.
+
+The Fabric mod (examples/fabric_waypoints) runs here without Minecraft: its
+domain modules are checked and its `sprig test` suite runs, and only its glue
+module may import Minecraft or Fabric classes. Building the mod itself needs
+Loom, so that is tests/fabric/check_examples.py, outside the default gate."""
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +22,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 PROGRAMS = ("blog", "todo", "tasks", "crawler")
+FABRIC_MOD = "fabric_waypoints"
+FABRIC_GLUE = "main.spr"  # the one module of the mod that talks to Minecraft
 FAILURES = []
 COUNT = 0
 
@@ -44,6 +52,8 @@ def main():
         for program in PROGRAMS:
             shutil.copytree(ROOT / "examples" / program, work / "examples" / program,
                             ignore=shutil.ignore_patterns("sprig.lock", "sprig-build", "site"))
+        shutil.copytree(ROOT / "examples" / FABRIC_MOD, work / "examples" / FABRIC_MOD,
+                        ignore=shutil.ignore_patterns("sprig.lock", "sprig-build", ".gradle", "build", "run"))
         for program in PROGRAMS:
             project = work / "examples" / program
             resolved = sprig(project, "resolve")
@@ -91,6 +101,25 @@ def main():
         check("crawler-deterministic-report", crawled.returncode == 0 and crawled.stdout == again.stdout
               and "index.html" in crawled.stdout and "FAILED" in crawled.stdout,
               f"exit={crawled.returncode} {crawled.stdout[-400:]} {crawled.stderr[-300:]}")
+
+        mod = work / "examples" / FABRIC_MOD
+        resolved = sprig(mod, "resolve")
+        check(f"{FABRIC_MOD}-resolve", resolved.returncode == 0, resolved.stdout + resolved.stderr)
+        minecraft = re.compile(r"^import (net\.minecraft|net\.fabricmc|com\.mojang)\.", re.M)
+        importers = sorted(source.name for source in (mod / "src").glob("*.spr")
+                           if minecraft.search(source.read_text(encoding="utf-8")))
+        check(f"{FABRIC_MOD}-only-glue-imports-minecraft", importers == [FABRIC_GLUE], f"modules importing Minecraft or Fabric: {importers}")
+        for source in sorted((mod / "src").glob("*.spr")):
+            if source.name == FABRIC_GLUE:
+                continue
+            checked = sprig(mod, "check", source.relative_to(mod), "--offline", "--json")
+            payload = json.loads(checked.stdout) if checked.stdout.strip().startswith("{") else {}
+            check(f"{FABRIC_MOD}-check-{source.stem}", checked.returncode == 0 and payload.get("diagnostics") == [],
+                  checked.stdout[-600:] + checked.stderr[-300:])
+        tests = len(list((mod / "tests").glob("*.spr")))
+        tested = sprig(mod, "test", "--offline")
+        check(f"{FABRIC_MOD}-test-without-minecraft", tested.returncode == 0 and tests > 0 and f"{tests} passed, 0 failed" in tested.stdout,
+              tested.stdout[-800:] + tested.stderr[-300:])
 
     print(f"dogfood programs: {COUNT - len(FAILURES)} checks passed, {len(FAILURES)} failed")
     for failure in FAILURES:

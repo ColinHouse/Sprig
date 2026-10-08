@@ -361,7 +361,8 @@
     },
     {
       "paths": [
-        "libraries/sprig-fabric/**"
+        "libraries/sprig-fabric/**",
+        "tests/fabric/**"
       ],
       "gates": [
         "tests/gradle/check_gradle_plugin.py"

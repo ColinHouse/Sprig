@@ -95,11 +95,16 @@ def main():
         (["tests/semantics/cases.json"], {"scripts/check_cases.py"}),
         (["tests/formatter/check_formatter.py"], {"tests/formatter/check_formatter.py"}),
         (["tests/web/http_support.py"], {"tests/web/check_web.py"}),
+        (["examples/fabric_waypoints/src/store.spr"], {"tests/examples/check_dogfood_programs.py"}),
+        (["tests/fabric/check_examples.py"], {"tests/gradle/check_gradle_plugin.py"}),
     ]
     for paths, expected in samples:
         found, full = selection(paths)
         check(f"sample {paths[0]}", found is not None and expected <= found,
               f"full={full} found={sorted(found) if found else found}")
+    # Fabric/Loom checks are explicit host-framework tests: no gate may need Loom.
+    check("fabric-outside-default-gate", not any(name.startswith("tests/fabric/") for name in gates),
+          sorted(name for name in gates if name.startswith("tests/fabric/")))
     # A changed suite does not drag the whole run in, and a feature fixture selects its suites.
     found, _ = selection(["tests/formatter/check_formatter.py"])
     check("suite-selects-only-itself", found == {"tests/formatter/check_formatter.py"}, sorted(found or []))
