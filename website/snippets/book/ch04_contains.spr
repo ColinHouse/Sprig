@@ -1,0 +1,2 @@
+print("ell" in "hello")
+print("z" in "hello")

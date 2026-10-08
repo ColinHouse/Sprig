@@ -1,0 +1,4 @@
+print("first line\nsecond line")
+print("tab\tbetween")
+print("a \"quote\" inside")
+print("a backslash: \\")

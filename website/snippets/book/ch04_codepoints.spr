@@ -1,0 +1,7 @@
+print("A😀東".length())
+print("A😀東"[1])
+print("A😀東".charAt(1))
+print("A😀東".codeAt(1))
+print("A😀東".substring(1, 2))
+print("A😀東".indexOf("東"))
+print(String.fromCode(65))
