@@ -1,6 +1,10 @@
 {
   "schemaVersion": 1,
   "executable": [
+    "book/appendix_f_ex_parent.spr",
+    "book/appendix_f_ex_predicate.spr",
+    "book/appendix_f_functional.spr",
+    "book/appendix_f_generic.spr",
     "book/ch01_hello.spr",
     "book/ch02_bindings.spr",
     "book/ch02_bool.spr",
@@ -62,6 +66,11 @@
     "book/ch22_run.spr",
     "book/ch22_shared_var.spr",
     "book/ch22_two_tasks.spr",
+    "book/ch24_bad_parse.spr",
+    "book/ch24_ex_count.spr",
+    "book/ch24_ex_label.spr",
+    "book/ch24_ex_money.spr",
+    "book/ch24_ledger.spr",
     "book_en/ch13_bytes.spr",
     "book_en/ch13_collections.spr",
     "book_en/ch13_exceptions.spr",
@@ -132,6 +141,8 @@
     "guide/tooling_missing_case.spr",
     "guide/generics_comparable_bool.spr",
     "guide/generics_float_key.spr",
+    "book/appendix_f_callable_throws.spr",
+    "book/appendix_f_generic_missing.spr",
     "book/ch02_division.spr",
     "book/ch02_let_assign.spr",
     "book/ch02_mixed.spr",
@@ -157,6 +168,8 @@
     "book/ch21_lambda_types.spr",
     "book/ch21_no_import.spr",
     "book/ch23_broken.spr",
-    "book/ch02_literal_range.spr"
+    "book/ch02_literal_range.spr",
+    "book/ch24_divide.spr",
+    "book/ch24_nonexhaustive.spr"
   ]
 }
