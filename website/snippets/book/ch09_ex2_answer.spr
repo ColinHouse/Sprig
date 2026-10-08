@@ -1,0 +1,10 @@
+let letters = ["b", "a", "b", "c", "b"]
+let counts: MutableMap[String, Int] = {}
+for letter in letters:
+    let old = counts[letter]
+    if old == null:
+        counts[letter] = 1
+    else:
+        counts[letter] = old + 1
+print(counts)
+print(counts["b"])

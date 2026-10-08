@@ -1,0 +1,5 @@
+import "@std/sets.spr" as sets
+
+let values = sets.of(["a", "b", "a", "c"])
+print(values.size())
+print(values.to_list())
