@@ -24,7 +24,7 @@ null
 <<< @/snippets/book/ch08_deref.spr
 
 ```text
-SPR-NUM-MIXED [TYPE] main.spr:2:7: Operator '+' has no implicit conversion between Int? and Int (expected matching numeric families, actual Int? and Int)
+SPR-TYPE-NULLABLE [TYPE] main.spr:2:7: Operator '+' cannot use a value that may be null (expected non-null operands, actual Int? and Int)
   hint: count may be null (Int?): check it first with 'if count != null:', and inside that block it is Int, or give a fallback with or_else from @std/nulls.spr.
 ```
 
@@ -58,7 +58,7 @@ hi
 <<< @/snippets/book/ch08_var_narrowing.spr
 
 ```text
-SPR-NUM-MIXED [TYPE] main.spr:3:11: Operator '+' has no implicit conversion between Int? and Int (expected matching numeric families, actual Int? and Int)
+SPR-TYPE-NULLABLE [TYPE] main.spr:3:11: Operator '+' cannot use a value that may be null (expected non-null operands, actual Int? and Int)
   hint: count may be null (Int?), and a var never narrows: copy it into a let (let current = count), check 'if current != null:', and use current inside that block.
 ```
 
