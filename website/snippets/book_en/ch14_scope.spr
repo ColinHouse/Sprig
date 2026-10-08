@@ -1,0 +1,13 @@
+import "@std/concurrent.spr" as concurrent
+
+func word_count(line: String) -> Int:
+    return line.split(" ").size()
+
+# The scope body is a named function passed by reference; its s owns the tasks started inside.
+func count_two(s: concurrent.Scope) -> Int throws Error:
+    let first = concurrent.spawn(s, fn() => word_count("the quick brown fox"))
+    let second = concurrent.spawn(s, fn() => word_count("a lazy dog"))
+    return first.await() + second.await()
+
+print(concurrent.scope(count_two))
+print(concurrent.parallel_map(["a b", "c d e"], fn(line: String) => word_count(line)))

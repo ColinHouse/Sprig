@@ -1,0 +1,13 @@
+import "@std/jvm.spr" as jvm
+import java.util.ArrayList as ArrayList
+
+# Between a Java ArrayList and a Sprig List there is only an explicit copy.
+let java_names = ArrayList[String]()
+java_names.add("ada")
+java_names.add("grace")
+let names: List[String] = jvm.list_snapshot[String](java_names)
+print(names)
+let copy = jvm.list_copy[String](names)
+copy.add("linus")
+print(copy.size())
+print(names.size())

@@ -1,0 +1,5 @@
+import java.time.LocalDate as LocalDate
+
+let date = LocalDate.of(2024, 2, 28)
+if date != null:
+    print(date.getYear())

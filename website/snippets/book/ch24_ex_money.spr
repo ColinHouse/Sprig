@@ -1,0 +1,10 @@
+# 检查两个边角：5 分发 0.05 元，0 分发 0.00 元。
+func format_money(cents: Int) -> String:
+    let units = cents.divTrunc(100)
+    let rest = cents % 100
+    if rest < 10:
+        return units + ".0" + rest
+    return units + "." + rest
+
+print(format_money(5))
+print(format_money(0))

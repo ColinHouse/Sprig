@@ -1,0 +1,17 @@
+# 金额必须是「整数.两位小数」；"45.5" 只有一位，解析会失败。
+func parse_amount(text: String) -> Int throws Error:
+    let parts = text.split(".")
+    let units = parts.get(0).toIntOrNull()
+    if units == null or parts.size() > 2:
+        throw Error("not an amount: " + text)
+    if parts.size() == 1:
+        return units * 100
+    let cents = parts.get(1).toIntOrNull()
+    if cents == null or parts.get(1).length() != 2:
+        throw Error("not an amount: " + text)
+    return units * 100 + cents
+
+try:
+    print(parse_amount("45.5"))
+catch problem: Error:
+    print(problem.message)

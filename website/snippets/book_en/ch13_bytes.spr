@@ -1,0 +1,10 @@
+import sprig.runtime.jvm.HostBytes as HostBytes
+import java.util.Base64 as Base64
+
+# byte[] is an opaque Java value: hold it, check it for null, pass it on unchanged.
+let bytes = HostBytes.utf8("tea")
+if bytes != null:
+    print(HostBytes.length(bytes))
+    let encoder = Base64.getEncoder()
+    if encoder != null:
+        print(encoder.encodeToString(bytes))

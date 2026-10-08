@@ -1,0 +1,9 @@
+import java.lang.Thread as Thread
+
+# This function value carries throws Error; a Java interface cannot see that.
+func fail() -> Unit throws Error:
+    throw Error("no")
+
+let thread = Thread(fn() => fail())
+thread.start()
+thread.join()

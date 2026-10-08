@@ -1,0 +1,5 @@
+import java.util.stream.Collectors as Collectors
+
+# toList 的返回类型拿不到任何实参信息；不写 [Int] 就调用不了。
+let list = Collectors.toList()
+print(list)

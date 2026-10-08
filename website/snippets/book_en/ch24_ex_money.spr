@@ -1,0 +1,10 @@
+# Check two edges: 5 cents prints 0.05, 0 cents prints 0.00.
+func format_money(cents: Int) -> String:
+    let units = cents.divTrunc(100)
+    let rest = cents % 100
+    if rest < 10:
+        return units + ".0" + rest
+    return units + "." + rest
+
+print(format_money(5))
+print(format_money(0))

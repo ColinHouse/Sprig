@@ -1,0 +1,17 @@
+import java.util.Random as Random
+
+# 覆盖 public 的 nextInt(bound)，数它被调用了多少次。
+class Counting:
+    let seed: Int
+    var calls: Int = 0
+
+    func nextInt(bound: Int32) -> Int32:
+        calls += 1
+        return parent.nextInt(bound)
+
+conform Counting to Random(seed) as parent
+
+let rng = Counting(seed=42)
+print(rng.nextInt(100))
+print(rng.nextInt(100))
+print(rng.calls)

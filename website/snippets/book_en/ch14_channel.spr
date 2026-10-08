@@ -1,0 +1,24 @@
+import "@std/concurrent.spr" as concurrent
+
+# A capacity-4 channel: a producer task sends, the main thread receives until close and drain.
+let lines = concurrent.channel[String](4)
+
+func produce() -> Int:
+    lines.send("one")
+    lines.send("two")
+    lines.send("three")
+    lines.close()
+    return 3
+
+func drain(s: concurrent.Scope) -> Int throws Error:
+    let producer = concurrent.spawn(s, produce)
+    var received = 0
+    while true:
+        let line = lines.receive()
+        if line == null:
+            break
+        print("got " + line)
+        received += 1
+    return producer.await() + received
+
+print(concurrent.scope(drain))

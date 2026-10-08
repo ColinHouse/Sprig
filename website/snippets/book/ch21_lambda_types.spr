@@ -1,0 +1,4 @@
+import java.util.ArrayList as ArrayList
+
+let names = ArrayList[String]()
+names.sort(fn(a, b) => a.length() - b.length())

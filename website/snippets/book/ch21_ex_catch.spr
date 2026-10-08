@@ -1,0 +1,8 @@
+import java.lang.Integer as Integer
+import java.lang.NumberFormatException as NumberFormatException
+
+try:
+    print(Integer.parseInt("42"))
+    print(Integer.parseInt("abc"))
+catch problem: NumberFormatException:
+    print("bad number: " + problem.toString())

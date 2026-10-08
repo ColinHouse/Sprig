@@ -1,0 +1,19 @@
+import "@std/concurrent.spr" as concurrent
+
+let hits = concurrent.counter(0)
+
+func bump() -> Int:
+    var i = 0
+    while i < 1000:
+        hits.increment()
+        i += 1
+    return i
+
+func run_all(s: concurrent.Scope) -> List[Int] throws Error:
+    let tasks: MutableList[concurrent.Task[Int]] = []
+    for id in [1, 2, 3]:
+        tasks.append(concurrent.spawn(s, fn() => bump()))
+    return concurrent.await_all(tasks)
+
+print(concurrent.scope(run_all))
+print(hits.get())

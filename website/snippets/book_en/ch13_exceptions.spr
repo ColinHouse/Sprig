@@ -1,0 +1,18 @@
+import java.nio.file.Files as Files
+import java.nio.file.Paths as Paths
+import java.io.IOException as IOException
+
+# Files.readString declares IOException, so this function catches it or declares it.
+func read_text(name: String) -> String throws IOException:
+    let path = Paths.get(name)
+    if path == null:
+        return ""
+    let text = Files.readString(path)
+    if text == null:
+        return ""
+    return text
+
+try:
+    print(read_text("definitely-missing.txt"))
+catch problem: IOException:
+    print("could not read: " + problem.toString())

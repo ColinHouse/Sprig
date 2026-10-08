@@ -1,0 +1,24 @@
+variant Category:
+    Food
+    Transport
+    Other
+
+func category_of(name: String) -> Category:
+    if name == "food":
+        return Category.Food
+    if name == "transport":
+        return Category.Transport
+    return Category.Other
+
+func label(category: Category) -> String:
+    return match category:
+        case Category.Food:
+            "Food"
+        case Category.Transport:
+            "Transport"
+        case Category.Other:
+            "Other"
+
+# 不认识的类别名落到 Other。
+print(label(category_of("fun")))
+print(label(category_of("transport")))
