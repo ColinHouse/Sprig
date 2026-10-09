@@ -25,19 +25,19 @@ sprig version
 
 To upgrade later, run `sprig upgrade --check` to see whether there's a new version, then `sprig upgrade`.
 
-::: tip You get v0.7.1-beta.1
-The install script installs the newest published release, v0.7.1-beta.1 today. This site follows the `main` branch, and some of what it shows (`if` expressions, contract classes, `@std/concurrent`, `sprig build --bundle`) is newer. To use those, build from source as described [below](#windows-and-building-from-source); [release status](/en/project/release-status) lists the differences.
+::: tip Current published release: v0.8.0-beta.1
+The installer selects the newest published release, including Betas. The current v0.8.0-beta.1 includes the tutorial's `if` expressions, contract classes, function references and `@std/concurrent`; building from source is optional. SDK, language and extension versions are independent. Query `sprig capabilities --json` for exact capabilities and see [release status](/en/project/release-status).
 :::
 
 ### Manual download
 
-You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1), verify it and unpack it yourself:
+You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1), verify it and unpack it yourself:
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.1-beta.1/sprig-v0.7.1-beta.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.1-beta.1/sprig-v0.7.1-beta.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.7.1-beta.1-jdk.zip.sha256
-unzip sprig-v0.7.1-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.8.0-beta.1/sprig-v0.8.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.8.0-beta.1/sprig-v0.8.0-beta.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.8.0-beta.1-jdk.zip.sha256
+unzip sprig-v0.8.0-beta.1-jdk.zip
 ```
 
 On Linux, `sha256sum -c` works too. If the checksum doesn't match, download the file again; don't skip the check. Then add the unpacked directory's `bin` to your `PATH`.
@@ -71,7 +71,7 @@ You should see `Hello, Sprig!`. Here's what each command did:
 
 Almost all of them accept `--json` and return structured output that editors, scripts and AI coding assistants can read. See [tools and JSON](/en/guide/tooling).
 
-For editing, there's a [VS Code extension](/en/guide/editor) (a local preview for now) with syntax highlighting, checks on save and one-click run.
+The [Sprig VS Code extension](https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language) is available on the Marketplace, with highlighting, live diagnostics, parameter hints and one-command runs. See the [extension guide](/en/guide/editor) for installation and compiler path settings.
 
 ## Windows and building from source
 

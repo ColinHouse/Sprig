@@ -9,7 +9,7 @@
 - 文件大纲
 - 悬停提示
 - 自动补全
-- 函数参数提示和语义着色（需要提供这两项能力的新编译器）
+- 函数参数提示和语义着色（v0.8.0-beta.1 编译器支持）
 - 跳转到定义、查找引用和重命名
 - 代码片段
 - 测试面板
@@ -17,26 +17,33 @@
 
 类型、签名和报错都来自你装好的 `sprig` 命令，插件自己不做类型检查。如果这个编译器带有[语言服务器](/guide/tooling#语言服务器) `sprig lsp`，插件会自动启动它，上面这些功能都由它提供。
 
-插件还没有发布到 VS Code 插件市场，也没有放进 SDK 的压缩包，需要自己从源码打包安装。
+插件已上架 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language)，扩展标识是 `ColinHouse.sprig-language`。插件不包含 Sprig SDK，需要分别安装。
 
 ## 安装
 
-在 Sprig 仓库的 `editors/vscode/` 目录里运行：
+在 VS Code 扩展面板搜索 **Sprig**，确认发布者是 **ColinHouse**，然后安装；也可以运行：
+
+```sh
+code --install-extension ColinHouse.sprig-language
+```
+
+### 从源码打包（可选）
+
+只有开发插件或安装本地修改时才需要打包。在 Sprig 仓库的 `editors/vscode/` 目录运行：
 
 ```sh
 npm ci
 npm run package
-```
-
-会生成 `dist/sprig-language-0.3.1.vsix`。在 VS Code 的扩展面板里点 `…` → **Install from VSIX…** 选中它，或者在命令行运行：
-
-```sh
 code --install-extension dist/sprig-language-0.3.1.vsix
 ```
 
+也可以在扩展面板里点 `…` → **Install from VSIX…**，选择生成的 VSIX。
+
+### 配置编译器
+
 装好以后，语法高亮、大纲和代码片段马上就能用，不需要 Java 和编译器。
 
-其他功能还需要装好 JDK 21+ 和 [Sprig SDK](/guide/getting-started)，然后在设置里把 **Sprig: Compiler Path**（`sprig.compilerPath`）设成 SDK 里的 `bin/sprig`。不设置的话，插件会先在 `PATH` 里找 `sprig`，再沿着上级目录查找源码构建出来的 `bin/sprig`。测试面板需要 v0.5.0-beta.1 或更新的编译器。
+其他功能还需要装好 JDK 21+ 和 [Sprig SDK](/guide/getting-started)，然后在设置里把 **Sprig: Compiler Path**（`sprig.compilerPath`）设成 SDK 里的 `bin/sprig`（Windows 为 `bin\sprig.cmd`）。不设置的话，插件会先在 `PATH` 里找 `sprig`，再沿着上级目录查找源码构建出来的 `bin/sprig`。测试面板需要 v0.5.0-beta.1 或更新的编译器。
 
 语言服务器是 v0.6.0-beta.1 新加的。用 v0.6.0-beta.1 或更新的编译器时，插件会自动用上它；用 v0.5.0-beta.1 时，插件改为每次单独调用编译器命令，区别见下表。想关掉语言服务器，把 `sprig.languageServer.enabled` 设成 `false`。
 
@@ -45,7 +52,7 @@ code --install-extension dist/sprig-language-0.3.1.vsix
 | 功能 | 有语言服务器时 | 用 v0.5.0-beta.1 时 |
 |---|---|---|
 | 报错 | 边写边报，显示在「问题」面板里。被导入的文件里有错，会标在对应的 `import` 那一行 | 保存时才报 |
-| 快速修复 | 错误的改法是一处机械改写时，比如把 `else if` 改成 `elif`、补上漏写的 `@std` 导入，错误旁边的灯泡里就有这处修改，点一下就改好。需要比 v0.7.1-beta.1 新的编译器 | 没有 |
+| 快速修复 | 错误的改法是一处机械改写时，比如把 `else if` 改成 `elif`、补上漏写的 `@std` 导入，错误旁边的灯泡里就有这处修改，点一下就改好。已包含在 v0.8.0-beta.1 编译器中 | 没有 |
 | 悬停提示 | 任何名字都能显示声明和类型，包括局部变量和参数，还有写在声明上方的注释 | 关键字、`Java类.方法`、`模块.函数` 和你写的顶层声明，用的是已保存文件的信息 |
 | 自动补全 | 输入点号后补全任何值的成员，包括局部变量；其他位置补全作用域里的名字和关键字 | 关键字、本文件的声明和导入的名字；输入 `Java类.`、`模块.`、enum 名加点或顶层变量加点之后，补全它的成员 |
 | 跳转到定义（F12） | 任何名字，可以跨文件 | import 的路径、`模块.成员` 和本文件的声明 |
@@ -58,7 +65,7 @@ code --install-extension dist/sprig-language-0.3.1.vsix
 
 两种情况下，停在关键字上都会显示 `sprig help` 的说明，**Go to Symbol in Workspace** 可以在整个工作区里搜，点错误码可以打开错误码文档。代码片段：输入 `func`、`class`、`variant`、`match`、`ifnn`、`try`、`importj` 等前缀，按 Tab 展开。
 
-参数提示和语义着色由更新后的编译器提供，插件 0.3.1 随它一起发布，会自动注册这两项功能。嵌套调用和字符串里的逗号不会弄错当前参数；命名构造参数可以按任意顺序填写。Java 没保留参数名时显示 `arg0`、`arg1` 等占位名。Java 重载暂不按实参类型排序，Sprig 泛型显示声明里的类型参数；内置函数和原生字符串、集合方法暂不提供参数签名。调用之外的语法错误仍可能让提示失效。语法或名字解析失败时会清空语义着色，保留词法高亮。
+参数提示和语义着色由 v0.8.0-beta.1 编译器提供，插件 0.3.1 支持这两项能力，会自动注册这两项功能。嵌套调用和字符串里的逗号不会弄错当前参数；命名构造参数可以按任意顺序填写。Java 没保留参数名时显示 `arg0`、`arg1` 等占位名。Java 重载暂不按实参类型排序，Sprig 泛型显示声明里的类型参数；内置函数和原生字符串、集合方法暂不提供参数签名。调用之外的语法错误仍可能让提示失效。语法或名字解析失败时会清空语义着色，保留词法高亮。
 
 ## 命令
 

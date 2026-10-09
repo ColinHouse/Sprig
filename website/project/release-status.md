@@ -1,69 +1,56 @@
 # 发布状态
 
-当前发布的版本是 [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1)。
+当前发布的 SDK 是 [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1)。
 
-| | |
+| 项目 | 当前状态 |
 |---|---|
-| 编译器 | `0.7.1-beta.1` |
-| 语言版本 | `0.8-dev` |
-| 运行环境 | 安装脚本和 `main` 上的源码要求 JDK 21 或更新的版本（SDK 不附带 JDK）。已发布的 v0.7.1-beta.1 本身在 JDK 17 上也能运行，但要手动下载它的 ZIP 来安装 |
+| SDK / 编译器 | `0.8.0-beta.1` |
+| 语言版本 | `0.8-dev`，尚未冻结 |
+| 运行环境 | JDK 21+；SDK 不附带 JDK |
+| VS Code 插件 | Marketplace 上的 `ColinHouse.sprig-language`，版本 `0.3.1`；需单独安装 SDK |
 | 许可证 | Apache-2.0 |
-| 平台 | 正式支持 Linux 和 macOS；Windows 是实验性预览 |
+| 平台 | Linux 和 macOS 为发布支持平台；Windows 是实验性预览 |
 
-这是一个实验性的 Beta 版，适合拿来试用和反馈问题，还不建议迁移生产项目。
+这是实验性 Beta，适合试用和反馈问题，还不建议迁移生产项目。安装发布的 SDK 即可学习当前教程，无需先从源码构建；见[安装说明](/guide/getting-started)和[插件说明](/guide/editor)。
 
 ## 这个版本新增了什么
 
-v0.7.1-beta.1 修好了一次评测用真实程序和 Java 对照在 v0.7.0-beta.1 里发现的问题，也让调用 Java 更顺手：
+以下变化相对于 v0.7.1-beta.1，已包含在 v0.8.0-beta.1 SDK 中：
 
-- `for i in range(n)` 改成计数，不再先建出整个列表，循环多长都只占固定的内存
-- 顶层代码里有好几个热循环时，跑得和同样的 Java 一样快
-- 把可能为 `null` 的值拼进文本会报错，不再打印出 `null`
-- `Error` 不管怎么变成文本，显示的都是它的消息，`toString()` 也一样
-- 字符串有了 `a.compareTo(b)`，正好是 Java `Comparator` 要的
-- `Int` 可以直接传给 Java 的 `int` 参数，运行时检查范围；Java 签名里的通配符类型，比如 `List<? extends Entity>`，按它的上下界来读
-- `sprig api` 会显示写在每个声明上方的注释
-- 帮助和 `sprig capabilities` 说的就是编译器实际的行为，包括 `==` 比较两个类对象时看的是不是同一个对象
+- 语言：`if` 表达式、根据实参推断泛型类型参数、契约类和 `conform`、单行类、具名函数引用、错误类、可变集合的只读视图，以及更完整的条件分支可空性收窄。
+- Java：用 `conform` 扩展 Java 类、读取可空性注解、Java 泛型方法根据实参推断类型参数，以及 `--classpath-file`。
+- 标准库和包：`@std/concurrent` 的结构化 scope 和虚拟线程，以及集合、文本、正则、Web 和 SQLite 的改进。注册表包通过向 `registry/` 提交 PR 发布，并由 CI 验证；目前没有带账号和上传服务的中央包仓库。
+- 工具：`sprig build --bundle`、`run`/`test` 编译缓存、`sprig search` 和 `sprig publish`。
+- 编辑器：快速修复、参数提示、语义着色，以及引用扫描达到上限时的结果不完整提示。重命名仍限于局部变量和参数，没有调试器；其他语法错误仍可能影响语义功能。
+- 最低 JDK 从 17 提升到 21。
 
-这是一个补丁版本：v0.7.0-beta.1 和 v0.6 里有的功能都还在。还没有中央的包仓库，编译器也还不是用 Sprig 自己写的（没有自举）。你装的 SDK 具体支持什么，以 `sprig capabilities --json` 为准。完整的说明见 [v0.7.1-beta.1 发布说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.7.1-beta.1.md)。
+完整变化和限制见 [v0.8.0-beta.1 发布说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md)。安装版本的具体功能以 `sprig capabilities --json` 为准。
 
-## 从 v0.7.0 升级
+## 从 v0.7.1 升级
 
-运行 `sprig upgrade`，然后在每个项目里运行一次 `sprig resolve`，因为锁文件里记着写它的编译器版本。
+先安装 JDK 21+。Linux/macOS 的托管安装运行 `sprig upgrade`；手动解压的 SDK（包括 Windows）需要下载并校验新 ZIP。升级后在项目中运行 `sprig resolve`，更新记录编译器身份的锁文件。
 
-有两类 v0.7.0 能通过的写法现在会报错，因为它们可能打印出 `null`，或者运行时才出错。报错里会告诉你怎么改：
+这次 MINOR 升级包含需要修改代码的变化：
 
-- 把可能为 `null` 的值拼进 `String`：先检查，或者用 `@std/nulls.spr` 里的 `or_else` 给个默认值。Java 方法返回的值也算可能为 `null`，`toString()` 的结果不算
-- 把 Java 异常的 `message` 当 `String` 用：Java 可能让它是 `null`，所以它现在是 `String?`。直接拼接异常本身，或者先检查消息
+- 数字转换统一写法：`n.toFloat()`、`x.toInt()`、`Decimal.fromInt(n)` 和 `Int.parse(text)` 分别改成 `n.toFloatExact()`、`x.toIntExact()`、`n.toDecimal()` 和 `text.toInt()`。
+- `elif` 和 `else` 的类型收窄更完整；在已经确定非空的分支中，一些旧写法会被拒绝。
+- 部分库函数现在声明 `throws Error`；调用代码需要按其签名处理错误。
+- 其他集合、数值及互操作变化见发布说明的[升级部分（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md#upgrade-from-v071-beta1)。
 
-还有一处写法照样能编译，但打印出来的不一样了：`Error` 的 `toString()` 现在返回它的消息，不再带 `sprig.runtime.SprigError: ` 前缀。
+## 网站、源码和发布版
 
-从 v0.6 升级的话，还要看一下 [v0.7.0-beta.1 发布说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.7.0-beta.1.md)里的升级部分。
-
-## 发布之后的改动
-
-网站按仓库 `main` 分支上的源码来写，比 v0.7.1-beta.1 新。不是每一页都会注明哪些内容是新的，所以请以这份清单为准：
-
-- 语言：`if` 表达式；`elif` 和 `else` 知道前面的条件为假；泛型调用根据你传的参数算出类型参数；契约类（`conform C to Contract`）；单行类 `class Pair(first: Int, second: Int)`；不加括号就是函数值的具名函数、模块函数和方法；错误类（`conform E to Error(message)`）；`MutableList` 可以直接当 `List` 用；数字类型上的 `compareTo`、`String.lastIndexOf`，以及 `xs == []` 这样直接和字面量比较。
-- Java：用 `conform C to J(字段) as 名字` 继承 Java 类；读取可空性注解；Java 泛型方法按实参推断类型参数；`--classpath-file` 选项。
-- 库：`@std/concurrent` 的结构化 scope 和虚拟线程；`@std/regex` 的 `find_groups`，`@std/lists` 的 `max`、`min`、`max_by`、`min_by`，`@std/text` 的 `escape_html`；sprig-web 的 `app.put`、`app.patch` 和 `app.run_on`；sprig-sqlite 的每个 SQL 字符串只能有一条语句，迁移在运行前先整体检查。
-- 工具：语言服务器的快速修复；`sprig build --bundle`；`run` 和 `test` 的编译缓存（`run --no-cache`）；`sprig search`、`sprig publish`，以及经 pull request 发布到 `registry/` 的包；`@std` 函数里的运行时错误指向你调用它的那一行。
-- 最低 JDK 21。
-
-有几处改动会让 v0.7.1-beta.1 能通过的代码报错。最先碰到的会是数字转换：每种只留一种写法。`n.toFloat()`、`x.toInt()`、`Decimal.fromInt(n)` 和 `Int.parse(text)` 都没有了，分别改成 `n.toFloatExact()`、`x.toIntExact()`、`n.toDecimal()` 和 `text.toInt()`。其余几处（`elif` 和 `else` 里更窄的类型、改为声明 `throws Error` 的库函数、经泛型代码传入的 Float map 键）和完整的升级说明，见下一个版本的说明草稿 [v0.8.0-beta.1（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md)。
+网站随 `main` 分支维护。当前教程使用的功能已经发布；后续源码可能先于下次 SDK 发布增加改动。`sprig version` 确认 SDK/编译器版本，`sprig capabilities --json` 确认语言版本和实际功能。`languageVersion: 0.8-dev` 不代表 SDK 没有发布。
 
 ## 怎么验证的
 
-这个版本的 SDK 压缩包在 Linux 和 macOS 上，分别用 JDK 17 和 26 做过验收，也核对了校验值和发布流程。具体的源码版本、压缩包的 SHA-256、运行的命令和 CI 链接，见[发布验证记录（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md)。
-
-从源码构建、没有打 tag 的版本，版本信息会标成 development；和某个干净的 tag 完全一致的构建，会标成 prerelease。
+发布流程已通过 Linux/macOS × JDK 21/26 的下载 SDK 验证。另在 macOS/JDK 26.0.1 上重新下载官方 ZIP、核对 SHA-256，并跑通 `init → resolve → run`。源码提交、校验值、CI 链接及验证范围见[发布验证记录（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md)。本地冒烟检查不代表 Windows 或全部编辑器交互都经过人工验证。
 
 ## 还在计划中
 
 - 能像值一样索引的 Java 数组，以及完整的 Java 泛型
 - 用 Sprig 自己来写编译器（自举）
 
-另外，类型检查保证不了数值计算是否稳定。
+类型检查也不能保证数值稳定性或应用逻辑正确。
 
 ## 更早的版本
 

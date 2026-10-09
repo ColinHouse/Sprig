@@ -70,6 +70,18 @@ required = {
     "website/en/project/release-status.md": [published_version, published_tag],
     "website/project/release-status.md": [published_version, published_tag],
 }
+# Onboarding pages must identify the published SDK, rather than a pre-release
+# preparation snapshot. Historical release notes are deliberately excluded.
+for name in ("website/index.md", "website/en/index.md",
+             "website/guide/getting-started.md", "website/en/guide/getting-started.md",
+             "website/tutorial/index.md", "website/en/tutorial/index.md",
+             "website/tutorial/ch01-tools.md", "website/en/tutorial/ch01-tools.md"):
+    required[name] = [published_tag]
+for name in ("website/guide/editor.md", "website/en/guide/editor.md", "editors/vscode/README.md"):
+    required[name] = ["https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language",
+                      "code --install-extension ColinHouse.sprig-language"]
+for name in ("website/tutorial/ch23-tooling.md", "website/en/tutorial/ch23-tooling.md"):
+    required[name] = ["sprig-compiler " + version, "compilerVersion: " + version]
 for name, markers in required.items():
     text = (ROOT / name).read_text()
     for marker in markers:

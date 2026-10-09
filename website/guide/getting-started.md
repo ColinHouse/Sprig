@@ -25,19 +25,19 @@ sprig version
 
 以后想升级，运行 `sprig upgrade --check` 看看有没有新版本，再用 `sprig upgrade` 升级。
 
-::: tip 装好的是 v0.7.1-beta.1
-安装脚本装的是最新发布的版本，现在是 v0.7.1-beta.1。这个网站按 `main` 分支来写，有些功能（比如 `if` 表达式、契约类、`@std/concurrent`、`sprig build --bundle`）比它新。想用这些功能，就按下面[从源码构建](#windows-和从源码构建)的步骤来；具体差别见[发布状态](/project/release-status)。
+::: tip 当前发布版本：v0.8.0-beta.1
+安装脚本选择最新已发布的版本（包括 Beta）。当前的 v0.8.0-beta.1 已包含教程使用的 `if` 表达式、契约类、函数引用和 `@std/concurrent` 等功能，无需从源码构建。SDK、语言和插件各有独立版本；具体能力可用 `sprig capabilities --json` 查询，见[发布状态](/project/release-status)。
 :::
 
 ### 手动下载
 
-也可以从[发布页](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1)下载 ZIP，自己校验后解压：
+也可以从[发布页](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1)下载 ZIP，自己校验后解压：
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.1-beta.1/sprig-v0.7.1-beta.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.7.1-beta.1/sprig-v0.7.1-beta.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.7.1-beta.1-jdk.zip.sha256
-unzip sprig-v0.7.1-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.8.0-beta.1/sprig-v0.8.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.8.0-beta.1/sprig-v0.8.0-beta.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.8.0-beta.1-jdk.zip.sha256
+unzip sprig-v0.8.0-beta.1-jdk.zip
 ```
 
 Linux 上也可以用 `sha256sum -c`。如果校验没通过，请重新下载，不要跳过校验。解压后把目录里的 `bin` 加进 `PATH`。
@@ -71,7 +71,7 @@ sprig run
 
 这些命令几乎都能加 `--json`，输出结构化的结果，方便编辑器、脚本或 AI 编程助手读取。详见[工具与 JSON](/guide/tooling)。
 
-编辑器方面，有一个 [VS Code 插件](/guide/editor)（目前是本地预览版），支持语法高亮、保存时检查和一键运行。
+编辑器方面，[Sprig VS Code 插件](https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language)已上架 Marketplace，支持语法高亮、边写边检查、参数提示和一键运行。安装和编译器路径配置见[插件说明](/guide/editor)。
 
 ## Windows 和从源码构建
 

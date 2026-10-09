@@ -120,7 +120,7 @@ declarations:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.7.1-beta.1",
+  "toolVersion": "sprig-compiler 0.8.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},
@@ -150,7 +150,7 @@ declarations:
 
 ```text
 $ sprig capabilities
-Sprig compiler 0.7.1-beta.1 / language 0.8-dev
+Sprig compiler 0.8.0-beta.1 / language 0.8-dev
 JDK minimum: 21
 Commands: help, version, check, build, run, test, codes, explain, capabilities, api, wrap, doctor, init, resolve, add, remove, search, publish, project, deps, upgrade, fmt, lsp
 Types: Int, Int32, BigInt, Float, Float32, Decimal, Bool, String, Unit
@@ -177,7 +177,7 @@ Use 'sprig help <topic>' for syntax and rules.
 ```text
 $ sprig doctor
 schemaVersion: 1
-compilerVersion: 0.7.1-beta.1
+compilerVersion: 0.8.0-beta.1
 languageVersion: 0.8-dev
 jdkMinimum: 21
 javaVersion: 26.0.1

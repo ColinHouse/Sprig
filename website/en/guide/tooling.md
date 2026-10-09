@@ -2,7 +2,7 @@
 
 Sprig comes as one command-line program, `sprig`, and everything it does is a subcommand. There's no background process: even the language server is a subcommand, `sprig lsp`, which your editor starts itself. For VS Code, see the [VS Code extension](/en/guide/editor).
 
-This page follows the `main` branch. `sprig build --bundle`, `sprig search`, `sprig publish` and `run --no-cache` are newer than the published v0.7.1-beta.1; every other command is in it. For exactly what your installed SDK supports, run `sprig capabilities --json`.
+This page follows `main`. The current published v0.8.0-beta.1 includes the commands below, including `sprig build --bundle`, `sprig search`, `sprig publish` and `run --no-cache`. Query `sprig capabilities --json` for your installed SDK's exact capabilities.
 
 ## The commands
 
@@ -75,7 +75,7 @@ A small greeting program that runs successfully:
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.7.1-beta.1",
+  "toolVersion": "sprig-compiler 0.8.0-beta.1",
   "command": "run",
   "exitCode": 0,
   "programOutput": "Hello, Ada!\n",
@@ -101,7 +101,7 @@ And with `--json` (the real `uri` is a full `file:` path, shortened here):
 ```json
 {
   "schemaVersion": 1,
-  "toolVersion": "sprig-compiler 0.7.1-beta.1",
+  "toolVersion": "sprig-compiler 0.8.0-beta.1",
   "command": "check",
   "exitCode": 1,
   "environment": {"classpath": []},
@@ -153,7 +153,7 @@ The full approach is in [working with AI assistants](/en/guide/agent-workflow).
 
 `sprig lsp` speaks the Language Server Protocol over standard input and output, so editors such as Neovim and Helix can use it directly, and the [VS Code extension](/en/guide/editor) starts it for you. It's new in v0.6.0-beta.1.
 
-It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, rename for local variables and parameters, and quick fixes: when an error's fix is one mechanical rewrite, your editor applies it in one click. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. While your code doesn't parse, the server answers with nothing rather than a guess. Quick fixes are newer than v0.7.1-beta.1 and come with the next release.
+It gives you errors as you type, hover, go to definition, references, an outline, completion, formatting, rename for local variables and parameters, and quick fixes: when an error's fix is one mechanical rewrite, your editor applies it in one click. All of it comes from the same compiler as `sprig check`, so your editor and the command line never disagree. Most semantic queries need parseable source; parameter hints can handle calls whose closing parenthesis is still missing. Quick fixes, parameter hints and semantic tokens are included in v0.8.0-beta.1. Parameter hints can handle unfinished calls, but other syntax errors may still disable semantic features.
 
 Editor setup and the details of each feature are in the [language server reference](/en/reference/tooling/lsp).
 

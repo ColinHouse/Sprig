@@ -12,15 +12,20 @@ Extension version **0.3.1** is independent of the compiler version.
 
 ## Install / 安装
 
-Install **Sprig** (`ColinHouse.sprig-language`) from the Extensions view. The
-Visual Studio Marketplace serves VS Code; Open VSX serves VSCodium and other
-compatible editors. To build the extension yourself, see
-[Development](#development--开发).
+Install **Sprig** (`ColinHouse.sprig-language`, publisher **ColinHouse**) from the
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language), or run:
+
+```sh
+code --install-extension ColinHouse.sprig-language
+```
+
+The extension and SDK are installed separately. To build a local VSIX for
+extension development or compatible editors, see [Development](#development--开发).
 
 Highlighting, the outline and snippets work immediately, without Java or the
 compiler. Everything else needs JDK 21+ and the
 [Sprig SDK](https://colinhouse.github.io/Sprig/en/guide/getting-started). Set
-**Sprig: Compiler Path** to the SDK's `bin/sprig` launcher, or put the SDK's
+**Sprig: Compiler Path** to the SDK's `bin/sprig` launcher (`bin\sprig.cmd` on Windows), or put the SDK's
 `bin` on PATH. A built Sprig source checkout is found by searching parent
 directories for `bin/sprig` after PATH.
 
