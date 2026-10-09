@@ -1,69 +1,56 @@
 # Release status
 
-The current release is [v0.7.1-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.7.1-beta.1).
+The current published SDK is [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1).
 
-| | |
+| Item | Current status |
 |---|---|
-| Compiler | `0.7.1-beta.1` |
-| Language version | `0.8-dev` |
-| Requires | JDK 21 or newer for the install script and for the source on `main` (the SDK doesn't include a JDK). The published v0.7.1-beta.1 itself still runs on JDK 17 if you install its ZIP by hand |
+| SDK / compiler | `0.8.0-beta.1` |
+| Language | `0.8-dev`, not frozen yet |
+| Runtime requirement | Separate JDK 21+; the SDK does not bundle a JDK |
+| VS Code extension | `ColinHouse.sprig-language` on the Marketplace, version `0.3.1`; install the SDK separately |
 | License | Apache-2.0 |
-| Platforms | Linux and macOS are supported; Windows is an experimental preview |
+| Platforms | Linux and macOS are release-supported; Windows is an experimental preview |
 
-This is an experimental Beta. It's for trying Sprig out and reporting problems; don't move production projects to it yet.
+This is an experimental Beta for trying Sprig and reporting problems, not for migrating production projects. The published SDK can run the current tutorial; building from source is optional. See [installation](/en/guide/getting-started) and the [extension guide](/en/guide/editor).
 
-## What's new in this release
+## What this release adds
 
-v0.7.1-beta.1 fixes what an evaluation of v0.7.0-beta.1 found with real programs and Java baselines, and makes Java calls easier:
+These changes from v0.7.1-beta.1 are included in the v0.8.0-beta.1 SDK:
 
-- `for i in range(n)` counts instead of building a list, so a loop of any length runs in constant memory
-- top-level code with several hot loops runs as fast as the same Java
-- joining a value that may be `null` into text is an error, instead of printing `null`
-- an `Error` shows its message wherever it becomes text, `toString()` included
-- `a.compareTo(b)` on Strings, which is what a Java `Comparator` wants
-- an `Int` goes into an `int` Java parameter with a run-time range check, and wildcard types in Java signatures, such as `List<? extends Entity>`, are read at their bounds
-- `sprig api` shows the comment written above each declaration
-- help and `sprig capabilities` say what the compiler actually does, including that `==` compares two class objects by identity
+- Language: `if` expressions, type arguments inferred from arguments, contract classes and `conform`, one-line classes, named function references, error classes, read-only views of mutable collections, and more complete nullability narrowing across conditional branches.
+- Java: extending a Java class with `conform`, nullability annotations, argument-based type inference for Java generic methods, and `--classpath-file`.
+- Libraries and packages: structured scopes and virtual threads in `@std/concurrent`, and improvements to collections, text, regex, Web and SQLite. Registry packages are published through PRs to `registry/`, validated by CI; there is no central account-based upload service.
+- Tools: `sprig build --bundle`, the `run`/`test` compilation cache, `sprig search` and `sprig publish`.
+- Editor: quick fixes, parameter hints, semantic highlighting, and a warning when the references scan omits results at its limit. Rename remains limited to locals and parameters; there is no debugger. Other syntax errors may still affect semantic features.
+- The minimum JDK rises from 17 to 21.
 
-It's a patch release: everything from v0.7.0-beta.1 is still there, and so is everything from v0.6. There's no central package registry yet, and the compiler isn't written in Sprig itself (it isn't self-hosted). For exactly what your installed SDK supports, run `sprig capabilities --json`. The full story is in the [v0.7.1-beta.1 release notes](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.7.1-beta.1.md).
+See the [v0.8.0-beta.1 notes](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md) for the complete changes and limits. Query `sprig capabilities --json` for your installed SDK's actual features.
 
-## Upgrading from v0.7.0
+## Upgrade from v0.7.1
 
-Run `sprig upgrade`, then run `sprig resolve` once in each project, because a lock file records the compiler that wrote it.
+Install JDK 21+ first. For a managed Linux/macOS installation, run `sprig upgrade`. Manually extracted SDKs, including Windows, need a new verified ZIP. Run `sprig resolve` inside projects after upgrading to update the lock's compiler identity.
 
-Two kinds of programs that v0.7.0 accepted are now rejected, because they could print `null` or fail at run time. The error tells you what to change:
+This MINOR upgrade includes changes that may require source edits:
 
-- joining a value that may be `null` into a `String`: check it first, or give it a fallback with `or_else` from `@std/nulls.spr`. A value a Java method returns counts as possibly `null` too; a `toString()` result doesn't
-- using a Java exception's `message` as a `String`: Java may leave it `null`, so it's a `String?` now. Join the exception itself, or check the message first
+- Number conversions now have one spelling: replace `n.toFloat()`, `x.toInt()`, `Decimal.fromInt(n)` and `Int.parse(text)` with `n.toFloatExact()`, `x.toIntExact()`, `n.toDecimal()` and `text.toInt()` respectively.
+- More complete narrowing in `elif` and `else` rejects some older patterns in branches already known to be non-null.
+- Some library functions now declare `throws Error`; callers need to handle errors as their signatures require.
+- See the release notes' [upgrade section](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md#upgrade-from-v071-beta1) for the remaining collection, numeric and interop changes.
 
-One program that still compiles prints something else: `toString()` on an `Error` now gives its message, without the `sprig.runtime.SprigError: ` prefix.
+## Website, source and released SDK
 
-Coming from v0.6? Read the upgrade section of the [v0.7.0-beta.1 release notes](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.7.0-beta.1.md) as well.
-
-## Changes since the release
-
-This website follows the source on the repository's `main` branch, which is ahead of v0.7.1-beta.1. Not every page marks what's new, so go by this list:
-
-- Language: `if` expressions; `elif` and `else` knowing the earlier conditions are false; generic calls that work out their type arguments from the arguments you pass; contract classes (`conform C to Contract`); one-line classes `class Pair(first: Int, second: Int)`; named functions, module functions and methods used as values without parentheses; error classes (`conform E to Error(message)`); a `MutableList` accepted where a `List` is expected; `compareTo` on the number types, `String.lastIndexOf`, and comparisons with a literal such as `xs == []`.
-- Java: extending a Java class with `conform C to J(fields) as NAME`; nullability annotations; Java generic methods inferring their type arguments from the arguments; the `--classpath-file` option.
-- Libraries: structured scopes over virtual threads in `@std/concurrent`; `find_groups` in `@std/regex`, `max`, `min`, `max_by` and `min_by` in `@std/lists`, `escape_html` in `@std/text`; `app.put`, `app.patch` and `app.run_on` in sprig-web; one statement per SQL string in sprig-sqlite, and migrations checked as a whole before any runs.
-- Tools: quick fixes in the language server; `sprig build --bundle`; the compiled-class cache of `run` and `test` (`run --no-cache`); `sprig search`, `sprig publish` and packages published to `registry/` by pull request; a runtime failure inside an `@std` function reported at your line that called it.
-- A JDK 21 minimum.
-
-A few changes reject code that v0.7.1-beta.1 accepts. The one you'll meet first is the number conversions: each now has one spelling. `n.toFloat()`, `x.toInt()`, `Decimal.fromInt(n)` and `Int.parse(text)` are gone; write `n.toFloatExact()`, `x.toIntExact()`, `n.toDecimal()` and `text.toInt()`. The others (a narrower type in `elif` and `else`, library functions that now declare `throws Error`, a Float map key reached through generic code) and the full upgrade list are in the draft notes for the next release, [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/v0.8.0-beta.1.md).
+The site follows `main`. The current tutorial's features are published; later source changes may precede the next SDK. `sprig version` identifies the SDK/compiler release, and `sprig capabilities --json` reports its language version and features. `languageVersion: 0.8-dev` does not mean that the SDK is unpublished.
 
 ## How it was verified
 
-The release's SDK archive passed acceptance checks on Linux and macOS with JDK 17 and 26, including checksum verification and the publishing workflow. The [release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md) lists the source revision, the archive's SHA-256, the commands run and links to the CI runs.
-
-A build from source without a tag reports itself as development; a build that exactly matches a clean tag reports prerelease.
+The release workflow passed the downloaded-SDK checks on Linux/macOS × JDK 21/26. A fresh local ZIP download on macOS/JDK 26.0.1 also passed SHA-256 verification and `init → resolve → run`. See the [release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md) for the source commit, digest, CI links and limits. The local smoke check does not imply manual Windows or complete editor-interaction coverage.
 
 ## Still planned
 
-- Java arrays as values you can index, and full Java generics
+- Java arrays as indexable values, and full Java generics
 - a compiler written in Sprig itself (self-hosting)
 
-Also note that type checking doesn't prove numerical stability.
+Type checking does not prove numerical stability or application correctness either.
 
 ## Earlier releases
 

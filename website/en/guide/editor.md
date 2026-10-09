@@ -9,7 +9,7 @@ The extension helps you write Sprig in VS Code with:
 - an outline
 - hover information
 - completion
-- parameter hints and semantic highlighting (with a compiler that provides them)
+- parameter hints and semantic highlighting (supported by compiler v0.8.0-beta.1)
 - go-to-definition, find references and rename
 - snippets
 - a Testing view
@@ -17,26 +17,33 @@ The extension helps you write Sprig in VS Code with:
 
 Types, signatures and errors all come from the `sprig` command you installed; the extension doesn't do any type checking of its own. When that compiler has the [language server](/en/guide/tooling#language-server), `sprig lsp`, the extension starts it and gets everything above from it.
 
-The extension isn't on the VS Code Marketplace yet and isn't part of the SDK archive, so you package and install it yourself from source.
+The extension is available on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language) as `ColinHouse.sprig-language`. It does not include the Sprig SDK; install that separately.
 
 ## Installing
 
-In the Sprig repository, in `editors/vscode/`, run:
+Search for **Sprig** in VS Code's Extensions view, check that the publisher is **ColinHouse**, and install it. Or run:
+
+```sh
+code --install-extension ColinHouse.sprig-language
+```
+
+### Package from source (optional)
+
+Packaging is needed only for extension development or local modifications. In the repository's `editors/vscode/` directory, run:
 
 ```sh
 npm ci
 npm run package
-```
-
-That creates `dist/sprig-language-0.3.1.vsix`. In VS Code's Extensions view, choose `…` → **Install from VSIX…** and pick it, or run:
-
-```sh
 code --install-extension dist/sprig-language-0.3.1.vsix
 ```
 
+Alternatively, choose `…` → **Install from VSIX…** in the Extensions view and select the generated VSIX.
+
+### Configure the compiler
+
 Highlighting, the outline and snippets work right away, without Java or the compiler.
 
-Everything else needs JDK 21+ and the [Sprig SDK](/en/guide/getting-started). Then set **Sprig: Compiler Path** (`sprig.compilerPath`) to the SDK's `bin/sprig`. If you don't set it, the extension looks for `sprig` on your `PATH` first, then searches parent directories for a `bin/sprig` built from source. The Testing view needs compiler v0.5.0-beta.1 or newer.
+Everything else needs JDK 21+ and the [Sprig SDK](/en/guide/getting-started). Then set **Sprig: Compiler Path** (`sprig.compilerPath`) to the SDK's `bin/sprig` (`bin\sprig.cmd` on Windows). If you don't set it, the extension looks for `sprig` on your `PATH` first, then searches parent directories for a `bin/sprig` built from source. The Testing view needs compiler v0.5.0-beta.1 or newer.
 
 The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the extension uses it automatically; with v0.5.0-beta.1, it falls back to running separate compiler commands, as the table below shows. To turn the server off, set `sprig.languageServer.enabled` to `false`.
 
@@ -45,7 +52,7 @@ The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the ex
 | Feature | With the language server | With v0.5.0-beta.1 |
 |---|---|---|
 | Errors | Shown as you type, in the Problems panel. An error inside an imported file shows on its `import` line | Shown when you save |
-| Quick fixes | When an error's fix is one mechanical rewrite, such as `else if` to `elif` or a missing `@std` import, the lightbulb next to it offers that change, and one click applies it. Needs a compiler newer than v0.7.1-beta.1 | Not available |
+| Quick fixes | When an error's fix is one mechanical rewrite, such as `else if` to `elif` or a missing `@std` import, the lightbulb next to it offers that change, and one click applies it. Included in compiler v0.8.0-beta.1 | Not available |
 | Hover | Any name: its declaration and type, including local variables and parameters, plus the comment above it | Keywords, `JavaClass.method`, `module.function` and your top-level declarations, from the saved file |
 | Completion | After a dot, the members of any value, including local variables; elsewhere, the names in scope and keywords | Keywords, the file's declarations and imported names; members after `JavaClass.`, `module.`, an enum name or a top-level variable |
 | Go to Definition (F12) | Any name, across files | Import paths, `module.member` and declarations in the same file |
@@ -58,7 +65,7 @@ The language server is new in v0.6.0-beta.1. With v0.6.0-beta.1 or newer, the ex
 
 In both cases, hovering over a keyword shows its `sprig help` text, **Go to Symbol in Workspace** searches all your files, and clicking an error code opens the diagnostic code reference. For snippets, type a prefix such as `func`, `class`, `variant`, `match`, `ifnn`, `try` or `importj` and press Tab.
 
-These new capabilities come from the updated compiler; extension 0.3.1 ships with it and registers them automatically. Nested calls and commas inside strings do not advance the outer call's active parameter; named constructor fields can be written out of order. Java parameter names missing from bytecode use `arg0`, `arg1`, etc. Java candidates are not ranked by argument types, and Sprig generics display their written type parameters; built-in functions and native string/collection methods have no parameter signatures yet. Unrelated syntax errors can still prevent a hint. Syntax or name-resolution failures clear semantic tokens and leave lexical highlighting available.
+Compiler v0.8.0-beta.1 provides these capabilities; extension 0.3.1 supports them and registers them automatically. Nested calls and commas inside strings do not advance the outer call's active parameter; named constructor fields can be written out of order. Java parameter names missing from bytecode use `arg0`, `arg1`, etc. Java candidates are not ranked by argument types, and Sprig generics display their written type parameters; built-in functions and native string/collection methods have no parameter signatures yet. Unrelated syntax errors can still prevent a hint. Syntax or name-resolution failures clear semantic tokens and leave lexical highlighting available.
 
 ## Commands
 

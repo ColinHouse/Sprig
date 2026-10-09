@@ -1,5 +1,7 @@
 # Sprig SDK install and upgrade
 
+The current published SDK is [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1). It includes the 0.8 tutorial features and requires a separate JDK 21+; building from source is optional. The language version remains `0.8-dev`, independently of the SDK release version.
+
 The managed SDK installer supports Linux and macOS with JDK 21+ (`java` and
 `javac`), `curl`, `unzip`, and `shasum` or `sha256sum`. Windows remains an
 experimental preview. The installer does not require Maven.

@@ -46,9 +46,9 @@ done
 
 ## 需要哪个版本的编译器
 
-这本书跟的是 0.8 语言，也就是仓库 main 分支上的编译器。`sprig capabilities` 会把它写成 `language 0.8-dev`。
+这本书使用 0.8 语言，编译器在 `sprig capabilities` 中将它写成 `language 0.8-dev`。SDK 的发布版本与语言版本是两回事。
 
-已经发布的 SDK 是 v0.7.1-beta.1，比这本书旧：书里用到的 if 表达式、单行类、契约类、错误类、函数引用、类型参数推断和 `@std/concurrent` 都是 v0.7.1-beta.1 之后才加入的。在 0.8 正式发布之前，请先[从源码构建](/tutorial/ch01-tools)，用仓库里的 `bin/sprig`（Windows 上是 `bin\sprig.cmd`）。第 1 章会把环境、版本检查和第一个程序一步步讲完。
+当前已发布的 [v0.8.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1)包含本书使用的语法和标准模块，需要 JDK 21+。直接安装 SDK 即可开始，不需要先构建编译器。第 1 章会一步步说明[安装和版本检查](/tutorial/ch01-tools)。网站随 `main` 分支维护；后续版本差异见[发布状态](/project/release-status)，实际功能以 `sprig capabilities --json` 为准。
 
 ## 章节地图
 

@@ -65,11 +65,55 @@ Common problems:
 
 ## 1.3 Install Sprig, and check the version
 
-This part matters most: **this book follows the 0.8 language on the `main` branch**. The official release and the install script currently give you `v0.7.1-beta.1`, which does not have some of the syntax the book uses, so later programs won't run on it. Until 0.8 is released, build from source.
+The syntax and standard modules used by this book are included in the published [v0.8.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1). Install the SDK to begin; you do not need to build the compiler first.
 
-### Build from source (Linux, macOS, Windows)
+### Linux / macOS: install the SDK
 
-You need Git, JDK 21+, and Python 3.12+. In a terminal:
+After installing JDK 21+, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ColinHouse/Sprig/main/scripts/install-sprig.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+sprig version
+```
+
+The installer selects the newest published release, including Betas, checks the ZIP's SHA-256, installs the SDK under `~/.sprig/versions/` and places its launcher at `~/.local/bin/sprig`. It does not edit your shell configuration. The `export` above affects this terminal only; add it to `~/.zshrc` for zsh or `~/.bashrc` for bash if new terminals should find `sprig` too.
+
+You can also download, verify and unpack the ZIP manually; see [installation](/en/guide/getting-started). Using the SDK does not require Python or Git. The first Maven dependency resolution may still need a network connection.
+
+### Windows: unpack the SDK
+
+Windows is an experimental preview and has no managed installer. Download the release ZIP and its matching `.sha256` file, verify the checksum, then unpack and use `bin\sprig.cmd`. Add the extracted SDK's `bin` directory to `Path` to type `sprig ...` directly. See [installing on Windows](/en/reference/projects/install#windows) for the full steps.
+
+### Check the version
+
+```bash
+sprig version
+```
+
+The current SDK prints:
+
+```text
+sprig-compiler 0.8.0-beta.1
+```
+
+This is the **SDK/compiler release version**. If it shows an older version, run `sprig upgrade` for a managed installation, or download a new ZIP for a manual installation. If the old version persists, check that `PATH` and **Sprig: Compiler Path** do not point to another compiler.
+
+Then run:
+
+```bash
+sprig capabilities
+```
+
+It lists the compiler version, `language 0.8-dev`, the minimum JDK, commands, types and implemented features. `0.8-dev` is the **language version**: the language is not frozen yet. It does not mean you lack a published SDK. Use `sprig capabilities --json` for a complete, machine-readable list for editors or coding agents.
+
+::: tip What are the two versions for?
+`sprig version` identifies the SDK you installed; `sprig capabilities` describes its features. This site follows `main` and may gain new features later. Include both version and capability information when reporting a problem; see [release status](/en/project/release-status).
+:::
+
+### Build from source (optional)
+
+To modify the compiler or try unpublished changes, you need Git, JDK 21+ and Python 3.12+:
 
 ```bash
 git clone https://github.com/ColinHouse/Sprig.git
@@ -77,84 +121,14 @@ cd Sprig
 python3 scripts/build.py
 ```
 
-On Windows, use this for the last line:
-
-```powershell
-py -3 scripts/build.py
-```
-
-The first build downloads pinned build tools, so it needs a network connection and a few minutes. When it finishes, `bin/sprig` (on Windows, `bin\sprig.cmd`) in that checkout is the compiler.
-
-### Make `sprig` typeable (optional)
-
-The rest of the book writes commands as `sprig`. To avoid typing the full path, add the checkout's `bin` directory to `PATH`. The default macOS terminal is zsh:
-
-```bash
-echo 'export PATH="/replace/this/with/the/checkout/Sprig/bin:$PATH"' >> ~/.zshrc
-```
-
-Then open a new terminal. For bash use `~/.bashrc`; Linux is the same idea. On Windows, search Settings for "environment variables" and add `...\Sprig\bin` to Path.
-
-You can also skip this: every `sprig ...` in the book can be `/path/to/Sprig/bin/sprig ...`, or `...\Sprig\bin\sprig.cmd ...` on Windows.
-
-### Checking the version: `sprig version` is not enough
-
-Look at the version command first:
-
-```bash
-sprig version
-```
-
-```text
-sprig-compiler 0.7.1-beta.1
-```
-
-**This does not tell the new compiler from the old one.** The published SDK also calls itself `0.7.1-beta.1`, and so does the 0.8 compiler built from `main`. The first line of `sprig capabilities` is no help either: both say "language 0.8-dev". Don't trust version strings; trust the feature list:
-
-```bash
-sprig capabilities
-```
-
-```text
-Sprig compiler 0.7.1-beta.1 / language 0.8-dev
-JDK minimum: 21
-Commands: help, version, check, build, run, test, codes, explain, capabilities, api, wrap, doctor, init, resolve, add, remove, search, publish, project, deps, upgrade, fmt, lsp
-Types: Int, Int32, BigInt, Float, Float32, Decimal, Bool, String, Unit
-Implemented: typed functions, one-line class declarations, contract classes (methods without bodies) with conform, function references (named, module and method functions, and print, as values), source function types fn(A) -> R, function types that throw Error, rethrows functions, classes, enums, variants, match statements, match expressions, if expressions, explicit declaration reexports, nullable types, typed catch, local modules, lambdas up to three parameters, generic blocks with one or more type parameters, explicit Type[Arg] generic uses, type arguments inferred from call arguments, Equatable capability, Comparable capability, Sprig function values passed as Java functional interfaces with up to three parameters, Java varargs calls, declared foreign JVM conformance (conform Class to ImportedInterface), Java class conformance with a parent view, error classes (conform C to Error(message))
-Unsupported: inference from the expected type, variance, inheritance, Java functional interfaces with more than three parameters, Java type-variable varargs (T...), varargs declarations in Sprig, annotations, decorators, macros, reflection-based schemas, block lambdas, tuples, destructuring, string interpolation, Char type, async/await, wildcard match, pipeline, operator overloading, arrays
-Use 'sprig help <topic>' for syntax and rules.
-```
-
-The long `Implemented:` line must contain **`if expressions`**. The old SDK's list doesn't have it. To check just that one item:
-
-```bash
-sprig capabilities | grep -o "if expressions"
-```
-
-```text
-if expressions
-```
-
-On Windows PowerShell:
-
-```powershell
-sprig capabilities | Select-String "if expressions"
-```
-
-If you see `if expressions`, you have the right compiler. If you don't, you have the published SDK; build from source as above.
-
-One more confirmation: `sprig doctor`, which you'll run below, prints `jdkMinimum: 21` on the right compiler. On the old SDK it is `jdkMinimum: 17`.
-
-::: tip Coming from another language?
-Static typing and compilers may be familiar already. The one counterintuitive thing here: **version strings lie, feature lists don't**. This is how the Sprig toolchain works everywhere. `sprig capabilities --json` and `sprig doctor --json` report machine-readable facts, and the editor extension and AI assistants read them instead of guessing from a version number.
-:::
+On Windows replace the last line with `py -3 scripts/build.py`. The first build downloads pinned build tools. Use the repository's `bin/sprig` (`bin\sprig.cmd` on Windows), or add its `bin` directory to `PATH`. You can also replace every `sprig ...` command in this book with that launcher's full path.
 
 ## 1.4 Editor: VS Code
 
 You can write Sprig in any text editor, but a good one saves you work. Use [VS Code](https://code.visualstudio.com/):
 
 1. Install VS Code.
-2. Install the Sprig extension. It isn't on the Marketplace yet, so package it from source; see the [extension page](/en/guide/editor). Syntax highlighting, check-on-save and one-click run all use the compiler you just built. If the extension can't find it, set **Sprig: Compiler Path** to `bin/sprig`.
+2. Install [Sprig from the Marketplace](https://marketplace.visualstudio.com/items?itemName=ColinHouse.sprig-language), checking that the publisher is **ColinHouse**. It uses the SDK you installed for diagnostics, parameter hints and runs. If it cannot find the compiler, set **Sprig: Compiler Path** to the SDK launcher (`bin/sprig`, or `bin\sprig.cmd` on Windows); see the [extension guide](/en/guide/editor).
 3. Save your files with the `.spr` extension, for example `hello.spr`.
 
 ### Deliberate mistake: indenting with a tab
@@ -180,7 +154,7 @@ The first few lines on this machine are:
 
 ```text
 schemaVersion: 1
-compilerVersion: 0.7.1-beta.1
+compilerVersion: 0.8.0-beta.1
 languageVersion: 0.8-dev
 jdkMinimum: 21
 javaVersion: 26.0.1
@@ -196,8 +170,8 @@ Many lines follow, listing `javaHome`, class paths, cache locations and more. Th
 
 - The terminal is where you type commands; `cd`, `pwd` and `ls` get you around.
 - You need JDK 21+; both `java -version` and `javac -version` must produce output.
-- This book needs the 0.8 compiler from `main`. The official `v0.7.1-beta.1` SDK is not enough; until 0.8 is released, build from source with `python3 scripts/build.py` and use `bin/sprig`.
-- `sprig version` and the first line of `capabilities` cannot tell the versions apart; look for `if expressions` in the `Implemented:` line of `sprig capabilities`.
+- Install the published v0.8.0-beta.1 SDK; building from source is optional.
+- `sprig version` identifies the SDK release; `sprig capabilities` lists features and the separate language version.
 - `sprig doctor` is the check-up; `jdkMinimum` should be 21.
 - Indent with spaces, never tabs.
 
@@ -218,17 +192,17 @@ javac 26.0.1
 Your numbers will differ (21, 22, 23, ... are all fine), as long as both major versions are ≥ 21. If `javac` isn't found, go back to 1.2.
 :::
 
-2. Run `sprig capabilities | grep -o "if expressions"` (on Windows use `Select-String`) and confirm you see `if expressions`.
-   Hint: `grep -o` keeps only the matching text; on Windows use `sprig capabilities | Select-String "if expressions"`.
+2. Run `sprig version`, then `sprig capabilities`. Find the compiler and language versions.
+   Hint: the SDK release version and the language version describe different things.
 
 ::: details Answer
-The right compiler prints exactly:
+For the current published SDK:
 
 ```text
-if expressions
+sprig-compiler 0.8.0-beta.1
 ```
 
-No output means you have the old release; build from source as in 1.3.
+The capability list reports compiler `0.8.0-beta.1` and language `0.8-dev`. A newer SDK may have a different version; an older SDK should be upgraded as in 1.3.
 :::
 
 3. Run `sprig doctor`, find the `jdkMinimum` and `javacAvailable` lines, and say what they should be.
