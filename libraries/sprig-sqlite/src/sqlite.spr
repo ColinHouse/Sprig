@@ -121,9 +121,15 @@ func open(path: String) -> Database throws Error:
 class Transaction:
     let host: HostTransaction
 
+    # Runs one prepared update on the scope connection and returns its changed
+    # row count. Throws Error for invalid SQL/parameters or an inactive scope;
+    # a failed operation prevents the transaction from committing.
     func execute(sql: String, parameters: List[Parameter]) -> Int throws Error:
         return host.execute(sql, bind(parameters))
 
+    # Copies one query, including INSERT ... RETURNING, into detached Rows on
+    # the scope connection, seeing earlier uncommitted writes. Throws Error for
+    # invalid SQL/parameters/results or an inactive scope; failure prevents commit.
     func query(sql: String, parameters: List[Parameter]) -> Rows throws Error:
         let value = host.query(sql, bind(parameters))
         if value != null:
