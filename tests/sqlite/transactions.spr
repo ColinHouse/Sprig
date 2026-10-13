@@ -1,0 +1,42 @@
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/process.spr" as process
+import "@std/test.spr" as test
+
+func post(tx: sqlite.Transaction) -> sqlite.Rows throws Error:
+    let before = tx.query("SELECT COUNT(*) AS n FROM entries", [])
+    if before.integer(0, "n") == 0:
+        tx.execute("INSERT INTO entries VALUES (?)", [sqlite.Parameter.Text(value="first")])
+    let during = tx.query("SELECT COUNT(*) AS n FROM entries", [])
+    test.equal_int(during.integer(0, "n"), 1, "own uncommitted write")
+    return tx.query("INSERT INTO entries VALUES ('second') RETURNING name", [])
+
+func rejected(tx: sqlite.Transaction) -> Int throws Error:
+    tx.execute("INSERT INTO entries VALUES ('partial')", [])
+    throw Error("posting rejected")
+
+func broken(tx: sqlite.Transaction) -> Int throws Error:
+    tx.execute("INSERT INTO entries VALUES ('partial')", [])
+    return tx.execute("INSERT INTO missing VALUES (1)", [])
+
+func nothing(tx: sqlite.Transaction) -> String?:
+    return null
+
+func main() -> Unit throws Error:
+    let db = sqlite.open(process.arguments().get(0))
+    db.execute("CREATE TABLE entries(name TEXT)", [])
+    let rows: sqlite.Rows = sqlite.transaction(db, fn(tx: sqlite.Transaction) => post(tx))
+    test.equal_text(rows.text(0, "name"), "second", "detached return")
+    test.equal_int(db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n"), 2, "all writes committed")
+    test.check_error("callback rollback", fn() => sqlite.transaction(db, fn(tx: sqlite.Transaction) => rejected(tx)))
+    test.equal_int(db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n"), 2, "callback rollback count")
+    test.check_error("SQL rollback", fn() => sqlite.transaction(db, fn(tx: sqlite.Transaction) => broken(tx)))
+    test.equal_int(db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n"), 2, "SQL rollback count")
+    let escaped = sqlite.transaction(db, fn(tx: sqlite.Transaction) => tx)
+    test.check_error("ended scope", fn() => escaped.query("SELECT 1", []))
+    let count: Int = sqlite.transaction(db, fn(tx: sqlite.Transaction) => tx.execute("INSERT INTO entries VALUES ('usable')", []))
+    test.equal_int(count, 1, "usable after failures")
+    let missing: String? = sqlite.transaction(db, fn(tx: sqlite.Transaction) => nothing(tx))
+    test.equal_bool(missing == null, true, "nullable callback result")
+    test.finish()
+
+main()

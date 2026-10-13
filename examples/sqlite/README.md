@@ -20,3 +20,18 @@ This is real file persistence across separate JVM processes. SQL is visible in
 JAR is downloaded by check/run. Run resolve explicitly before offline reuse.
 Generated database and local-path lock files are ignored. Delete only your own
 example database when you intentionally want a fresh demonstration.
+
+## Read-check-write transaction
+
+```sh
+../../bin/sprig run src/transfer.spr --offline -- transfer.sqlite
+```
+
+`transfer.spr` checks the checking account balance and moves 250 minor units to
+savings using `sqlite.transaction(database, callback)`. Both updates commit
+together, and the returned balance includes the callback's uncommitted write.
+It starts checking at 1000 on a new database; the first run prints
+`checking balance=750`. An insufficient balance throws `Error` and rolls back.
+The callback uses only `Transaction.query`/`execute`, typed parameters and detached
+rows. The library owns commit, rollback and closing resources. Nested scopes are
+unsupported; a retained transaction cannot be used after the callback finishes.

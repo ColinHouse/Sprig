@@ -37,6 +37,9 @@ absolute path is recorded as written and needs `sprig resolve` after a move.
 | `open(path) -> Database` | Create/open an ordinary file-backed SQLite DB; existing parent required |
 | `Database.execute(sql, List[Parameter]) -> Int` | One prepared statement; return affected row count |
 | `Database.query(sql, List[Parameter]) -> Rows` | Prepared query with detached snapshot; `INSERT ... RETURNING` is supported |
+| `transaction[T](Database, fn(Transaction) -> T throws Error) -> T` | Scoped read-check-write transaction; commit and return the callback result |
+| `Transaction.execute(sql, List[Parameter]) -> Int` | One prepared update on the scope connection |
+| `Transaction.query(sql, List[Parameter]) -> Rows` | Detached query snapshot on the same scope connection |
 | `Database.batch(List[Statement]) -> Int` | One transaction; commit all commands or rollback on failure |
 | `Statement(sql=..., parameters=...)` | Visible SQL (one statement) and explicit typed parameters |
 | `Parameter.Integer(value=Int)` | Exact signed 64-bit INTEGER |
@@ -66,15 +69,15 @@ statement is an `Error`, and the call changes nothing (a batch rolls back), wher
 JDBC would run the first statement and silently ignore the rest. Put a
 multi-statement script in a migration file instead.
 
-Each operation creates a connection, enables foreign keys and a 5-second busy
+Each standalone database operation creates a connection, enables foreign keys and a 5-second busy
 timeout, binds parameters, and closes statements/results/connections with Java
 resource scopes. Rows retain no JDBC resources. Queries use an explicit transaction, so a failed
 `INSERT ... RETURNING` snapshot (duplicate labels, unsupported types or size
 limit) rolls back its write before returning an error. Batch parameters are snapshotted
 when added; a failed batch rolls back even when the failure is adapter validation.
 SQL transaction-control statements (`BEGIN`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`,
-`RELEASE`, `END`) are rejected; batch owns transaction lifetime. No transaction can
-span separate calls. SQL structure/identifiers remain trusted application code;
+`RELEASE`, `END`) are rejected; the library owns transaction lifetime. Separate
+`Database` calls do not join a scoped transaction. SQL structure/identifiers remain trusted application code;
 only data uses parameters. This is not a SQL sandbox.
 
 Errors preserve the JDBC cause as recoverable `Error` (`SqliteError`); the host
@@ -94,6 +97,48 @@ See [SQLite example](../../examples/sqlite/README.md) and
 [ledger backend](../../examples/ledger/README.md). Verify with
 `python3 tests/sqlite/check_sqlite.py` (network only in explicit `sprig resolve`),
 or `--offline` after cache warm-up.
+
+## Scoped read-check-write transactions
+
+`sqlite.transaction(database, body)` calls `body` synchronously with a
+`sqlite.Transaction`. Use that value's `query` and `execute` methods for every
+operation in the transaction. They use one connection and see earlier writes
+before commit. The existing `Parameter`, one-statement SQL validation and detached
+`Rows` contracts apply. On success, all writes commit and the callback result is
+returned; a returned `Rows` remains usable after the scope ends. Type arguments
+can be inferred from the callback result or written as `transaction[Int](...)`.
+The callback must return a value (for example, an affected-row count); `Unit`
+is not a generic type argument. Nullable results are supported.
+
+An escaping callback `Error` is rethrown unchanged after rollback. SQL failures
+are `Error` values with the JDBC exception retained as their cause. A failed
+transaction SQL operation marks the scope failed: even if the callback catches
+that error, the transaction rolls back and throws it when the callback returns.
+Statements and result sets close after each operation, and the connection closes
+on success and failure. Rollback/close failures are suppressed on the primary
+error (or its JDBC cause); they do not replace it. If connection close fails after
+a successful commit, an `Error` is reported but the committed writes remain.
+
+The `Transaction` is valid only inside its callback, on that callback's thread.
+Keeping it and calling it after return or failure throws `Error`. Nested scoped
+transactions on the same thread are rejected, including through another
+`Database`; savepoints are unsupported. Helpers should accept the current
+`Transaction` instead. Calls to `Database.query`, `execute` or `batch` still open
+independent connections; use the scope methods to participate in the transaction.
+This is a synchronous API with detached results, not streaming cursors.
+
+Run the [transfer example](../../examples/sqlite/src/transfer.spr), which reads a
+balance, checks available funds, updates two accounts and reads its own write:
+
+```sh
+cd examples/sqlite
+../../bin/sprig resolve
+../../bin/sprig run src/transfer.spr --offline -- transfer.sqlite
+```
+
+The first run prints `checking balance=750`; subsequent successful runs transfer
+another 250 minor units. Insufficient funds throw `Error` and leave both balances
+unchanged. Application code imports no JDBC classes and closes no resources.
 
 ## Experimental migrations
 

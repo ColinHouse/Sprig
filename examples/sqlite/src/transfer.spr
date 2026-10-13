@@ -1,0 +1,26 @@
+# Read, validate and write on one connection, with automatic commit or rollback.
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/process.spr" as process
+
+func transfer(tx: sqlite.Transaction, amount: Int) -> Int throws Error:
+    let rows = tx.query("SELECT balance FROM accounts WHERE name = ?", [sqlite.Parameter.Text(value="checking")])
+    let available = rows.integer(0, "balance")
+    if amount <= 0 or available < amount:
+        throw Error("insufficient checking balance or invalid amount")
+    tx.execute("UPDATE accounts SET balance = balance - ? WHERE name = ?", [sqlite.Parameter.Integer(value=amount), sqlite.Parameter.Text(value="checking")])
+    tx.execute("UPDATE accounts SET balance = balance + ? WHERE name = ?", [sqlite.Parameter.Integer(value=amount), sqlite.Parameter.Text(value="savings")])
+    let after = tx.query("SELECT balance FROM accounts WHERE name = 'checking'", [])
+    return after.integer(0, "balance")
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var path = "transfer.sqlite"
+    if args.size() > 0:
+        path = args.get(0)
+    let db = sqlite.open(path)
+    db.execute("CREATE TABLE IF NOT EXISTS accounts(name TEXT PRIMARY KEY, balance INTEGER NOT NULL)", [])
+    db.execute("INSERT OR IGNORE INTO accounts VALUES ('checking', 1000), ('savings', 0)", [])
+    let remaining = sqlite.transaction(db, fn(tx: sqlite.Transaction) => transfer(tx, 250))
+    print("checking balance=" + remaining)
+
+main()

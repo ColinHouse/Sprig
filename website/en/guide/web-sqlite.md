@@ -77,7 +77,9 @@ The SQLite library gets a pinned `org.xerial:sqlite-jdbc:3.46.1.0` from Maven, r
 - Each SQL string holds one statement. A trailing semicolon or comment is fine; a second statement is an error instead of being silently skipped, so a multi-statement script belongs in a migration file.
 - A query returns a typed snapshot of the results, already disconnected from the database. Connections, statements and result sets are closed when they're done. A single query can return at most 10,000 rows (more is an error), and the whole result is held in memory.
 - `Database.batch` runs a list of statements in one transaction; if any of them fails, all of them are rolled back. When a query (including `INSERT ... RETURNING`) fails, anything it wrote is rolled back too.
-- You can't write transaction statements such as `BEGIN` or `COMMIT` yourself; `batch` manages transactions.
+- `sqlite.transaction(database, callback)` supports read-check-write workflows: the callback receives a `Transaction` with `query` and `execute` methods that share one connection and see earlier writes. Success commits and returns the callback result; an escaping `Error` or SQL failure rolls back. JDBC causes and primary failures survive cleanup. Even a caught SQL-operation error prevents commit.
+- A transaction is valid only during its synchronous callback and on that thread; use after return throws `Error`. Nested scoped transactions and savepoints are unsupported. Separate `Database` calls open independent connections, so use the supplied `Transaction` throughout. Detached `Rows` may be returned and used later.
+- You can't write transaction statements such as `BEGIN` or `COMMIT` yourself; the library manages transactions. See the runnable [account transfer](https://github.com/ColinHouse/Sprig/blob/main/examples/sqlite/src/transfer.spr) example.
 - There's no ORM, no automatic conversion from REAL to Int, and no BLOB or Decimal parameters. Only ordinary database files are supported, not `:memory:` databases.
 
 ### Database migrations (experimental)
