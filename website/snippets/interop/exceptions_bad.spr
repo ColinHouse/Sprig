@@ -1,0 +1,4 @@
+import java.net.URI as URI
+import java.net.URISyntaxException as URISyntaxException
+func parse_uri(text: String) -> URI:
+    return URI(text)

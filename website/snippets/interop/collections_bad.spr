@@ -1,0 +1,2 @@
+import java.util.Collections as Collections
+Collections.sort(["b", "a"])

@@ -1,0 +1,7 @@
+import java.util.HashMap as HashMap
+let names = HashMap[String, String]()
+let name = names.get("missing")
+if name != null:
+    print(name.length())
+else:
+    print("missing")

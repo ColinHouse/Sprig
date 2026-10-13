@@ -1,0 +1,11 @@
+import java.lang.StringBuilder as StringBuilder
+import java.lang.Math as Math
+
+let capacity: Int32 = 16
+let builder = StringBuilder(capacity)
+builder.append("rows=")
+builder.append(3)
+print(builder.toString())
+let small: Int32 = 2
+let large: Int32 = 3
+print(Math.max(small, large))

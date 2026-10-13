@@ -102,6 +102,35 @@ final class RepairHints {
     }
 
     static void apply(Diagnostic diagnostic) {
+        // Only attach Java recipes when the checker supplied a real receiver/member.
+        // This is guidance to inspect candidates, never a guessed overload repair.
+        if (diagnostic.data != null && diagnostic.data.get("receiverType") instanceof String owner
+                && diagnostic.data.get("member") instanceof String member) {
+            String recipe = switch (diagnostic.code) {
+                case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> "overloads";
+                case Codes.TYPE_NULLABLE -> "nullable";
+                case Codes.TYPE_CALLABLE_THROWS -> "callbacks";
+                default -> null;
+            };
+            if ("overloads".equals(recipe)
+                    && diagnostic.data.get("argumentTypes") instanceof java.util.List<?> arguments
+                    && arguments.stream().anyMatch(value -> value instanceof String type
+                            && (type.startsWith("List[") || type.startsWith("MutableList[")
+                            || type.startsWith("Map[") || type.startsWith("MutableMap[")))
+                    && diagnostic.data.get("candidates") instanceof java.util.List<?> candidates
+                    && candidates.stream().anyMatch(value -> value instanceof Map<?, ?> candidate
+                            && candidate.get("adaptation") instanceof Map<?, ?> adaptation
+                            && Boolean.TRUE.equals(adaptation.get("available")))) {
+                recipe = "collections";
+            }
+            if (recipe != null) {
+                if (diagnostic.hint == null) {
+                    diagnostic.hint = "Inspect signatures with `sprig api " + owner
+                            + " --member '" + member + "' --json` before choosing argument types.";
+                }
+                diagnostic.hint += "\nRecipe: https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook#" + recipe;
+            }
+        }
         if (diagnostic.relatedHelp == null) {
             diagnostic.relatedHelp = helpTopic(diagnostic.code);
         }

@@ -363,3 +363,6 @@ The interface wants the comparator to return Java's `int`; the lambda returns `I
 :::
 
 Next chapter: [Concurrency](/en/tutorial/ch22-concurrency) — making a Sprig program do several things at once.
+
+
+[Practical before/after cookbook](/en/guide/java-interop-cookbook): nulls, errors, collections, callbacks and overloads.

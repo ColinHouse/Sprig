@@ -1,0 +1,19 @@
+import java.util.ArrayList as ArrayList
+import java.lang.Thread as Thread
+
+func work() -> Unit throws Error:
+    throw Error("failed")
+func run_callback() -> Unit:
+    try:
+        work()
+    catch problem: Error:
+        print(problem.message)
+
+let names = ArrayList[String]()
+names.add("bb")
+names.add("a")
+names.sort(fn(a: String, b: String) => a.compareTo(b))
+print(names)
+let thread = Thread(fn() => run_callback())
+thread.start()
+thread.join()

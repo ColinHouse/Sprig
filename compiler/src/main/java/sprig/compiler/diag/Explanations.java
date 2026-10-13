@@ -157,7 +157,8 @@ public final class Explanations {
                         "Two overloads are equally applicable, so the call is ambiguous."));
                 out.put("safeFixes", List.of("Run sprig api <fully.qualified.Class> --json and read the reported candidates.",
                         "Choose a supported signature and convert explicitly (toIntExact(), toString(), ...).",
-                        "Adapt the value at the boundary the way sprig api's interopReasonCodes report it."));
+                        "Adapt the value at the boundary the way sprig api's interopReasonCodes report it.",
+                        "See https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook#overloads for verified method and constructor examples."));
                 out.put("relatedCodes", List.of(Codes.TYPE_NULLABLE, Codes.JVM_CLASS));
             }
             case Codes.JVM_CLASSPATH -> {

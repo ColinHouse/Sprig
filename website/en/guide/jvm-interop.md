@@ -1,5 +1,7 @@
 # JVM interop
 
+[Practical before/after cookbook](/en/guide/java-interop-cookbook): nulls, errors, collections, callbacks and overloads.
+
 Sprig compiles to Java before it runs, so the JDK's classes and Java libraries from Maven are right there for you to use. This page covers importing and calling Java classes, and the checks Sprig makes where your code meets Java.
 
 The general rule is cautious. Unless Java says otherwise, Sprig assumes a returned value might be `null`: `toString()` is always a `String`, and a result the library annotates as non-null is a plain value (see below). In the other direction, what you pass to Java may not be `null` unless the parameter is annotated `@Nullable`.

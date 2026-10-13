@@ -363,3 +363,6 @@ bad number: java.lang.NumberFormatException: For input string: "abc"
 :::
 
 下一章：[并发](/tutorial/ch22-concurrency)——让 Sprig 程序同时做几件事。
+
+
+[Java 互操作实用配方](/guide/java-interop-cookbook)：可空值、异常、集合、回调和重载的前后对照。

@@ -1,0 +1,2 @@
+import java.lang.StringBuilder as StringBuilder
+let builder = StringBuilder(1.5)

@@ -1,5 +1,7 @@
 # Implemented JVM interop (main, after v0.8.0-beta.1)
 
+For verified before/after recipes, read the [Java interop cookbook](https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook) ([中文](https://colinhouse.github.io/Sprig/guide/java-interop-cookbook)).
+
 Import a public class with an alias, then call public constructors, static
 methods, instance methods, or fields. The class must live in a named package:
 generated Sprig classes are emitted into `sprig.user`, and Java cannot reference

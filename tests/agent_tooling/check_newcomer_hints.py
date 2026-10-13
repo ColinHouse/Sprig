@@ -263,6 +263,30 @@ def main():
             text = (first.get("message") or "") + " " + (first.get("hint") or "")
             check("hint-" + name, result.returncode == 1 and first.get("code") == code and expected in text,
                   json.dumps(first))
+        # Cookbook before/after programs share the executable docs' source. Pin the
+        # stable code and first hint line so documentation never teaches stale repairs.
+        cookbook_hints = {
+            "nullable": ("SPR-TYPE-NULLABLE", "Bind the receiver to a let and check it with 'if value != null:' before using 'length'."),
+            "exceptions": ("SPR-FLOW-THROWS", "Declare it on 'parse_uri' by changing its header to 'func parse_uri(text: String) -> URI throws URISyntaxException:', and its callers then handle or declare it too (top-level statements need neither), or handle it where it happens: 'try:' around the call, then 'catch problem: URISyntaxException:' with what to do instead. Sprig keeps recoverable errors explicit; there is no implicit propagation."),
+            "collections": ("SPR-JVM-MEMBER", "Inspect signatures with `sprig api java.util.Collections --member 'sort' --json` before choosing argument types."),
+            "callbacks": ("SPR-TYPE-CALLABLE-THROWS", "Handle the error inside a named function and pass a lambda that calls it."),
+            "overloads": ("SPR-JVM-MEMBER", "Inspect signatures with `sprig api java.lang.StringBuilder --member '<init>' --json` before choosing argument types."),
+        }
+        for recipe, (code, first_hint) in cookbook_hints.items():
+            source = ROOT / "website" / "snippets" / "interop" / (recipe + "_bad.spr")
+            result = run("check", source, "--json", cwd=work)
+            diagnostic = json.loads(result.stdout)["diagnostics"][0]
+            check("cookbook-first-hint-" + recipe,
+                  result.returncode == 1 and diagnostic["code"] == code
+                  and diagnostic.get("hint", "").split("\n")[0] == first_hint, diagnostic)
+            if recipe in ("collections", "overloads", "callbacks"):
+                check("cookbook-link-" + recipe,
+                      "java-interop-cookbook#" + recipe in diagnostic.get("hint", ""), diagnostic)
+        jvm_help = json.loads(run("help", "jvm", "--json", cwd=work).stdout)
+        check("cookbook-help-link", "java-interop-cookbook" in " ".join(jvm_help["rules"]), jvm_help)
+        strings_help = json.loads(run("help", "strings", "--json", cwd=work).stdout)
+        check("string-builder-help", "StringBuilder" in " ".join(strings_help["rules"]), strings_help)
+
         for name, source, wrong in UNTARGETED:
             (work / "case.spr").write_text(source, encoding="utf-8")
             result = run("check", "case.spr", "--json", cwd=work)

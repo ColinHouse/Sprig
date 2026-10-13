@@ -186,3 +186,16 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
   first non-null branch.
 - `SPR-TYPE-INFER`: every branch is `null` and nothing gives the type.
 - `SPR-TYPE-UNIT`: a branch without a value; use an `if` statement.
+
+
+## Java boundary recipes
+
+`sprig help jvm` links the [Java interop cookbook](https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook).
+`SPR-JVM-MEMBER` and `SPR-JVM-AMBIGUOUS` with checker-provided candidate metadata
+point to the exact `sprig api` query and the overload recipe (or the collection
+recipe when a native collection argument meets a candidate with an explicit adapter). Java-bound
+`SPR-TYPE-CALLABLE-THROWS` and nullable-argument diagnostics retain their specific
+first hint and add callback/nullability recipe links. The candidate list, stable
+codes and accepted programs are unchanged; these hints never select an overload
+or silently rewrite a call. Recipes also cover `SPR-FLOW-THROWS`, explicit
+collection adapters and mutable/immutable copy behavior.
