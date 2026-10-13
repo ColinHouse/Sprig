@@ -45,6 +45,7 @@ public final class JvmMetadata {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("schemaVersion", 1);
         out.put("className", clazz.getName());
+        JvmDeprecation.describe(clazz, out);
         out.put("classKind", clazz.isInterface() ? "interface" : clazz.isEnum() ? "enum" : "class");
         List<Map<String, Object>> constructors = new ArrayList<>();
         Arrays.stream(clazz.getConstructors()).sorted(Comparator.comparing(Constructor::toGenericString))
@@ -110,6 +111,7 @@ public final class JvmMetadata {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", executable instanceof Method method ? method.getName() : "<init>");
         out.put("javaSignature", executable.toGenericString());
+        JvmDeprecation.describe(executable, out);
         out.put("sprigSignature", sprigSignature(executable));
         out.put("static", Modifier.isStatic(executable.getModifiers()));
         out.put("varargs", executable.isVarArgs());
@@ -230,6 +232,7 @@ public final class JvmMetadata {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", field.getName());
         out.put("javaSignature", field.toGenericString());
+        JvmDeprecation.describe(field, out);
         out.put("javaType", field.getType().getTypeName());
         sprig.compiler.types.Type fieldType = JavaTypes.mapValue(field.getGenericType(), field.getType());
         if (fieldType.isNullable() && JvmNullability.fieldNonNull(field)) {

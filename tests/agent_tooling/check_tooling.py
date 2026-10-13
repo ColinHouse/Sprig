@@ -30,7 +30,127 @@ def obj(proc):
     return json.loads(proc.stdout)
 
 
+def check_java_deprecation():
+    """Keep annotation metadata, resolved overload warnings, and source ranges aligned."""
+    with tempfile.TemporaryDirectory(prefix="sprig-deprecation-") as tmp:
+        directory = Path(tmp)
+        java = directory / "DeprecationFixture.java"
+        java.write_text('''package probe;
+@Deprecated(since="2", forRemoval=true)
+public class DeprecationFixture {
+    @Deprecated public DeprecationFixture() {}
+    public DeprecationFixture(long n) {}
+    @Deprecated(forRemoval=true) public static long oldField = 1;
+    public static long currentField = 2;
+    @Deprecated public static long choose(long value) { return value; }
+    public static long choose(String value) { return 0; }
+    @Deprecated(forRemoval=true) public long oldMethod() { return 1; }
+    @Deprecated protected long hook() { return 1; }
+    public static class Child extends DeprecationFixture { public Child() { super(1); } }
+    public static class CurrentChild extends DeprecationFixture {
+        public CurrentChild() { super(1); }
+        @Override public long oldMethod() { return 1; }
+        @Override protected long hook() { return 1; }
+    }
+    public interface Contract {
+        @Deprecated long required();
+        @Deprecated(forRemoval=true) default long helper() { return 1; }
+    }
+}
+''', encoding="utf-8")
+        classes = directory / "classes"
+        classes.mkdir()
+        subprocess.run(["javac", "-nowarn", "-d", str(classes), str(java)], check=True,
+                       capture_output=True, text=True)
+        target = "probe.DeprecationFixture"
+        api = obj(run("api", target, "--classpath", classes, "--json"))
+        check("api-deprecated-class", api.get("deprecated") is True and api.get("forRemoval") is True)
+        for category, name, removal in (("constructors", "<init>", False),
+                                       ("staticMethods", "choose", False),
+                                       ("instanceMethods", "oldMethod", True),
+                                       ("protectedMethods", "hook", False),
+                                       ("fields", "oldField", True)):
+            members = [m for m in api[category] if m["name"] == name and m.get("deprecated")]
+            check("api-deprecated-" + category, len(members) == 1 and members[0]["forRemoval"] is removal)
+        check("api-current-overload", any(m["name"] == "choose" and m.get("deprecated") is False
+                                          and m.get("forRemoval") is False for m in api["staticMethods"]))
+        child = obj(run("api", target + "$Child", "--classpath", classes, "--json"))
+        check("api-deprecation-not-inherited-by-class", child.get("deprecated") is False)
+        check("api-deprecated-inherited-member", any(m["name"] == "oldMethod" and m["deprecated"]
+                                                       for m in child["instanceMethods"]))
+        text_api = run("api", target, "--classpath", classes).stdout
+        check("api-deprecated-text", "deprecated: true, forRemoval: true" in text_api
+              and "deprecated: true, forRemoval: false" in text_api)
+        filtered = obj(run("api", target, "--member", "oldMethod", "--classpath", classes, "--json"))
+        check("api-deprecated-member-filter", filtered["instanceMethods"][0]["deprecated"] is True)
+        source = directory / "deprecated.spr"
+        lines = [
+            'import probe.DeprecationFixture as Fixture',
+            'import probe.DeprecationFixture.Contract as Contract',
+            'let old = Fixture()',
+            'let current = Fixture(1)',
+            'print(Fixture.choose(1))',
+            'print(Fixture.choose("current"))',
+            'print(current.oldMethod())',
+            'print(Fixture.oldField)',
+            'Fixture.oldField = 3',
+            'print(Fixture.currentField)',
+            'class Derived:',
+            '    func hook() -> Int:',
+            '        return parent.hook()',
+            'conform Derived to Fixture() as parent',
+            'class Witness:',
+            '    func required() -> Int:',
+            '        return 1',
+            '    func helper() -> Int:',
+            '        return 2',
+            'conform Witness to Contract',
+        ]
+        source.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        proc = run("check", source, "--classpath", classes, "--json")
+        result = obj(proc)
+        check("deprecated-check-still-accepted", proc.returncode == 0)
+        warnings = result["diagnostics"]
+        expected_lines = {2, 4, 6, 7, 8, 11, 12, 13, 15, 17}
+        check("deprecated-warning-count", len(warnings) == len(expected_lines))
+        check("deprecated-warning-code-severity", all(d["code"] == "SPR-JVM-DEPRECATED"
+              and d["severity"] == "warning" for d in warnings))
+        check("deprecated-warning-source-lines", {d["range"]["start"]["line"] for d in warnings} == expected_lines
+              and all(d["uri"] == source.as_uri() for d in warnings))
+        call = next(d for d in warnings if d["range"]["start"]["line"] == 6)
+        check("deprecated-warning-member-range", call["range"]["start"]["character"] == 14
+              and call["range"]["end"]["character"] == 23)
+        override = next(d for d in warnings if d["range"]["start"]["line"] == 11)
+        check("deprecated-warning-override-range", override["range"]["start"]["character"] == 9
+              and override["range"]["end"]["character"] == 13)
+        check("deprecated-warning-removal", call["data"]["forRemoval"] is True
+              and "marked for removal" in call["message"])
+        text_check = run("check", source, "--classpath", classes)
+        check("deprecated-check-text", text_check.returncode == 0
+              and "SPR-JVM-DEPRECATED" in text_check.stderr and "deprecated.spr:7:15" in text_check.stderr)
+        current_api = obj(run("api", target + "$CurrentChild", "--member", "oldMethod",
+                              "--classpath", classes, "--json"))
+        check("api-current-override-not-deprecated", current_api["instanceMethods"][0]["deprecated"] is False)
+        source.write_text("\n".join([
+            "import probe.DeprecationFixture.CurrentChild as CurrentChild",
+            "class Current:",
+            "    func hook() -> Int:",
+            "        return parent.hook()",
+            "    func oldMethod() -> Int:",
+            "        return 2",
+            "conform Current to CurrentChild() as parent",
+            "let child = CurrentChild()",
+            "print(child.oldMethod())",
+        ]) + "\n", encoding="utf-8")
+        current_check = run("check", source, "--classpath", classes, "--json")
+        check("current-override-shadows-deprecated-ancestor", current_check.returncode == 0
+              and obj(current_check)["diagnostics"] == [])
+        explanation = obj(run("explain", "SPR-JVM-DEPRECATED", "--json"))
+        check("deprecated-explain", explanation["known"] and explanation["documentationTopic"] == "jvm")
+
+
 def main():
+    check_java_deprecation()
     catalog = obj(run("capabilities", "--json"))
     check("catalog-version", catalog["compilerVersion"] == "0.8.0-beta.1"
           and catalog["languageVersion"] == "0.8-dev" and catalog["jdk"]["minimum"] == 21)

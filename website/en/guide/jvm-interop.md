@@ -38,6 +38,22 @@ Methods that return primitives (`long`, `int`, `double`, `boolean` and so on) ne
 
 In the other direction, an argument you pass to Java can't be `null` by default, even when the parameter type is `Object`. Check a `T?` value before you pass it to Java. Sprig reads nullability annotations: a result annotated `@NotNull`/`@NonNull` (or declared in a `@NullMarked` class or package) is a plain `T`, and a parameter annotated `@Nullable` accepts a `T?` or `null`. Run-time visible annotations (JSpecify, JSR-305) are read through reflection; annotations that live only in class files, like `org.jetbrains.annotations`, are read from the class file. Minecraft itself is JSpecify-annotated with `@NullMarked` on every package, so `Item.use` or `Component.literal` give you a plain value and only its `@Nullable` members are `T?`.
 
+## Deprecated Java APIs
+
+`sprig api` marks classes and members annotated with Java's `@Deprecated` in
+text output. JSON includes `deprecated` and `forRemoval` booleans for classes,
+constructors, methods, and fields. `forRemoval: true` means the library intends
+to remove that declaration.
+
+Calling or overriding a deprecated method produces `SPR-JVM-DEPRECATED` at
+your Sprig source location. Deprecated constructor calls and field reads or
+writes also warn, as do protected parent calls and superclass constructors
+selected by `conform`. `sprig check --json` reports `severity: "warning"` and
+`data.forRemoval`. A valid program still succeeds; inspect the Java library's
+documentation before choosing a replacement. Only the selected overload is
+checked, and an unannotated member does not become deprecated just because its
+class is deprecated.
+
 ## Type mapping
 
 | Java | Sprig (primitive) | Sprig (boxed or object) |

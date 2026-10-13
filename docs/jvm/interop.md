@@ -82,6 +82,28 @@ at check time (`SPR-JVM-MEMBER`, the candidate's reason names the literal); ever
 numeric conversion (`Float` to `float`, `Int` to `short`) requires an explicit
 Sprig operation. See `docs/language/numeric-semantics.md`.
 
+## Java deprecation
+
+`sprig api` reports boolean `deprecated` and `forRemoval` fields for the class,
+constructors, methods (including protected methods), and fields. They reflect
+`java.lang.Deprecated` on that declaration. A deprecated superclass does not
+make an unannotated subclass deprecated. Inherited members retain the metadata
+of their declaring member. Text output labels annotated declarations as
+`(deprecated: true, forRemoval: true)` or `forRemoval: false`; member filtering
+preserves the metadata.
+
+Calling a deprecated constructor or selected method overload, reading or
+writing a deprecated field, or overriding a deprecated Java method emits
+`SPR-JVM-DEPRECATED` at the Sprig source location. This also covers protected
+parent-view calls, interface methods (including defaults), and the superclass
+constructor selected by `conform`. JSON diagnostics have `severity: "warning"`
+and `data.member`, `data.deprecated`, and `data.forRemoval`; text diagnostics
+name the member and say when it is marked for removal. Warnings do not change
+overload selection, whether a signature is supported, or the successful exit
+status of a valid program. An unannotated overload does not inherit the warning
+from another overload. Consult the Java library's documentation for a supported
+replacement; Sprig does not infer one.
+
 ## Nullability annotations
 
 Java reference results are nullable and reference parameters non-null by

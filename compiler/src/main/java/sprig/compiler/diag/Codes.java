@@ -120,6 +120,7 @@ public final class Codes {
     // JVM
     public static final String JVM_CLASS = "SPR-JVM-CLASS";
     public static final String JVM_CLASSPATH = "SPR-JVM-CLASSPATH";
+    public static final String JVM_DEPRECATED = "SPR-JVM-DEPRECATED";
     public static final String JVM_MEMBER = "SPR-JVM-MEMBER";
     public static final String JVM_AMBIGUOUS = "SPR-JVM-AMBIGUOUS";
     public static final String JVM_COMPILE = "SPR-JVM-COMPILE";

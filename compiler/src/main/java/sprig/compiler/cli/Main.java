@@ -39,6 +39,7 @@ import sprig.compiler.gen.JavaGenerator;
 import sprig.compiler.jvm.JavaRunner;
 import sprig.compiler.jvm.JavacRunner;
 import sprig.compiler.jvm.JvmClasspath;
+import sprig.compiler.jvm.JvmDeprecation;
 import sprig.compiler.jvm.JvmMetadata;
 import sprig.compiler.jvm.StandardStreams;
 import sprig.compiler.tooling.Catalog;
@@ -287,12 +288,13 @@ public final class Main {
         }
         if (options.json) System.out.println(ToolJson.encode(data));
         else {
-            System.out.println("Java API: " + clazz.getName());
+            System.out.println("Java API: " + clazz.getName() + JvmDeprecation.text(data));
             for (String category : List.of("constructors", "staticMethods", "instanceMethods", "fields")) {
                 System.out.println(category + ":");
                 for (Map<String, Object> item : (List<Map<String, Object>>) data.get(category)) {
                     System.out.println("  " + item.get("javaSignature") + " => "
-                            + item.getOrDefault("sprigSignature", item.getOrDefault("sprigType", "")));
+                            + item.getOrDefault("sprigSignature", item.getOrDefault("sprigType", ""))
+                            + JvmDeprecation.text(item));
                     if (item.get("unusableReason") != null) System.out.println("    unavailable: " + item.get("unusableReason"));
                 }
             }
@@ -302,7 +304,8 @@ public final class Main {
                         + clazz.getSimpleName() + "(...) as NAME': override them, call them as NAME.m(...)):");
                 for (Map<String, Object> item : protectedMethods) {
                     System.out.println("  " + item.get("javaSignature") + " => " + item.get("sprigSignature")
-                            + (Boolean.TRUE.equals(item.get("final")) ? "  (final: callable, not overridable)" : ""));
+                            + (Boolean.TRUE.equals(item.get("final")) ? "  (final: callable, not overridable)" : "")
+                            + JvmDeprecation.text(item));
                 }
             }
         }

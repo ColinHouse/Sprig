@@ -149,6 +149,13 @@ public final class Explanations {
                         "Read standard input with @std/process.spr (read_lines, read_line, read_all)."));
                 out.put("relatedCodes", List.of(Codes.NAME_IMPORT, Codes.NAME_NOT_A_VALUE));
             }
+            case Codes.JVM_DEPRECATED -> {
+                out.put("whyMatters", "The Java library marks this member as deprecated; forRemoval means it is intended for removal. This warning does not reject the program.");
+                out.put("commonCauses", List.of("Calling or accessing an annotated Java member.",
+                        "Overriding an annotated Java method, or selecting an annotated superclass constructor."));
+                out.put("safeFixes", List.of("Consult the Java library documentation for a supported replacement; no automatic replacement is inferred.",
+                        "Use sprig api CLASS --member NAME --json to inspect deprecated and forRemoval metadata."));
+            }
             case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> {
                 out.put("whyMatters", "Java calls are resolved against real signatures; unsupported boundaries are reported instead of guessed.");
                 out.put("confusedWith", List.of("Java automatic boxing", "Kotlin SAM conversion"));

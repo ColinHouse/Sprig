@@ -160,6 +160,18 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 
 `wrap` 写文件之前，会先用同一个 classpath 检查生成的代码。已有的文件默认不会被覆盖，要覆盖得加 `--force`。完整规则见[包装生成器（英文）](/en/reference/jvm/wrap)。
 
+## Java 弃用提示
+
+如果 Java 类或成员标了 `@Deprecated`，`sprig api` 的文本输出会标出弃用信息。
+JSON 为类、构造器、方法和字段提供 `deprecated` 与 `forRemoval` 布尔字段；
+`forRemoval: true` 表示库作者计划移除该声明。
+
+调用或覆盖弃用方法时，Sprig 会在你写的源码位置报告 `SPR-JVM-DEPRECATED`。
+弃用构造器的调用、字段的读写、protected 父视图调用，以及 `conform` 选择的父类
+构造器也会触发警告。`sprig check --json` 的诊断包含 `severity: "warning"` 和
+`data.forRemoval`。合法程序仍然检查成功；替代方案要查 Java 库的文档。
+警告只针对实际选中的重载；类被弃用，不会让没有注解的成员自动变成弃用成员。
+
 ## 还不支持的
 
 - **数组语法**：没有数组字面量、数组类型标注、下标和遍历，数组只能原样传递。
