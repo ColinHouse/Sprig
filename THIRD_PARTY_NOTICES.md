@@ -120,3 +120,15 @@ These libraries are not committed to the source repository. Compiler-library
 classes are isolated from the user's application classpath. User-declared Maven
 libraries have their own licensing obligations; their download is not a Sprig
 license grant.
+
+## CSV application package (`libraries/sprig-csv/`)
+
+The CSV package declares Apache Commons CSV 1.14.1 from Maven Central. Its
+resolved runtime dependencies are Apache Commons IO 2.20.0 and Apache Commons
+Codec 1.19.0. All three are Apache-2.0 licensed, unmodified, and downloaded by
+`sprig resolve`; no JAR or third-party source is committed or bundled by this
+package. Applications distributing these dependencies must retain their JARs'
+`META-INF/LICENSE.txt` and `META-INF/NOTICE.txt` notices. See the official
+[Commons CSV](https://commons.apache.org/proper/commons-csv/),
+[Commons IO](https://commons.apache.org/proper/commons-io/) and
+[Commons Codec](https://commons.apache.org/proper/commons-codec/) projects.

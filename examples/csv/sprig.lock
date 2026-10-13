@@ -1,0 +1,126 @@
+lock-version = 5
+language = "0.8"
+compiler = "0.8.0-beta.1"
+manifest-sha256 = "2ab8623c9e44243e549c3ab47c026088f9b176fe1a82be3e2dfc490997fc0271"
+
+[[sprig]]
+id = "root/@csv"
+owner = "root"
+name = "csv"
+kind = "local"
+path = "../../libraries/sprig-csv"
+portable = true
+project-name = "sprig-csv"
+source = "src"
+manifest-sha256 = "fd5a9c3c6f08cdf7480635e2f86099c9540367fbafaa23c1f3c304279ef725fa"
+
+[[jvm]]
+group = "commons-codec"
+artifact = "commons-codec"
+version = "1.19.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "5c3881e4f556855e9c532927ee0c9dfde94cc66760d5805c031a59887070af5f"
+extension = "jar"
+classifier = ""
+classpath-order = 2
+direct = false
+
+[[jvm]]
+group = "commons-codec"
+artifact = "commons-codec"
+version = "1.19.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "e0f3269fa23de0c83130c5659f5f9514cc5422c0bcdf45f2eae004a78b9fca34"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "commons-io"
+artifact = "commons-io"
+version = "2.20.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "df90bba0fe3cb586b7f164e78fe8f8f4da3f2dd5c27fa645f888100ccc25dd72"
+extension = "jar"
+classifier = ""
+classpath-order = 1
+direct = false
+
+[[jvm]]
+group = "commons-io"
+artifact = "commons-io"
+version = "2.20.0"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "bdbdf81072c190ee9a8b181a5c58f5bd917a750fb13a256debbf53f5dbd33a2a"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache"
+artifact = "apache"
+version = "35"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "ea297dcd114136e8b8e8b630230d52a76c2fc69f6c5db25d672b1857000728b8"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-csv"
+version = "1.14.1"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "32be0e1e76673092f5d12cb790bd2acb6c2ab04c4ea6efc69ea5ee17911c24fe"
+extension = "jar"
+classifier = ""
+classpath-order = 0
+direct = true
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-csv"
+version = "1.14.1"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "95df735302c0ab92cec05a2b51e2270758e15f0a64186de65662eb148ebd97fd"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.apache.commons"
+artifact = "commons-parent"
+version = "85"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "d189ff2c0027e96bb65d31e6f227ed2af966169b36af1e973dd5ba08926dc7b5"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm]]
+group = "org.junit"
+artifact = "junit-bom"
+version = "5.13.1"
+repository = "https://repo.maven.apache.org/maven2/"
+sha256 = "fa68451ea830572ed43ffe51d75b6a05f7a5e665a602a51f49d6be02063a65f3"
+extension = "pom"
+classifier = ""
+classpath-order = -1
+direct = false
+
+[[jvm-edge]]
+parent = "org.apache.commons:commons-csv:jar::1.14.1"
+child = "commons-codec:commons-codec:jar::1.19.0"
+
+[[jvm-edge]]
+parent = "org.apache.commons:commons-csv:jar::1.14.1"
+child = "commons-io:commons-io:jar::2.20.0"
+
+[[jvm-edge]]
+parent = "root"
+child = "org.apache.commons:commons-csv:jar::1.14.1"

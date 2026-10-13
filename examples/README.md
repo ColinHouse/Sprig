@@ -23,6 +23,8 @@ used by examples are in [`libraries/`](../libraries/).
 
 - [application_foundation](application_foundation/README.md) — HTTP, JSON,
   time and files with first-party libraries.
+- [csv](csv/README.md) — UTF-8 CSV tables with headers, quoting and multiline
+  text through `sprig-csv`.
 - [sqlite](sqlite/README.md) — pinned Maven JDBC driver and prepared SQL.
 - [sqlite_migrations](sqlite_migrations/README.md) — ordered transactional
   migrations with rollback and retry.

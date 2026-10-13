@@ -1,0 +1,22 @@
+import "@csv/csv.spr" as csv
+import "@std/process.spr" as process
+
+func main() -> Unit throws Error:
+    let args = process.arguments()
+    var path = "contacts.csv"
+    if not args.isEmpty():
+        path = args.get(0)
+    let format = csv.Format(delimiter=",", header=true)
+    let contacts = csv.Table(
+        headers=["name", "note"],
+        rows=[["世界", "tea, cake"], ["Zoë", "first line\nsecond line"]]
+    )
+    csv.write(path, contacts, format)
+    let loaded = csv.read(path, format)
+    print("CSV rows=" + loaded.rows.size())
+    var row: Int = 0
+    while row < loaded.rows.size():
+        print(loaded.cell(row, "name") + ": " + loaded.cell(row, "note"))
+        row += 1
+
+main()

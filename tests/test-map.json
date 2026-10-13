@@ -122,7 +122,8 @@
     },
     "scripts/internal/check-tooling-consistency.py": {
       "full": false
-    }
+    },
+    "tests/csv/check_csv.py": {}
   },
   "smoke": {
     "build": "scripts/build.py",
@@ -563,6 +564,17 @@
       ],
       "gates": [
         "tests/numeric/check_numeric.py"
+      ]
+    },
+    {
+      "paths": [
+        "libraries/sprig-csv/**",
+        "examples/csv/**",
+        "tests/csv/**"
+      ],
+      "gates": [
+        "tests/csv/check_csv.py",
+        "tests/agent_tooling/check_api_docs.py"
       ]
     }
   ]

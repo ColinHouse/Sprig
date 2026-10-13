@@ -1,0 +1,136 @@
+import "@csv/csv.spr" as csv
+import "@std/process.spr" as process
+import "@std/files.spr" as files
+
+func require(ok: Bool, message: String) -> Unit throws Error:
+    if not ok:
+        throw Error(message)
+
+func parse_error(source: String, format: csv.Format, expected: String, has_cause: Bool) -> Unit throws Error:
+    var failed = false
+    try:
+        csv.parse(source, format)
+    catch problem: csv.CsvError:
+        require(problem.message.contains(expected), "wrong parse error: " + problem.message)
+        require((problem.cause != null) == has_cause, "parse cause missing")
+        failed = true
+    require(failed, "expected parse failure: " + expected)
+
+func encode_error(table: csv.Table, format: csv.Format, expected: String) -> Unit throws Error:
+    var failed = false
+    try:
+        csv.encode(table, format)
+    catch problem: csv.CsvError:
+        require(problem.message.contains(expected), "wrong encode error: " + problem.message)
+        failed = true
+    require(failed, "expected encode failure: " + expected)
+
+let format = csv.Format(delimiter=";", header=true)
+let source = "name;note\r\n世界;\"comma, semicolon; and \"\"quote\"\"\"\r\nZoë;\"line one\nline two\"\r\n"
+let table = csv.parse(source, format)
+require(table.rows.size() == 2, "record count")
+require(table.cell(0, "name") == "世界", "unicode")
+require(table.cell(0, "note") == "comma, semicolon; and \"quote\"", "escaping")
+require(table.cell(1, "note") == "line one\nline two", "multiline")
+let roundtrip = csv.parse(csv.encode(table, format), format)
+require(roundtrip.rows == table.rows, "round trip")
+require(roundtrip.headers == table.headers, "header round trip")
+require(csv.encode(table, format) == source, "CRLF and quote encoding")
+
+let raw = csv.Format(header=false)
+require(csv.parse("", raw).rows.isEmpty(), "empty input")
+require(csv.parse("\n", raw).rows == [[""]], "one blank record")
+require(csv.parse("\r\n\r\n", raw).rows == [[""], [""]], "CRLF blank records")
+require(csv.parse("\"\"\n", raw).rows == [[""]], "quoted empty")
+require(csv.parse("a\n", raw).rows == [["a"]], "no phantom final record")
+require(csv.parse("a\r\nb\rc\n", raw).rows == [["a"], ["b"], ["c"]], "all input terminators")
+require(csv.parse("a,b,\n\nc\n", raw).rows == [["a", "b", ""], [""], ["c"]], "headerless ragged records")
+require(csv.parse(" a ,001,true,null\n", raw).rows == [[" a ", "001", "true", "null"]], "text without inference")
+require(csv.parse("\"a\" ,b\n", raw).rows == [["a", "b"]], "whitespace after closing quote")
+require(csv.parse("a\"b,c\n", raw).rows == [["a\"b", "c"]], "literal quote inside unquoted field")
+require(csv.parse("\"a\r\nb\"\n", raw).rows == [["a\r\nb"]], "embedded CRLF kept")
+require(csv.parse("x\n\n", csv.Format()).rows == [[""]], "one-column blank data record")
+require(csv.parse("x,X\n1,2\n", csv.Format()).cell(0, "X") == "2", "case sensitive headers")
+require(csv.parse("x\n", csv.Format()).rows.isEmpty(), "header-only table")
+require(csv.parse(String.fromCode(65279) + "x\n世界\n", csv.Format()).cell(0, "x") == "世界", "UTF-8 BOM")
+let tab = csv.Format(delimiter="\t", header=false)
+require(csv.parse("a\t\"b\tc\"\n", tab).rows == [["a", "b\tc"]], "tab delimiter")
+let emoji = csv.Format(delimiter="😀", header=false)
+require(csv.parse("a😀b\n", emoji).rows == [["a", "b"]], "code point delimiter")
+let emoji_table = csv.Table(headers=[], rows=[["a", "b😀c"]])
+require(csv.parse(csv.encode(emoji_table, emoji), emoji).rows == emoji_table.rows, "code point delimiter round trip")
+let empty = csv.Table(headers=[], rows=[])
+require(csv.encode(empty, raw) == "", "empty output")
+let unusual = csv.Table(headers=[], rows=[["", "\"", "\r", "\n", "a,b", "世界", " "]])
+require(csv.parse(csv.encode(unusual, raw), raw).rows == unusual.rows, "all escaping round trip")
+require(csv.parse(csv.encode(table, csv.Format(delimiter=";", header=false)), csv.Format(delimiter=";", header=false)).rows == table.rows, "omit headers")
+
+parse_error("", csv.Format(), "header record is missing", false)
+parse_error("\n", csv.Format(), "header column 1 is blank", false)
+parse_error("a,\n1,2", csv.Format(), "header column 2 is blank", false)
+parse_error("a, \n1,2", csv.Format(), "header column 2 is blank", false)
+parse_error("a,a\n1,2", csv.Format(), "header column 2 duplicates: a", false)
+parse_error("a,b\n1\n", csv.Format(), "record 2 has 1 cells; expected 2", false)
+parse_error("a,b\n1,2,3\n", csv.Format(), "record 2 has 3 cells; expected 2", false)
+parse_error("a,b\n\n", csv.Format(), "record 2 has 1 cells; expected 2", false)
+parse_error("a,b\n\"unclosed", csv.Format(), "line 2", true)
+parse_error("\"a\nunfinished", raw, "record 1", true)
+parse_error("\"closed\"junk\n", raw, "line 1", true)
+for delimiter in ["", "ab", "\"", "\r", "\n", String.fromCode(0)]:
+    parse_error("a", csv.Format(delimiter=delimiter, header=false), "delimiter must be one character", false)
+encode_error(empty, csv.Format(), "header record is missing")
+encode_error(csv.Table(headers=["x", "x"], rows=[]), csv.Format(), "duplicates")
+encode_error(csv.Table(headers=[" "], rows=[]), csv.Format(), "is blank")
+encode_error(csv.Table(headers=[], rows=[[]]), raw, "has no cells")
+encode_error(csv.Table(headers=["x"], rows=[["a", "b"]]), csv.Format(), "expected 1")
+var lookup_failed = false
+try:
+    table.cell(0, "missing")
+catch problem: Error:
+    require(problem.message.contains("Unknown CSV header"), "header lookup error")
+    lookup_failed = true
+require(lookup_failed, "unknown header must fail")
+var index_failed = false
+try:
+    table.cell(-1, "name")
+catch problem: Error:
+    require(problem.message.contains("row index out of bounds"), "row lookup error")
+    index_failed = true
+require(index_failed, "bad row must fail")
+
+let args = process.arguments()
+let output = args.get(0)
+csv.write(output, table, format)
+require(csv.read(output, format).rows == table.rows, "UTF-8 file round trip")
+var write_failed = false
+try:
+    csv.write(output, csv.Table(headers=["x"], rows=[["a", "b"]]), csv.Format())
+catch problem: csv.CsvError:
+    require(problem.message.contains(output), "write path missing")
+    require(problem.cause != null, "write validation cause missing")
+    write_failed = true
+require(write_failed, "invalid write must fail")
+require(files.read_utf8(output) == source, "invalid write modified existing file")
+for path in [args.get(1), args.get(2), args.get(3), String.fromCode(0)]:
+    var failed = false
+    try:
+        csv.read(path, csv.Format())
+    catch problem: csv.CsvError:
+        require(problem.message.contains(path), "read path missing")
+        require(problem.cause != null, "read cause missing")
+        failed = true
+    require(failed, "read should fail: " + path)
+var io_failed = false
+try:
+    csv.write(args.get(4), table, format)
+catch problem: csv.CsvError:
+    require(problem.message.contains(args.get(4)), "write failure path missing")
+    require(problem.cause != null, "IO write cause missing")
+    io_failed = true
+require(io_failed, "missing parent write must fail")
+# Move and delete immediately after read/write, also exercising handle release
+# on Windows, where open handles would prevent these operations.
+let moved = output + ".moved"
+files.move(output, moved)
+files.remove_file(moved)
+print("CSV contract PASS")
