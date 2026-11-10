@@ -77,6 +77,34 @@ public final class TransactionProbe {
             check(problem[0] instanceof SqliteError, "scope confined to callback thread");
             return 1;
         });
+        // Inside the callback the database itself refuses work at once. A second connection
+        // would not see the transaction's writes, and a write through it would wait for the
+        // lock this thread holds. The transaction goes on, and another file is another database.
+        Database other = new Database(args[0] + ".other");
+        other.execute("CREATE TABLE notes(text TEXT)", none());
+        long guarded = db.transaction(tx -> {
+            tx.execute("INSERT INTO entries VALUES ('guarded')", none());
+            Runnable[] misuses = {
+                () -> db.query("SELECT COUNT(*) AS n FROM entries", none()),
+                () -> db.execute("DELETE FROM entries", none()),
+                () -> db.batch(new Batch()),
+                () -> new Database(args[0]).initialize(),
+            };
+            for (Runnable misuse : misuses) {
+                RuntimeException refused = failure(misuse);
+                check(refused instanceof SqliteError && refused.getCause() == null
+                        && refused.getMessage().equals("This database has a transaction running on this thread; "
+                                + "call query and execute on the Transaction passed to the callback"),
+                        "database call inside its transaction: " + refused);
+            }
+            other.execute("INSERT INTO notes VALUES ('another file')", none());
+            return tx.query("SELECT COUNT(*) AS n FROM entries", none()).integer(0, "n");
+        });
+        check(guarded == 3, "the transaction commits after a refused database call");
+        check(other.query("SELECT COUNT(*) AS n FROM notes", none()).integer(0, "n") == 1,
+              "another database works inside the callback");
+        check(db.execute("DELETE FROM entries WHERE name='guarded'", none()) == 1, "the database works again afterwards");
+        usable(db, 2);
         // Counters track actual close calls; injected failures happen after the real JDBC close.
         Observed observed = new Observed();
         Database measured = new Database(args[0], observed::open);

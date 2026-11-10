@@ -17,7 +17,8 @@ import sprig.runtime.NonNull;
 public final class Database {
     private final String file;
     private final ConnectionFactory connections;
-    private static final ThreadLocal<Boolean> IN_TRANSACTION = new ThreadLocal<>();
+    /** The file of the transaction that this thread is running, if it is running one. */
+    private static final ThreadLocal<String> ACTIVE_TRANSACTION = new ThreadLocal<>();
 
     @FunctionalInterface
     interface ConnectionFactory { Connection open(String url) throws SQLException; }
@@ -33,6 +34,12 @@ public final class Database {
         this.file = Path.of(file).toAbsolutePath().normalize().toString();
     }
     private Connection connect() throws SQLException {
+        // Inside a transaction's callback, a call on the database itself would open a
+        // second connection. A query through it does not see the transaction's writes,
+        // and a write waits for the lock this same thread holds until the busy timeout.
+        if (file.equals(ACTIVE_TRANSACTION.get()))
+            throw new SqliteError("This database has a transaction running on this thread; "
+                    + "call query and execute on the Transaction passed to the callback");
         Connection connection = connections.open("jdbc:sqlite:" + file);
         try {
             try (var statement = connection.createStatement()) {
@@ -157,31 +164,33 @@ public final class Database {
     @NonNull
     public <T> T transaction(Fn1<Transaction, T> work) {
         Objects.requireNonNull(work, "transaction work");
-        if (Boolean.TRUE.equals(IN_TRANSACTION.get()))
+        if (ACTIVE_TRANSACTION.get() != null)
             throw new SqliteError("Nested SQLite transactions are unsupported");
-        IN_TRANSACTION.set(true);
         try (Connection connection = connect()) {
-            connection.setAutoCommit(false);
-            Transaction scope = new Transaction(connection);
+            ACTIVE_TRANSACTION.set(file);
             try {
-                T value = work.apply(scope);
-                scope.checkUsable();
-                if (value == null) throw new SqliteError("Transaction callback returned a null host result");
-                connection.commit();
-                return value;
-            } catch (SQLException | RuntimeException | Error failure) {
-                try { connection.rollback(); }
-                catch (SQLException | RuntimeException | Error rollback) {
-                    if (rollback != failure) failure.addSuppressed(rollback);
+                connection.setAutoCommit(false);
+                Transaction scope = new Transaction(connection);
+                try {
+                    T value = work.apply(scope);
+                    scope.checkUsable();
+                    if (value == null) throw new SqliteError("Transaction callback returned a null host result");
+                    connection.commit();
+                    return value;
+                } catch (SQLException | RuntimeException | Error failure) {
+                    try { connection.rollback(); }
+                    catch (SQLException | RuntimeException | Error rollback) {
+                        if (rollback != failure) failure.addSuppressed(rollback);
+                    }
+                    throw failure;
+                } finally {
+                    scope.end();
                 }
-                throw failure;
             } finally {
-                scope.end();
+                ACTIVE_TRANSACTION.remove();
             }
         } catch (SQLException failure) {
             throw new SqliteError("SQLite transaction failed", failure);
-        } finally {
-            IN_TRANSACTION.remove();
         }
     }
 

@@ -69,6 +69,8 @@ class Rows:
 
 # A SQLite database file; get one from open(path). Each call opens its own
 # connection (foreign keys on); use transaction(database, body) to group calls.
+# Inside that body, work goes through the Transaction: a call on the database
+# itself throws Error.
 # Each sql holds one statement: a trailing ";" or comment is fine, and a second statement
 # throws Error and the call changes nothing. Bad SQL, a wrong ? count or
 # BEGIN/COMMIT-style SQL also throws Error.
@@ -136,13 +138,15 @@ class Transaction:
             return Rows(host=value)
         throw Error("SQLite transaction query unexpectedly returned null")
 
-# Internal non-null envelope preserves nullable callback results across Java.
+# Internal: holds the body's result, which may be null, in a value that is
+# never null on its way through Java; callers use transaction.
 generic T:
     class TransactionResult:
         let value: T
 
-# Internal Java callback bridge. Java Fn1 has no checked Error clause; catch
-# here and let the host rethrow the same Error inside its rollback scope.
+# Internal: runs the body for the host. A Java callback cannot declare throws
+# Error, so an Error is handed to the host, which rolls back and throws it
+# again; callers use transaction.
 generic T:
     func invoke_transaction(host: HostTransaction, body: fn(Transaction) -> T throws Error) -> TransactionResult[T]:
         try:
@@ -157,3 +161,14 @@ generic T:
     func transaction(database: Database, body: fn(Transaction) -> T throws Error) -> T throws Error:
         let result = HostDatabase(database.path).transaction[TransactionResult[T]](fn(host: HostTransaction) => invoke_transaction[T](host, body))
         return result.value
+
+# Internal: gives a body without a result one for transaction; callers use
+# transaction_run.
+func run_body(scope: Transaction, body: fn(Transaction) -> Unit throws Error) -> Bool throws Error:
+    body(scope)
+    return true
+
+# transaction() for a body that returns nothing: the same connection, commit,
+# rollback and errors.
+func transaction_run(database: Database, body: fn(Transaction) -> Unit throws Error) -> Unit throws Error:
+    transaction[Bool](database, fn(scope: Transaction) => run_body(scope, body))

@@ -38,6 +38,7 @@ absolute path is recorded as written and needs `sprig resolve` after a move.
 | `Database.execute(sql, List[Parameter]) -> Int` | One prepared statement; return affected row count |
 | `Database.query(sql, List[Parameter]) -> Rows` | Prepared query with detached snapshot; `INSERT ... RETURNING` is supported |
 | `transaction[T](Database, fn(Transaction) -> T throws Error) -> T` | Scoped read-check-write transaction; commit and return the callback result |
+| `transaction_run(Database, fn(Transaction) -> Unit throws Error)` | The same transaction for a callback that returns nothing |
 | `Transaction.execute(sql, List[Parameter]) -> Int` | One prepared update on the scope connection |
 | `Transaction.query(sql, List[Parameter]) -> Rows` | Detached query snapshot on the same scope connection |
 | `Database.batch(List[Statement]) -> Int` | One transaction; commit all commands or rollback on failure |
@@ -107,8 +108,9 @@ before commit. The existing `Parameter`, one-statement SQL validation and detach
 `Rows` contracts apply. On success, all writes commit and the callback result is
 returned; a returned `Rows` remains usable after the scope ends. Type arguments
 can be inferred from the callback result or written as `transaction[Int](...)`.
-The callback must return a value (for example, an affected-row count); `Unit`
-is not a generic type argument. Nullable results are supported.
+Nullable results are supported. A callback that returns nothing goes to
+`sqlite.transaction_run(database, body)`, which has the same connection, commit,
+rollback and error rules; `Unit` is not a value, so `transaction` cannot take it.
 
 An escaping callback `Error` is rethrown unchanged after rollback. SQL failures
 are `Error` values with the JDBC exception retained as their cause. A failed
@@ -123,8 +125,13 @@ The `Transaction` is valid only inside its callback, on that callback's thread.
 Keeping it and calling it after return or failure throws `Error`. Nested scoped
 transactions on the same thread are rejected, including through another
 `Database`; savepoints are unsupported. Helpers should accept the current
-`Transaction` instead. Calls to `Database.query`, `execute` or `batch` still open
-independent connections; use the scope methods to participate in the transaction.
+`Transaction` instead. Inside the callback, a call on the database itself
+(`Database.query`, `execute`, `batch`, or `open` on the same file) throws `Error`
+at once: `This database has a transaction running on this thread; call query
+and execute on the Transaction passed to the callback`. Such a call would use a
+second connection, which does not see the transaction's writes and whose own
+write would wait for the transaction's lock until the 5-second busy timeout.
+The transaction itself goes on, and a database in another file works as usual.
 This is a synchronous API with detached results, not streaming cursors.
 
 Run the [transfer example](../../examples/sqlite/src/transfer.spr), which reads a
