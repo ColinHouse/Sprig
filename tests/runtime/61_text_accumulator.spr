@@ -1,0 +1,213 @@
+# A local String var that a loop appends to is kept in a builder by the
+# generated code. Every read must give the text that concatenation gives, so
+# these cases cover each way such a variable is written and read.
+
+class Point(x: Int, y: Int)
+
+enum Color:
+    Red
+    Green
+
+func color_of(value: Int) -> Color:
+    if value % 2 == 0:
+        return Color.Green
+    return Color.Red
+
+func risky(value: Int) -> String throws Error:
+    if value == 3:
+        throw Error("three")
+    return "<" + value + ">"
+
+func shout(value: String) -> String:
+    return value + "!"
+
+# The reported pattern: separators and rendered rows.
+func joined(rows: List[String]) -> String:
+    var out = ""
+    var index = 0
+    for row in rows:
+        if index > 0:
+            out += ","
+        out += row
+        index += 1
+    return out
+
+# text = text + a + b appends each operand's own text; parentheses add first.
+func chained(count: Int) -> String:
+    var out = "start"
+    for i in range(count):
+        out = out + i + 1
+        out = out + (i + 1)
+        out = out + ":" + true + 1.5 + ";"
+    return out
+
+# A read between two appends sees every append so far.
+func reads_between(count: Int) -> Int:
+    var out = ""
+    var total = 0
+    for i in range(count):
+        out += "ab"
+        total += out.length()
+        if out == "abab":
+            total += 1000
+    return total
+
+# A plain assignment starts the text over; so does a prepend.
+func restarted() -> String:
+    var line = ""
+    var all = ""
+    for word in ["a", "b", "c", "d"]:
+        line += word
+        if line.length() == 2:
+            all += "[" + line + "]"
+            line = ""
+    line = "(" + line + ")"
+    for i in range(2):
+        line += "!"
+    return all + line
+
+# The variable may appear in what it appends.
+func doubled(times: Int) -> String:
+    var out = "x"
+    for i in range(times):
+        out += out
+    return out
+
+# An operand that throws leaves the variable as it was, in an append of one
+# operand and in a chain.
+func atomic() -> String:
+    var out = ""
+    for i in range(5):
+        try:
+            out += risky(i)
+        catch problem: Error:
+            out += "!"
+    for i in range(5):
+        try:
+            out = out + "a" + risky(i) + "b"
+        catch problem: Error:
+            out = out + "?"
+    return out
+
+# while, nested loops, break and continue; a variable declared inside a loop.
+func nested() -> String:
+    var out = ""
+    var row = 0
+    while row < 3:
+        var cells = ""
+        for column in range(4):
+            if column == 1:
+                continue
+            if column == 3:
+                break
+            cells += row + "." + column + " "
+        out += "[" + cells.trim() + "]"
+        row += 1
+    return out
+
+# Values of other types join with the text print shows.
+func mixed() -> String:
+    var out = ""
+    let point = Point(x=1, y=2)
+    let small: Int32 = 5
+    let single: Float32 = 1.5
+    for i in range(1):
+        out += 7
+        out += " "
+        out += small
+        out += " "
+        out += 2.5
+        out += " "
+        out += single
+        out += " "
+        out += true
+        out += " "
+        out += [1, 2]
+        out += " "
+        out += {"k": 1}
+        out += " "
+        out += point
+        out += " "
+        out += Color.Green
+        out += " "
+        out += Decimal.parse("1.50")
+        out += " "
+        out += BigInt.parse("123456789012345678901234567890")
+    return out
+
+# Positions count code points, also right after an append.
+func unicode() -> String:
+    var out = ""
+    for part in ["松", "😀", "é", "東京"]:
+        out += part
+        out += out.length()
+    return out
+
+# Everything a String can do works on the variable.
+func uses() -> String:
+    var out = ""
+    for i in range(3):
+        out += "ab"
+    var seen = ""
+    for ch in out:
+        seen += ch.toUpperCase()
+    let first = out[0]
+    let has = "ba" in out
+    return seen + first + has + out.substring(1, 3) + shout(out) + (out == "ababab")
+
+# A method's local, with an if expression and a match statement in the loop.
+class Report:
+    let title: String
+
+    func render(items: List[Int]) -> String:
+        var out = title + ":"
+        for item in items:
+            let mark = if item % 2 == 0:
+                "e"
+            else:
+                "o"
+            out += mark
+            match color_of(item):
+                case Color.Red:
+                    out += "R"
+                case Color.Green:
+                    out += "G"
+        return out
+
+func large(count: Int) -> Int:
+    var out = ""
+    for i in range(count):
+        out += "row,"
+        out += i
+        out += "\n"
+    return out.length()
+
+print(joined(["oak", "birch", "松"]))
+print(joined([]))
+print(chained(2))
+print(reads_between(3))
+print(restarted())
+print(doubled(3))
+print(atomic())
+print(nested())
+print(mixed())
+print(unicode())
+print(uses())
+print(Report(title="items").render([1, 2, 3]))
+print(large(20000))
+
+# A local of a top-level block.
+for round in range(2):
+    var banner = ""
+    for i in range(3):
+        banner += round
+    print(banner)
+
+# Without a loop the variable is an ordinary String; the text is the same.
+func plain() -> String:
+    var out = "a"
+    out += "b"
+    out = out + 1 + 2
+    return out
+
+print(plain())
