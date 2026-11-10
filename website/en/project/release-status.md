@@ -44,6 +44,7 @@ The site follows `main`. The current tutorial's features are published; later so
 On `main` and not in v0.8.0-beta.1 yet:
 
 - `sqlite.transaction` and `transaction_run` in sprig-sqlite;
+- [sprig-csv](https://github.com/ColinHouse/Sprig/tree/main/libraries/sprig-csv), a library that reads and writes CSV tables;
 - the `SPR-JVM-DEPRECATED` warning, and the `deprecated` and `forRemoval` fields of `sprig api`;
 - the `example` link on diagnostics about Java calls, and the [Java interop cookbook](/en/guide/java-interop-cookbook) it points to;
 - building a long text with `text += part` in a function's loop in time proportional to the text.

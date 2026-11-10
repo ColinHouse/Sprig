@@ -1,0 +1,213 @@
+# Text-only, materialized CSV tables backed by Apache Commons CSV.
+import org.apache.commons.csv.CSVFormat as CSVFormat
+import org.apache.commons.csv.CSVParser as CSVParser
+import org.apache.commons.csv.CSVPrinter as CSVPrinter
+import java.io.StringReader as StringReader
+import java.io.StringWriter as StringWriter
+import java.io.IOException as IOException
+import java.io.UncheckedIOException as UncheckedIOException
+import java.lang.Throwable as Throwable
+import java.nio.file.InvalidPathException as InvalidPathException
+import sprig.runtime.host.HostFiles as HostFiles
+
+# Catch as CsvError to inspect the original Java cause, or as Error for its text.
+class CsvError:
+    let message: String
+    let cause: Throwable? = null
+conform CsvError to Error(message)
+
+# header=true consumes/emits one header row. Blank records are retained.
+class Format:
+    let delimiter: String = ","
+    let header: Bool = true
+
+# A materialized text table. Headers are empty in headerless mode.
+class Table:
+    let headers: List[String]
+    let rows: List[List[String]]
+
+    # Where a header's cells are in each row, for reading one column of every
+    # row: row[table.column_index("amount")]. The name is exact and
+    # case-sensitive; an unknown one is an Error.
+    func column_index(column: String) -> Int throws Error:
+        let index = headers.indexOf(column)
+        if index < 0:
+            throw CsvError(message="Unknown CSV header: " + column)
+        return index
+
+    # Zero-based data row and exact, case-sensitive header name.
+    func cell(row: Int, column: String) -> String throws Error:
+        if row < 0 or row >= rows.size():
+            throw CsvError(message="CSV data row index out of bounds: " + row)
+        let index = column_index(column)
+        let record = rows.get(row)
+        if index >= record.size():
+            throw CsvError(message="CSV data row " + (row + 1) + " has no column " + column)
+        return record.get(index)
+
+# Internal: what went wrong, in the words of the innermost Java cause and
+# without its class name; callers read CsvError.message, and CsvError.cause
+# still holds the exception.
+func reason(problem: Throwable) -> String:
+    var current = problem
+    var depth = 0
+    while depth < 8:
+        let next = current.getCause()
+        if next == null:
+            break
+        current = next
+        depth += 1
+    let message = current.getMessage()
+    if message != null and not message.isEmpty():
+        return message
+    return current.toString()
+
+# Internal: construct the format; the Java parser owns CSV quoting rules.
+func host_format(format: Format) -> CSVFormat throws Error:
+    if format.delimiter.length() != 1 or format.delimiter == "\"" or format.delimiter == "\r" or format.delimiter == "\n" or format.delimiter.codeAt(0) == 0:
+        throw CsvError(message="CSV delimiter must be one character other than quote, CR, LF or NUL")
+    let base = CSVFormat.RFC4180
+    if base == null:
+        throw CsvError(message="CSV RFC4180 format returned null")
+    let builder = base.builder()
+    if builder == null:
+        throw CsvError(message="CSV format builder returned null")
+    builder.setDelimiter(format.delimiter)
+    builder.setIgnoreEmptyLines(false)
+    builder.setLenientEof(false)
+    builder.setTrailingData(false)
+    builder.setRecordSeparator("\r\n")
+    let result = builder.get()
+    if result != null:
+        return result
+    throw CsvError(message="CSV format builder returned null")
+
+# Internal: reject missing, ASCII-blank or repeated exact header names.
+func validate_headers(headers: List[String]) -> Unit throws Error:
+    if headers.isEmpty():
+        throw CsvError(message="CSV header record is missing")
+    let seen: MutableList[String] = []
+    var column: Int = 0
+    for name in headers:
+        column += 1
+        if name.trim().isEmpty():
+            throw CsvError(message="CSV header column " + column + " is blank")
+        if seen.contains(name):
+            throw CsvError(message="CSV header column " + column + " duplicates: " + name)
+        seen.append(name)
+
+# Parse all records, preserving text/whitespace/newlines. Empty input with a
+# header is an error; without a header it is an empty table. Ragged headerless
+# records are supported; with headers, every data row must match their width.
+func parse(source: String, format: Format) -> Table throws Error:
+    let dialect = host_format(format)
+    var input = source
+    if input.startsWith(String.fromCode(65279)):
+        input = input.substring(1)
+    var line: Int = 1
+    var record_number: Int = 1
+    try:
+        let builder = CSVParser.builder()
+        if builder == null:
+            throw CsvError(message="CSV parser builder returned null")
+        builder.setReader(StringReader(input))
+        builder.setFormat(dialect)
+        let parser = builder.get()
+        if parser == null:
+            throw CsvError(message="CSV parser builder returned null")
+        try:
+            let records = parser.getRecords()
+            if records == null:
+                throw CsvError(message="CSV parser returned null records")
+            let rows: MutableList[List[String]] = []
+            var headers: List[String] = []
+            var row: Int = 0
+            while row < records.size():
+                let record = records.get(row)
+                if record == null:
+                    throw CsvError(message="CSV parser returned a null record")
+                let cells: MutableList[String] = []
+                var column: Int = 0
+                while column < record.size():
+                    let value = record.get(column)
+                    if value == null:
+                        throw CsvError(message="CSV record " + (row + 1) + " contains a null cell")
+                    cells.append(value)
+                    column += 1
+                if format.header and row == 0:
+                    headers = cells.toList()
+                    validate_headers(headers)
+                else:
+                    if format.header and cells.size() != headers.size():
+                        throw CsvError(message="CSV record " + (row + 1) + " has " + cells.size() + " cells; expected " + headers.size())
+                    rows.append(cells.toList())
+                row += 1
+            if format.header and records.isEmpty():
+                throw CsvError(message="CSV header record is missing")
+            return Table(headers=headers, rows=rows.toList())
+        finally:
+            line = parser.getCurrentLineNumber()
+            record_number = parser.getRecordNumber() + 1
+            parser.close()
+    catch problem: IOException:
+        throw CsvError(message="CSV parse failed near record " + record_number + ", line " + line + ": " + reason(problem), cause=problem)
+    catch problem: UncheckedIOException:
+        throw CsvError(message="CSV parse failed near record " + record_number + ", line " + line + ": " + reason(problem), cause=problem)
+
+# Serialize all records with CRLF terminators and RFC-style quote escaping.
+# A zero-cell record is rejected; use [""] for a record with one empty cell.
+func encode(table: Table, format: Format) -> String throws Error:
+    let dialect = host_format(format)
+    if format.header:
+        validate_headers(table.headers)
+    var record_number: Int = 0
+    let writer = StringWriter()
+    try:
+        let printer = CSVPrinter(writer, dialect)
+        try:
+            if format.header:
+                for header in table.headers:
+                    printer.print(header)
+                printer.println()
+            for row in table.rows:
+                record_number += 1
+                if row.isEmpty():
+                    throw CsvError(message="CSV data row " + record_number + " has no cells; use one empty string for a blank record")
+                if format.header and row.size() != table.headers.size():
+                    throw CsvError(message="CSV data row " + record_number + " has " + row.size() + " cells; expected " + table.headers.size())
+                for cell in row:
+                    printer.print(cell)
+                printer.println()
+        finally:
+            printer.close()
+    catch problem: IOException:
+        throw CsvError(message="CSV write failed near data row " + record_number + ": " + reason(problem), cause=problem)
+    return writer.toString()
+
+# Whole-file strict UTF-8; all handles close before returning or throwing.
+func read(path: String, format: Format) -> Table throws Error:
+    try:
+        let source = HostFiles.readUtf8(path)
+        if source == null:
+            throw CsvError(message="CSV read returned null: " + path)
+        try:
+            return parse(source, format)
+        catch problem: CsvError:
+            throw CsvError(message="CSV read " + path + ": " + problem.message, cause=problem)
+    catch problem: IOException:
+        throw CsvError(message="CSV read " + path + ": " + reason(problem), cause=problem)
+    catch problem: InvalidPathException:
+        throw CsvError(message="CSV read " + path + ": " + reason(problem), cause=problem)
+
+# Encode before opening the destination, then replace through a temporary
+# sibling (atomic rename where supported, no fsync), using strict UTF-8.
+func write(path: String, table: Table, format: Format) -> Unit throws Error:
+    try:
+        let source = encode(table, format)
+        HostFiles.atomicWriteUtf8(path, source)
+    catch problem: CsvError:
+        throw CsvError(message="CSV write " + path + ": " + problem.message, cause=problem)
+    catch problem: IOException:
+        throw CsvError(message="CSV write " + path + ": " + reason(problem), cause=problem)
+    catch problem: InvalidPathException:
+        throw CsvError(message="CSV write " + path + ": " + reason(problem), cause=problem)

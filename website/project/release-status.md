@@ -44,6 +44,7 @@
 下面这些已经在 `main` 上，但还不在 v0.8.0-beta.1 里：
 
 - sprig-sqlite 的 `sqlite.transaction` 和 `transaction_run`；
+- 读写 CSV 表格的库 [sprig-csv](https://github.com/ColinHouse/Sprig/tree/main/libraries/sprig-csv)；
 - `SPR-JVM-DEPRECATED` 警告，以及 `sprig api` 的 `deprecated` 和 `forRemoval` 字段；
 - Java 调用相关报错上的 `example` 链接，以及它指向的 [Java 互操作实用配方](/guide/java-interop-cookbook)；
 - 在函数的循环里用 `text += part` 拼长文本，耗时和文本长度成正比。
