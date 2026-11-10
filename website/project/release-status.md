@@ -41,6 +41,13 @@
 
 网站随 `main` 分支维护。当前教程使用的功能已经发布；后续源码可能先于下次 SDK 发布增加改动。`sprig version` 确认 SDK/编译器版本，`sprig capabilities --json` 确认语言版本和实际功能。`languageVersion: 0.8-dev` 不代表 SDK 没有发布。
 
+下面这些已经在 `main` 上，但还不在 v0.8.0-beta.1 里：
+
+- sprig-sqlite 的 `sqlite.transaction` 和 `transaction_run`；
+- `SPR-JVM-DEPRECATED` 警告，以及 `sprig api` 的 `deprecated` 和 `forRemoval` 字段；
+- Java 调用相关报错上的 `example` 链接，以及它指向的 [Java 互操作实用配方](/guide/java-interop-cookbook)；
+- 在函数的循环里用 `text += part` 拼长文本，耗时和文本长度成正比。
+
 ## 怎么验证的
 
 发布流程已通过 Linux/macOS × JDK 21/26 的下载 SDK 验证。另在 macOS/JDK 26.0.1 上重新下载官方 ZIP、核对 SHA-256，并跑通 `init → resolve → run`。源码提交、校验值、CI 链接及验证范围见[发布验证记录（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md)。本地冒烟检查不代表 Windows 或全部编辑器交互都经过人工验证。

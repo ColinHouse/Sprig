@@ -387,6 +387,24 @@ def check_workspace(directory):
     client.notify("textDocument/didClose", {"textDocument": {"uri": uri(uses_bad)}})
     check("close-clears-diagnostics", client.wait_diagnostics(uses_bad, lambda d: d == []) == [])
 
+    # A use of a deprecated Java declaration is a warning, not an error, and a
+    # diagnostic with a worked example carries that page as the link of its code.
+    java_use = directory / "java_use.spr"
+    client.open(java_use, 'import java.util.Collections as Collections\nimport java.util.Date as Date\n'
+                          'let date = Date(126, 0, 15)\nCollections.sort(["b", "a"])\n')
+    published = {d["code"]: d for d in client.wait_diagnostics(java_use, lambda d: len(d) == 2)}
+    deprecated = published.get("SPR-JVM-DEPRECATED", {})
+    check("deprecation-is-a-warning", deprecated.get("severity") == 2
+          and deprecated.get("range", {}).get("start", {}).get("line") == 2
+          and deprecated.get("message", "").startswith(
+              "Calling deprecated Java constructor java.util.Date(int, int, int)\nhint: "),
+          published)
+    unmatched = published.get("SPR-JVM-MEMBER", {})
+    check("diagnostic-example-link", unmatched.get("severity") == 1 and unmatched.get("codeDescription")
+          == {"href": "https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook#collections"}, published)
+    client.notify("textDocument/didClose", {"textDocument": {"uri": uri(java_use)}})
+    client.wait_diagnostics(java_use, lambda d: d == [])
+
     # Hover shows declarations in Sprig syntax with their comments and types.
     sum_line = 5
     area_hover = hover_text(client, main, sum_line, position(MAIN, sum_line, "area", offset=1))
