@@ -84,25 +84,41 @@ Sprig operation. See `docs/language/numeric-semantics.md`.
 
 ## Java deprecation
 
-`sprig api` reports boolean `deprecated` and `forRemoval` fields for the class,
-constructors, methods (including protected methods), and fields. They reflect
-`java.lang.Deprecated` on that declaration. A deprecated superclass does not
-make an unannotated subclass deprecated. Inherited members retain the metadata
-of their declaring member. Text output labels annotated declarations as
-`(deprecated: true, forRemoval: true)` or `forRemoval: false`; member filtering
-preserves the metadata.
+`sprig api` reports `deprecated` and `forRemoval` for the class and for each
+constructor, method (protected methods included) and field. They reflect
+`java.lang.Deprecated` on that declaration itself: a deprecated superclass does
+not make a subclass deprecated, an inherited member keeps the metadata of the
+member that declares it, and an override without the annotation is not
+deprecated. Text output shows `(deprecated: true, forRemoval: false)` after a
+deprecated declaration.
 
-Calling a deprecated constructor or selected method overload, reading or
-writing a deprecated field, or overriding a deprecated Java method emits
-`SPR-JVM-DEPRECATED` at the Sprig source location. This also covers protected
-parent-view calls, interface methods (including defaults), and the superclass
-constructor selected by `conform`. JSON diagnostics have `severity: "warning"`
-and `data.member`, `data.deprecated`, and `data.forRemoval`; text diagnostics
-name the member and say when it is marked for removal. Warnings do not change
-overload selection, whether a signature is supported, or the successful exit
-status of a valid program. An unannotated overload does not inherit the warning
-from another overload. Consult the Java library's documentation for a supported
-replacement; Sprig does not infer one.
+A program that uses a deprecated declaration gets the warning
+`SPR-JVM-DEPRECATED` at the Sprig source location of each use:
+
+| Use | Message |
+|---|---|
+| a call | `Calling deprecated Java method java.net.URLDecoder.decode(String)` |
+| a constructor call, or the superclass constructor that `conform` selects | `Calling deprecated Java constructor java.util.Date(int, int, int)` |
+| a field read or write | `Accessing deprecated Java field java.math.BigDecimal.ROUND_HALF_UP` |
+| a method of a conforming class that overrides or implements it | `Overriding deprecated Java method ...` |
+| an import of the class | `Importing deprecated Java class java.util.Observable` |
+
+`(marked for removal)` follows when the annotation sets `forRemoval`. The
+message names the selected overload with its parameter types, since one
+overload may be deprecated while another is not, and only the selected one is
+checked. Calls through the parent view of a class that extends a Java class
+are calls like any other.
+
+A warning never changes overload selection, whether a signature is supported,
+or the exit status: a program with only warnings checks, builds and runs with
+status 0. In text output the location is followed by `warning:`, and the
+closing line counts warnings apart from errors (`1 error(s), 2 warning(s)`). In
+JSON the diagnostic has `"severity": "warning"`, and `data` holds `member`
+(`java.util.Date.getYear`, or `...<init>` for a constructor), `javaSignature`
+(the string `sprig api` shows for that member), `deprecated` and `forRemoval`;
+for an import, `data` holds `class` instead of the first two. The language
+server publishes it as a warning. Sprig does not suggest a replacement; the
+library's documentation does.
 
 ## Nullability annotations
 

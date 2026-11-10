@@ -38,22 +38,6 @@ Methods that return primitives (`long`, `int`, `double`, `boolean` and so on) ne
 
 In the other direction, an argument you pass to Java can't be `null` by default, even when the parameter type is `Object`. Check a `T?` value before you pass it to Java. Sprig reads nullability annotations: a result annotated `@NotNull`/`@NonNull` (or declared in a `@NullMarked` class or package) is a plain `T`, and a parameter annotated `@Nullable` accepts a `T?` or `null`. Run-time visible annotations (JSpecify, JSR-305) are read through reflection; annotations that live only in class files, like `org.jetbrains.annotations`, are read from the class file. Minecraft itself is JSpecify-annotated with `@NullMarked` on every package, so `Item.use` or `Component.literal` give you a plain value and only its `@Nullable` members are `T?`.
 
-## Deprecated Java APIs
-
-`sprig api` marks classes and members annotated with Java's `@Deprecated` in
-text output. JSON includes `deprecated` and `forRemoval` booleans for classes,
-constructors, methods, and fields. `forRemoval: true` means the library intends
-to remove that declaration.
-
-Calling or overriding a deprecated method produces `SPR-JVM-DEPRECATED` at
-your Sprig source location. Deprecated constructor calls and field reads or
-writes also warn, as do protected parent calls and superclass constructors
-selected by `conform`. `sprig check --json` reports `severity: "warning"` and
-`data.forRemoval`. A valid program still succeeds; inspect the Java library's
-documentation before choosing a replacement. Only the selected overload is
-checked, and an unannotated member does not become deprecated just because its
-class is deprecated.
-
 ## Type mapping
 
 | Java | Sprig (primitive) | Sprig (boxed or object) |
@@ -175,6 +159,32 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 ```
 
 Before writing the file, `wrap` checks the generated code against the same classpath. It won't overwrite an existing file unless you pass `--force`. The [wrapper generator reference](/en/reference/jvm/wrap) has the full rules.
+
+## Deprecated Java APIs
+
+When a Java library marks something `@Deprecated`, Sprig tells you where your code uses it. This program still runs:
+
+<<< @/snippets/guide/jvm_deprecated.spr
+
+```text
+2026
+```
+
+`sprig check` and `sprig run` also print a warning for each use, on standard error:
+
+```text
+SPR-JVM-DEPRECATED [TYPE] main.spr:3:12: warning: Calling deprecated Java constructor java.util.Date(int, int, int)
+  hint: The Java library's documentation names the replacement; 'sprig api CLASS --member NAME' shows which overloads are deprecated.
+SPR-JVM-DEPRECATED [TYPE] main.spr:4:12: warning: Calling deprecated Java method java.util.Date.getYear()
+2 warning(s); run 'sprig explain <code>' for details on a diagnostic code.
+```
+
+- A warning has the code `SPR-JVM-DEPRECATED` and the word `warning:` after the location. It doesn't fail the command: the exit status is still 0, and `--json` reports it with `"severity": "warning"`.
+- You get one for calling a deprecated constructor or method, reading or writing a deprecated field, overriding a deprecated method in a class that `conform`s to a Java class or interface, and importing a deprecated class.
+- The message names the exact overload, because `URLDecoder.decode(String)` is deprecated while `decode(String, String)` is not. `(marked for removal)` means the library plans to delete it.
+- `sprig api java.util.Date --member getYear` shows `(deprecated: true, forRemoval: false)` next to each deprecated member; in `--json` these are the `deprecated` and `forRemoval` fields.
+
+Sprig doesn't pick a replacement for you. The library's documentation says what to call instead.
 
 ## Not supported yet
 

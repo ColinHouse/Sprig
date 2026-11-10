@@ -150,11 +150,12 @@ public final class Explanations {
                 out.put("relatedCodes", List.of(Codes.NAME_IMPORT, Codes.NAME_NOT_A_VALUE));
             }
             case Codes.JVM_DEPRECATED -> {
-                out.put("whyMatters", "The Java library marks this member as deprecated; forRemoval means it is intended for removal. This warning does not reject the program.");
-                out.put("commonCauses", List.of("Calling or accessing an annotated Java member.",
-                        "Overriding an annotated Java method, or selecting an annotated superclass constructor."));
-                out.put("safeFixes", List.of("Consult the Java library documentation for a supported replacement; no automatic replacement is inferred.",
-                        "Use sprig api CLASS --member NAME --json to inspect deprecated and forRemoval metadata."));
+                out.put("whyMatters", "The Java library marks this declaration deprecated, and 'marked for removal' means a later version deletes it. This is a warning: the program still checks, builds and runs.");
+                out.put("commonCauses", List.of("Calling a deprecated constructor or method, or reading or writing a deprecated field.",
+                        "Overriding a deprecated method in a class that conforms to a Java class or interface.",
+                        "Importing a deprecated class."));
+                out.put("safeFixes", List.of("Read the Java library's documentation for the replacement; none is inferred for you.",
+                        "Run sprig api CLASS --member NAME to see which overloads are deprecated: the message names the one this call selects."));
             }
             case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> {
                 out.put("whyMatters", "Java calls are resolved against real signatures; unsupported boundaries are reported instead of guessed.");

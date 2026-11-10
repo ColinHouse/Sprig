@@ -1988,9 +1988,13 @@ public final class Main {
             boolean newHint = diagnostic.hint == null || shownHints.add(diagnostic.hint);
             System.err.println(diagnostic.format(newHint));
         }
-        if (diagnostics.hasErrors()) {
-            System.err.println(diagnostics.errorCount() + " error(s); "
-                    + "run 'sprig explain <code>' for details on a diagnostic code.");
+        int warnings = diagnostics.all().size() - diagnostics.errorCount();
+        if (diagnostics.hasErrors() || warnings > 0) {
+            String counts = diagnostics.hasErrors() ? diagnostics.errorCount() + " error(s)" : "";
+            if (warnings > 0) {
+                counts += (counts.isEmpty() ? "" : ", ") + warnings + " warning(s)";
+            }
+            System.err.println(counts + "; run 'sprig explain <code>' for details on a diagnostic code.");
         }
     }
 

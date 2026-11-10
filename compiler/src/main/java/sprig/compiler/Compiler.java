@@ -164,8 +164,11 @@ public final class Compiler {
                                     + "and cannot be referenced from generated Sprig code",
                             module.uri, imp.span)
                             .withHint("Move the Java class into a named package."));
-                } else if (alias != null) {
-                    module.javaImports.put(alias, clazz);
+                } else {
+                    sprig.compiler.jvm.JvmDeprecation.warnImport(diagnostics, clazz, module.uri, imp.span);
+                    if (alias != null) {
+                        module.javaImports.put(alias, clazz);
+                    }
                 }
             }
         }

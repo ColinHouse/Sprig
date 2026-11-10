@@ -18,10 +18,10 @@ def run(*args, env=None):
                           text=True, capture_output=True)
 
 
-def check(name, ok):
+def check(name, ok, detail=""):
     global COUNT
     if not ok:
-        raise AssertionError(name)
+        raise AssertionError(f"{name}: {detail}" if detail else name)
     COUNT += 1
     print("pass", name)
 
@@ -111,7 +111,9 @@ public class DeprecationFixture {
         result = obj(proc)
         check("deprecated-check-still-accepted", proc.returncode == 0)
         warnings = result["diagnostics"]
-        expected_lines = {2, 4, 6, 7, 8, 11, 12, 13, 15, 17}
+        # Line 0 imports the deprecated class; line 1 imports a nested interface
+        # that is not deprecated itself, and so does not warn.
+        expected_lines = {0, 2, 4, 6, 7, 8, 11, 12, 13, 15, 17}
         check("deprecated-warning-count", len(warnings) == len(expected_lines))
         check("deprecated-warning-code-severity", all(d["code"] == "SPR-JVM-DEPRECATED"
               and d["severity"] == "warning" for d in warnings))
@@ -124,10 +126,50 @@ public class DeprecationFixture {
         check("deprecated-warning-override-range", override["range"]["start"]["character"] == 9
               and override["range"]["end"]["character"] == 13)
         check("deprecated-warning-removal", call["data"]["forRemoval"] is True
-              and "marked for removal" in call["message"])
+              and call["message"] == "Calling deprecated Java method probe.DeprecationFixture.oldMethod()"
+                                     " (marked for removal)")
+        # The message and the data say which overload: choose(long) is deprecated, choose(String) is not.
+        overload = next(d for d in warnings if d["range"]["start"]["line"] == 4)
+        api_choose = next(m for m in api["staticMethods"] if m["name"] == "choose" and m["deprecated"])
+        check("deprecated-warning-names-the-overload",
+              overload["message"] == "Calling deprecated Java method probe.DeprecationFixture.choose(long)"
+              and overload["data"]["javaSignature"] == api_choose["javaSignature"]
+              and overload["data"]["member"] == "probe.DeprecationFixture.choose")
+        constructor = next(d for d in warnings if d["range"]["start"]["line"] == 2)
+        check("deprecated-warning-constructor",
+              constructor["message"] == "Calling deprecated Java constructor probe.DeprecationFixture()"
+              and constructor["data"]["member"] == "probe.DeprecationFixture.<init>")
+        field = next(d for d in warnings if d["range"]["start"]["line"] == 7)
+        check("deprecated-warning-field", field["message"]
+              == "Accessing deprecated Java field probe.DeprecationFixture.oldField (marked for removal)")
+        imported = next(d for d in warnings if d["range"]["start"]["line"] == 0)
+        check("deprecated-warning-class-import",
+              imported["message"] == "Importing deprecated Java class probe.DeprecationFixture (marked for removal)"
+              and imported["data"] == {"class": "probe.DeprecationFixture", "deprecated": True, "forRemoval": True})
+        # In text a warning line says so, and the closing line counts warnings apart from errors.
         text_check = run("check", source, "--classpath", classes)
-        check("deprecated-check-text", text_check.returncode == 0
-              and "SPR-JVM-DEPRECATED" in text_check.stderr and "deprecated.spr:7:15" in text_check.stderr)
+        warning_lines = [line for line in text_check.stderr.splitlines() if line.startswith("SPR-JVM-DEPRECATED")]
+        check("deprecated-check-text", text_check.returncode == 0 and len(warning_lines) == len(expected_lines)
+              and all(": warning: " in line for line in warning_lines)
+              and "deprecated.spr:7:15: warning: Calling deprecated Java method" in text_check.stderr
+              and text_check.stderr.rstrip().endswith(
+                  "11 warning(s); run 'sprig explain <code>' for details on a diagnostic code."),
+              text_check.stderr)
+        failing = directory / "deprecated_and_wrong.spr"
+        failing.write_text('import probe.DeprecationFixture.CurrentChild as CurrentChild\n'
+                           'print(CurrentChild.choose(1))\nlet count: Int = "one"\n', encoding="utf-8")
+        mixed = run("check", failing, "--classpath", classes)
+        check("deprecated-warning-beside-an-error", mixed.returncode == 1
+              and "deprecated_and_wrong.spr:2:20: warning: Calling deprecated Java method" in mixed.stderr
+              and "deprecated_and_wrong.spr:3:18: Type mismatch in initializer" in mixed.stderr
+              and "1 error(s), 1 warning(s); run 'sprig explain <code>'" in mixed.stderr, mixed.stderr)
+        ran = directory / "deprecated_run.spr"
+        ran.write_text('import probe.DeprecationFixture.CurrentChild as CurrentChild\n'
+                       'print(CurrentChild.choose(41) + 1)\n', encoding="utf-8")
+        executed = run("run", ran, "--classpath", classes)
+        check("deprecated-warning-does-not-stop-a-run", executed.returncode == 0 and executed.stdout == "42\n"
+              and ": warning: Calling deprecated Java method probe.DeprecationFixture.choose(long)" in executed.stderr,
+              executed.stdout + executed.stderr)
         current_api = obj(run("api", target + "$CurrentChild", "--member", "oldMethod",
                               "--classpath", classes, "--json"))
         check("api-current-override-not-deprecated", current_api["instanceMethods"][0]["deprecated"] is False)

@@ -131,6 +131,10 @@ public final class Diagnostic {
             }
             sb.append(": ");
         }
+        if (severity == Severity.WARNING) {
+            // An error line has no label; a warning says so, since it does not fail the command.
+            sb.append("warning: ");
+        }
         sb.append(message);
         if (expectedType != null || actualType != null) {
             sb.append(" (expected ").append(expectedType == null ? "?" : expectedType)

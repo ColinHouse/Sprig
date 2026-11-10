@@ -35,7 +35,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-JVM-CLASS | The imported Java class could not be loaded, or it lives in the unnamed package. |
 | SPR-JVM-CLASSPATH | A `--classpath` entry is empty, missing, or not a JAR/directory. |
 | SPR-JVM-COMPILE | The generated Java source did not compile; may be a compiler bug. |
-| SPR-JVM-DEPRECATED | Warning: a Java member annotated `@Deprecated` is called, accessed, or overridden; `forRemoval` is included in diagnostic data. |
+| SPR-JVM-DEPRECATED | Warning, not an error: a Java constructor, method or field annotated `@Deprecated` is called, accessed or overridden, or a deprecated class is imported. The message names the overload; `data.forRemoval` says whether it is marked for removal. |
 | SPR-JVM-INTERNAL | Internal compiler or tooling failure. |
 | SPR-JVM-MEMBER | No Java method/constructor/field matches this call. |
 | SPR-LEX-CHAR | The input contains a character outside the Sprig lexer. |

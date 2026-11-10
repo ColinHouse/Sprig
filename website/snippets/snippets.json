@@ -336,6 +336,7 @@
     "guide/generics_option.spr",
     "guide/jvm_bytes.spr",
     "guide/jvm_collections.spr",
+    "guide/jvm_deprecated.spr",
     "guide/jvm_nullable.spr",
     "guide/lists_group.spr",
     "guide/nulls_fallback.spr",

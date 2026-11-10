@@ -160,17 +160,31 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 
 `wrap` 写文件之前，会先用同一个 classpath 检查生成的代码。已有的文件默认不会被覆盖，要覆盖得加 `--force`。完整规则见[包装生成器（英文）](/en/reference/jvm/wrap)。
 
-## Java 弃用提示
+## 弃用的 Java API
 
-如果 Java 类或成员标了 `@Deprecated`，`sprig api` 的文本输出会标出弃用信息。
-JSON 为类、构造器、方法和字段提供 `deprecated` 与 `forRemoval` 布尔字段；
-`forRemoval: true` 表示库作者计划移除该声明。
+Java 库把某个东西标成 `@Deprecated` 之后，你的代码哪里用到了它，Sprig 会告诉你。下面这个程序照样能运行：
 
-调用或覆盖弃用方法时，Sprig 会在你写的源码位置报告 `SPR-JVM-DEPRECATED`。
-弃用构造器的调用、字段的读写、protected 父视图调用，以及 `conform` 选择的父类
-构造器也会触发警告。`sprig check --json` 的诊断包含 `severity: "warning"` 和
-`data.forRemoval`。合法程序仍然检查成功；替代方案要查 Java 库的文档。
-警告只针对实际选中的重载；类被弃用，不会让没有注解的成员自动变成弃用成员。
+<<< @/snippets/guide/jvm_deprecated.spr
+
+```text
+2026
+```
+
+同时，`sprig check` 和 `sprig run` 会在标准错误里为每一处使用打印一条警告：
+
+```text
+SPR-JVM-DEPRECATED [TYPE] main.spr:3:12: warning: Calling deprecated Java constructor java.util.Date(int, int, int)
+  hint: The Java library's documentation names the replacement; 'sprig api CLASS --member NAME' shows which overloads are deprecated.
+SPR-JVM-DEPRECATED [TYPE] main.spr:4:12: warning: Calling deprecated Java method java.util.Date.getYear()
+2 warning(s); run 'sprig explain <code>' for details on a diagnostic code.
+```
+
+- 警告的错误码是 `SPR-JVM-DEPRECATED`，位置后面带着 `warning:`。它不会让命令失败：退出码仍然是 0，`--json` 里它的 `"severity"` 是 `"warning"`。
+- 这几种情况会有警告：调用弃用的构造器或方法、读写弃用的字段、在 `conform` 到 Java 类或接口的类里覆盖弃用的方法，以及导入弃用的类。
+- 消息会写明是哪一个重载，因为 `URLDecoder.decode(String)` 已弃用，而 `decode(String, String)` 没有。带 `(marked for removal)` 表示库作者打算把它删掉。
+- `sprig api java.util.Date --member getYear` 会在每个弃用成员后面标出 `(deprecated: true, forRemoval: false)`；加 `--json` 时对应 `deprecated` 和 `forRemoval` 两个字段。
+
+Sprig 不会替你选替代品，该换成什么要看这个库自己的文档。
 
 ## 还不支持的
 
