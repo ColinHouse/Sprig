@@ -63,10 +63,11 @@ public final class SprigToolchain {
                         + ". Reinstall the SDK or configure the executable from a complete Sprig checkout.");
             }
             Map<?, ?> features = map(capabilities.get("features"));
-            if (!Boolean.TRUE.equals(features.get("emitJavaOnly"))
+            if (!Boolean.TRUE.equals(features.get("emitJavaWithRuntime"))
                     || !Boolean.TRUE.equals(features.get("testRunner"))) {
                 throw new GradleException("Sprig " + version + " is not supported by dev.sprig: it must provide "
-                        + "build --emit-java-only and sprig test. Install a compatible Sprig SDK.");
+                        + "build --emit-java-only --with-runtime and sprig test. Use the dev.sprig plugin of "
+                        + "that SDK (its libraries/sprig-gradle), or install a compatible Sprig SDK.");
             }
 
             List<File> compilerClasspath = compilerClasspath(doctor.get("compilerClasspath"));

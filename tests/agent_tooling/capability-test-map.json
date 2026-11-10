@@ -95,6 +95,9 @@
   "feature.emitJavaOnly": [
     "tests/release_hardening/check_hardening.py"
   ],
+  "feature.emitJavaWithRuntime": [
+    "tests/project_package/check_project_package.py"
+  ],
   "feature.formatter": [
     "tests/formatter/check_formatter.py"
   ],

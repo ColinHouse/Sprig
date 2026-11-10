@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -74,22 +75,68 @@ def main() -> int:
                 "SPRIG_HOME must select the compiler from that SDK before PATH fallback")
         for field in ("Compiler version:", "Compiler home:", "Runtime source:",
                       "Target source set: main", "Generated Java:", "Bridge sources:",
+                      "Generated package: sprig.user.ordinary_project",
                       "Test directory:", "Lock status:", "Compile classpath entries:"):
             require(field in output, f"sprigInfo must report {field}")
-        generated = project / "build/generated/sprig/main/java/sprig/user/$Counter.java"
+        # The project's classes and its copy of the runtime, in the project's package.
+        package_directory = project / "build/generated/sprig/main/java/sprig/user/ordinary_project"
+        generated = package_directory / "$Counter.java"
         require(generated.is_file(), f"generated Java is inspectable at {generated}")
-        require(not (project / "src/main/java/sprig/user/$Counter.java").exists(),
+        require((package_directory / "runtime/SprigRuntime.java").is_file(),
+                "the project's runtime copy is generated next to its classes")
+        require(not list((project / "src").rglob("$Counter.java")),
                 "generation must not write Java into source directories")
 
         jar = project / "build/libs/ordinary-project.jar"
         require(jar.is_file(), "Gradle build must produce the ordinary Java jar")
         jar_contents = run(["jar", "tf", str(jar)], cwd=project, env=env)
         require(jar_contents.returncode == 0, "jar inspection must succeed")
-        for entry in ("sprig/user/$Counter.class", "sprig/runtime/SprigRuntime.class",
+        entries = jar_contents.stdout.splitlines()
+        for entry in ("sprig/user/ordinary_project/$Counter.class",
+                      "sprig/user/ordinary_project/runtime/SprigRuntime.class",
                       "dev/sprig/fixture/Meter.class"):
-            require(entry in jar_contents.stdout, f"application jar must contain {entry}")
-            require(jar_contents.stdout.splitlines().count(entry) == 1,
-                    f"application jar must contain exactly one {entry}")
+            require(entries.count(entry) == 1, f"application jar must contain exactly one {entry}")
+        # Nothing of Sprig's sits outside the project's package: another Sprig-built
+        # jar on the same classpath has no class name in common with this one.
+        outside = [entry for entry in entries if entry.startswith("sprig/") and entry.endswith(".class")
+                   and not entry.startswith("sprig/user/ordinary_project/")]
+        require(not outside, f"every Sprig class must be in the project's package, found {outside[:5]}")
+
+        # Two Sprig-built jars in one JVM (#223): a second project with the same
+        # module and class names, built by the same plugin, next to the first.
+        second = Path(temp) / "second project"
+        shutil.copytree(FIXTURE, second)
+        for relative, old, new in (("sprig.toml", 'name = "ordinary-project"', 'name = "second-project"'),
+                                   ("src/main.spr", "return 42", "return 7"),
+                                   ("src/main/java/demo/Main.java", "sprig.user.ordinary_project",
+                                    "sprig.user.second_project")):
+            path = second / relative
+            text = path.read_text(encoding="utf-8")
+            require(old in text, f"fixture {relative} must contain {old!r}")
+            path.write_text(text.replace(old, new), encoding="utf-8")
+        require(run([str(launcher), "resolve", "--offline"], cwd=second, env=env).returncode == 0,
+                "the second project must resolve")
+        require(run([*gradle, "--offline", "--no-daemon", "jar"], cwd=second, env=env).returncode == 0,
+                "the second project must build its jar")
+        second_jar = second / "build/libs/ordinary-project.jar"
+        probe = Path(temp) / "probe"
+        probe.mkdir()
+        (probe / "Probe.java").write_text(
+            "public final class Probe {\n"
+            "    public static void main(String[] args) {\n"
+            "        System.out.println(new sprig.user.ordinary_project.$Counter().current()\n"
+            '                + " " + new sprig.user.second_project.$Counter().current());\n'
+            "    }\n"
+            "}\n", encoding="utf-8")
+        compiled = run(["javac", "-cp", os.pathsep.join([str(jar), str(second_jar)]), "-d", str(probe),
+                        str(probe / "Probe.java")], cwd=probe, env=env)
+        require(compiled.returncode == 0, "Java must be able to name both projects' classes")
+        for order in ([jar, second_jar], [second_jar, jar]):
+            together = run(["java", "-cp", os.pathsep.join(map(str, [probe, *order])), "Probe"],
+                           cwd=probe, env=env)
+            require(together.returncode == 0 and together.stdout.strip() == "42 7",
+                    "two Sprig-built jars on one classpath must each run their own classes, in either order; "
+                    f"{order[0].parent.parent.parent.name} first printed {together.stdout!r} {together.stderr!r}")
 
         bridge = project / "src/sprigBridge/java/dev/sprig/fixture/Meter.java"
         bridge_source = bridge.read_text(encoding="utf-8")
@@ -166,6 +213,25 @@ def main() -> int:
         missing_cli_output = missing_cli.stdout + missing_cli.stderr
         require(missing_cli.returncode != 0 and "SPRIG_EXECUTABLE" in missing_cli_output,
                 "missing explicit Sprig executable must produce setup guidance\n" + missing_cli_output)
+
+        if os.name != "nt":
+            # A compiler without the option the plugin generates with, as v0.8.0-beta.1
+            # is: the build stops while it is configured and says what is missing.
+            older = Path(temp) / "older-sprig"
+            older.write_text(
+                "#!/bin/sh\n"
+                f'if [ "$1" = capabilities ]; then {shlex.quote(str(launcher))} "$@"'
+                " | sed 's/\"emitJavaWithRuntime\": *true/\"emitJavaWithRuntime\": false/'; exit; fi\n"
+                f'exec {shlex.quote(str(launcher))} "$@"\n', encoding="utf-8")
+            older.chmod(0o755)
+            older_env = env.copy()
+            older_env["SPRIG_EXECUTABLE"] = str(older)
+            unsupported = run([*gradle, "--offline", "--no-daemon", "sprigInfo"],
+                              cwd=project, env=older_env, report_failure=False)
+            unsupported_output = unsupported.stdout + unsupported.stderr
+            require(unsupported.returncode != 0
+                    and "must provide build --emit-java-only --with-runtime" in unsupported_output,
+                    "a compiler without --with-runtime must be refused with guidance\n" + unsupported_output)
 
         main_source.unlink()
         stale = run([*gradle, "--offline", "--no-daemon", "sprigGenerate"],

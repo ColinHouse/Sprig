@@ -3,7 +3,8 @@
 Fabric/Loom is a useful host-framework stress test: it owns game mappings,
 client/server source sets, dependency resolution, Java compilation and the mod
 jar. `sprig-gradle` reads that real source-set classpath and handles Sprig
-generation, runtime sources, the narrow Java bridge and `check` integration.
+generation, the mod's own copy of the runtime, the narrow Java bridge and
+`check` integration.
 
 The component is a starter and convention, not a replacement Fabric API or a
 Sprig import package. It intentionally avoids UI, widget, inventory and
@@ -46,6 +47,29 @@ tasks or manually assembled classpaths.
 generates and compiles Java plus runtime and bridge sources before Loom packages
 the mod. `runClient` uses the same generated source set. Generated Java stays
 under `build/generated/sprig/main/java/` for inspection.
+
+## Your mod's package, and other Sprig mods
+
+Fabric loads every mod in one class loader, so two mods must not have a class
+with the same name. Everything Sprig adds to your jar is therefore in a package
+named after your project: the generated classes in `sprig.user.<project>`, and
+the mod's own copy of the runtime in `sprig.user.<project>.runtime`. The
+template's project is `sprig-fabric-counter`, so its Java entry points call
+`sprig.user.sprig_fabric_counter.$M_main`.
+
+- **Rename the project, then the package in Java.** After you change `name` in
+  `sprig.toml`, `javac` reports the two calls in `SprigItems.java` and
+  `SprigCounterClient.java` that still use the old package.
+  `./gradlew sprigInfo` prints the new one.
+- **Give each mod its own project name.** Two mods with the same `name` would
+  get the same package.
+- **Mods talk to each other through Java types.** Each mod has its own runtime
+  classes, so one mod's Sprig `List` is not another's; pass `String`, numbers
+  or a Java interface both mods know.
+
+In the Sprig repository, `python3 tests/fabric/check_template.py --run-client
+--with-example fabric_waypoints` starts a client with the starter and the
+waypoint example installed together.
 
 ## Verified version combination
 

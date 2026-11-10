@@ -1,6 +1,6 @@
 package demo;
 
-import sprig.user.$Counter;
+import sprig.user.ordinary_project.$Counter;
 
 public final class Main {
     private Main() {}

@@ -78,6 +78,7 @@ every gate reachable and every named file present.
 | Generation/runtime | `python3 tests/correctness/check_correctness.py` | Java/JVM |
 | CLI/JVM query tools | `python3 tests/agent_tooling/check_tooling.py` | subprocess/API fixtures |
 | Language server | `python3 tests/lsp/check_lsp.py` | JSON-RPC over stdio against `bin/sprig lsp` |
+| Generated packages, a project's own runtime | `python3 tests/project_package/check_project_package.py` | javac and JVM: two projects in one class loader, the runtime goldens on a copied runtime |
 | Generic Gradle integration | `python3 tests/gradle/check_gradle_plugin.py` | ordinary Java fixture; no Loom/Minecraft dependencies |
 | Fabric/Loom integration | `python3 tests/fabric/check_template.py` | explicit host-framework integration test; downloads may be needed |
 | Projects/dependencies | `python3 tests/project_deps/check_deps.py` | lock/cache/project behavior |

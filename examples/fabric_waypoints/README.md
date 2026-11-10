@@ -70,9 +70,10 @@ Only `main.spr` imports Minecraft or Fabric classes, and the dogfood test
 checks that it stays that way.
 
 The entrypoint is the one Java class, because `fabric.mod.json` names it by
-class and the classes Sprig generates (`sprig.user.$M_main` and so on) are
-compiler output, not names to publish in mod metadata. `javac` checks its call
-into Sprig at build time.
+class and the classes Sprig generates (`sprig.user.sprig_waypoints.$M_main` and
+so on, in a package named after the project in `sprig.toml`) are compiler
+output, not names to publish in mod metadata. `javac` checks its call into
+Sprig at build time.
 
 Three things you meet when you write the glue yourself:
 
@@ -101,7 +102,3 @@ Three things you meet when you write the glue yourself:
 - Chat lines are English text from Sprig; the item name and tooltip are
   translatable (`assets/sprig_waypoints/lang/en_us.json`).
 - The marker borrows the vanilla empty map texture.
-- Every Sprig mod jar carries the Sprig runtime (`sprig/runtime/`) and its
-  generated classes in the shared `sprig.user` package. This mod and the
-  starter both contain `sprig/user/$M_main.class`, so two Sprig mods in one
-  game have classes with the same names. That combination is untested.

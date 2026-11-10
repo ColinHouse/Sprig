@@ -133,8 +133,12 @@ sprig build src/main.spr --emit-java-only -d generated --json
 ```
 
 Loads imports and performs ordinary static checking, writes `generated/java/`,
-then stops before javac. JSON includes `javaSources`, `mainClass` and
-`javacInvoked=false`; invalid sources still fail with normal diagnostics.
+then stops before javac. JSON includes `javaSources`, `mainClass`,
+`generatedPackage`, `runtimePackage` and `javacInvoked=false`; invalid sources
+still fail with normal diagnostics. A project's classes are generated into
+`sprig.user.<project>`, a file outside a project into `sprig.user`. Add
+`--with-runtime` to also write the runtime's sources, as
+`sprig.user.<project>.runtime`, for a build tool that compiles the tree alone.
 Normal `build` additionally compiles classes; `run --keep` retains temporary
 Java for execution debugging and `run --stacktrace` restores the raw JVM stack
 of an uncaught runtime failure. No extra transpile command is introduced.

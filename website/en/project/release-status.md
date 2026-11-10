@@ -47,7 +47,8 @@ On `main` and not in v0.8.0-beta.1 yet:
 - [sprig-csv](https://github.com/ColinHouse/Sprig/tree/main/libraries/sprig-csv), a library that reads and writes CSV tables;
 - the `SPR-JVM-DEPRECATED` warning, and the `deprecated` and `forRemoval` fields of `sprig api`;
 - the `example` link on diagnostics about Java calls, and the [Java interop cookbook](/en/guide/java-interop-cookbook) it points to;
-- building a long text with `text += part` in a function's loop in time proportional to the text.
+- building a long text with `text += part` in a function's loop in time proportional to the text;
+- a package of its own for each project's generated classes, `sprig.user.<project>`, and in Gradle builds the project's own copy of the runtime, so two Sprig mods work in one game. Java code that names a generated class adds the project's package; see [Gradle integration](/en/guide/gradle#using-sprig-classes-from-java).
 
 ## How it was verified
 

@@ -47,7 +47,8 @@
 - 读写 CSV 表格的库 [sprig-csv](https://github.com/ColinHouse/Sprig/tree/main/libraries/sprig-csv)；
 - `SPR-JVM-DEPRECATED` 警告，以及 `sprig api` 的 `deprecated` 和 `forRemoval` 字段；
 - Java 调用相关报错上的 `example` 链接，以及它指向的 [Java 互操作实用配方](/guide/java-interop-cookbook)；
-- 在函数的循环里用 `text += part` 拼长文本，耗时和文本长度成正比。
+- 在函数的循环里用 `text += part` 拼长文本，耗时和文本长度成正比；
+- 每个项目生成的类有自己的包 `sprig.user.<项目名>`，Gradle 构建还会带上项目自己的一份运行时，所以两个 Sprig 模组可以装进同一个游戏。Java 代码里引用生成类的地方要加上项目的包名，见 [Gradle 集成](/guide/gradle#在-java-里用-sprig-写的类)。
 
 ## 怎么验证的
 

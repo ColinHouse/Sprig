@@ -45,6 +45,7 @@ public abstract class SprigInfoTask extends SprigTask {
                     + result.stderr() + result.stdout());
         }
         String lockStatus = "unknown";
+        String generatedPackage = "unknown";
         String manifest = new File(getProjectDirectory(), "sprig.toml").getAbsolutePath();
         try {
             Object parsed = new JsonSlurper().parseText(result.stdout());
@@ -53,6 +54,7 @@ public abstract class SprigInfoTask extends SprigTask {
             if (project != null) {
                 lockStatus = String.valueOf(project.get("lockStatus"));
                 manifest = String.valueOf(project.get("manifest"));
+                generatedPackage = String.valueOf(project.get("generatedPackage"));
             }
         } catch (RuntimeException e) {
             throw new GradleException("Sprig project --json returned invalid project metadata: " + e.getMessage(), e);
@@ -64,6 +66,7 @@ public abstract class SprigInfoTask extends SprigTask {
         getLogger().lifecycle("Target source set: {}", getSourceSetName());
         getLogger().lifecycle("Bridge sources: {}", bridgeSources);
         getLogger().lifecycle("Generated Java: {}", generatedJava);
+        getLogger().lifecycle("Generated package: {}", generatedPackage);
         getLogger().lifecycle("Runtime source: {}", runtimeSource);
         getLogger().lifecycle("Test directory: {}", testDirectory);
         getLogger().lifecycle("Lock status: {}", lockStatus);

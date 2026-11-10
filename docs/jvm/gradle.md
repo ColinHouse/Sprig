@@ -2,8 +2,9 @@
 
 The first-party `dev.sprig` Gradle plugin integrates an existing Sprig project
 with an ordinary Java source set. It reads Gradle's resolved compile classpath,
-compiles the optional Java bridge before Sprig checking, emits reviewable Java,
-registers generated and runtime sources, and connects Sprig tests to `check`.
+compiles the optional Java bridge before Sprig checking, emits reviewable Java
+with the project's own copy of the runtime, registers it with the source set,
+and connects Sprig tests to `check`.
 
 See the full [plugin guide](../../libraries/sprig-gradle/README.md) for the
 extension, tasks, toolchain discovery, lock behavior and compatibility
@@ -43,13 +44,26 @@ The host build still declares its own Java/Minecraft/Fabric dependencies and
 mod membership. It does not compile a bridge, serialize a classpath, invoke an
 `Exec` generation task, register runtime sources, or wire Sprig tests itself.
 
+## Generated package
+
+The classes generated for a project are in `sprig.user.<project>`, and the
+project's copy of the runtime in `sprig.user.<project>.runtime`, where
+`<project>` is the manifest's `name` with every character a Java package name
+cannot hold replaced by `_`. Java code in the project names a generated class
+with that package (`sprig.user.ordinary_project.$Counter`), and
+`./gradlew sprigInfo` prints it. Two jars built this way share no class name,
+so one class loader can hold both: two Fabric mods in one game, or two
+Sprig-built libraries on one classpath. The
+[plugin guide](../../libraries/sprig-gradle/README.md#generated-package-and-runtime)
+has the details.
+
 ## Responsibilities
 
 | Owner | Responsibilities |
 |---|---|
 | Gradle/Loom | Dependencies, source sets, `javac`, host tests, run tasks and final jar. |
-| Sprig compiler | Language checking, Java generation, lock validation and Sprig tests. |
-| `dev.sprig` | Toolchain discovery, Java bridge, classpath transfer, generated/runtime sources and lifecycle dependencies. |
+| Sprig compiler | Language checking, Java generation with the project's copy of the runtime, lock validation and Sprig tests. |
+| `dev.sprig` | Toolchain discovery, Java bridge, classpath transfer, generated sources and lifecycle dependencies. |
 
 `check` runs `sprigCheck` and `sprigTest`. Generation is a dependency of the
 selected Java compile task, so `build` and host run tasks see current output.

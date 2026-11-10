@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import sprig.compiler.diag.Codes;
 import sprig.compiler.diag.Diagnostic;
@@ -133,6 +135,40 @@ public final class RuntimeClasses {
         List<Path> sources = new ArrayList<>(programSources);
         sources.addAll(listSources(sourceDir));
         return JavacRunner.compile(classesDir, sources, diagnostics, lineMaps, uris);
+    }
+
+    /** {@code sprig.runtime} where it starts a qualified name: not inside a longer identifier or name. */
+    private static final Pattern RUNTIME_NAME = Pattern.compile(
+            "(?<![\\p{javaJavaIdentifierPart}.])sprig\\.runtime(?![\\p{javaJavaIdentifierPart}])");
+
+    /**
+     * Writes the runtime's sources below {@code javaDir} as the package
+     * {@code runtimePackage}, and returns the files written.
+     *
+     * <p>A build tool compiles this copy together with code generated for the
+     * same package ({@code build --emit-java-only --with-runtime}): the result
+     * names no class of {@code sprig.runtime}, so another Sprig-built jar in
+     * the same class loader cannot supply or shadow one. The runtime's files
+     * refer to each other through their package and import declarations
+     * only, so renaming the package where it starts a name moves all of them;
+     * line numbers stay those of the shipped sources.
+     */
+    List<Path> writeSources(String runtimePackage, Path javaDir) throws IOException {
+        Path shippedRoot = sourceDir.resolve("sprig").resolve("runtime");
+        Path target = javaDir.resolve(runtimePackage.replace('.', '/'));
+        List<Path> written = new ArrayList<>();
+        for (Path source : listSources(sourceDir)) {
+            if (!source.startsWith(shippedRoot)) {
+                throw new IOException("Runtime source outside sprig/runtime cannot be given another package: " + source);
+            }
+            String text = Files.readString(source, StandardCharsets.UTF_8);
+            Path file = target.resolve(shippedRoot.relativize(source).toString());
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, RUNTIME_NAME.matcher(text).replaceAll(Matcher.quoteReplacement(runtimePackage)),
+                    StandardCharsets.UTF_8);
+            written.add(file);
+        }
+        return written;
     }
 
     /**

@@ -37,7 +37,7 @@ sprig {
 }
 ```
 
-Fabric 依赖、拆分的 source set、模组入口和 Java 版本，都还是普通的 Loom 配置。Sprig 插件负责编译桥接代码、提供真实的 classpath、生成源码、加入运行时源码，并把这些接进 Gradle 的构建流程。
+Fabric 依赖、拆分的 source set、模组入口和 Java 版本，都还是普通的 Loom 配置。Sprig 插件负责编译桥接代码、提供真实的 classpath、生成源码、加入模组自己的一份运行时，并把这些接进 Gradle 的构建流程。
 
 ## 各部分的分工
 
@@ -51,6 +51,22 @@ Fabric 依赖、拆分的 source set、模组入口和 Java 版本，都还是�
 | `build/generated/sprig/main/java/` | 生成的 Java，可以打开查看 |
 
 Gradle 和 Loom 负责依赖、source set、javac 和打包 jar；Sprig 负责类型检查、生成代码、校验锁文件和运行 Sprig 测试；插件把两边接起来。依赖不会自动更新：`check` 和 `build` 只读当前的 `sprig.lock`，只有明确运行 `./gradlew sprigResolve` 才会更新它。
+
+## 改项目名，以及和别的 Sprig 模组共存
+
+Fabric 把所有模组放在同一个类加载器里，所以两个模组不能有同名的类。Sprig 往你的 jar 里放的东西因此都在以项目名命名的包里：生成的类在 `sprig.user.<项目名>`，模组自己的一份运行时在 `sprig.user.<项目名>.runtime`。模板的项目叫 `sprig-fabric-counter`，它的 Java 入口就这样调用 Sprig：
+
+```java
+CounterActions counter = sprig.user.sprig_fabric_counter.$M_main.fn$new_counter();
+```
+
+- **改了 `sprig.toml` 里的 `name`，Java 里的包名也要改。** `javac` 会指出 `SprigItems.java` 和 `SprigCounterClient.java` 里还在用旧包名的两处调用，`./gradlew sprigInfo` 会打印新的包名。
+- **每个模组用自己的项目名。** 两个模组的 `name` 相同，包名就相同。
+- **模组之间用 Java 的类型传值。** 每个模组各有一份运行时，一个模组的 Sprig `List` 不是另一个模组的。传 `String`、数字，或者双方都认识的 Java 接口。
+
+::: tip 这是 `main` 分支上的行为
+v0.8.0-beta.1 和更早的 SDK 把所有模组的类都生成到 `sprig.user`，运行时在 `sprig.runtime`，所以两个 Sprig 模组装进同一个游戏时会有同名的类。
+:::
 
 ## 测试过的版本
 

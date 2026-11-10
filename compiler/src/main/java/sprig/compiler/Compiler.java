@@ -156,9 +156,10 @@ public final class Compiler {
                             module.uri, imp.span)
                             .withHint("Check the class name and the compile classpath."));
                 } else if (clazz.getPackageName().isEmpty()) {
-                    // Generated code lives in package sprig.user, and Java forbids
-                    // referencing a type from the unnamed package there. Reject the
-                    // import now instead of failing later inside javac.
+                    // Generated code lives in a named package (sprig.user, or a
+                    // project's own below it), and Java forbids referencing a type
+                    // from the unnamed package there. Reject the import now instead
+                    // of failing later inside javac.
                     diagnostics.add(Diagnostic.error(Codes.JVM_CLASS, Phase.JVM,
                             "Java class '" + clazz.getName() + "' is in the unnamed package "
                                     + "and cannot be referenced from generated Sprig code",

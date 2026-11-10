@@ -16,6 +16,13 @@ the Sprig-generated Java, runtime and bridge as part of the Loom `main` source
 set, so the client entry point and the item registration both see it.
 Generated Java is kept under `build/generated/sprig/main/java/`.
 
+The two Java entry points call the generated classes by their package,
+`sprig.user.sprig_fabric_counter`, which is named after `name` in `sprig.toml`.
+When you rename the project, change the package in `SprigItems.java` and
+`SprigCounterClient.java` as well; `./gradlew sprigInfo` prints it. The mod's
+copy of the Sprig runtime is in the same package, so another Sprig mod in the
+same game has no class in common with this one.
+
 The wand (`class Wand` in `src/main.spr`, `conform Wand to Item(properties) as
 parent`) counts its uses, tells the player on the server side and then runs
 the inherited `Item.use` through `parent.use(...)`. `SprigItems.java` registers

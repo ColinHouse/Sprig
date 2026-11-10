@@ -273,7 +273,8 @@ public final class TestCommand {
         Compilation compilation = compiler.compile(test.source);
         if (diagnostics.hasErrors())
             return new Outcome("failed", diagnostics.all(), "", "", "Sprig check failed");
-        JavaGenerator.Output generated = new JavaGenerator(compilation, diagnostics).generate();
+        JavaGenerator.Output generated = new JavaGenerator(compilation, diagnostics,
+                Main.packages(graph, false)).generate();
         if (diagnostics.hasErrors())
             return new Outcome("failed", diagnostics.all(), "", "", "Java generation failed");
         Path work = Files.createTempDirectory("sprig-test-");

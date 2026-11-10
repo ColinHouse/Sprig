@@ -123,7 +123,8 @@
     "scripts/internal/check-tooling-consistency.py": {
       "full": false
     },
-    "tests/csv/check_csv.py": {}
+    "tests/csv/check_csv.py": {},
+    "tests/project_package/check_project_package.py": {}
   },
   "smoke": {
     "build": "scripts/build.py",
@@ -575,6 +576,20 @@
       "gates": [
         "tests/csv/check_csv.py",
         "tests/agent_tooling/check_api_docs.py"
+      ]
+    },
+    {
+      "paths": [
+        "tests/project_package/**",
+        "compiler/src/main/java/sprig/compiler/gen/**",
+        "compiler/src/main/java/sprig/compiler/cli/**",
+        "runtime/**",
+        "std/**",
+        "tests/runtime/*.spr",
+        "tests/runtime/*.out"
+      ],
+      "gates": [
+        "tests/project_package/check_project_package.py"
       ]
     }
   ]

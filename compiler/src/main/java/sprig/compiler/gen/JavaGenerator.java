@@ -37,10 +37,7 @@ import sprig.compiler.types.VariantType;
  * by name resolution + type checking; this phase only lowers to Java.
  */
 public final class JavaGenerator {
-    public static final String PACKAGE = "sprig.user";
-    public static final String PACKAGE_DIR = "sprig/user";
-
-    private static final Set<String> JAVA_RESERVED = Set.of(
+    static final Set<String> JAVA_RESERVED = Set.of(
             "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
             "continue", "default", "do", "double", "else", "enum", "extends", "final", "finally", "float",
             "for", "goto", "if", "implements", "import", "instanceof", "int", "interface", "long", "native",
@@ -71,6 +68,12 @@ public final class JavaGenerator {
 
     private final Compilation compilation;
     private final Diagnostics diagnostics;
+    private final Packages packages;
+    /** The package of the generated classes, and its directory below the source root. */
+    private final String pkg;
+    private final String pkgDir;
+    /** The package generated code finds the runtime in. */
+    private final String runtime;
     private final Output output = new Output();
     // A Java variable or member type named like a package root obscures that
     // package (JLS 6.4.2), breaking every fully qualified name below it.
@@ -94,13 +97,18 @@ public final class JavaGenerator {
     private Decl.ClassDecl currentClassDecl;
     private Type currentReturnType;
 
-    public JavaGenerator(Compilation compilation, Diagnostics diagnostics) {
-        this(compilation, diagnostics, BUILTIN_PACKAGE_ROOTS);
+    public JavaGenerator(Compilation compilation, Diagnostics diagnostics, Packages packages) {
+        this(compilation, diagnostics, packages, BUILTIN_PACKAGE_ROOTS);
     }
 
-    private JavaGenerator(Compilation compilation, Diagnostics diagnostics, Set<String> reservedRoots) {
+    private JavaGenerator(Compilation compilation, Diagnostics diagnostics, Packages packages,
+                          Set<String> reservedRoots) {
         this.compilation = compilation;
         this.diagnostics = diagnostics;
+        this.packages = packages;
+        this.pkg = packages.generated();
+        this.pkgDir = packages.generatedDirectory();
+        this.runtime = packages.runtime();
         this.reservedRoots = reservedRoots;
     }
 
@@ -121,7 +129,7 @@ public final class JavaGenerator {
             }
         }
         if (compilation.main != null) {
-            output.mainClass = PACKAGE + "." + moduleClassNames.get(compilation.main);
+            output.mainClass = pkg + "." + moduleClassNames.get(compilation.main);
         }
         // JVM package roots are only known once their fully qualified names have
         // been emitted. If a user identifier was emitted with the same spelling,
@@ -132,7 +140,7 @@ public final class JavaGenerator {
         if (!collisions.isEmpty()) {
             Set<String> roots = new java.util.HashSet<>(reservedRoots);
             roots.addAll(referencedRoots);
-            return new JavaGenerator(compilation, diagnostics, Set.copyOf(roots)).generate();
+            return new JavaGenerator(compilation, diagnostics, packages, Set.copyOf(roots)).generate();
         }
         return output;
     }
@@ -169,7 +177,7 @@ public final class JavaGenerator {
                         usedNames.add(name + "$" + mangle(variantCase.name));
                     }
                 }
-                typeNames.put(decl, PACKAGE + "." + name);
+                typeNames.put(decl, pkg + "." + name);
             }
         }
     }
@@ -213,7 +221,7 @@ public final class JavaGenerator {
     }
 
     private String moduleClassName(Module module) {
-        return PACKAGE + "." + moduleClassNames.get(module);
+        return pkg + "." + moduleClassNames.get(module);
     }
 
     private static String sanitize(String name) {
@@ -297,10 +305,10 @@ public final class JavaGenerator {
             return "float";
         }
         if (type == NativeType.DECIMAL) {
-            return "sprig.runtime.SprigDecimal";
+            return runtime + ".SprigDecimal";
         }
         if (type == NativeType.BIGINT) {
-            return "sprig.runtime.SprigBigInt";
+            return runtime + ".SprigBigInt";
         }
         if (type == NativeType.BOOL) {
             return "boolean";
@@ -320,21 +328,21 @@ public final class JavaGenerator {
         // its raw runtime class and cast at the substituted boundary.
         if (containsTypeParameter(type)) {
             if (type instanceof ListType list) {
-                return list.mutable ? "sprig.runtime.SprigMutableList" : "sprig.runtime.SprigList";
+                return list.mutable ? runtime + ".SprigMutableList" : runtime + ".SprigList";
             }
             if (type instanceof MapType map) {
-                return map.mutable ? "sprig.runtime.SprigMutableMap" : "sprig.runtime.SprigMap";
+                return map.mutable ? runtime + ".SprigMutableMap" : runtime + ".SprigMap";
             }
             if (type instanceof FunctionType function) {
-                return "sprig.runtime.Fn" + function.params.size();
+                return runtime + ".Fn" + function.params.size();
             }
         }
         if (type instanceof ListType list) {
-            String raw = list.mutable ? "sprig.runtime.SprigMutableList" : "sprig.runtime.SprigList";
+            String raw = list.mutable ? runtime + ".SprigMutableList" : runtime + ".SprigList";
             return raw + "<" + boxedJavaType(list.element) + ">";
         }
         if (type instanceof MapType map) {
-            String raw = map.mutable ? "sprig.runtime.SprigMutableMap" : "sprig.runtime.SprigMap";
+            String raw = map.mutable ? runtime + ".SprigMutableMap" : runtime + ".SprigMap";
             return raw + "<" + boxedJavaType(map.key) + ", " + boxedJavaType(map.value) + ">";
         }
         if (type instanceof ClassType classType) {
@@ -363,7 +371,7 @@ public final class JavaGenerator {
             return parameterized.append('>').toString();
         }
         if (type instanceof FunctionType functionType) {
-            StringBuilder sb = new StringBuilder("sprig.runtime.Fn").append(functionType.params.size()).append('<');
+            StringBuilder sb = new StringBuilder(runtime + ".Fn").append(functionType.params.size()).append('<');
             for (Type param : functionType.params) {
                 sb.append(boxedJavaType(param)).append(", ");
             }
@@ -394,10 +402,10 @@ public final class JavaGenerator {
             return "java.lang.Float";
         }
         if (type == NativeType.DECIMAL) {
-            return "sprig.runtime.SprigDecimal";
+            return runtime + ".SprigDecimal";
         }
         if (type == NativeType.BIGINT) {
-            return "sprig.runtime.SprigBigInt";
+            return runtime + ".SprigBigInt";
         }
         if (type == NativeType.BOOL) {
             return "java.lang.Boolean";
@@ -423,7 +431,9 @@ public final class JavaGenerator {
             return sourceName(clazz.getComponentType()) + "[]";
         }
         String canonical = clazz.getCanonicalName();
-        String name = canonical != null ? canonical : clazz.getName().replace('$', '.');
+        // A runtime class that Sprig source imports is, like the generated code's
+        // own references, the one of this compilation's runtime package.
+        String name = packages.runtimeName(canonical != null ? canonical : clazz.getName().replace('$', '.'));
         int dot = name.indexOf('.');
         if (dot > 0) {
             referencedRoots.add(name.substring(0, dot));
@@ -437,7 +447,7 @@ public final class JavaGenerator {
 
     private void generateEnum(Decl.EnumDecl decl) {
         JavaWriter w = writer(decl.span);
-        w.line("package " + PACKAGE + ";");
+        w.line("package " + pkg + ";");
         w.blank();
         w.line("// Sprig enum " + commentText(currentModule.name) + ":" + decl.span.display());
         w.map(decl.span);
@@ -462,12 +472,12 @@ public final class JavaGenerator {
             w.line("@Override public java.lang.String toString() { return sprigName; }");
             w.close();
         }
-        emitFile(PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java", w);
+        emitFile(pkgDir + "/" + simpleName(typeNames.get(decl)) + ".java", w);
     }
 
     private void generateVariant(Decl.VariantDecl decl) {
         JavaWriter w = writer(decl.span);
-        w.line("package " + PACKAGE + ";");
+        w.line("package " + pkg + ";");
         w.blank();
         w.line("// Sprig variant " + commentText(currentModule.name) + ":" + decl.span.display());
         w.map(decl.span);
@@ -478,7 +488,7 @@ public final class JavaGenerator {
             generateVariantCase(w, decl, variantCase);
         }
         w.close();
-        String file = PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java";
+        String file = pkgDir + "/" + simpleName(typeNames.get(decl)) + ".java";
         emitFile(file, w);
     }
 
@@ -519,7 +529,7 @@ public final class JavaGenerator {
                 if (i > 0) {
                     text.append(", ");
                 }
-                text.append(variantCase.fields.get(i).name).append("=\" + sprig.runtime.SprigRuntime.str(")
+                text.append(variantCase.fields.get(i).name).append("=\" + " + runtime + ".SprigRuntime.str(")
                     .append(mangle(variantCase.fields.get(i).name)).append(") + \"");
             }
             text.append(')');
@@ -546,7 +556,7 @@ public final class JavaGenerator {
                 if (isPrimitive(field.type)) {
                     comparison.append("this.").append(name).append(" == that.").append(name);
                 } else {
-                    comparison.append("sprig.runtime.SprigRuntime.equalsValue(this.").append(name)
+                    comparison.append(runtime + ".SprigRuntime.equalsValue(this.").append(name)
                             .append(", that.").append(name).append(')');
                 }
             }
@@ -560,7 +570,7 @@ public final class JavaGenerator {
             if (i > 0) {
                 hash.append(", ");
             }
-            hash.append("sprig.runtime.SprigRuntime.hashValue(this.")
+            hash.append(runtime + ".SprigRuntime.hashValue(this.")
                     .append(mangle(variantCase.fields.get(i).name)).append(")");
         }
         w.line(hash.append(");").toString());
@@ -574,7 +584,7 @@ public final class JavaGenerator {
     /** A contract class is a Java interface: one abstract method per bodiless Sprig method. */
     private void generateContract(Decl decl, Decl.ClassDecl classDecl) {
         JavaWriter w = writer(classDecl.span);
-        w.line("package " + PACKAGE + ";");
+        w.line("package " + pkg + ";");
         w.blank();
         w.line("// Sprig contract " + commentText(currentModule.name) + ":" + classDecl.span.display());
         w.map(classDecl.span);
@@ -606,7 +616,7 @@ public final class JavaGenerator {
             w.line(sig.append(';').toString());
         }
         w.close();
-        emitFile(PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java", w);
+        emitFile(pkgDir + "/" + simpleName(typeNames.get(decl)) + ".java", w);
     }
 
     private void generateClass(Decl decl, Decl.ClassDecl classDecl) {
@@ -615,7 +625,7 @@ public final class JavaGenerator {
             return;
         }
         JavaWriter w = writer(classDecl.span);
-        w.line("package " + PACKAGE + ";");
+        w.line("package " + pkg + ";");
         w.blank();
         w.line("// Sprig class " + commentText(currentModule.name) + ":" + classDecl.span.display());
         w.map(classDecl.span);
@@ -657,7 +667,7 @@ public final class JavaGenerator {
                     if (i > 0) {
                         text.append(", ");
                     }
-                    text.append(classDecl.fields.get(i).name).append("=\" + sprig.runtime.SprigRuntime.str(")
+                    text.append(classDecl.fields.get(i).name).append("=\" + " + runtime + ".SprigRuntime.str(")
                         .append(mangle(classDecl.fields.get(i).name)).append(") + \"");
                 }
                 text.append(')');
@@ -667,7 +677,7 @@ public final class JavaGenerator {
             w.close();
         }
         w.close();
-        String file = PACKAGE_DIR + "/" + simpleName(typeNames.get(decl)) + ".java";
+        String file = pkgDir + "/" + simpleName(typeNames.get(decl)) + ".java";
         emitFile(file, w);
     }
 
@@ -706,7 +716,7 @@ public final class JavaGenerator {
 
     private void generateModule(Module module) {
         JavaWriter w = writer(null);
-        w.line("package " + PACKAGE + ";");
+        w.line("package " + pkg + ";");
         w.blank();
         w.line("// Sprig module " + commentText(module.name) + " (" + commentText(module.path.getFileName()) + ")");
         w.map(null);
@@ -773,16 +783,16 @@ public final class JavaGenerator {
         w.blank();
         w.open("public static void main(java.lang.String[] args)");
         w.open("try");
-        w.line("sprig.runtime.host.HostSystem.setArguments(args);");
+        w.line(runtime + ".host.HostSystem.setArguments(args);");
         w.line("sprigMain();");
         w.close();
         w.open("catch (java.lang.Throwable failure)");
-        w.line("sprig.runtime.SprigRuntime.reportRuntimeFailure(failure);");
+        w.line(runtime + ".SprigRuntime.reportRuntimeFailure(failure);");
         w.line("java.lang.System.exit(1);");
         w.close();
         w.close();
         w.close();
-        String file = PACKAGE_DIR + "/" + moduleClassNames.get(module) + ".java";
+        String file = pkgDir + "/" + moduleClassNames.get(module) + ".java";
         emitFile(file, w);
     }
 
@@ -852,7 +862,7 @@ public final class JavaGenerator {
         if (!needsInitGuard(symbol)) {
             return field;
         }
-        return "sprig.runtime.SprigRuntime.initialized(" + moduleClassName(symbol.module) + "."
+        return runtime + ".SprigRuntime.initialized(" + moduleClassName(symbol.module) + "."
                 + readyFlagName(symbol) + ", \"" + symbol.name + "\", " + field + ")";
     }
 
@@ -928,8 +938,8 @@ public final class JavaGenerator {
         if (stmt instanceof Stmt.VarDecl varDecl) {
             w.map(varDecl.span);
             if (textAccumulators.contains(varDecl.symbol)) {
-                w.line("final sprig.runtime.TextAccumulator " + localName(varDecl.symbol)
-                        + " = new sprig.runtime.TextAccumulator("
+                w.line("final " + runtime + ".TextAccumulator " + localName(varDecl.symbol)
+                        + " = new " + runtime + ".TextAccumulator("
                         + convertedExpression(varDecl.init, varDecl.symbol.type) + ");");
             } else {
                 w.line(javaType(varDecl.symbol.type) + " " + localName(varDecl.symbol) + " = "
@@ -998,7 +1008,7 @@ public final class JavaGenerator {
             if (name.symbol.kind == Symbol.Kind.TOP_VAR) {
                 lhs = moduleClassName(name.symbol.module) + "." + mangle(name.symbol.name);
                 if (needsInitGuard(name.symbol)) {
-                    w.line("sprig.runtime.SprigRuntime.requireInitialized(" + moduleClassName(name.symbol.module)
+                    w.line(runtime + ".SprigRuntime.requireInitialized(" + moduleClassName(name.symbol.module)
                             + "." + readyFlagName(name.symbol) + ", \"" + name.symbol.name + "\");");
                 }
             }
@@ -1034,7 +1044,7 @@ public final class JavaGenerator {
                     && (field.jvm.field.getType() == int.class || field.jvm.field.getType() == Integer.class)
                     && assign.value.type == NativeType.INT) {
                 // An Int written to an int/Integer Java field: checked narrowing.
-                w.line(lhs + " = sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(assign.value) + ");");
+                w.line(lhs + " = " + runtime + ".NumericOps.toInt32Exact(" + emitExpr(assign.value) + ");");
                 return;
             }
             w.line(lhs + " = " + assignmentValue(field.type, oldValue, assign) + ";");
@@ -1050,7 +1060,7 @@ public final class JavaGenerator {
         if (!assign.op.equals("=") && receiverBase instanceof MapType) {
             // Compound assignment reads an existing value; a missing key is a
             // Sprig Error, not a Java unboxing failure.
-            w.line("if (!" + receiver + ".containsKeyObject(" + key + ")) throw new sprig.runtime.SprigError("
+            w.line("if (!" + receiver + ".containsKeyObject(" + key + ")) throw new " + runtime + ".SprigError("
                     + "\"compound assignment requires an existing map key\");");
         }
         String oldValue = receiver + ".get(" + key + ")";
@@ -1245,7 +1255,7 @@ public final class JavaGenerator {
         }
         switch (forStmt.forKind) {
             case STRING -> w.open("for (java.lang.String " + var
-                    + " : sprig.runtime.StringOps.codePoints(" + iterable + "))");
+                    + " : " + runtime + ".StringOps.codePoints(" + iterable + "))");
             case MAP_KEYS -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : "
                     + values + ")");
             default -> w.open("for (" + boxedJavaType(forStmt.symbol.type) + " " + var + " : " + values + ")");
@@ -1273,7 +1283,7 @@ public final class JavaGenerator {
         w.line("long " + start + " = " + (args.size() == 1 ? "0L" : emitExpr(args.get(0).value)) + ";");
         w.line("long " + end + " = " + emitExpr(args.get(args.size() == 1 ? 0 : 1).value) + ";");
         w.line("long " + step + " = " + (args.size() == 3 ? emitExpr(args.get(2).value) : "1L") + ";");
-        w.open("for (long " + index + " = " + start + ", " + left + " = sprig.runtime.SprigRuntime.rangeCount("
+        w.open("for (long " + index + " = " + start + ", " + left + " = " + runtime + ".SprigRuntime.rangeCount("
                 + start + ", " + end + ", " + step + "); " + left + " != 0L; " + left + "--, "
                 + index + " += " + step + ")");
         w.line("long " + var + " = " + index + ";");
@@ -1588,7 +1598,7 @@ public final class JavaGenerator {
                 return "(" + emitExpr(access.receiver) + ").getMessage()";
             case BUILTIN_METHOD:
                 if (field.builtinId.equals("toString")) {
-                    return "sprig.runtime.SprigRuntime.str(" + emitExpr(access.receiver) + ")";
+                    return runtime + ".SprigRuntime.str(" + emitExpr(access.receiver) + ")";
                 }
                 return "null";
             default:
@@ -1613,8 +1623,8 @@ public final class JavaGenerator {
     private String emitIndexOn(Expr receiverExpr, Expr indexExpr) {
         Type receiver = receiverExpr.type == null ? null : receiverExpr.type.nonNull();
         if (receiver == NativeType.STRING) {
-            return "sprig.runtime.StringOps.elementAt(" + emitExpr(receiverExpr)
-                    + ", sprig.runtime.NumericOps.toInt32Exact(" + emitExpr(indexExpr) + "))";
+            return runtime + ".StringOps.elementAt(" + emitExpr(receiverExpr)
+                    + ", " + runtime + ".NumericOps.toInt32Exact(" + emitExpr(indexExpr) + "))";
         }
         Type keyType = receiver instanceof MapType map ? map.key : NativeType.INT;
         String code = "(" + emitExpr(receiverExpr) + ").get(" + convertedExpression(indexExpr, keyType) + ")";
@@ -1637,8 +1647,8 @@ public final class JavaGenerator {
                 return "java.lang.Integer.MIN_VALUE";
         }
         if (unary.op.equals("-")) {
-            if (unary.type == NativeType.INT) return "sprig.runtime.NumericOps.neg(" + emitExpr(unary.operand) + ")";
-            if (unary.type == NativeType.INT32) return "sprig.runtime.NumericOps.neg32(" + emitExpr(unary.operand) + ")";
+            if (unary.type == NativeType.INT) return runtime + ".NumericOps.neg(" + emitExpr(unary.operand) + ")";
+            if (unary.type == NativeType.INT32) return runtime + ".NumericOps.neg32(" + emitExpr(unary.operand) + ")";
             if (unary.type == NativeType.DECIMAL) return emitExpr(unary.operand) + ".negate()";
             if (unary.type == NativeType.BIGINT) return emitExpr(unary.operand) + ".negate()";
         }
@@ -1653,12 +1663,12 @@ public final class JavaGenerator {
      * HotSpot's inlining budget and left a later hot loop's arithmetic as real
      * calls. The checker guarantees one side is a String, so Java concatenates.
      */
-    private static String joinOperand(Type type, String code) {
+    private String joinOperand(Type type, String code) {
         if (type == NativeType.STRING || type == NativeType.INT || type == NativeType.INT32
                 || type == NativeType.FLOAT || type == NativeType.FLOAT32 || type == NativeType.BOOL) {
             return code;
         }
-        return "sprig.runtime.SprigRuntime.str(" + code + ")";
+        return runtime + ".SprigRuntime.str(" + code + ")";
     }
 
     private String emitBinary(Expr.Binary binary) {
@@ -1679,12 +1689,12 @@ public final class JavaGenerator {
             // Runtime helpers keep Sprig's left-to-right operand evaluation;
             // `right.contains(left)` would evaluate the container first.
             if (rightType instanceof MapType) {
-                return "(sprig.runtime.SprigRuntime.mapContainsKey(" + left + ", " + right + "))";
+                return "(" + runtime + ".SprigRuntime.mapContainsKey(" + left + ", " + right + "))";
             }
             if (rightType instanceof ListType) {
-                return "(sprig.runtime.SprigRuntime.listContains(" + left + ", " + right + "))";
+                return "(" + runtime + ".SprigRuntime.listContains(" + left + ", " + right + "))";
             }
-            return "(sprig.runtime.SprigRuntime.stringContains(" + left + ", " + right + "))";
+            return "(" + runtime + ".SprigRuntime.stringContains(" + left + ", " + right + "))";
         }
         if (op.equals("==") || op.equals("!=")) {
             boolean negate = op.equals("!=");
@@ -1692,7 +1702,7 @@ public final class JavaGenerator {
                 return wrapNegate(negate, "(" + left + " == " + right + ")");
             }
             if (binary.comparisonType != null) {
-                String call = "sprig.runtime.SprigRuntime.equalsValue("
+                String call = runtime + ".SprigRuntime.equalsValue("
                         + convertedExpression(binary.left, binary.comparisonType) + ", "
                         + convertedExpression(binary.right, binary.comparisonType) + ")";
                 return wrapNegate(negate, call);
@@ -1713,7 +1723,7 @@ public final class JavaGenerator {
                 return wrapNegate(negate, "(" + call + ")");
             }
             if (binary.valueEquality) {
-                String call = "sprig.runtime.SprigRuntime.equalsValue(" + left + ", " + right + ")";
+                String call = runtime + ".SprigRuntime.equalsValue(" + left + ", " + right + ")";
                 return negate ? "(!" + call + ")" : call;
             }
             if (base instanceof EnumType) {
@@ -1732,7 +1742,7 @@ public final class JavaGenerator {
                 case ">" -> "greaterThan";
                 default -> "greaterOrEqual";
             };
-            return "sprig.runtime.SprigRuntime." + helper + "(" + left + ", " + right + ")";
+            return runtime + ".SprigRuntime." + helper + "(" + left + ", " + right + ")";
         }
         if ((op.equals("<") || op.equals("<=") || op.equals(">") || op.equals(">="))
                 && binary.left.type == NativeType.STRING) {
@@ -1770,7 +1780,7 @@ public final class JavaGenerator {
                 case "+" -> "add"; case "-" -> "sub"; case "*" -> "mul";
                 case "%" -> "rem"; default -> null;
             };
-            if (method != null) return "sprig.runtime.NumericOps." + method
+            if (method != null) return runtime + ".NumericOps." + method
                     + (type == NativeType.INT32 ? "32" : "") + "(" + left + ", " + right + ")";
         }
         return "(" + left + " " + op + " " + right + ")";
@@ -1810,10 +1820,10 @@ public final class JavaGenerator {
     private String emitListLit(Expr.ListLit lit) {
         StringBuilder sb = new StringBuilder();
         if (lit.mutable) {
-            sb.append("sprig.runtime.SprigMutableList.<").append(boxedJavaType(lit.type == null
+            sb.append(runtime + ".SprigMutableList.<").append(boxedJavaType(lit.type == null
                     ? NativeType.ERROR : ((ListType) lit.type).element)).append(">ofItems(");
         } else {
-            sb.append("sprig.runtime.SprigList.<").append(boxedJavaType(lit.type == null
+            sb.append(runtime + ".SprigList.<").append(boxedJavaType(lit.type == null
                     ? NativeType.ERROR : ((ListType) lit.type).element)).append(">ofItems(");
         }
         for (int i = 0; i < lit.items.size(); i++) {
@@ -1837,7 +1847,7 @@ public final class JavaGenerator {
         String keyType = mapType == null ? "java.lang.Object" : boxedJavaType(mapType.key);
         String valueType = mapType == null ? "java.lang.Object" : boxedJavaType(mapType.value);
         StringBuilder sb = new StringBuilder();
-        sb.append(lit.mutable ? "sprig.runtime.SprigMutableMap" : "sprig.runtime.SprigMap")
+        sb.append(lit.mutable ? runtime + ".SprigMutableMap" : runtime + ".SprigMap")
           .append(".<").append(keyType).append(", ").append(valueType).append(">ofEntries(");
         for (int i = 0; i < lit.keys.size(); i++) {
             if (i > 0) {
@@ -1853,7 +1863,7 @@ public final class JavaGenerator {
         FunctionType functionType = lambda.type instanceof FunctionType ft ? ft : null;
         lambdaDepth++;
         int arity = lambda.params.size();
-        String raw = "sprig.runtime.Fn" + arity;
+        String raw = runtime + ".Fn" + arity;
         StringBuilder sb = new StringBuilder("new ").append(raw).append('<');
         for (Decl.Param param : lambda.params) {
             sb.append(boxedJavaType(param.type)).append(", ");
@@ -1885,7 +1895,7 @@ public final class JavaGenerator {
         if (lambda.boundReceiver != null) {
             // A method reference evaluates its receiver once, here, and the
             // function value reads the bound copy.
-            return "sprig.runtime.SprigRuntime.bind(" + emitExpr(lambda.boundReceiver) + ", ("
+            return runtime + ".SprigRuntime.bind(" + emitExpr(lambda.boundReceiver) + ", ("
                     + boxedJavaType(lambda.receiverSymbol.type) + " " + localName(lambda.receiverSymbol) + ") -> "
                     + sb + ")";
         }
@@ -2015,12 +2025,12 @@ public final class JavaGenerator {
         if (source == null || target == null) return code;
         if (source.nonNull() == NativeType.INT32 && target.nonNull() == NativeType.INT) {
             return source.isNullable()
-                    ? "sprig.runtime.NumericOps.widenInt32Nullable(" + code + ")"
+                    ? runtime + ".NumericOps.widenInt32Nullable(" + code + ")"
                     : "((long) (" + code + "))";
         }
         if (source.nonNull() == NativeType.FLOAT32 && target.nonNull() == NativeType.FLOAT) {
             return source.isNullable()
-                    ? "sprig.runtime.NumericOps.widenFloat32Nullable(" + code + ")"
+                    ? runtime + ".NumericOps.widenFloat32Nullable(" + code + ")"
                     : "((double) (" + code + "))";
         }
         return code;
@@ -2072,10 +2082,10 @@ public final class JavaGenerator {
             return "((java.lang.String) " + code + ")";
         }
         if (base == NativeType.BIGINT) {
-            return "((sprig.runtime.SprigBigInt) " + code + ")";
+            return "((" + runtime + ".SprigBigInt) " + code + ")";
         }
         if (base == NativeType.DECIMAL) {
-            return "((sprig.runtime.SprigDecimal) " + code + ")";
+            return "((" + runtime + ".SprigDecimal) " + code + ")";
         }
         return "((" + javaType(concrete) + ") (" + code + "))";
     }
@@ -2181,9 +2191,9 @@ public final class JavaGenerator {
 
     private String emitBuiltinFunction(String id, Expr.Call call) {
         return switch (id) {
-            case "print" -> "sprig.runtime.SprigRuntime.print(" + emitExpr(call.args.get(0).value) + ")";
+            case "print" -> runtime + ".SprigRuntime.print(" + emitExpr(call.args.get(0).value) + ")";
             case "range" -> {
-                StringBuilder sb = new StringBuilder("sprig.runtime.SprigRuntime.range(");
+                StringBuilder sb = new StringBuilder(runtime + ".SprigRuntime.range(");
                 for (int i = 0; i < call.args.size(); i++) {
                     if (i > 0) {
                         sb.append(", ");
@@ -2193,7 +2203,7 @@ public final class JavaGenerator {
                 yield sb.append(')').toString();
             }
             case "assert" -> {
-                StringBuilder sb = new StringBuilder("sprig.runtime.SprigRuntime.assertTrue(");
+                StringBuilder sb = new StringBuilder(runtime + ".SprigRuntime.assertTrue(");
                 for (int i = 0; i < call.args.size(); i++) {
                     if (i > 0) {
                         sb.append(", ");
@@ -2246,35 +2256,35 @@ public final class JavaGenerator {
             if (id.equals("MutableMap.set")) a1 = convertedExpression(args.get(1), map.value);
         }
         String code = switch (id) {
-            case "toString" -> "sprig.runtime.SprigRuntime.str(" + recv + ")";
+            case "toString" -> runtime + ".SprigRuntime.str(" + recv + ")";
             case "Int.toString" -> "java.lang.Long.toString(" + recv + ")";
-            case "Int.toFloatExact" -> "sprig.runtime.NumericOps.toFloatExact(" + recv + ")";
+            case "Int.toFloatExact" -> runtime + ".NumericOps.toFloatExact(" + recv + ")";
             case "Int.toFloatLossy" -> "((double) " + recv + ")";
-            case "Int.toInt32Exact" -> "sprig.runtime.NumericOps.toInt32Exact(" + recv + ")";
-            case "Int.toDecimal", "Int32.toDecimal" -> "sprig.runtime.SprigDecimal.fromInt(" + recv + ")";
-            case "Int.divTrunc" -> "sprig.runtime.NumericOps.divTrunc(" + recv + ", " + a0 + ")";
+            case "Int.toInt32Exact" -> runtime + ".NumericOps.toInt32Exact(" + recv + ")";
+            case "Int.toDecimal", "Int32.toDecimal" -> runtime + ".SprigDecimal.fromInt(" + recv + ")";
+            case "Int.divTrunc" -> runtime + ".NumericOps.divTrunc(" + recv + ", " + a0 + ")";
             case "Int.compareTo" -> "java.lang.Long.compare(" + recv + ", " + a0 + ")";
             case "Int32.compareTo" -> "java.lang.Integer.compare(" + recv + ", " + a0 + ")";
             case "Float.compareTo" -> "java.lang.Double.compare(" + recv + ", " + a0 + ")";
             case "Float32.compareTo" -> "java.lang.Float.compare(" + recv + ", " + a0 + ")";
             case "Decimal.compareTo", "BigInt.compareTo" -> "java.lang.Integer.signum(" + recv + ".compareTo(" + a0 + "))";
-            case "String.lastIndexOf" -> "sprig.runtime.StringOps.lastIndexOf(" + recv + ", " + a0 + ")";
-            case "Int32.divTrunc" -> "sprig.runtime.NumericOps.divTrunc32(" + recv + ", " + a0 + ")";
+            case "String.lastIndexOf" -> runtime + ".StringOps.lastIndexOf(" + recv + ", " + a0 + ")";
+            case "Int32.divTrunc" -> runtime + ".NumericOps.divTrunc32(" + recv + ", " + a0 + ")";
             case "Int32.toInt" -> "((long) " + recv + ")";
             case "Int32.toFloat" -> "((double) " + recv + ")";
             case "Int32.toString" -> "java.lang.Integer.toString(" + recv + ")";
-            case "Int.abs" -> "sprig.runtime.NumericOps.abs(" + a0 + ")";
+            case "Int.abs" -> runtime + ".NumericOps.abs(" + a0 + ")";
             case "Int.min" -> "java.lang.Math.min(" + a0 + ", " + a1 + ")";
             case "Int.max" -> "java.lang.Math.max(" + a0 + ", " + a1 + ")";
             case "Float.toString" -> "java.lang.Double.toString(" + recv + ")";
             case "Float.isNaN" -> "java.lang.Double.isNaN(" + recv + ")";
-            case "Float.toIntExact" -> "sprig.runtime.NumericOps.floatToIntExact(" + recv + ")";
-            case "Float.toIntTrunc" -> "sprig.runtime.NumericOps.floatToIntTrunc(" + recv + ")";
-            case "Float.toFloat32Exact" -> "sprig.runtime.NumericOps.toFloat32Exact(" + recv + ")";
+            case "Float.toIntExact" -> runtime + ".NumericOps.floatToIntExact(" + recv + ")";
+            case "Float.toIntTrunc" -> runtime + ".NumericOps.floatToIntTrunc(" + recv + ")";
+            case "Float.toFloat32Exact" -> runtime + ".NumericOps.toFloat32Exact(" + recv + ")";
             case "Float.toFloat32Lossy" -> "((float) " + recv + ")";
             case "Float.isInfinite" -> "java.lang.Double.isInfinite(" + recv + ")";
             case "Float.isFinite" -> "java.lang.Double.isFinite(" + recv + ")";
-            case "Float.approxEqual" -> "sprig.runtime.NumericOps.approxEqual(" + recv + ", " + a0 + ", " + a1 + ")";
+            case "Float.approxEqual" -> runtime + ".NumericOps.approxEqual(" + recv + ", " + a0 + ", " + a1 + ")";
             case "Float.sqrt" -> "java.lang.StrictMath.sqrt(" + a0 + ")";
             case "Float.abs" -> "java.lang.StrictMath.abs(" + a0 + ")";
             case "Float.floor" -> "java.lang.StrictMath.floor(" + a0 + ")";
@@ -2284,17 +2294,17 @@ public final class JavaGenerator {
             case "Float32.isNaN" -> "java.lang.Float.isNaN(" + recv + ")";
             case "Float32.isInfinite" -> "java.lang.Float.isInfinite(" + recv + ")";
             case "Float32.isFinite" -> "java.lang.Float.isFinite(" + recv + ")";
-            case "Decimal.parse" -> "sprig.runtime.SprigDecimal.parse(" + a0 + ")";
-            case "Decimal.fromJava" -> "sprig.runtime.SprigDecimal.fromJava(" + a0 + ")";
+            case "Decimal.parse" -> runtime + ".SprigDecimal.parse(" + a0 + ")";
+            case "Decimal.fromJava" -> runtime + ".SprigDecimal.fromJava(" + a0 + ")";
             case "Decimal.divide" -> recv + ".divide(" + a0 + ", " + a1 + ", " + emitExpr(args.get(2)) + ")";
             case "Decimal.toString" -> recv + ".toString()";
             case "Decimal.toIntExact" -> recv + ".toIntExact()";
             case "Decimal.toFloatExact" -> recv + ".toFloatExact()";
             case "Decimal.toFloatLossy" -> recv + ".toFloatLossy()";
             case "Decimal.toJava" -> recv + ".toJava()";
-            case "BigInt.parse" -> "sprig.runtime.SprigBigInt.parse(" + a0 + ")";
-            case "BigInt.fromInt" -> "sprig.runtime.SprigBigInt.fromInt(" + a0 + ")";
-            case "BigInt.fromJava" -> "sprig.runtime.SprigBigInt.fromJava(" + a0 + ")";
+            case "BigInt.parse" -> runtime + ".SprigBigInt.parse(" + a0 + ")";
+            case "BigInt.fromInt" -> runtime + ".SprigBigInt.fromInt(" + a0 + ")";
+            case "BigInt.fromJava" -> runtime + ".SprigBigInt.fromJava(" + a0 + ")";
             case "BigInt.divTrunc" -> recv + ".divTrunc(" + a0 + ")";
             case "BigInt.toString" -> recv + ".toString()";
             case "BigInt.toIntExact" -> recv + ".toIntExact()";
@@ -2303,19 +2313,19 @@ public final class JavaGenerator {
             case "BigInt.toDecimal" -> recv + ".toDecimal()";
             case "BigInt.toJava" -> recv + ".toJava()";
             case "Bool.toString" -> "java.lang.Boolean.toString(" + recv + ")";
-            case "String.length" -> "sprig.runtime.StringOps.length(" + recv + ")";
+            case "String.length" -> runtime + ".StringOps.length(" + recv + ")";
             case "String.isEmpty" -> recv + ".isEmpty()";
-            case "String.charAt" -> "sprig.runtime.StringOps.elementAt(" + recv
-                    + ", sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))";
-            case "String.codeAt" -> "sprig.runtime.StringOps.codePointAt(" + recv
-                    + ", sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))";
+            case "String.charAt" -> runtime + ".StringOps.elementAt(" + recv
+                    + ", " + runtime + ".NumericOps.toInt32Exact(" + a0 + "))";
+            case "String.codeAt" -> runtime + ".StringOps.codePointAt(" + recv
+                    + ", " + runtime + ".NumericOps.toInt32Exact(" + a0 + "))";
             case "String.substring" -> a1 == null
-                    ? "sprig.runtime.StringOps.substring(" + recv
-                        + ", sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))"
-                    : "sprig.runtime.StringOps.substring(" + recv
-                        + ", sprig.runtime.NumericOps.toInt32Exact(" + a0
-                        + "), sprig.runtime.NumericOps.toInt32Exact(" + a1 + "))";
-            case "String.indexOf" -> "sprig.runtime.StringOps.indexOf(" + recv + ", " + a0 + ")";
+                    ? runtime + ".StringOps.substring(" + recv
+                        + ", " + runtime + ".NumericOps.toInt32Exact(" + a0 + "))"
+                    : runtime + ".StringOps.substring(" + recv
+                        + ", " + runtime + ".NumericOps.toInt32Exact(" + a0
+                        + "), " + runtime + ".NumericOps.toInt32Exact(" + a1 + "))";
+            case "String.indexOf" -> runtime + ".StringOps.indexOf(" + recv + ", " + a0 + ")";
             case "String.contains" -> recv + ".contains(" + a0 + ")";
             case "String.startsWith" -> recv + ".startsWith(" + a0 + ")";
             case "String.endsWith" -> recv + ".endsWith(" + a0 + ")";
@@ -2323,15 +2333,15 @@ public final class JavaGenerator {
             case "String.toUpperCase" -> recv + ".toUpperCase()";
             case "String.toLowerCase" -> recv + ".toLowerCase()";
             case "String.trim" -> recv + ".trim()";
-            case "String.split" -> "sprig.runtime.SprigRuntime.stringSplit(" + recv + ", " + a0 + ")";
+            case "String.split" -> runtime + ".SprigRuntime.stringSplit(" + recv + ", " + a0 + ")";
             case "String.replace" -> recv + ".replace(" + a0 + ", " + a1 + ")";
-            case "String.repeat" -> recv + ".repeat(sprig.runtime.NumericOps.toInt32Exact(" + a0 + "))";
-            case "String.toInt" -> "sprig.runtime.SprigRuntime.parseInt(" + recv + ")";
-            case "String.toIntOrNull" -> "sprig.runtime.SprigRuntime.parseIntOrNull(" + recv + ")";
-            case "String.toFloat" -> "sprig.runtime.SprigRuntime.parseFloat(" + recv + ")";
+            case "String.repeat" -> recv + ".repeat(" + runtime + ".NumericOps.toInt32Exact(" + a0 + "))";
+            case "String.toInt" -> runtime + ".SprigRuntime.parseInt(" + recv + ")";
+            case "String.toIntOrNull" -> runtime + ".SprigRuntime.parseIntOrNull(" + recv + ")";
+            case "String.toFloat" -> runtime + ".SprigRuntime.parseFloat(" + recv + ")";
             case "String.toString" -> recv;
-            case "String.join" -> "sprig.runtime.SprigRuntime.stringJoin(" + a0 + ", " + a1 + ")";
-            case "String.fromCode" -> "new java.lang.String(java.lang.Character.toChars(sprig.runtime.NumericOps.toInt32Exact(" + a0 + ")))";
+            case "String.join" -> runtime + ".SprigRuntime.stringJoin(" + a0 + ", " + a1 + ")";
+            case "String.fromCode" -> "new java.lang.String(java.lang.Character.toChars(" + runtime + ".NumericOps.toInt32Exact(" + a0 + ")))";
             case "List.size", "Map.size" -> recv + ".size()";
             case "List.isEmpty", "Map.isEmpty" -> recv + ".isEmpty()";
             case "List.get" -> recv + ".get(" + a0 + ")";
@@ -2417,11 +2427,11 @@ public final class JavaGenerator {
         return unboxGeneric(code, mapped);
     }
 
-    private static String convertJvmResult(Class<?> javaType, String code) {
+    private String convertJvmResult(Class<?> javaType, String code) {
         if (javaType == char.class) return "java.lang.String.valueOf(" + code + ")";
-        if (javaType == Character.class) return "sprig.runtime.SprigRuntime.fromJavaCharacter(" + code + ")";
-        if (javaType == Short.class) return "sprig.runtime.SprigRuntime.fromJavaShort(" + code + ")";
-        if (javaType == Byte.class) return "sprig.runtime.SprigRuntime.fromJavaByte(" + code + ")";
+        if (javaType == Character.class) return runtime + ".SprigRuntime.fromJavaCharacter(" + code + ")";
+        if (javaType == Short.class) return runtime + ".SprigRuntime.fromJavaShort(" + code + ")";
+        if (javaType == Byte.class) return runtime + ".SprigRuntime.fromJavaByte(" + code + ")";
         return code;
     }
 
@@ -2526,7 +2536,7 @@ public final class JavaGenerator {
         if (expected != null && arg.type != null && arg.type.nonNull() instanceof FunctionType actual
                 && sprig.compiler.sem.TypeChecker.narrowsToInt32(expected.result, actual.result)) {
             // A Sprig callback returning Int for an int/Integer slot: checked narrowing.
-            invoke = "sprig.runtime.NumericOps.toInt32Exact(" + invoke + ")";
+            invoke = runtime + ".NumericOps.toInt32Exact(" + invoke + ")";
         }
         String body = sam.getReturnType() == void.class ? "{ " + invoke + "; }" : "{ return " + invoke + "; }";
         return "(" + params + " -> " + body + ")";
@@ -2583,7 +2593,7 @@ public final class JavaGenerator {
         if (arg instanceof Expr.FloatLit && (param == float.class || param == Float.class)) return "((float) " + code + ")";
         if ((param == int.class || param == Integer.class) && base == NativeType.INT) {
             // Checked narrowing: fails at run time outside the Int32 range.
-            return "sprig.runtime.NumericOps.toInt32Exact(" + code + ")";
+            return runtime + ".NumericOps.toInt32Exact(" + code + ")";
         }
         if (param == Long.class && base == NativeType.INT32) return "((long) " + code + ")";
         if (param == Double.class && base == NativeType.FLOAT32) return "((double) " + code + ")";
