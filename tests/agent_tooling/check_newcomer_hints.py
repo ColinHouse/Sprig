@@ -263,29 +263,36 @@ def main():
             text = (first.get("message") or "") + " " + (first.get("hint") or "")
             check("hint-" + name, result.returncode == 1 and first.get("code") == code and expected in text,
                   json.dumps(first))
-        # Cookbook before/after programs share the executable docs' source. Pin the
-        # stable code and first hint line so documentation never teaches stale repairs.
+        # The cookbook's "before" programs are the documentation's own snippets. Each
+        # diagnostic keeps its hint (a Java call without one gets the command that
+        # lists the signatures) and carries the recipe's page as `example`.
+        cookbook = "https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook#"
         cookbook_hints = {
-            "nullable": ("SPR-TYPE-NULLABLE", "Bind the receiver to a let and check it with 'if value != null:' before using 'length'."),
-            "exceptions": ("SPR-FLOW-THROWS", "Declare it on 'parse_uri' by changing its header to 'func parse_uri(text: String) -> URI throws URISyntaxException:', and its callers then handle or declare it too (top-level statements need neither), or handle it where it happens: 'try:' around the call, then 'catch problem: URISyntaxException:' with what to do instead. Sprig keeps recoverable errors explicit; there is no implicit propagation."),
-            "collections": ("SPR-JVM-MEMBER", "Inspect signatures with `sprig api java.util.Collections --member 'sort' --json` before choosing argument types."),
-            "callbacks": ("SPR-TYPE-CALLABLE-THROWS", "Handle the error inside a named function and pass a lambda that calls it."),
-            "overloads": ("SPR-JVM-MEMBER", "Inspect signatures with `sprig api java.lang.StringBuilder --member '<init>' --json` before choosing argument types."),
+            "nullable": ("SPR-TYPE-NULLABLE", "Bind the receiver to a let and check it with 'if value != null:' before using 'length'.", None),
+            "exceptions": ("SPR-FLOW-THROWS", "Declare it on 'parse_uri' by changing its header to 'func parse_uri(text: String) -> URI throws URISyntaxException:', and its callers then handle or declare it too (top-level statements need neither), or handle it where it happens: 'try:' around the call, then 'catch problem: URISyntaxException:' with what to do instead. Sprig keeps recoverable errors explicit; there is no implicit propagation.", None),
+            "collections": ("SPR-JVM-MEMBER", "Run sprig api java.util.Collections --member sort to see the signatures this call can match.", "collections"),
+            "callbacks": ("SPR-TYPE-CALLABLE-THROWS", "Handle the error inside a named function and pass a lambda that calls it.", "callbacks"),
+            "overloads": ("SPR-JVM-MEMBER", "Run sprig api java.lang.StringBuilder --member '<init>' to see the signatures this call can match.", "overloads"),
         }
-        for recipe, (code, first_hint) in cookbook_hints.items():
+        for recipe, (code, hint, anchor) in cookbook_hints.items():
             source = ROOT / "website" / "snippets" / "interop" / (recipe + "_bad.spr")
             result = run("check", source, "--json", cwd=work)
             diagnostic = json.loads(result.stdout)["diagnostics"][0]
-            check("cookbook-first-hint-" + recipe,
-                  result.returncode == 1 and diagnostic["code"] == code
-                  and diagnostic.get("hint", "").split("\n")[0] == first_hint, diagnostic)
-            if recipe in ("collections", "overloads", "callbacks"):
-                check("cookbook-link-" + recipe,
-                      "java-interop-cookbook#" + recipe in diagnostic.get("hint", ""), diagnostic)
+            check("cookbook-hint-" + recipe,
+                  result.returncode == 1 and diagnostic["code"] == code and diagnostic.get("hint") == hint
+                  and diagnostic.get("example") == (cookbook + anchor if anchor else None), diagnostic)
+            # In text the page is one line of its own under the hint (a diagnostic
+            # that was checked twice used to print the link twice).
+            text = run("check", source, cwd=work).stderr
+            check("cookbook-text-" + recipe,
+                  text.count("java-interop-cookbook") == (1 if anchor else 0)
+                  and ("\n  example: " + cookbook + anchor + "\n" in text if anchor else "example:" not in text),
+                  text)
         jvm_help = json.loads(run("help", "jvm", "--json", cwd=work).stdout)
         check("cookbook-help-link", "java-interop-cookbook" in " ".join(jvm_help["rules"]), jvm_help)
         strings_help = json.loads(run("help", "strings", "--json", cwd=work).stdout)
-        check("string-builder-help", "StringBuilder" in " ".join(strings_help["rules"]), strings_help)
+        check("string-building-help", any(rule.startswith("text += part in a loop is linear for a function's local var")
+                                          for rule in strings_help["rules"]), strings_help)
 
         for name, source, wrong in UNTARGETED:
             (work / "case.spr").write_text(source, encoding="utf-8")

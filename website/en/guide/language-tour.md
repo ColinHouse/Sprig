@@ -235,6 +235,7 @@ The all-caps cases of sprig-cli's `OptionKind.FLAG` and sprig-web's `Method.GET`
 ## A few smaller features
 
 - String literals must close on the same line. A missing closing quote or a newline inside a string reports `SPR-LEX-STRING` on the unterminated literal.
+- Building a long text with `text += part` in a loop takes time in proportion to the text when it happens in a function: the generated code keeps such a local `var` in a builder instead of copying what is already there on every pass. A module-level `var` or a field doesn't get this, so build that text in a function, or collect the parts in a list and `text.join` them. See [building a String in a loop](/en/reference/language/string-building).
 - `sprig fmt` formats code in one standard style. It keeps your comments and has no options. See [formatter](/en/reference/tooling/formatter).
 - A module can re-export an imported declaration with `export alias.Symbol`, but that can't be used to get around a dependency's exports. There's no `export *`. See [re-exports](/en/reference/language/module-reexports).
 - An expression `match` allows one expression per branch; for several lines, use a statement `match`. See [match expressions](/en/reference/language/match-expressions).

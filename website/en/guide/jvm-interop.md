@@ -1,12 +1,10 @@
 # JVM interop
 
-[Practical before/after cookbook](/en/guide/java-interop-cookbook): nulls, errors, collections, callbacks and overloads.
-
 Sprig compiles to Java before it runs, so the JDK's classes and Java libraries from Maven are right there for you to use. This page covers importing and calling Java classes, and the checks Sprig makes where your code meets Java.
 
 The general rule is cautious. Unless Java says otherwise, Sprig assumes a returned value might be `null`: `toString()` is always a `String`, and a result the library annotates as non-null is a plain value (see below). In the other direction, what you pass to Java may not be `null` unless the parameter is annotated `@Nullable`.
 
-The [JVM interop reference](/en/reference/jvm/interop) has the complete rules. To plug Sprig into an existing build such as Gradle or Loom, see [Gradle integration](/en/guide/gradle) and [Fabric mods](/en/guide/fabric).
+The [JVM interop reference](/en/reference/jvm/interop) has the complete rules. To plug Sprig into an existing build such as Gradle or Loom, see [Gradle integration](/en/guide/gradle) and [Fabric mods](/en/guide/fabric). The [Java interop cookbook](/en/guide/java-interop-cookbook) works through five situations you'll meet again and again: nulls, exceptions, collections, callbacks and overloads.
 
 ## Importing and calling Java classes
 

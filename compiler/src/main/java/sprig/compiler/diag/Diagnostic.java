@@ -18,6 +18,8 @@ public final class Diagnostic {
     public String expectedType;
     public String actualType;
     public String hint;
+    /** A page with a worked example of the repair, when the documentation has one. */
+    public String example;
     public String relatedHelp;
     public Map<String, Object> repair;
     public Map<String, Object> data;
@@ -142,6 +144,9 @@ public final class Diagnostic {
         }
         if (hint != null && includeHint) {
             sb.append("\n  hint: ").append(hint);
+        }
+        if (example != null) {
+            sb.append("\n  example: ").append(example);
         }
         for (Related r : related) {
             sb.append("\n  ").append(r.message);

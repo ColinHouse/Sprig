@@ -148,16 +148,27 @@ with tempfile.TemporaryDirectory(prefix="sprig-strings-") as work:
     # 400,000 appends of 25 characters build a text of 10 MB. As concatenations
     # they copy 25 * 400000^2 / 2 = 2 * 10^12 characters, which takes minutes;
     # appended to a builder they copy 10^7, so the run fits the usual time limit.
-    growth = directory / "growth.spr"
-    growth.write_text('func build(count: Int) -> Int:\n    var out = ""\n    for i in range(count):\n'
-                      '        out += "0123456789012345678901234"\n    return out.length()\n'
-                      'print(build(400000))\n', encoding="utf-8")
-    try:
-        result = call("run", growth)
-        verify("accumulator grows in linear time", result.returncode == 0 and result.stdout.strip() == "10000000",
-               f"exit={result.returncode} {result.stdout!r} {result.stderr}")
-    except subprocess.TimeoutExpired:
-        verify("accumulator grows in linear time", False, "400,000 appends did not finish in 60 s")
+    # The same holds when each pass first asks for the length or for emptiness to
+    # place a separator: the builder answers without giving out the text.
+    part = '"0123456789012345678901234"'
+    GROWTH = {
+        "appends": (f'        out += {part}\n', "10000000"),
+        "appends after a length check": ('        if out.length() > 0:\n            out += ","\n'
+                                         f'        out += {part}\n', "10399999"),
+        "appends after an emptiness check": ('        if out != "":\n            out += ","\n'
+                                             f'        out += {part}\n', "10399999"),
+    }
+    for name, (body, expected) in GROWTH.items():
+        growth = directory / (name.replace(" ", "_") + ".spr")
+        growth.write_text('func build(count: Int) -> Int:\n    var out = ""\n    for i in range(count):\n'
+                          + body + '    return out.length()\nprint(build(400000))\n', encoding="utf-8")
+        try:
+            result = call("run", growth)
+            verify(f"accumulator grows in linear time: {name}",
+                   result.returncode == 0 and result.stdout.strip() == expected,
+                   f"exit={result.returncode} {result.stdout!r} {result.stderr}")
+        except subprocess.TimeoutExpired:
+            verify(f"accumulator grows in linear time: {name}", False, "400,000 appends did not finish in 60 s")
 
     # Java char interop stays a UTF-16 code-unit boundary: a one-unit literal is
     # accepted; a two-unit literal or supplementary code point is rejected.

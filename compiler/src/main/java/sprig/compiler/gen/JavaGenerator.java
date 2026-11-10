@@ -1153,6 +1153,23 @@ public final class JavaGenerator {
         return List.copyOf(parts);
     }
 
+    /**
+     * The accumulator that {@code text == ""} or {@code "" != text} asks about, or
+     * null for any other comparison. Like its length, its emptiness is answered
+     * without taking the text out of the builder.
+     */
+    private Symbol comparedWithEmptyText(Expr.Binary binary) {
+        Expr text = binary.left;
+        Expr literal = binary.right;
+        if (text instanceof Expr.StringLit) {
+            text = binary.right;
+            literal = binary.left;
+        }
+        return literal instanceof Expr.StringLit empty && empty.value.isEmpty()
+                && text instanceof Expr.Name name && textAccumulators.contains(name.symbol)
+                ? name.symbol : null;
+    }
+
     /** An assignment to a variable that markTextAccumulators marked. */
     private void emitAccumulatorAssign(JavaWriter w, Symbol symbol, Stmt.Assign assign) {
         String variable = localName(symbol);
@@ -1681,6 +1698,10 @@ public final class JavaGenerator {
                 return wrapNegate(negate, call);
             }
             Type base = binary.left.type == null ? null : binary.left.type.nonNull();
+            Symbol accumulator = comparedWithEmptyText(binary);
+            if (accumulator != null) {
+                return wrapNegate(negate, localName(accumulator) + ".isEmpty()");
+            }
             if (binary.valueEquality && isStringType(binary.left.type) && isStringType(binary.right.type)) {
                 // Two Strings compare with Objects.equals directly; equalsValue
                 // would first test both sides for Double and Float. The operands
@@ -2188,6 +2209,13 @@ public final class JavaGenerator {
     private String emitBuiltinMethod(Expr.Call call, ResolvedCall resolved) {
         String id = resolved.builtinId;
         Expr.FieldAccess access = (Expr.FieldAccess) call.callee;
+        if ((id.equals("String.length") || id.equals("String.isEmpty"))
+                && access.receiver instanceof Expr.Name name && textAccumulators.contains(name.symbol)) {
+            // The accumulator answers these from its builder. A loop that asks "is
+            // this the first part?" before each append would otherwise take the
+            // whole text out of the builder on every pass.
+            return localName(name.symbol) + (id.equals("String.length") ? ".length()" : ".isEmpty()");
+        }
         String recv = "(" + emitExpr(access.receiver) + ")";
         List<Expr> args = new ArrayList<>();
         for (Expr.Arg arg : call.args) {

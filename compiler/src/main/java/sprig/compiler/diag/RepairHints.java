@@ -101,9 +101,13 @@ final class RepairHints {
         return hint == null ? null : hint.repairKind();
     }
 
+    /** The Java interop cookbook on the website; a recipe is an anchor on this page. */
+    private static final String COOKBOOK = "https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook";
+
     static void apply(Diagnostic diagnostic) {
-        // Only attach Java recipes when the checker supplied a real receiver/member.
-        // This is guidance to inspect candidates, never a guessed overload repair.
+        // A Java call that the checker resolved far enough to know the class and the
+        // member gets the command that lists the real signatures, and the cookbook
+        // recipe for its kind of mismatch. Neither picks an overload for the user.
         if (diagnostic.data != null && diagnostic.data.get("receiverType") instanceof String owner
                 && diagnostic.data.get("member") instanceof String member) {
             String recipe = switch (diagnostic.code) {
@@ -124,11 +128,14 @@ final class RepairHints {
                 recipe = "collections";
             }
             if (recipe != null) {
+                // The link is a field of its own: the hint keeps saying what to change.
+                diagnostic.example = COOKBOOK + "#" + recipe;
                 if (diagnostic.hint == null) {
-                    diagnostic.hint = "Inspect signatures with `sprig api " + owner
-                            + " --member '" + member + "' --json` before choosing argument types.";
+                    // A shell reads <init> as redirections, so that name is quoted.
+                    String name = member.startsWith("<") ? "'" + member + "'" : member;
+                    diagnostic.hint = "Run sprig api " + owner + " --member " + name
+                            + " to see the signatures this call can match.";
                 }
-                diagnostic.hint += "\nRecipe: https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook#" + recipe;
             }
         }
         if (diagnostic.relatedHelp == null) {

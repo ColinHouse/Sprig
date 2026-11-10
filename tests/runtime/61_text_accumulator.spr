@@ -174,6 +174,49 @@ class Report:
                     out += "G"
         return out
 
+# Asking for the length or for emptiness before each append: the usual ways to
+# place a separator.
+func separated(parts: List[String]) -> String:
+    var by_length = ""
+    var by_empty = ""
+    var by_method = ""
+    var by_literal_first = ""
+    for part in parts:
+        if by_length.length() > 0:
+            by_length += ", "
+        by_length += part
+        if by_empty != "":
+            by_empty += "; "
+        by_empty += part
+        if not by_method.isEmpty():
+            by_method += " | "
+        by_method += part
+        if "" == by_literal_first:
+            by_literal_first += "^"
+        by_literal_first += part
+    return by_length + "\n" + by_empty + "\n" + by_method + "\n" + by_literal_first
+
+# The length counts code points across appends, also when one append ends in
+# the first half of a pair and the next begins with the second half, after a
+# plain assignment, and next to reads of the text.
+func lengths() -> String:
+    var out = ""
+    var seen = ""
+    for part in ["a", "松", "😀", String.fromCode(55357), String.fromCode(56832), "", "é"]:
+        out += part
+        seen += out.length() + " "
+    out = "東京"
+    for i in range(3):
+        out += "😀"
+        seen += out.length() + ":" + out.substring(out.length() - 1) + " "
+    return seen + (out == "東京😀😀😀") + " " + out.isEmpty()
+
+func padded(value: String, width: Int) -> String:
+    var out = value
+    while out.length() < width:
+        out += "."
+    return out
+
 func large(count: Int) -> Int:
     var out = ""
     for i in range(count):
@@ -194,6 +237,10 @@ print(mixed())
 print(unicode())
 print(uses())
 print(Report(title="items").render([1, 2, 3]))
+print(separated(["oak", "birch", "松"]))
+print(separated([]).length())
+print(lengths())
+print(padded("ab", 6) + padded("松", 3) + padded("toolong", 2))
 print(large(20000))
 
 # A local of a top-level block.

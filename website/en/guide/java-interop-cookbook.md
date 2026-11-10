@@ -1,130 +1,139 @@
 # Java interop cookbook
 
-These are small boundary repairs for code that already calls Java. Start with
-[the beginner Java chapter](/en/tutorial/ch21-java) for imports and basic calls;
-use the [complete interop contract](/en/reference/jvm/interop) for the rules.
-All programs below are compiled and either run against their output oracle or
-checked against their expected diagnostic by the documentation gate.
+Five things come up again and again where your code meets Java: a result that may be `null`, a checked exception, a collection, a callback, and an overloaded method. Each recipe shows the program the compiler rejects, what it says, and the version that works. The docs check runs every program on this page and compares what it prints with the block under it.
 
-First inspect the actual classpath: `sprig api java.util.ArrayList --member sort --json`.
-For third-party classes, use the same resolved project or `--classpath` as your
-program. Read `sprigParameterTypes`, `sprigReturnType`, `checkedExceptions`,
-`interopReasonCodes` and the overload candidates; do not guess a Java signature.
+If you haven't called Java from Sprig yet, start with the [Java chapter of the book](/en/tutorial/ch21-java). The rules in full are in the [JVM interop reference](/en/reference/jvm/interop).
 
-## Nullable results {#nullable}
+One habit helps with all five: look the signature up instead of guessing it.
 
-A `HashMap.get` may return no value. This is rejected with `SPR-TYPE-NULLABLE`:
+```sh
+sprig api java.util.ArrayList --member sort
+```
+
+This prints each overload as Java declares it and as Sprig sees it. Add `--json` for the machine-readable form (`sprigParameterTypes`, `sprigReturnType`, `checkedExceptions`, `interopReasonCodes`). For a library outside the JDK, run it in the resolved project or pass `--classpath`.
+
+## A result that may be null {#nullable}
+
+`HashMap.get` returns nothing when the key is missing, so Sprig types its result `String?` and won't let you use it as a `String`:
 
 <<< @/snippets/interop/nullable_bad.spr
 
-Bind the result to a `let`, then handle both outcomes explicitly:
+```text
+SPR-TYPE-NULLABLE [TYPE] main.spr:4:12: Cannot access 'length' on a value that may be null (receiver type String?)
+  hint: Bind the receiver to a let and check it with 'if value != null:' before using 'length'.
+```
+
+Keep the result in a `let` and say what happens in both cases:
 
 <<< @/snippets/interop/nullable.spr
 
-Output: `missing`. Only immutable bindings narrow; copying a `var` into a `let`
-and checking that copy is useful when the source is mutable. Java reference
-results are nullable unless the supported annotations or `toString()` contract
-say otherwise. Do not hide missing required data behind a default merely to
-silence the checker. For optional data, `@std/nulls.spr` provides `or_else`.
+```text
+missing
+```
 
-## Exceptions: propagation and adaptation {#exceptions}
+- Only a `let` narrows. If the value lives in a `var`, copy it into a `let` and check the copy.
+- A Java reference result is nullable unless the library annotates it as non-null. `toString()` is always a `String`.
+- When the value really is optional, `or_else` from `@std/nulls.spr` gives it a fallback. Don't add a default just to make the error go away: when the data is required, a missing value is a failure you should report.
 
-A named function must catch or declare a checked Java exception. This is
-`SPR-FLOW-THROWS`:
+## A checked exception {#exceptions}
+
+`URI(text)` declares `URISyntaxException`. A named function has to catch it or declare it:
 
 <<< @/snippets/interop/exceptions_bad.spr
 
-Propagate the imported exception when the caller needs its Java type. At a
-Sprig function-value boundary, only `throws Error` is supported: catch the Java
-exception inside a named function and translate it deliberately.
+```text
+SPR-FLOW-THROWS [FLOW] main.spr:4:12: Call may throw URISyntaxException; declare 'throws URISyntaxException' or handle it with try/catch
+```
+
+The next program does both. `parse_uri` declares the Java exception and passes it on, so a caller can still catch it by its type. `parse_for_callback` catches it and throws an `Error` with a message of its own:
 
 <<< @/snippets/interop/exceptions.spr
 
-Output is `https://example.com`, then `invalid URI: ::bad`.
-This example deliberately creates a domain message: `Error(message)` does not
-retain the original Java exception as its cause. Preserve the Java exception by
-propagating it if callers need that identity; use a library boundary that preserves
-causes when one is available. A caught Java exception's `message` is `String?`;
-its `toString()` is a non-null diagnostic description. Avoid broad catches that
-turn errors into successful empty values.
+```text
+https://example.com
+invalid URI: ::bad
+```
 
-## Collections and mutability {#collections}
+- Translate to `Error` when the function will be passed around as a value. A function type can end with `throws Error` and nothing else, so a checked Java exception never crosses one.
+- `Error(message)` keeps the message and not the Java exception behind it. If callers need the original, declare it and let it propagate.
+- A caught Java exception's `message` is a `String?`, because `getMessage()` may return `null`. `problem.toString()` is always a `String`.
 
-Sprig collections and Java collections are distinct. This direct call fails
-with `SPR-JVM-MEMBER`, even though the elements are strings:
+## A collection {#collections}
+
+A Sprig list isn't a `java.util.List`, even when both hold strings:
 
 <<< @/snippets/interop/collections_bad.spr
 
-Copy to a Java collection explicitly, call Java, then take a detached Sprig snapshot:
+```text
+SPR-JVM-MEMBER [JVM] main.spr:2:1: Java class Collections has no method 'sort' matching 1 argument(s)
+  hint: Run sprig api java.util.Collections --member sort to see the signatures this call can match.
+```
+
+Copy the list into a Java one with `@std/jvm.spr`, let Java work on the copy, then take a Sprig snapshot of the result:
 
 <<< @/snippets/interop/collections.spr
 
-Output is `[b, a]`, `[a, b]`, then `3`. `list_copy` creates a mutable independent
-Java `ArrayList`; `list_snapshot` returns an immutable Sprig `List`. Later Java
-mutation does not modify either the original or the snapshot. Map equivalents
-are `map_copy` and `map_snapshot`. Snapshot functions reject null elements,
-keys and values with `Error`. They do not create live views or deep-copy objects.
+```text
+[b, a]
+[a, b]
+3
+```
 
-## Callbacks and SAM interfaces {#callbacks}
+- `list_copy` gives you a separate, mutable `ArrayList`. Sorting it leaves `original` as it was, which is the first line.
+- `list_snapshot` gives you a read-only Sprig `List` of what the Java list holds at that moment. The `add("c")` afterwards makes `copy` three long and doesn't touch `snapshot`.
+- Maps work the same way with `map_copy` and `map_snapshot`.
+- A snapshot isn't a live view, and it doesn't copy the objects inside. A `null` in the Java collection makes it throw `Error`.
 
-A Java functional-interface parameter can accept a Sprig `fn` with exact parameter
-types. Java cannot express Sprig's `throws Error` contract, so this callback fails
-with `SPR-TYPE-CALLABLE-THROWS`:
+## A callback {#callbacks}
+
+A Java parameter whose type is a functional interface (`Runnable`, `Comparator`, `Consumer` and so on) takes a Sprig `fn` value. It can't take one that may throw `Error`, because Java has no way to see that:
 
 <<< @/snippets/interop/callbacks_bad.spr
 
-Handle the error in a named function before passing the callback. For a
-`Comparator[String]`, explicitly typed parameters and `compareTo` match its
-`Int32` result without guessing a subtraction-based comparison:
+```text
+SPR-TYPE-CALLABLE-THROWS [TYPE] main.spr:4:21: A function value that may throw Error cannot be passed to Java parameter 1 of Thread; Java cannot see the throws clause (expected fn() -> Unit, actual fn() -> Unit throws Error)
+  hint: Handle the error inside a named function and pass a lambda that calls it.
+```
+
+Decide in a named function what a failure means, and pass a lambda that calls it:
 
 <<< @/snippets/interop/callbacks.spr
 
-Output is `[a, bb]`, then `failed`. The thread is joined before the program exits.
-Choose the failure policy for the real application; logging here is just the
-example's policy. For stateful framework callbacks or several abstract methods,
-read [`conform`](/en/reference/jvm/conformance). General multi-method interfaces
-are not SAMs; the compiler does not synthesize their implementations from a lambda.
+```text
+[a, bb]
+failed
+```
 
-## Overloaded methods and constructors {#overloads}
+- `run_callback` prints the message. Your program might log it, count it or keep it for later; what matters is that you made the decision and wrote it down.
+- For a comparator, write the parameter types and return `a.compareTo(b)`. Its result is the `Int32` that `Comparator` expects.
+- An interface with several abstract methods, or a callback that keeps state, is a class with `conform`. See [conformance](/en/reference/jvm/conformance).
 
-A floating-point capacity cannot select a `StringBuilder` constructor. This is
-`SPR-JVM-MEMBER`:
+## An overloaded method or constructor {#overloads}
+
+`StringBuilder` has four constructors, and none of them takes a `Float`:
 
 <<< @/snippets/interop/overloads_bad.spr
 
-Inspect before repairing:
-
-```sh
-sprig api java.lang.StringBuilder --member '<init>' --json
-sprig api java.lang.Math --member max --json
+```text
+SPR-JVM-MEMBER [JVM] main.spr:2:15: No constructor of StringBuilder matches 1 argument(s)
+  hint: Run sprig api java.lang.StringBuilder --member '<init>' to see the signatures this call can match.
 ```
 
-Give the argument its intended type instead of rounding a value just to satisfy an overload:
+Run the command from the hint, pick the overload you mean, and give the argument that type:
+
+```sh
+sprig api java.lang.StringBuilder --member '<init>'
+sprig api java.lang.Math --member max
+```
 
 <<< @/snippets/interop/overloads.spr
 
-Output is `rows=3`, then `3`. A typed `Int32` chooses the `int` shape here; `Int`
-usually prefers an exact `long` overload when one exists. Constructors and Java
-methods use positional arguments. Explicit Java generic method arguments such
-as `Collections.emptyList[String]()` settle a type parameter, not an arbitrary
-overload tie. `SPR-JVM-AMBIGUOUS` requires examining all equally applicable
-signatures; the compiler's cookbook hint does not pick one on your behalf.
+```text
+rows=3
+3
+```
 
-## Building a large string {#string-building}
-
-Repeated `result += fragment` in a loop copies the already accumulated prefix.
-For similarly sized fragments, the total copied text can grow quadratically.
-A short expression like `"count=" + count` remains convenient; an incremental
-serializer should use a builder, or join parts it already holds:
-
-<<< @/snippets/interop/string_building.spr
-
-Both lines print `oak,birch,松`. Call `toString()` once after appending. `text.join`
-from `@std/text.spr` works on string parts; retaining all parts costs memory.
-Java `StringBuilder.length()` counts UTF-16 units, unlike Sprig String's code-point
-length. The example only tests emptiness, for which that difference is harmless.
-Java append formatting may differ for Sprig objects: explicitly convert a value
-to its Sprig `toString()` text before appending when preserving that presentation
-matters. No automatic loop rewrite or language semantic change is implied.
-See [the reproducible comparison](/en/reference/jvm/string-building) for the
-bounded benchmark and its limitations.
+- An `Int32` value selects the `int` overload. A plain `Int` prefers an exact `long` overload when there is one; otherwise it narrows to `int`, with a range check at run time.
+- Java calls take positional arguments only.
+- Type arguments in brackets, as in `Collections.emptyList[String]()`, settle a generic method's type parameter. They don't choose between overloads.
+- `SPR-JVM-AMBIGUOUS` means two overloads fit equally well. Look at the candidates the diagnostic lists and change an argument's type until one fits; the compiler won't pick for you.

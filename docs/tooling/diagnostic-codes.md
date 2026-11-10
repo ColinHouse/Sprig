@@ -117,6 +117,7 @@ Diagnostic JSON keeps the stable fields (`code`, `phase`, `severity`, `uri`,
 |---|---|
 | `expectedType` / `actualType` | Rendered types involved in a mismatch. |
 | `hint` | One short human instruction. |
+| `example` | The URL of a documentation page with a worked example of the repair. Text output shows it as an `example:` line under the hint, and the language server sends it as the diagnostic's `codeDescription.href`. |
 | `relatedHelp` | Help topic accepted by `sprig help <topic>`. |
 | `repair` | `{ "kind": ..., "machineApplicable": bool }` repair strategy. |
 
@@ -191,12 +192,20 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
 
 ## Java boundary recipes
 
-`sprig help jvm` links the [Java interop cookbook](https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook).
-`SPR-JVM-MEMBER` and `SPR-JVM-AMBIGUOUS` with checker-provided candidate metadata
-point to the exact `sprig api` query and the overload recipe (or the collection
-recipe when a native collection argument meets a candidate with an explicit adapter). Java-bound
-`SPR-TYPE-CALLABLE-THROWS` and nullable-argument diagnostics retain their specific
-first hint and add callback/nullability recipe links. The candidate list, stable
-codes and accepted programs are unchanged; these hints never select an overload
-or silently rewrite a call. Recipes also cover `SPR-FLOW-THROWS`, explicit
-collection adapters and mutable/immutable copy behavior.
+A diagnostic about a Java call for which the checker knows the class and the
+member carries an `example`: the recipe of the
+[Java interop cookbook](https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook)
+that shows this kind of mismatch before and after.
+
+| Diagnostic | Recipe |
+|---|---|
+| `SPR-JVM-MEMBER`, `SPR-JVM-AMBIGUOUS` | `#overloads`; `#collections` when an argument is a Sprig list or map and a candidate takes the Java collection |
+| `SPR-TYPE-CALLABLE-THROWS` for a Java parameter | `#callbacks` |
+| `SPR-TYPE-NULLABLE` for an argument of a Java call | `#nullable` |
+
+`SPR-JVM-MEMBER` and `SPR-JVM-AMBIGUOUS` had no hint for such a call; the hint
+is now the command that lists the real signatures, for example
+`Run sprig api java.util.Collections --member sort to see the signatures this
+call can match.` The other hints, the codes, the candidate list in `data` and
+the programs the compiler accepts are unchanged. Neither the hint nor the
+example chooses an overload.

@@ -1,12 +1,10 @@
 # JVM 互操作
 
-[Java 互操作实用配方](/guide/java-interop-cookbook)：可空值、异常、集合、回调和重载的前后对照。
-
 Sprig 会先编译成 Java 再运行，所以 JDK 自带的类和 Maven 上的 Java 库都能直接用。这页讲怎么导入、调用 Java 类，以及 Sprig 在和 Java 交接的地方会做哪些检查。
 
 总的原则偏保守：Java 没说一个返回值不会是 `null`，Sprig 就当它可能是 `null`。`toString()` 总是返回 `String`，标了非空注解的结果也是普通的值（见下面）。反过来，你传给 Java 的参数默认不能是 `null`，标了 `@Nullable` 的参数除外。
 
-完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。
+完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。[Java 互操作实用配方](/guide/java-interop-cookbook)把五种反复遇到的情况各走了一遍：可空值、异常、集合、回调和重载。
 
 ## 导入和调用 Java 类
 

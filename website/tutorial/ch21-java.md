@@ -362,7 +362,6 @@ bad number: java.lang.NumberFormatException: For input string: "abc"
 `sort` 的接口要求比较函数返回 Java 的 `int`；lambda 返回 `Int`，编译器自动收窄。`print` 一个 Java `ArrayList` 会按 Java 的 `toString` 打印成 `[3, 2, 1]`。
 :::
 
+以后调用 Java 时反复遇到的五种情况（可空值、异常、集合、回调和重载），[Java 互操作实用配方](/guide/java-interop-cookbook)里各有一个改前改后的对照。
+
 下一章：[并发](/tutorial/ch22-concurrency)——让 Sprig 程序同时做几件事。
-
-
-[Java 互操作实用配方](/guide/java-interop-cookbook)：可空值、异常、集合、回调和重载的前后对照。

@@ -26,6 +26,7 @@ public final class JsonWriter {
         if (diagnostic.expectedType != null) item.put("expectedType", diagnostic.expectedType);
         if (diagnostic.actualType != null) item.put("actualType", diagnostic.actualType);
         if (diagnostic.hint != null) item.put("hint", diagnostic.hint);
+        if (diagnostic.example != null) item.put("example", diagnostic.example);
         if (diagnostic.relatedHelp != null) item.put("relatedHelp", diagnostic.relatedHelp);
         if (diagnostic.repair != null) item.put("repair", diagnostic.repair);
         if (diagnostic.data != null) item.put("data", diagnostic.data);
@@ -125,6 +126,9 @@ public final class JsonWriter {
         }
         if (d.hint != null) {
             sb.append(",\n").append(indent).append("  \"hint\": \"").append(escape(d.hint)).append("\"");
+        }
+        if (d.example != null) {
+            sb.append(",\n").append(indent).append("  \"example\": \"").append(escape(d.example)).append("\"");
         }
         if (d.relatedHelp != null) {
             sb.append(",\n").append(indent).append("  \"relatedHelp\": \"").append(escape(d.relatedHelp)).append("\"");
