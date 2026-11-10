@@ -1,0 +1,13 @@
+import "@std/text.spr" as text
+
+func csv_line(cells: List[String]) -> String:
+    var line = ""
+    for cell in cells:
+        if line.length() > 0:
+            line += ","
+        line += cell
+    return line
+
+let cells = ["oak", "birch", "松"]
+print(csv_line(cells))
+print(text.join(cells, ","))

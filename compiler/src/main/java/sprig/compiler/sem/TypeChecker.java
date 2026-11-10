@@ -26,6 +26,7 @@ import sprig.compiler.diag.Newcomer;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
+import sprig.compiler.jvm.JvmDeprecation;
 import sprig.compiler.jvm.JvmMetadata;
 import sprig.compiler.jvm.JvmNullability;
 import sprig.compiler.types.ClassType;
@@ -4396,6 +4397,8 @@ public final class TypeChecker {
                 field.kind = ResolvedField.Kind.JAVA_FIELD;
                 JvmMember member = new JvmMember();
                 member.field = javaField;
+                JvmDeprecation.warn(diagnostics, javaField, "Accessing", module.uri,
+                        access.nameSpan != null ? access.nameSpan : access.span);
                 member.owner = clazz;
                 member.name = access.name;
                 Map<TypeVariable<?>, Type> fieldBindings = JavaTypes
@@ -5050,6 +5053,7 @@ public final class TypeChecker {
         }
         member.returnType = javaType;
         resolved.jvm = member;
+        JvmDeprecation.warn(diagnostics, best, "Calling", module.uri, calleeSpan(call));
         requireHandled(jvmExceptions(best.getExceptionTypes()), call.span);
         return javaType;
     }
@@ -5202,6 +5206,7 @@ public final class TypeChecker {
             member.returnType = member.returnType.nonNull();
         }
         field.jvm = member;
+        JvmDeprecation.warn(diagnostics, best, "Calling", module.uri, calleeSpan(call));
         if (call.resolved != null && bestMethodArgs != null) {
             call.resolved.typeArgs = bestMethodArgs;
         }

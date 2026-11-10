@@ -96,6 +96,7 @@ public final class CodeDocs {
             Map.entry(Codes.CONFORM_PARENT, "The parent view of a class that extends a Java class only calls inherited methods; it is not a value, has no fields and cannot reach abstract methods."),
             Map.entry(Codes.JVM_CLASS, "The imported Java class could not be loaded, or it lives in the unnamed package."),
             Map.entry(Codes.JVM_CLASSPATH, "A --classpath entry is missing, empty, or not a JAR/directory."),
+            Map.entry(Codes.JVM_DEPRECATED, "Warning, not an error: a Java constructor, method or field annotated @Deprecated is called, accessed or overridden, or a deprecated class is imported."),
             Map.entry(Codes.JVM_MEMBER, "No Java method/constructor/field matches this call."),
             Map.entry(Codes.JVM_AMBIGUOUS, "The Java overload is ambiguous for these argument types."),
             Map.entry(Codes.JVM_COMPILE, "The generated Java source did not compile; may be a compiler bug."),

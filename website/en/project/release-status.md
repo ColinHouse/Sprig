@@ -41,6 +41,13 @@ This MINOR upgrade includes changes that may require source edits:
 
 The site follows `main`. The current tutorial's features are published; later source changes may precede the next SDK. `sprig version` identifies the SDK/compiler release, and `sprig capabilities --json` reports its language version and features. `languageVersion: 0.8-dev` does not mean that the SDK is unpublished.
 
+On `main` and not in v0.8.0-beta.1 yet:
+
+- `sqlite.transaction` and `transaction_run` in sprig-sqlite;
+- the `SPR-JVM-DEPRECATED` warning, and the `deprecated` and `forRemoval` fields of `sprig api`;
+- the `example` link on diagnostics about Java calls, and the [Java interop cookbook](/en/guide/java-interop-cookbook) it points to;
+- building a long text with `text += part` in a function's loop in time proportional to the text.
+
 ## How it was verified
 
 The release workflow passed the downloaded-SDK checks on Linux/macOS × JDK 21/26. A fresh local ZIP download on macOS/JDK 26.0.1 also passed SHA-256 verification and `init → resolve → run`. See the [release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md) for the source commit, digest, CI links and limits. The local smoke check does not imply manual Windows or complete editor-interaction coverage.

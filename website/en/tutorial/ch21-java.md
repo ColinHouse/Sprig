@@ -362,4 +362,6 @@ bad number: java.lang.NumberFormatException: For input string: "abc"
 The interface wants the comparator to return Java's `int`; the lambda returns `Int` and the compiler narrows it. `print` on a Java `ArrayList` uses Java's `toString`, giving `[3, 2, 1]`.
 :::
 
+The [Java interop cookbook](/en/guide/java-interop-cookbook) works through five situations you will meet again when calling Java, each before and after: nulls, exceptions, collections, callbacks and overloads.
+
 Next chapter: [Concurrency](/en/tutorial/ch22-concurrency) — making a Sprig program do several things at once.

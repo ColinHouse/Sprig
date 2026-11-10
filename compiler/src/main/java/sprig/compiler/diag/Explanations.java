@@ -149,6 +149,14 @@ public final class Explanations {
                         "Read standard input with @std/process.spr (read_lines, read_line, read_all)."));
                 out.put("relatedCodes", List.of(Codes.NAME_IMPORT, Codes.NAME_NOT_A_VALUE));
             }
+            case Codes.JVM_DEPRECATED -> {
+                out.put("whyMatters", "The Java library marks this declaration deprecated, and 'marked for removal' means a later version deletes it. This is a warning: the program still checks, builds and runs.");
+                out.put("commonCauses", List.of("Calling a deprecated constructor or method, or reading or writing a deprecated field.",
+                        "Overriding a deprecated method in a class that conforms to a Java class or interface.",
+                        "Importing a deprecated class."));
+                out.put("safeFixes", List.of("Read the Java library's documentation for the replacement; none is inferred for you.",
+                        "Run sprig api CLASS --member NAME to see which overloads are deprecated: the message names the one this call selects."));
+            }
             case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> {
                 out.put("whyMatters", "Java calls are resolved against real signatures; unsupported boundaries are reported instead of guessed.");
                 out.put("confusedWith", List.of("Java automatic boxing", "Kotlin SAM conversion"));
@@ -157,7 +165,8 @@ public final class Explanations {
                         "Two overloads are equally applicable, so the call is ambiguous."));
                 out.put("safeFixes", List.of("Run sprig api <fully.qualified.Class> --json and read the reported candidates.",
                         "Choose a supported signature and convert explicitly (toIntExact(), toString(), ...).",
-                        "Adapt the value at the boundary the way sprig api's interopReasonCodes report it."));
+                        "Adapt the value at the boundary the way sprig api's interopReasonCodes report it.",
+                        "See https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook#overloads for verified method and constructor examples."));
                 out.put("relatedCodes", List.of(Codes.TYPE_NULLABLE, Codes.JVM_CLASS));
             }
             case Codes.JVM_CLASSPATH -> {

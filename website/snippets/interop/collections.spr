@@ -1,0 +1,11 @@
+import "@std/jvm.spr" as jvm
+import java.util.Collections as Collections
+
+let original: List[String] = ["b", "a"]
+let copy = jvm.list_copy[String](original)
+Collections.sort(copy)
+let snapshot = jvm.list_snapshot[String](copy)
+copy.add("c")
+print(original)
+print(snapshot)
+print(copy.size())

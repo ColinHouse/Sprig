@@ -545,6 +545,10 @@ public final class LanguageServer {
             // The `sprig help` topic, as `relatedHelp` in `sprig check --json`.
             item.put("data", Map.of("relatedHelp", diagnostic.relatedHelp));
         }
+        if (diagnostic.example != null) {
+            // An editor opens this page from the diagnostic's code.
+            item.put("codeDescription", Map.of("href", diagnostic.example));
+        }
         return item;
     }
 

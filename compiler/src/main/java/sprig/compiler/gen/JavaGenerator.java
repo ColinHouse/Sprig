@@ -85,6 +85,8 @@ public final class JavaGenerator {
     private final Map<Decl, String> typeNames = new IdentityHashMap<>();
     private final Map<Module, String> moduleClassNames = new IdentityHashMap<>();
     private final Map<Symbol, String> localNames = new HashMap<>();
+    /** Local String variables kept as a sprig.runtime.TextAccumulator; see markTextAccumulators. */
+    private final Set<Symbol> textAccumulators = new java.util.HashSet<>();
     private final Map<String, Integer> localNameCounts = new HashMap<>();
     private int tempCounter;
     private int lambdaDepth;
@@ -748,6 +750,7 @@ public final class JavaGenerator {
             }
         }
         resetLocals();
+        markTextAccumulators(module.topStatements, 0, new HashMap<>());
         emittingModuleInit = true;
         for (Stmt stmt : module.topStatements) {
             if (stmt instanceof Stmt.VarDecl varDecl) {
@@ -862,6 +865,7 @@ public final class JavaGenerator {
 
     private void emitFunction(JavaWriter w, Decl.Func func, Decl.ClassDecl owner) {
         resetLocals();
+        markTextAccumulators(func.body, 0, new HashMap<>());
         currentClassDecl = owner;
         currentReturnType = func.returnType;
         lambdaDepth = 0;
@@ -923,8 +927,14 @@ public final class JavaGenerator {
     private void emitStmt(JavaWriter w, Stmt stmt) {
         if (stmt instanceof Stmt.VarDecl varDecl) {
             w.map(varDecl.span);
-            w.line(javaType(varDecl.symbol.type) + " " + localName(varDecl.symbol) + " = "
-                    + convertedExpression(varDecl.init, varDecl.symbol.type) + ";");
+            if (textAccumulators.contains(varDecl.symbol)) {
+                w.line("final sprig.runtime.TextAccumulator " + localName(varDecl.symbol)
+                        + " = new sprig.runtime.TextAccumulator("
+                        + convertedExpression(varDecl.init, varDecl.symbol.type) + ");");
+            } else {
+                w.line(javaType(varDecl.symbol.type) + " " + localName(varDecl.symbol) + " = "
+                        + convertedExpression(varDecl.init, varDecl.symbol.type) + ";");
+            }
         } else if (stmt instanceof Stmt.Assign assign) {
             emitAssign(w, assign);
         } else if (stmt instanceof Stmt.ExprStmt exprStmt) {
@@ -978,6 +988,10 @@ public final class JavaGenerator {
     private void emitAssign(JavaWriter w, Stmt.Assign assign) {
         w.map(assign.span);
         Expr target = assign.target;
+        if (target instanceof Expr.Name name && textAccumulators.contains(name.symbol)) {
+            emitAccumulatorAssign(w, name.symbol, assign);
+            return;
+        }
         if (target instanceof Expr.Name name) {
             String lhs = name.symbol.kind == Symbol.Kind.FIELD
                     ? thisRef() + "." + mangle(name.symbol.name) : localName(name.symbol);
@@ -1046,6 +1060,139 @@ public final class JavaGenerator {
             oldValue = unboxGeneric(oldValue, index.type);
         }
         w.line(receiver + ".set(" + key + ", " + assignmentValue(index.type, oldValue, assign) + ");");
+    }
+
+    /**
+     * Marks the local String variables of a body that a loop appends to.
+     *
+     * <p>{@code text += part} as a concatenation copies the whole accumulated
+     * text on every pass, so a loop that builds a text from n parts copies on
+     * the order of n squared characters: 100,000 rows took minutes where a
+     * builder takes milliseconds. Such a variable is declared as a
+     * {@code sprig.runtime.TextAccumulator}, whose append copies only the new
+     * part; reading it gives the same String the concatenation would.
+     *
+     * <p>The variable is a {@code var} local of type String with an append
+     * ({@code text += part} or {@code text = text + part}) inside a loop that
+     * starts after its declaration, so the append repeats during one lifetime of
+     * the variable. Only locals qualify: nothing outside the function reaches
+     * one, and a lambda cannot capture a local var, so no other code observes
+     * the variable between two statements. A module-level var and a field are
+     * shared state and stay plain Strings.
+     *
+     * @param declaredAt the loop depth at which each candidate was declared
+     */
+    private void markTextAccumulators(List<Stmt> body, int loopDepth, Map<Symbol, Integer> declaredAt) {
+        for (Stmt stmt : body) {
+            if (stmt instanceof Stmt.VarDecl varDecl) {
+                Symbol symbol = varDecl.symbol;
+                if (varDecl.mutable && symbol != null && symbol.kind == Symbol.Kind.LOCAL
+                        && symbol.type == NativeType.STRING) {
+                    declaredAt.put(symbol, loopDepth);
+                }
+            } else if (stmt instanceof Stmt.Assign assign) {
+                if (assign.target instanceof Expr.Name name && appendedParts(assign, name.symbol) != null) {
+                    Integer depth = declaredAt.get(name.symbol);
+                    if (depth != null && loopDepth > depth) {
+                        textAccumulators.add(name.symbol);
+                    }
+                }
+            } else if (stmt instanceof Stmt.IfStmt ifStmt) {
+                markTextAccumulators(ifStmt.thenBody, loopDepth, declaredAt);
+                for (Stmt.IfStmt.Elif elif : ifStmt.elifs) {
+                    markTextAccumulators(elif.body, loopDepth, declaredAt);
+                }
+                if (ifStmt.elseBody != null) {
+                    markTextAccumulators(ifStmt.elseBody, loopDepth, declaredAt);
+                }
+            } else if (stmt instanceof Stmt.WhileStmt whileStmt) {
+                markTextAccumulators(whileStmt.body, loopDepth + 1, declaredAt);
+            } else if (stmt instanceof Stmt.ForStmt forStmt) {
+                markTextAccumulators(forStmt.body, loopDepth + 1, declaredAt);
+            } else if (stmt instanceof Stmt.Try tryStmt) {
+                markTextAccumulators(tryStmt.body, loopDepth, declaredAt);
+                for (Stmt.Try.CatchClause clause : tryStmt.catches) {
+                    markTextAccumulators(clause.body, loopDepth, declaredAt);
+                }
+                if (tryStmt.finallyBody != null) {
+                    markTextAccumulators(tryStmt.finallyBody, loopDepth, declaredAt);
+                }
+            } else if (stmt instanceof Stmt.Match match) {
+                for (Stmt.Match.Branch branch : match.branches) {
+                    markTextAccumulators(branch.body, loopDepth, declaredAt);
+                }
+            }
+        }
+    }
+
+    /**
+     * What an assignment appends to a String variable, in order: the value of
+     * {@code text += value}, or a, b for {@code text = text + a + b}. Null when
+     * the assignment is not an append. In a chain of concatenations that starts
+     * with the variable, each operand joins as text by itself, so
+     * {@code text = text + 1 + 2} appends "1" and "2", and a parenthesized
+     * {@code text = text + (1 + 2)} is one operand that appends "3".
+     */
+    private static List<Expr> appendedParts(Stmt.Assign assign, Symbol symbol) {
+        if (assign.op.equals("+=")) {
+            return List.of(assign.value);
+        }
+        if (!assign.op.equals("=")) {
+            return null;
+        }
+        java.util.ArrayDeque<Expr> parts = new java.util.ArrayDeque<>();
+        Expr value = assign.value;
+        while (value instanceof Expr.Binary binary && binary.op.equals("+")
+                && binary.type == NativeType.STRING) {
+            parts.addFirst(binary.right);
+            value = binary.left;
+        }
+        if (parts.isEmpty() || !(value instanceof Expr.Name name) || name.symbol != symbol) {
+            return null;
+        }
+        return List.copyOf(parts);
+    }
+
+    /**
+     * The accumulator that {@code text == ""} or {@code "" != text} asks about, or
+     * null for any other comparison. Like its length, its emptiness is answered
+     * without taking the text out of the builder.
+     */
+    private Symbol comparedWithEmptyText(Expr.Binary binary) {
+        Expr text = binary.left;
+        Expr literal = binary.right;
+        if (text instanceof Expr.StringLit) {
+            text = binary.right;
+            literal = binary.left;
+        }
+        return literal instanceof Expr.StringLit empty && empty.value.isEmpty()
+                && text instanceof Expr.Name name && textAccumulators.contains(name.symbol)
+                ? name.symbol : null;
+    }
+
+    /** An assignment to a variable that markTextAccumulators marked. */
+    private void emitAccumulatorAssign(JavaWriter w, Symbol symbol, Stmt.Assign assign) {
+        String variable = localName(symbol);
+        List<Expr> parts = appendedParts(assign, symbol);
+        if (parts == null) {
+            w.line(variable + ".set(" + convertedExpression(assign.value, symbol.type) + ");");
+        } else if (parts.size() == 1) {
+            Expr part = parts.get(0);
+            w.line(variable + ".append(" + joinOperand(part.type, emitExpr(part)) + ");");
+        } else {
+            // Every operand is evaluated before the first append: the concatenation
+            // evaluates them all before it assigns, so an operand that throws
+            // leaves the variable as it was.
+            List<String> temps = new ArrayList<>();
+            for (Expr part : parts) {
+                String temp = freshTemp("part");
+                w.line("var " + temp + " = " + joinOperand(part.type, emitExpr(part)) + ";");
+                temps.add(temp);
+            }
+            for (String temp : temps) {
+                w.line(variable + ".append(" + temp + ");");
+            }
+        }
     }
 
     private String assignmentValue(Type targetType, String oldValue, Stmt.Assign assign) {
@@ -1399,7 +1546,8 @@ public final class JavaGenerator {
             return "null";
         }
         return switch (symbol.kind) {
-            case LOCAL, PARAM -> localName(symbol);
+            case LOCAL, PARAM -> textAccumulators.contains(symbol)
+                    ? localName(symbol) + ".get()" : localName(symbol);
             case FIELD -> thisRef() + "." + mangle(symbol.name);
             case TOP_VAR -> topVarRead(symbol);
             default -> "null";
@@ -1550,6 +1698,10 @@ public final class JavaGenerator {
                 return wrapNegate(negate, call);
             }
             Type base = binary.left.type == null ? null : binary.left.type.nonNull();
+            Symbol accumulator = comparedWithEmptyText(binary);
+            if (accumulator != null) {
+                return wrapNegate(negate, localName(accumulator) + ".isEmpty()");
+            }
             if (binary.valueEquality && isStringType(binary.left.type) && isStringType(binary.right.type)) {
                 // Two Strings compare with Objects.equals directly; equalsValue
                 // would first test both sides for Double and Float. The operands
@@ -2057,6 +2209,13 @@ public final class JavaGenerator {
     private String emitBuiltinMethod(Expr.Call call, ResolvedCall resolved) {
         String id = resolved.builtinId;
         Expr.FieldAccess access = (Expr.FieldAccess) call.callee;
+        if ((id.equals("String.length") || id.equals("String.isEmpty"))
+                && access.receiver instanceof Expr.Name name && textAccumulators.contains(name.symbol)) {
+            // The accumulator answers these from its builder. A loop that asks "is
+            // this the first part?" before each append would otherwise take the
+            // whole text out of the builder on every pass.
+            return localName(name.symbol) + (id.equals("String.length") ? ".length()" : ".isEmpty()");
+        }
         String recv = "(" + emitExpr(access.receiver) + ")";
         List<Expr> args = new ArrayList<>();
         for (Expr.Arg arg : call.args) {

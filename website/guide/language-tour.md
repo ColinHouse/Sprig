@@ -235,6 +235,7 @@ sprig-cli 的 `OptionKind.FLAG` 和 sprig-web 的 `Method.GET`、`SchemaType.STR
 ## 另外几个小功能
 
 - 字符串必须在同一行闭合；漏掉结尾引号或把字符串换到下一行时，`SPR-LEX-STRING` 会标出这行未闭合的字符串。
+- 在函数里用循环 `text += part` 拼出一大段文本，花的时间和文本长度成正比：这样的局部 `var` 在生成的代码里放在 builder 中，不会每一轮都把已有的内容复制一遍。模块顶层的 `var` 和字段不是这样，这类文本请放到函数里拼，或者把片段收进列表再用 `text.join`。见[在循环里拼字符串（英文）](/en/reference/language/string-building)。
 - `sprig fmt` 把代码整理成统一的格式，会保留注释，没有配置项。见[格式化（英文）](/en/reference/tooling/formatter)。
 - 模块可以用 `export alias.Symbol` 把导入的声明再导出，但不能借此绕过依赖包的导出范围。没有 `export *` 这样的通配导出。见[重导出（英文）](/en/reference/language/module-reexports)。
 - 表达式形式的 `match` 每个分支只能写一个表达式；要写多行，就用语句形式。见 [match 表达式（英文）](/en/reference/language/match-expressions)。

@@ -1,0 +1,4 @@
+import java.lang.Thread as Thread
+func fail() -> Unit throws Error:
+    throw Error("failed")
+let thread = Thread(fn() => fail())

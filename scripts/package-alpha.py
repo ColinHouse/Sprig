@@ -120,6 +120,7 @@ def main():
             'MATCH_EXPRESSIONS': 'docs/language/match-expressions.md',
             'IF_EXPRESSIONS': 'docs/language/if-expressions.md',
             'MODULE_REEXPORTS': 'docs/language/module-reexports.md',
+            'STRING_BUILDING': 'docs/language/string-building.md',
             'QUICK_REFERENCE': 'docs/language/quick-reference.md',
             'FEATURE_STATUS_IMPLEMENTED': 'docs/language/feature-status.md',
             'KNOWN_LIMITATIONS': 'docs/language/known-limitations.md',

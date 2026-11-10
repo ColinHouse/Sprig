@@ -3,6 +3,7 @@ import sprig.runtime.sqlite.Database as HostDatabase
 import sprig.runtime.sqlite.Parameters as HostParameters
 import sprig.runtime.sqlite.Rows as HostRows
 import sprig.runtime.sqlite.Batch as HostBatch
+import sprig.runtime.sqlite.Transaction as HostTransaction
 
 # A value for a ? placeholder, bound in list order: Integer (64-bit), Text,
 # Boolean (stored as 0 or 1) or Null (SQL NULL, unlike "" and 0).
@@ -67,8 +68,10 @@ class Rows:
         return host.bool(row, column)
 
 # A SQLite database file; get one from open(path). Each call opens its own
-# connection (foreign keys on), so no transaction spans calls. Each sql holds
-# one statement: a trailing ";" or comment is fine, and a second statement
+# connection (foreign keys on); use transaction(database, body) to group calls.
+# Inside that body, work goes through the Transaction: a call on the database
+# itself throws Error.
+# Each sql holds one statement: a trailing ";" or comment is fine, and a second statement
 # throws Error and the call changes nothing. Bad SQL, a wrong ? count or
 # BEGIN/COMMIT-style SQL also throws Error.
 class Database:
@@ -114,3 +117,58 @@ class Database:
 func open(path: String) -> Database throws Error:
     HostDatabase(path).initialize()
     return Database(path=path)
+
+# Valid only on the callback thread and while transaction() is running. It has
+# no commit/rollback methods; a retained Transaction throws Error after scope.
+class Transaction:
+    let host: HostTransaction
+
+    # Runs one prepared update on the scope connection and returns its changed
+    # row count. Throws Error for invalid SQL/parameters or an inactive scope;
+    # a failed operation prevents the transaction from committing.
+    func execute(sql: String, parameters: List[Parameter]) -> Int throws Error:
+        return host.execute(sql, bind(parameters))
+
+    # Copies one query, including INSERT ... RETURNING, into detached Rows on
+    # the scope connection, seeing earlier uncommitted writes. Throws Error for
+    # invalid SQL/parameters/results or an inactive scope; failure prevents commit.
+    func query(sql: String, parameters: List[Parameter]) -> Rows throws Error:
+        let value = host.query(sql, bind(parameters))
+        if value != null:
+            return Rows(host=value)
+        throw Error("SQLite transaction query unexpectedly returned null")
+
+# Internal: holds the body's result, which may be null, in a value that is
+# never null on its way through Java; callers use transaction.
+generic T:
+    class TransactionResult:
+        let value: T
+
+# Internal: runs the body for the host. A Java callback cannot declare throws
+# Error, so an Error is handed to the host, which rolls back and throws it
+# again; callers use transaction.
+generic T:
+    func invoke_transaction(host: HostTransaction, body: fn(Transaction) -> T throws Error) -> TransactionResult[T]:
+        try:
+            return TransactionResult[T](value=body(Transaction(host=host)))
+        catch problem: Error:
+            return host.abort[TransactionResult[T]](problem)
+
+# Runs body once, synchronously on one connection; commits and returns its
+# result on success. An escaping Error or a failed SQL operation rolls back.
+# Nested transaction() calls are unsupported; use the supplied scope throughout.
+generic T:
+    func transaction(database: Database, body: fn(Transaction) -> T throws Error) -> T throws Error:
+        let result = HostDatabase(database.path).transaction[TransactionResult[T]](fn(host: HostTransaction) => invoke_transaction[T](host, body))
+        return result.value
+
+# Internal: gives a body without a result one for transaction; callers use
+# transaction_run.
+func run_body(scope: Transaction, body: fn(Transaction) -> Unit throws Error) -> Bool throws Error:
+    body(scope)
+    return true
+
+# transaction() for a body that returns nothing: the same connection, commit,
+# rollback and errors.
+func transaction_run(database: Database, body: fn(Transaction) -> Unit throws Error) -> Unit throws Error:
+    transaction[Bool](database, fn(scope: Transaction) => run_body(scope, body))

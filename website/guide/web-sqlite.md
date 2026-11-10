@@ -77,7 +77,9 @@ SQLite 库通过 Maven 拿到固定版本的 `org.xerial:sqlite-jdbc:3.46.1.0`�
 - 每个 SQL 字符串只能写一条语句。末尾带分号或注释没关系；多写一条会直接报错，不会被悄悄跳过。有多条语句的脚本，写成迁移文件。
 - 查询返回的是带类型的结果快照，已经和数据库连接断开。连接、语句和结果集用完都会关闭。单次查询的结果最多 10,000 行，超过会报错；结果会整个读进内存。
 - `Database.batch` 在一个事务里执行一组语句，任何一条失败就全部回滚。查询（包括 `INSERT ... RETURNING`）失败时，它写进去的数据也会回滚。
-- 不支持你自己写 `BEGIN`、`COMMIT` 这类事务语句，事务只由 `batch` 管理。
+- `sqlite.transaction(database, callback)` 支持“读取、检查、写入”：回调接收 `Transaction`，它的 `query` 和 `execute` 共用一个连接，能看到前面尚未提交的写入。成功后提交并返回回调结果；回调抛出 `Error` 或 SQL 操作失败会回滚，保留 JDBC 原因和原始错误。即使回调捕获 SQL 操作的错误，也不会提交。
+- 事务只在同步回调内部、同一线程上有效；回调结束后使用会抛出 `Error`。不支持嵌套事务和保存点。回调里始终使用传入的 `Transaction`：直接调用数据库本身的方法（`database.query`、`execute`、`batch`）会立刻抛出 `Error`，因为那会另开一个连接，看不到事务里还没提交的写入。回调没有返回值时，用 `sqlite.transaction_run(database, callback)`。已脱离连接的 `Rows` 可以返回并继续读取。
+- 不能自行执行 `BEGIN`、`COMMIT` 等事务控制语句；提交、回滚和资源关闭由库管理。可运行的例子见[账户转账](https://github.com/ColinHouse/Sprig/blob/main/examples/sqlite/src/transfer.spr)。
 - 没有 ORM，不会把 REAL 自动转成 Int，也不支持 BLOB 和 Decimal 参数。只支持普通的数据库文件，不支持 `:memory:` 内存数据库。
 
 ### 数据库迁移（实验性）

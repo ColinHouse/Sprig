@@ -16,6 +16,7 @@ import sprig.compiler.diag.Diagnostic;
 import sprig.compiler.diag.Diagnostics;
 import sprig.compiler.diag.Phase;
 import sprig.compiler.diag.Span;
+import sprig.compiler.jvm.JvmDeprecation;
 import sprig.compiler.types.ClassType;
 import sprig.compiler.types.EnumType;
 import sprig.compiler.types.FunctionType;
@@ -128,6 +129,7 @@ public final class ConformanceChecker {
         for (Requirement requirement : requirements.values()) {
             markBoundary(classDecl, requirement);
         }
+        warnDeprecatedOverrides(module.uri, classDecl, declarations);
         classDecl.conformedInterfaces.add(target);
     }
 
@@ -198,9 +200,26 @@ public final class ConformanceChecker {
         for (Requirement requirement : contract.values()) {
             markBoundary(classDecl, requirement);
         }
+        warnDeprecatedOverrides(uri, classDecl, declarations);
+        JvmDeprecation.warn(diagnostics, constructor, "Calling", uri, conform.span);
         classDecl.superclass = target;
         classDecl.superConstructor = constructor;
         classDecl.superArguments.addAll(arguments);
+    }
+
+    private void warnDeprecatedOverrides(String uri, Decl.ClassDecl classDecl,
+                                         Map<String, List<Method>> declarations) {
+        for (Decl.Func method : classDecl.methods) {
+            for (List<Method> inherited : declarations.values()) {
+                for (Method candidate : maximal(inherited)) {
+                    if (method.name.equals(candidate.getName())
+                            && shapesMatch(method, candidate.getParameterTypes(), candidate.getReturnType())) {
+                        JvmDeprecation.warn(diagnostics, candidate, "Overriding", uri,
+                                method.nameSpan != null ? method.nameSpan : method.span);
+                    }
+                }
+            }
+        }
     }
 
     /** The one accessible constructor whose parameter shapes the named fields match exactly. */

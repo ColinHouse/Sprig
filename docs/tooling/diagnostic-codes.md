@@ -35,6 +35,7 @@ new behavior gets a new code. See also `sprig explain <code>`.
 | SPR-JVM-CLASS | The imported Java class could not be loaded, or it lives in the unnamed package. |
 | SPR-JVM-CLASSPATH | A `--classpath` entry is empty, missing, or not a JAR/directory. |
 | SPR-JVM-COMPILE | The generated Java source did not compile; may be a compiler bug. |
+| SPR-JVM-DEPRECATED | Warning, not an error: a Java constructor, method or field annotated `@Deprecated` is called, accessed or overridden, or a deprecated class is imported. The message names the overload; `data.forRemoval` says whether it is marked for removal. |
 | SPR-JVM-INTERNAL | Internal compiler or tooling failure. |
 | SPR-JVM-MEMBER | No Java method/constructor/field matches this call. |
 | SPR-LEX-CHAR | The input contains a character outside the Sprig lexer. |
@@ -116,6 +117,7 @@ Diagnostic JSON keeps the stable fields (`code`, `phase`, `severity`, `uri`,
 |---|---|
 | `expectedType` / `actualType` | Rendered types involved in a mismatch. |
 | `hint` | One short human instruction. |
+| `example` | The URL of a documentation page with a worked example of the repair. Text output shows it as an `example:` line under the hint, and the language server sends it as the diagnostic's `codeDescription.href`. |
 | `relatedHelp` | Help topic accepted by `sprig help <topic>`. |
 | `repair` | `{ "kind": ..., "machineApplicable": bool }` repair strategy. |
 
@@ -186,3 +188,24 @@ which is business logic the compiler must not invent. `sprig explain <CODE>
   first non-null branch.
 - `SPR-TYPE-INFER`: every branch is `null` and nothing gives the type.
 - `SPR-TYPE-UNIT`: a branch without a value; use an `if` statement.
+
+
+## Java boundary recipes
+
+A diagnostic about a Java call for which the checker knows the class and the
+member carries an `example`: the recipe of the
+[Java interop cookbook](https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook)
+that shows this kind of mismatch before and after.
+
+| Diagnostic | Recipe |
+|---|---|
+| `SPR-JVM-MEMBER`, `SPR-JVM-AMBIGUOUS` | `#overloads`; `#collections` when an argument is a Sprig list or map and a candidate takes the Java collection |
+| `SPR-TYPE-CALLABLE-THROWS` for a Java parameter | `#callbacks` |
+| `SPR-TYPE-NULLABLE` for an argument of a Java call | `#nullable` |
+
+`SPR-JVM-MEMBER` and `SPR-JVM-AMBIGUOUS` had no hint for such a call; the hint
+is now the command that lists the real signatures, for example
+`Run sprig api java.util.Collections --member sort to see the signatures this
+call can match.` The other hints, the codes, the candidate list in `data` and
+the programs the compiler accepts are unchanged. Neither the hint nor the
+example chooses an overload.

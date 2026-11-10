@@ -1,0 +1,4 @@
+import java.util.Date as Date
+
+let date = Date(126, 0, 15)
+print(date.getYear() + 1900)

@@ -1,0 +1,20 @@
+import java.net.URI as URI
+import java.net.URISyntaxException as URISyntax
+
+func parse_uri(text: String) -> URI throws URISyntax:
+    return URI(text)
+
+func parse_for_callback(text: String) -> URI throws Error:
+    try:
+        return parse_uri(text)
+    catch problem: URISyntax:
+        throw Error("invalid URI: " + text)
+
+try:
+    print(parse_uri("https://example.com"))
+catch problem: URISyntax:
+    print("invalid URI")
+try:
+    parse_for_callback("::bad")
+catch problem: Error:
+    print(problem.message)

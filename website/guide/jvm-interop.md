@@ -4,7 +4,7 @@ Sprig 会先编译成 Java 再运行，所以 JDK 自带的类和 Maven 上的 J
 
 总的原则偏保守：Java 没说一个返回值不会是 `null`，Sprig 就当它可能是 `null`。`toString()` 总是返回 `String`，标了非空注解的结果也是普通的值（见下面）。反过来，你传给 Java 的参数默认不能是 `null`，标了 `@Nullable` 的参数除外。
 
-完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。
+完整规则见 [JVM 互操作参考（英文）](/en/reference/jvm/interop)。想把 Sprig 接进 Gradle、Loom 这类现有构建，见 [Gradle 集成](/guide/gradle)和 [Fabric 模组](/guide/fabric)。[Java 互操作实用配方](/guide/java-interop-cookbook)把五种反复遇到的情况各走了一遍：可空值、异常、集合、回调和重载。
 
 ## 导入和调用 Java 类
 
@@ -157,6 +157,32 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 ```
 
 `wrap` 写文件之前，会先用同一个 classpath 检查生成的代码。已有的文件默认不会被覆盖，要覆盖得加 `--force`。完整规则见[包装生成器（英文）](/en/reference/jvm/wrap)。
+
+## 弃用的 Java API
+
+Java 库把某个东西标成 `@Deprecated` 之后，你的代码哪里用到了它，Sprig 会告诉你。下面这个程序照样能运行：
+
+<<< @/snippets/guide/jvm_deprecated.spr
+
+```text
+2026
+```
+
+同时，`sprig check` 和 `sprig run` 会在标准错误里为每一处使用打印一条警告：
+
+```text
+SPR-JVM-DEPRECATED [TYPE] main.spr:3:12: warning: Calling deprecated Java constructor java.util.Date(int, int, int)
+  hint: The Java library's documentation names the replacement; 'sprig api CLASS --member NAME' shows which overloads are deprecated.
+SPR-JVM-DEPRECATED [TYPE] main.spr:4:12: warning: Calling deprecated Java method java.util.Date.getYear()
+2 warning(s); run 'sprig explain <code>' for details on a diagnostic code.
+```
+
+- 警告的错误码是 `SPR-JVM-DEPRECATED`，位置后面带着 `warning:`。它不会让命令失败：退出码仍然是 0，`--json` 里它的 `"severity"` 是 `"warning"`。
+- 这几种情况会有警告：调用弃用的构造器或方法、读写弃用的字段、在 `conform` 到 Java 类或接口的类里覆盖弃用的方法，以及导入弃用的类。
+- 消息会写明是哪一个重载，因为 `URLDecoder.decode(String)` 已弃用，而 `decode(String, String)` 没有。带 `(marked for removal)` 表示库作者打算把它删掉。
+- `sprig api java.util.Date --member getYear` 会在每个弃用成员后面标出 `(deprecated: true, forRemoval: false)`；加 `--json` 时对应 `deprecated` 和 `forRemoval` 两个字段。
+
+Sprig 不会替你选替代品，该换成什么要看这个库自己的文档。
 
 ## 还不支持的
 

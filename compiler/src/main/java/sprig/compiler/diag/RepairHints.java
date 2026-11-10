@@ -101,7 +101,43 @@ final class RepairHints {
         return hint == null ? null : hint.repairKind();
     }
 
+    /** The Java interop cookbook on the website; a recipe is an anchor on this page. */
+    private static final String COOKBOOK = "https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook";
+
     static void apply(Diagnostic diagnostic) {
+        // A Java call that the checker resolved far enough to know the class and the
+        // member gets the command that lists the real signatures, and the cookbook
+        // recipe for its kind of mismatch. Neither picks an overload for the user.
+        if (diagnostic.data != null && diagnostic.data.get("receiverType") instanceof String owner
+                && diagnostic.data.get("member") instanceof String member) {
+            String recipe = switch (diagnostic.code) {
+                case Codes.JVM_MEMBER, Codes.JVM_AMBIGUOUS -> "overloads";
+                case Codes.TYPE_NULLABLE -> "nullable";
+                case Codes.TYPE_CALLABLE_THROWS -> "callbacks";
+                default -> null;
+            };
+            if ("overloads".equals(recipe)
+                    && diagnostic.data.get("argumentTypes") instanceof java.util.List<?> arguments
+                    && arguments.stream().anyMatch(value -> value instanceof String type
+                            && (type.startsWith("List[") || type.startsWith("MutableList[")
+                            || type.startsWith("Map[") || type.startsWith("MutableMap[")))
+                    && diagnostic.data.get("candidates") instanceof java.util.List<?> candidates
+                    && candidates.stream().anyMatch(value -> value instanceof Map<?, ?> candidate
+                            && candidate.get("adaptation") instanceof Map<?, ?> adaptation
+                            && Boolean.TRUE.equals(adaptation.get("available")))) {
+                recipe = "collections";
+            }
+            if (recipe != null) {
+                // The link is a field of its own: the hint keeps saying what to change.
+                diagnostic.example = COOKBOOK + "#" + recipe;
+                if (diagnostic.hint == null) {
+                    // A shell reads <init> as redirections, so that name is quoted.
+                    String name = member.startsWith("<") ? "'" + member + "'" : member;
+                    diagnostic.hint = "Run sprig api " + owner + " --member " + name
+                            + " to see the signatures this call can match.";
+                }
+            }
+        }
         if (diagnostic.relatedHelp == null) {
             diagnostic.relatedHelp = helpTopic(diagnostic.code);
         }

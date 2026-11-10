@@ -4,7 +4,7 @@ Sprig compiles to Java before it runs, so the JDK's classes and Java libraries f
 
 The general rule is cautious. Unless Java says otherwise, Sprig assumes a returned value might be `null`: `toString()` is always a `String`, and a result the library annotates as non-null is a plain value (see below). In the other direction, what you pass to Java may not be `null` unless the parameter is annotated `@Nullable`.
 
-The [JVM interop reference](/en/reference/jvm/interop) has the complete rules. To plug Sprig into an existing build such as Gradle or Loom, see [Gradle integration](/en/guide/gradle) and [Fabric mods](/en/guide/fabric).
+The [JVM interop reference](/en/reference/jvm/interop) has the complete rules. To plug Sprig into an existing build such as Gradle or Loom, see [Gradle integration](/en/guide/gradle) and [Fabric mods](/en/guide/fabric). The [Java interop cookbook](/en/guide/java-interop-cookbook) works through five situations you'll meet again and again: nulls, exceptions, collections, callbacks and overloads.
 
 ## Importing and calling Java classes
 
@@ -157,6 +157,32 @@ sprig wrap com.example.Client --out src/client.spr --classpath lib/client.jar
 ```
 
 Before writing the file, `wrap` checks the generated code against the same classpath. It won't overwrite an existing file unless you pass `--force`. The [wrapper generator reference](/en/reference/jvm/wrap) has the full rules.
+
+## Deprecated Java APIs
+
+When a Java library marks something `@Deprecated`, Sprig tells you where your code uses it. This program still runs:
+
+<<< @/snippets/guide/jvm_deprecated.spr
+
+```text
+2026
+```
+
+`sprig check` and `sprig run` also print a warning for each use, on standard error:
+
+```text
+SPR-JVM-DEPRECATED [TYPE] main.spr:3:12: warning: Calling deprecated Java constructor java.util.Date(int, int, int)
+  hint: The Java library's documentation names the replacement; 'sprig api CLASS --member NAME' shows which overloads are deprecated.
+SPR-JVM-DEPRECATED [TYPE] main.spr:4:12: warning: Calling deprecated Java method java.util.Date.getYear()
+2 warning(s); run 'sprig explain <code>' for details on a diagnostic code.
+```
+
+- A warning has the code `SPR-JVM-DEPRECATED` and the word `warning:` after the location. It doesn't fail the command: the exit status is still 0, and `--json` reports it with `"severity": "warning"`.
+- You get one for calling a deprecated constructor or method, reading or writing a deprecated field, overriding a deprecated method in a class that `conform`s to a Java class or interface, and importing a deprecated class.
+- The message names the exact overload, because `URLDecoder.decode(String)` is deprecated while `decode(String, String)` is not. `(marked for removal)` means the library plans to delete it.
+- `sprig api java.util.Date --member getYear` shows `(deprecated: true, forRemoval: false)` next to each deprecated member; in `--json` these are the `deprecated` and `forRemoval` fields.
+
+Sprig doesn't pick a replacement for you. The library's documentation says what to call instead.
 
 ## Not supported yet
 

@@ -1,0 +1,77 @@
+import "@sqlite/sqlite.spr" as sqlite
+import "@std/process.spr" as process
+import "@std/test.spr" as test
+
+func post(tx: sqlite.Transaction) -> sqlite.Rows throws Error:
+    let before = tx.query("SELECT COUNT(*) AS n FROM entries", [])
+    if before.integer(0, "n") == 0:
+        tx.execute("INSERT INTO entries VALUES (?)", [sqlite.Parameter.Text(value="first")])
+    let during = tx.query("SELECT COUNT(*) AS n FROM entries", [])
+    test.equal_int(during.integer(0, "n"), 1, "own uncommitted write")
+    return tx.query("INSERT INTO entries VALUES ('second') RETURNING name", [])
+
+func rejected(tx: sqlite.Transaction) -> Int throws Error:
+    tx.execute("INSERT INTO entries VALUES ('partial')", [])
+    throw Error("posting rejected")
+
+func broken(tx: sqlite.Transaction) -> Int throws Error:
+    tx.execute("INSERT INTO entries VALUES ('partial')", [])
+    return tx.execute("INSERT INTO missing VALUES (1)", [])
+
+func nothing(tx: sqlite.Transaction) -> String?:
+    return null
+
+func tally(tx: sqlite.Transaction) -> Unit throws Error:
+    tx.execute("INSERT INTO entries VALUES ('tally')", [])
+
+func refuse(tx: sqlite.Transaction) -> Unit throws Error:
+    tx.execute("INSERT INTO entries VALUES ('partial')", [])
+    throw Error("refused")
+
+# transaction_run rolls back and throws the body's own Error.
+func refused_message(db: sqlite.Database) -> String:
+    try:
+        sqlite.transaction_run(db, fn(tx: sqlite.Transaction) => refuse(tx))
+    catch problem: Error:
+        return problem.message
+    return "no Error"
+
+# Inside the body the database itself refuses work; the transaction goes on.
+func through_database(db: sqlite.Database, tx: sqlite.Transaction) -> String throws Error:
+    tx.execute("INSERT INTO entries VALUES ('guarded')", [])
+    try:
+        db.query("SELECT COUNT(*) AS n FROM entries", [])
+    catch problem: Error:
+        return problem.message
+    return "the database answered inside its own transaction"
+
+func entries(db: sqlite.Database) -> Int throws Error:
+    return db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n")
+
+func main() -> Unit throws Error:
+    let db = sqlite.open(process.arguments().get(0))
+    db.execute("CREATE TABLE entries(name TEXT)", [])
+    let rows: sqlite.Rows = sqlite.transaction(db, fn(tx: sqlite.Transaction) => post(tx))
+    test.equal_text(rows.text(0, "name"), "second", "detached return")
+    test.equal_int(db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n"), 2, "all writes committed")
+    test.check_error("callback rollback", fn() => sqlite.transaction(db, fn(tx: sqlite.Transaction) => rejected(tx)))
+    test.equal_int(db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n"), 2, "callback rollback count")
+    test.check_error("SQL rollback", fn() => sqlite.transaction(db, fn(tx: sqlite.Transaction) => broken(tx)))
+    test.equal_int(db.query("SELECT COUNT(*) AS n FROM entries", []).integer(0, "n"), 2, "SQL rollback count")
+    let escaped = sqlite.transaction(db, fn(tx: sqlite.Transaction) => tx)
+    test.check_error("ended scope", fn() => escaped.query("SELECT 1", []))
+    let count: Int = sqlite.transaction(db, fn(tx: sqlite.Transaction) => tx.execute("INSERT INTO entries VALUES ('usable')", []))
+    test.equal_int(count, 1, "usable after failures")
+    let missing: String? = sqlite.transaction(db, fn(tx: sqlite.Transaction) => nothing(tx))
+    test.equal_bool(missing == null, true, "nullable callback result")
+    test.equal_int(entries(db), 3, "before transaction_run")
+    sqlite.transaction_run(db, fn(tx: sqlite.Transaction) => tally(tx))
+    test.equal_int(entries(db), 4, "transaction_run commits")
+    test.equal_text(refused_message(db), "refused", "transaction_run keeps the body's Error")
+    test.equal_int(entries(db), 4, "transaction_run rolls back")
+    let refusal = sqlite.transaction(db, fn(tx: sqlite.Transaction) => through_database(db, tx))
+    test.equal_text(refusal, "This database has a transaction running on this thread; call query and execute on the Transaction passed to the callback", "database call inside its transaction")
+    test.equal_int(entries(db), 5, "the transaction commits after the refused call")
+    test.finish()
+
+main()

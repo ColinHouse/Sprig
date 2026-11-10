@@ -121,7 +121,8 @@ migration files unchanged.
 `schemaVersion`, `toolVersion`, `command`, `exitCode`, `environment.classpath`,
 and `diagnostics`. Each diagnostic has a stable code, phase, severity, URI,
 zero-based range, message, and optional types/hint/data. Diagnostics may also
-carry `relatedHelp` (a help topic) and `repair`
+carry `example` (the URL of a page with a worked example), `relatedHelp` (a
+help topic) and `repair`
 (`{"kind": ..., "machineApplicable": bool}`); `machineApplicable` is false when
 the fix needs a semantic decision. `suggestedEdits` lists the mechanical
 rewrites the hint describes, each as `{"range", "newText", "description"}`

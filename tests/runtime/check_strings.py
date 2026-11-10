@@ -102,6 +102,74 @@ with tempfile.TemporaryDirectory(prefix="sprig-strings-") as work:
         verify(f"positive {name}", result.returncode == 0 and result.stdout.rstrip("\n") == expected,
                f"exit={result.returncode} {result.stdout!r} {result.stderr}")
 
+    # A function's local String var that a loop appends to is kept in a builder
+    # (sprig.runtime.TextAccumulator), so the loop copies each part once.
+    # Shared state, and a local that no loop appends to, stay plain Strings.
+    # The generated Java shows which is which; 61_text_accumulator checks the text.
+    loop = "    for i in range(3):\n"
+    ACCUMULATORS = {
+        "local appended in a loop": ('func build() -> String:\n    var out = ""\n' + loop
+                                     + '        out += i\n    return out\nprint(build())\n', True, "012"),
+        "local with text = text + part": ('func build() -> String:\n    var out = ""\n' + loop
+                                          + '        out = out + i + ","\n    return out\nprint(build())\n',
+                                          True, "0,1,2,"),
+        "local of a top-level block": ('for round in range(2):\n    var out = ""\n' + loop
+                                       + '        out += i\n    print(out)\n', True, "012\n012"),
+        "local declared in an outer loop": ('func build() -> String:\n    var all = ""\n    for round in range(2):\n'
+                                            '        var out = ""\n        for i in range(3):\n'
+                                            '            out += i\n        all += out + ";"\n    return all\n'
+                                            'print(build())\n', True, "012;012;"),
+        "module-level var": ('var out = ""\nfor i in range(3):\n    out += i\nprint(out)\n', False, "012"),
+        "field": ('class Log:\n    var text: String = ""\n\n    func add(count: Int) -> Unit:\n'
+                  '        for i in range(count):\n            text += i\n\nlet log = Log()\nlog.add(3)\n'
+                  'print(log.text)\n', False, "012"),
+        "local without a loop": ('func build() -> String:\n    var out = "a"\n    out += "b"\n    return out\n'
+                                 'print(build())\n', False, "ab"),
+        "local declared in the loop that appends": ('func build() -> Int:\n    var total = 0\n' + loop
+                                                    + '        var out = "a"\n        out += i\n'
+                                                    '        total += out.length()\n    return total\n'
+                                                    'print(build())\n', False, "6"),
+        "local that a loop only prepends to": ('func build() -> String:\n    var out = ""\n' + loop
+                                               + '        out = i + out\n    return out\nprint(build())\n',
+                                               False, "210"),
+    }
+    for name, (source, kept_in_builder, expected) in ACCUMULATORS.items():
+        path = directory / (name.replace(" ", "_").replace("=", "") + ".spr")
+        path.write_text(source, encoding="utf-8")
+        java = directory / (path.stem + " java")
+        built = call("build", path, "--emit-java-only", "-d", java)
+        generated = "".join(file.read_text(encoding="utf-8") for file in sorted(java.rglob("*.java")))
+        result = call("run", path)
+        verify(f"accumulator {name}",
+               built.returncode == 0 and ("sprig.runtime.TextAccumulator" in generated) == kept_in_builder
+               and result.returncode == 0 and result.stdout.rstrip("\n") == expected,
+               f"build={built.returncode} run={result.returncode} {result.stdout!r} {built.stderr}{result.stderr}")
+
+    # 400,000 appends of 25 characters build a text of 10 MB. As concatenations
+    # they copy 25 * 400000^2 / 2 = 2 * 10^12 characters, which takes minutes;
+    # appended to a builder they copy 10^7, so the run fits the usual time limit.
+    # The same holds when each pass first asks for the length or for emptiness to
+    # place a separator: the builder answers without giving out the text.
+    part = '"0123456789012345678901234"'
+    GROWTH = {
+        "appends": (f'        out += {part}\n', "10000000"),
+        "appends after a length check": ('        if out.length() > 0:\n            out += ","\n'
+                                         f'        out += {part}\n', "10399999"),
+        "appends after an emptiness check": ('        if out != "":\n            out += ","\n'
+                                             f'        out += {part}\n', "10399999"),
+    }
+    for name, (body, expected) in GROWTH.items():
+        growth = directory / (name.replace(" ", "_") + ".spr")
+        growth.write_text('func build(count: Int) -> Int:\n    var out = ""\n    for i in range(count):\n'
+                          + body + '    return out.length()\nprint(build(400000))\n', encoding="utf-8")
+        try:
+            result = call("run", growth)
+            verify(f"accumulator grows in linear time: {name}",
+                   result.returncode == 0 and result.stdout.strip() == expected,
+                   f"exit={result.returncode} {result.stdout!r} {result.stderr}")
+        except subprocess.TimeoutExpired:
+            verify(f"accumulator grows in linear time: {name}", False, "400,000 appends did not finish in 60 s")
+
     # Java char interop stays a UTF-16 code-unit boundary: a one-unit literal is
     # accepted; a two-unit literal or supplementary code point is rejected.
     interop_ok = directory / "interop_ok.spr"

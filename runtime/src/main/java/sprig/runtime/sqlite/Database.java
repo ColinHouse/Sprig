@@ -10,26 +10,48 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import sprig.runtime.Fn1;
+import sprig.runtime.NonNull;
 
 /** Narrow file-backed JDBC boundary. SQL and business rules belong to Sprig. */
 public final class Database {
     private final String file;
-    public Database(String file) {
+    private final ConnectionFactory connections;
+    /** The file of the transaction that this thread is running, if it is running one. */
+    private static final ThreadLocal<String> ACTIVE_TRANSACTION = new ThreadLocal<>();
+
+    @FunctionalInterface
+    interface ConnectionFactory { Connection open(String url) throws SQLException; }
+
+    public Database(String file) { this(file, DriverManager::getConnection); }
+
+    // Package-private test seam: the public API never accepts or exposes JDBC resources.
+    Database(String file, ConnectionFactory connections) {
         Objects.requireNonNull(file, "database file");
         if (file.isBlank() || file.equals(":memory:") || file.startsWith("file:"))
             throw new SqliteError("Use an ordinary SQLite file path; URI and in-memory databases are unsupported");
+        this.connections = Objects.requireNonNull(connections);
         this.file = Path.of(file).toAbsolutePath().normalize().toString();
     }
     private Connection connect() throws SQLException {
-        Connection connection = DriverManager.getConnection("jdbc:sqlite:" + file);
+        // Inside a transaction's callback, a call on the database itself would open a
+        // second connection. A query through it does not see the transaction's writes,
+        // and a write waits for the lock this same thread holds until the busy timeout.
+        if (file.equals(ACTIVE_TRANSACTION.get()))
+            throw new SqliteError("This database has a transaction running on this thread; "
+                    + "call query and execute on the Transaction passed to the callback");
+        Connection connection = connections.open("jdbc:sqlite:" + file);
         try {
             try (var statement = connection.createStatement()) {
                 statement.execute("PRAGMA foreign_keys=ON");
                 statement.execute("PRAGMA busy_timeout=5000");
             }
             return connection;
-        } catch (SQLException | RuntimeException failure) {
-            try { connection.close(); } catch (SQLException close) { failure.addSuppressed(close); }
+        } catch (SQLException | RuntimeException | Error failure) {
+            try { connection.close(); }
+            catch (SQLException | RuntimeException | Error close) {
+                if (close != failure) failure.addSuppressed(close);
+            }
             throw failure;
         }
     }
@@ -62,8 +84,8 @@ public final class Database {
         }
         return offset;
     }
-    /** Transaction lifetimes belong to batch(), never SQL control statements. */
-    private static void checkSql(String sql) {
+    /** Transaction lifetimes belong to the library, never SQL control statements. */
+    static void checkSql(String sql) {
         Objects.requireNonNull(sql, "SQL");
         int offset = statementStart(sql);
         if (offset < 0) throw new SqliteError("Unterminated SQL comment");
@@ -71,10 +93,10 @@ public final class Database {
         while (end < sql.length() && Character.isLetter(sql.charAt(end))) end++;
         String keyword = sql.substring(offset, end).toUpperCase(Locale.ROOT);
         if (Set.of("BEGIN", "COMMIT", "END", "ROLLBACK", "SAVEPOINT", "RELEASE").contains(keyword))
-            throw new SqliteError("SQL transaction control is unsupported; use an atomic batch");
+            throw new SqliteError("SQL transaction control is unsupported; use an atomic batch or scoped transaction");
     }
     /** JDBC runs only the first statement of a text and ignores the rest, so a second one is an error. */
-    private static void checkOneStatement(String sql) {
+    static void checkOneStatement(String sql) {
         int count = splitScript(sql).size();
         if (count > 1)
             throw new SqliteError("SQL holds " + count + " statements; use one statement per SQL text, or a migration for a script");
@@ -136,6 +158,40 @@ public final class Database {
                 throw failure;
             }
         } catch (SQLException failure) { throw new SqliteError("SQLite transaction failed", failure); }
+    }
+
+    /** Run synchronous work on one connection. Nested scopes are unsupported. */
+    @NonNull
+    public <T> T transaction(Fn1<Transaction, T> work) {
+        Objects.requireNonNull(work, "transaction work");
+        if (ACTIVE_TRANSACTION.get() != null)
+            throw new SqliteError("Nested SQLite transactions are unsupported");
+        try (Connection connection = connect()) {
+            ACTIVE_TRANSACTION.set(file);
+            try {
+                connection.setAutoCommit(false);
+                Transaction scope = new Transaction(connection);
+                try {
+                    T value = work.apply(scope);
+                    scope.checkUsable();
+                    if (value == null) throw new SqliteError("Transaction callback returned a null host result");
+                    connection.commit();
+                    return value;
+                } catch (SQLException | RuntimeException | Error failure) {
+                    try { connection.rollback(); }
+                    catch (SQLException | RuntimeException | Error rollback) {
+                        if (rollback != failure) failure.addSuppressed(rollback);
+                    }
+                    throw failure;
+                } finally {
+                    scope.end();
+                }
+            } finally {
+                ACTIVE_TRANSACTION.remove();
+            }
+        } catch (SQLException failure) {
+            throw new SqliteError("SQLite transaction failed", failure);
+        }
     }
 
     /**

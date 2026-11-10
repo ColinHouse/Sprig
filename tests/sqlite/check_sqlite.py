@@ -111,11 +111,14 @@ def main():
         checked=json.loads(command(sqlite,'check','--offline','--json'))
         classpath=os.pathsep.join([str(ROOT/'build/sprig-compiler.jar'),*checked['environment']['classpath']])
         classes=work/'probe classes';classes.mkdir()
-        subprocess.run(['javac','--release','17','-cp',classpath,'-d',str(classes),str(ROOT/'runtime/src/main/java/sprig/runtime/SprigError.java'),*map(str,(ROOT/'runtime/src/main/java/sprig/runtime/sqlite').glob('*.java')),str(ROOT/'tests/sqlite/AdapterProbe.java')],check=True)
+        subprocess.run(['javac','--release','17','-cp',classpath,'-d',str(classes),str(ROOT/'runtime/src/main/java/sprig/runtime/SprigError.java'),*map(str,(ROOT/'runtime/src/main/java/sprig/runtime/sqlite').glob('*.java')),str(ROOT/'tests/sqlite/AdapterProbe.java'),str(ROOT/'tests/sqlite/TransactionProbe.java')],check=True)
         subprocess.run(['java','-Dfile.encoding=UTF-8','-cp',os.pathsep.join([str(classes),classpath]),'AdapterProbe',str(work/f'adapter {NON_ASCII}.sqlite')],check=True)
+        subprocess.run(['java','-Dfile.encoding=UTF-8','-cp',os.pathsep.join([str(classes),classpath]),'sprig.runtime.sqlite.TransactionProbe',str(work/'transactions.sqlite')],check=True)
         path=work/'demo notes.sqlite'
         assert command(sqlite,'run','--offline','--',path)=='persisted notes=1\n'
         assert command(sqlite,'run','--offline','--',path)=='persisted notes=2\n'
+        assert command(sqlite,'run','src/transfer.spr','--offline','--',work/'transfer.sqlite')=='checking balance=750\n'
+        assert command(sqlite,'run','src/transfer.spr','--offline','--',work/'transfer.sqlite')=='checking balance=500\n'
         # The Sprig API: every Rows accessor that can fail declares throws Error,
         # and an SQL text with a second statement is an Error instead of half a run.
         api=json.loads(command(sqlite,'api','@sqlite/sqlite.spr','--json'))
@@ -126,6 +129,9 @@ def main():
         multiple='Error: SQL holds 2 statements; use one statement per SQL text, or a migration for a script'
         assert lines==['null','not null','Error: Unknown query column: missing','Error: Query row index out of bounds',
                        multiple,multiple,multiple,'ran 1','ran 2'],lines
+        shutil.copy(ROOT/'tests/sqlite/transactions.spr',sqlite/'src/transactions.spr')
+        output=command(sqlite,'run','src/transactions.spr','--offline','--',work/'sprig transactions.sqlite')
+        assert output.endswith('3 passed, 0 failed\n'),output
         database=work/f'ledger {NON_ASCII}.sqlite';server=None
         try:
             server=Server(ledger,database)

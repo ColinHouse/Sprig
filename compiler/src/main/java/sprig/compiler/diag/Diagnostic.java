@@ -18,6 +18,8 @@ public final class Diagnostic {
     public String expectedType;
     public String actualType;
     public String hint;
+    /** A page with a worked example of the repair, when the documentation has one. */
+    public String example;
     public String relatedHelp;
     public Map<String, Object> repair;
     public Map<String, Object> data;
@@ -131,6 +133,10 @@ public final class Diagnostic {
             }
             sb.append(": ");
         }
+        if (severity == Severity.WARNING) {
+            // An error line has no label; a warning says so, since it does not fail the command.
+            sb.append("warning: ");
+        }
         sb.append(message);
         if (expectedType != null || actualType != null) {
             sb.append(" (expected ").append(expectedType == null ? "?" : expectedType)
@@ -138,6 +144,9 @@ public final class Diagnostic {
         }
         if (hint != null && includeHint) {
             sb.append("\n  hint: ").append(hint);
+        }
+        if (example != null) {
+            sb.append("\n  example: ").append(example);
         }
         for (Related r : related) {
             sb.append("\n  ").append(r.message);
