@@ -105,12 +105,13 @@ public final class SprigPlugin implements Plugin<Project> {
                     configureTask(task, projectDirectory, projectInputs, sprigClasspath, toolchain,
                             sourceSet.getName());
                     task.getOutputDirectory().set(generatedRoot);
+                    task.setRuntimeSource(toolchain.getRuntimeSource());
                     task.dependsOn(bridgeCompile);
                 });
 
         // The task-backed provider propagates the generation dependency into compileJava.
+        // The directory holds the generated classes and the project's copy of the runtime.
         sourceSet.getJava().srcDir(generate.flatMap(task -> task.getOutputDirectory().dir("java")));
-        sourceSet.getJava().srcDir(toolchain.getRuntimeSource());
 
         // javac must see the conventionally compiled bridge classes while compiling generated sources.
         targetCompile.configure(task -> {

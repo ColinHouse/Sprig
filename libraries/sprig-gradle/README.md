@@ -3,7 +3,7 @@
 `dev.sprig` connects an existing Sprig project to an ordinary Gradle Java
 source set. Gradle remains responsible for dependencies, source sets, `javac`,
 tests, packaging and host frameworks. The plugin owns the repeated bridge,
-classpath, generated-source, runtime-source and lifecycle wiring.
+classpath, generated-source and lifecycle wiring.
 
 The plugin ships as source inside the Sprig SDK at
 `libraries/sprig-gradle/`. This repository does not publish it to the Gradle
@@ -55,16 +55,16 @@ guessing the SDK layout. Toolchain selection order is:
 3. `sprig` on `PATH`.
 4. The managed `~/.sprig/current/bin/sprig` or `~/.sprig/bin/sprig` install.
 
-The resolved compiler must provide `build --emit-java-only`, `sprig test`, a
-complete runtime source tree and `javac`. Missing/incompatible toolchains fail
-during project configuration with setup guidance.
+The resolved compiler must provide `build --emit-java-only --with-runtime`,
+`sprig test`, a complete runtime source tree and `javac`. Missing/incompatible
+toolchains fail during project configuration with setup guidance.
 
 ## Source layout and extension options
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `projectDirectory` | Gradle project directory | Directory containing `sprig.toml` and `sprig.lock`. |
-| `targetSourceSet` | `main` | Existing Java source set receiving generated code and runtime sources. |
+| `targetSourceSet` | `main` | Existing Java source set receiving the generated code and the project's copy of the runtime. |
 | `testDirectory` | `<projectDirectory>/tests` | Sprig test programs passed to `sprig test`. |
 | `executable` | discovered | Explicit Sprig launcher override. |
 
@@ -76,11 +76,43 @@ through a file (`build/tmp/<task>/classpath.txt`, one entry per line, passed as
 `--classpath-file`), so a Loom classpath of several hundred JARs also works
 within the Windows command-line limit.
 
-Generated Java is placed under
-`build/generated/sprig/<sourceSet>/java/`; the compiler runtime sources are
-registered with the same source set. Generation clears its owned output before
+Generated Java is placed under `build/generated/sprig/<sourceSet>/java/` and
+registered with the source set. Generation clears its owned output before
 writing, so removed modules cannot leave stale classes in the build. Output is
 ordinary Java that can be inspected and debugged.
+
+## Generated package and runtime
+
+Everything Sprig adds to your jar is in one package, named after the project:
+
+| Package | What is in it |
+|---|---|
+| `sprig.user.<project>` | The classes generated from your `.spr` modules: `$M_main`, `$Counter` and so on. |
+| `sprig.user.<project>.runtime` | The project's own copy of the Sprig runtime. |
+
+`<project>` is the `name` in `sprig.toml`, with every character a Java package
+name cannot hold replaced by `_`: `ordinary-project` gives
+`sprig.user.ordinary_project`. `./gradlew sprigInfo` prints the package. Java
+code in the project names a generated class with it:
+
+```java
+import sprig.user.ordinary_project.$Counter;
+```
+
+Two jars built this way have no class name in common. That matters wherever
+one class loader holds several of them, such as two Fabric mods in one game or
+two Sprig-built libraries on one classpath: each runs its own classes and its
+own runtime, whichever SDK built the other.
+
+Two things follow from it:
+
+- **The package is part of your Java source.** Rename the project and `javac`
+  reports every reference to the old package.
+- **Values cross between two such jars as Java types** (`String`, `long`, your
+  own interfaces). One project's `List` and another's are different classes.
+
+`sprig build --emit-java-only --with-runtime -d <dir>` writes the same tree
+without Gradle, for another build tool to compile.
 
 ## Tasks and Gradle lifecycle
 
@@ -88,10 +120,10 @@ ordinary Java that can be inspected and debugged.
 |---|---|
 | `sprigCheck` | Statically checks the project against the selected Java classpath. |
 | `sprigTest` | Runs the configured Sprig test directory. |
-| `sprigGenerate` | Emits checked Java into the owned build directory. |
+| `sprigGenerate` | Emits checked Java and the project's copy of the runtime into the owned build directory. |
 | `compileSprigBridge` | Compiles the conventional Java boundary sources. |
 | `sprigResolve` | Explicitly resolves dependencies and updates `sprig.lock`. |
-| `sprigInfo` | Reports compiler, manifest, source set, paths, classpath count and lock status. |
+| `sprigInfo` | Reports compiler, manifest, source set, generated package, paths, classpath count and lock status. |
 
 `check` depends on `sprigCheck` and `sprigTest`. The selected Java compile task
 depends on bridge compilation and Sprig generation, so `build`, `jar` and host
@@ -116,12 +148,15 @@ diagnostics. `javac` errors identify the generated source directory and Java
 boundary source as usual.
 
 This plugin is verified with the compiler built from this source (Java 21
-bytecode), Gradle 9.7.1 and a JDK 26 host; Sprig 0.7.1-beta.1, which builds
-Java 17 bytecode, was verified the same way. The Fabric starter additionally
-uses Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3 and Loom
-1.18.2. This is a tested combination, not a promise of compatibility with
-every Gradle, JDK, Loom or Minecraft release. A host Gradle build can use any
-Java source set supplied by its Java plugin.
+bytecode), Gradle 9.7.1 and a JDK 26 host. It needs the compiler it ships
+with: v0.8.0-beta.1 and earlier have no `build --emit-java-only
+--with-runtime`, and the plugin stops with setup guidance when the compiler
+lacks it. Use the plugin from the same SDK as the compiler.
+
+The Fabric starter additionally uses Minecraft 26.3, Fabric Loader 0.19.5,
+Fabric API 0.161.0+26.3 and Loom 1.18.2. This is a tested combination, not a
+promise of compatibility with every Gradle, JDK, Loom or Minecraft release. A
+host Gradle build can use any Java source set supplied by its Java plugin.
 
 ## Non-goals
 
