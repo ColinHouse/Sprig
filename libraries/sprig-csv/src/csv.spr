@@ -26,17 +26,41 @@ class Table:
     let headers: List[String]
     let rows: List[List[String]]
 
+    # Where a header's cells are in each row, for reading one column of every
+    # row: row[table.column_index("amount")]. The name is exact and
+    # case-sensitive; an unknown one is an Error.
+    func column_index(column: String) -> Int throws Error:
+        let index = headers.indexOf(column)
+        if index < 0:
+            throw CsvError(message="Unknown CSV header: " + column)
+        return index
+
     # Zero-based data row and exact, case-sensitive header name.
     func cell(row: Int, column: String) -> String throws Error:
         if row < 0 or row >= rows.size():
             throw CsvError(message="CSV data row index out of bounds: " + row)
-        let index = headers.indexOf(column)
-        if index < 0:
-            throw CsvError(message="Unknown CSV header: " + column)
+        let index = column_index(column)
         let record = rows.get(row)
         if index >= record.size():
             throw CsvError(message="CSV data row " + (row + 1) + " has no column " + column)
         return record.get(index)
+
+# Internal: what went wrong, in the words of the innermost Java cause and
+# without its class name; callers read CsvError.message, and CsvError.cause
+# still holds the exception.
+func reason(problem: Throwable) -> String:
+    var current = problem
+    var depth = 0
+    while depth < 8:
+        let next = current.getCause()
+        if next == null:
+            break
+        current = next
+        depth += 1
+    let message = current.getMessage()
+    if message != null and not message.isEmpty():
+        return message
+    return current.toString()
 
 # Internal: construct the format; the Java parser owns CSV quoting rules.
 func host_format(format: Format) -> CSVFormat throws Error:
@@ -126,9 +150,9 @@ func parse(source: String, format: Format) -> Table throws Error:
             record_number = parser.getRecordNumber() + 1
             parser.close()
     catch problem: IOException:
-        throw CsvError(message="CSV parse failed near record " + record_number + ", line " + line + ": " + problem, cause=problem)
+        throw CsvError(message="CSV parse failed near record " + record_number + ", line " + line + ": " + reason(problem), cause=problem)
     catch problem: UncheckedIOException:
-        throw CsvError(message="CSV parse failed near record " + record_number + ", line " + line + ": " + problem, cause=problem)
+        throw CsvError(message="CSV parse failed near record " + record_number + ", line " + line + ": " + reason(problem), cause=problem)
 
 # Serialize all records with CRLF terminators and RFC-style quote escaping.
 # A zero-cell record is rejected; use [""] for a record with one empty cell.
@@ -157,7 +181,7 @@ func encode(table: Table, format: Format) -> String throws Error:
         finally:
             printer.close()
     catch problem: IOException:
-        throw CsvError(message="CSV write failed near data row " + record_number + ": " + problem, cause=problem)
+        throw CsvError(message="CSV write failed near data row " + record_number + ": " + reason(problem), cause=problem)
     return writer.toString()
 
 # Whole-file strict UTF-8; all handles close before returning or throwing.
@@ -171,9 +195,9 @@ func read(path: String, format: Format) -> Table throws Error:
         catch problem: CsvError:
             throw CsvError(message="CSV read " + path + ": " + problem.message, cause=problem)
     catch problem: IOException:
-        throw CsvError(message="CSV read " + path + ": " + problem, cause=problem)
+        throw CsvError(message="CSV read " + path + ": " + reason(problem), cause=problem)
     catch problem: InvalidPathException:
-        throw CsvError(message="CSV read " + path + ": " + problem, cause=problem)
+        throw CsvError(message="CSV read " + path + ": " + reason(problem), cause=problem)
 
 # Encode before opening the destination, then replace through a temporary
 # sibling (atomic rename where supported, no fsync), using strict UTF-8.
@@ -184,6 +208,6 @@ func write(path: String, table: Table, format: Format) -> Unit throws Error:
     catch problem: CsvError:
         throw CsvError(message="CSV write " + path + ": " + problem.message, cause=problem)
     catch problem: IOException:
-        throw CsvError(message="CSV write " + path + ": " + problem, cause=problem)
+        throw CsvError(message="CSV write " + path + ": " + reason(problem), cause=problem)
     catch problem: InvalidPathException:
-        throw CsvError(message="CSV write " + path + ": " + problem, cause=problem)
+        throw CsvError(message="CSV write " + path + ": " + reason(problem), cause=problem)

@@ -7,6 +7,7 @@
 - [Task Tracker](https://github.com/ColinHouse/Sprig/tree/main/examples/task-tracker)：命令行任务清单，数据存在本地的 JSON 文件里。演示文件读写、带类型的数据模型，以及用 `@std/json_codec` 读取 JSON 字段，不需要联网。
 - [json_select](https://github.com/ColinHouse/Sprig/tree/main/examples/json_select)：从 JSON 里挑选字段的命令行工具，由多个文件组成，用 `sprig-cli` 库解析命令行选项。
 - [tasks](https://github.com/ColinHouse/Sprig/tree/main/examples/tasks)：带子命令的命令行待办清单，数据存在 JSON 文件里（`sprig-cli`、`@std/json_codec`）。
+- [csv](https://github.com/ColinHouse/Sprig/tree/main/examples/csv)：用 `sprig-csv` 写出再读回一个 UTF-8 的 CSV 文件，单元格里有逗号、换行和非 ASCII 文字，按表头读取各列。这个库目前只在 `main` 分支的源码里。
 - [config_summary](https://github.com/ColinHouse/Sprig/tree/main/examples/config_summary)：读取一个小的 JSON 配置文件，输出格式固定的摘要；输入有误时会给出清楚的错误信息。
 - [blog](https://github.com/ColinHouse/Sprig/tree/main/examples/blog)：静态博客生成器，把带 front matter 的文章生成 HTML 页面和索引，输入有误时返回对应的退出码（`@std/files`、`@std/text`、`@std/lists`）。
 - [agent_tools](https://github.com/ColinHouse/Sprig/tree/main/examples/agent_tools)：三个用 Sprig 写的小工具，读取编译器输出的 JSON，用来查询 Java 和 Sprig API、汇总错误信息、比较 API 的差异。

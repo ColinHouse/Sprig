@@ -6,6 +6,11 @@ func require(ok: Bool, message: String) -> Unit throws Error:
     if not ok:
         throw Error(message)
 
+# A message is for the person reading it: the Java exception stays in cause.
+func plain(message: String) -> Unit throws Error:
+    for leaked in ["java.", "org.apache", "sprig.runtime", "Exception"]:
+        require(not message.contains(leaked), "Java class name in message: " + message)
+
 func parse_error(source: String, format: csv.Format, expected: String, has_cause: Bool) -> Unit throws Error:
     var failed = false
     try:
@@ -13,6 +18,7 @@ func parse_error(source: String, format: csv.Format, expected: String, has_cause
     catch problem: csv.CsvError:
         require(problem.message.contains(expected), "wrong parse error: " + problem.message)
         require((problem.cause != null) == has_cause, "parse cause missing")
+        plain(problem.message)
         failed = true
     require(failed, "expected parse failure: " + expected)
 
@@ -32,6 +38,12 @@ require(table.rows.size() == 2, "record count")
 require(table.cell(0, "name") == "世界", "unicode")
 require(table.cell(0, "note") == "comma, semicolon; and \"quote\"", "escaping")
 require(table.cell(1, "note") == "line one\nline two", "multiline")
+require(table.column_index("name") == 0 and table.column_index("note") == 1, "column index")
+let note_column = table.column_index("note")
+var notes = ""
+for row in table.rows:
+    notes += row[note_column].length() + " "
+require(notes == "29 17 ", "a column read row by row: " + notes)
 let roundtrip = csv.parse(csv.encode(table, format), format)
 require(roundtrip.rows == table.rows, "round trip")
 require(roundtrip.headers == table.headers, "header round trip")
@@ -90,6 +102,13 @@ catch problem: Error:
     require(problem.message.contains("Unknown CSV header"), "header lookup error")
     lookup_failed = true
 require(lookup_failed, "unknown header must fail")
+var column_failed = false
+try:
+    table.column_index("Name")
+catch problem: Error:
+    require(problem.message == "Unknown CSV header: Name", "column lookup error: " + problem.message)
+    column_failed = true
+require(column_failed, "an unknown column must fail")
 var index_failed = false
 try:
     table.cell(-1, "name")
@@ -118,6 +137,8 @@ for path in [args.get(1), args.get(2), args.get(3), String.fromCode(0)]:
     catch problem: csv.CsvError:
         require(problem.message.contains(path), "read path missing")
         require(problem.cause != null, "read cause missing")
+        if path != String.fromCode(0):
+            plain(problem.message.replace(path, "PATH"))
         failed = true
     require(failed, "read should fail: " + path)
 var io_failed = false

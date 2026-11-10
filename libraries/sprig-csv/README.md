@@ -19,6 +19,9 @@ import "@csv/csv.spr" as csv
 let format = csv.Format(delimiter=",", header=true)
 let table = csv.parse("name,note\r\n世界,\"tea, cake\"\r\n", format)
 print(table.cell(0, "note"))
+let note = table.column_index("note")
+for row in table.rows:
+    print(row[note])
 let output = csv.encode(table, format)
 ```
 
@@ -32,6 +35,7 @@ writes UTF-8 CSV, reads it back and accesses cells by header without Java import
 | `Format(delimiter=",", header=true)` | Delimiter is exactly one Unicode code point except quote, CR, LF or NUL. Tabs and semicolons work. `header` explicitly controls reading/writing the header record. |
 | `Table(headers, rows)` | `headers: List[String]`, `rows: List[List[String]]`. Values remain text; numbers, dates, booleans and `null` text are never inferred. |
 | `table.cell(row, column)` | Zero-based data row and exact case-sensitive header name. Unknown names and invalid row indices throw `CsvError`. |
+| `table.column_index(column)` | The position of that header's cells in each row, for reading a column in a loop: `row[index]`. An unknown name throws `CsvError`. |
 | `parse(source, format)` | Materializes a CSV string into a table. |
 | `encode(table, format)` | Returns a CSV string with CRLF record terminators, including the last record. |
 | `read(path, format)` | Reads the entire file as strict UTF-8 and parses it. |
@@ -43,7 +47,9 @@ All operations that can fail declare `throws Error`. `CsvError` conforms to
 The cause is an explicit API field, not Java's `Throwable.getCause()` chain.
 Validation failures have no cause; read/write wrappers retain their inner error.
 Parse failures include the attempted record and current physical line plus the
-upstream parser explanation. Header and width failures identify the column or
+upstream parser explanation. A message gives the reason in words, such as
+`CSV read orders.csv: no such file`; the Java exception and its class name are
+in `cause`, not in the text. Header and width failures identify the column or
 record; file failures also identify the path. No partial table is returned.
 
 ## CSV behavior

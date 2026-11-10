@@ -14,9 +14,9 @@ func main() -> Unit throws Error:
     csv.write(path, contacts, format)
     let loaded = csv.read(path, format)
     print("CSV rows=" + loaded.rows.size())
-    var row: Int = 0
-    while row < loaded.rows.size():
-        print(loaded.cell(row, "name") + ": " + loaded.cell(row, "note"))
-        row += 1
+    let name = loaded.column_index("name")
+    let note = loaded.column_index("note")
+    for row in loaded.rows:
+        print(row[name] + ": " + row[note])
 
 main()
