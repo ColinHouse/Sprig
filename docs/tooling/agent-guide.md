@@ -151,7 +151,8 @@ Project compilation refuses missing/stale locks or missing/corrupt locked JARs.
 An explicit file outside the project source root bypasses the project graph;
 use local `--classpath` there. Import the installed bundled standard package
 with `import "@std/files.spr" as files`; no copied std or dependency declaration
-is needed. `build --emit-java-only --json` returns checked Java paths before javac;
+is needed. `build --emit-java-only --json` returns checked Java paths before javac
+(`--with-runtime` adds the runtime's sources in the project's own package);
 see `docs/projects/standard-library.md` and the three `examples/showcases` projects.
 
 For details, see `docs/language/quick-reference.md`, `docs/jvm/interop.md`,

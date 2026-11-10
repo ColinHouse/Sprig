@@ -192,7 +192,7 @@ cacheRoot: /Users/wu/.sprig
 
 ```text
 $ sprig project --json
-{"schemaVersion":1,"command":"project","exitCode":0,"project":{"schemaVersion":1,"root":".../demo","name":"demo","version":"0.1.0","language":"0.8","source":"src","entry":"src/main.spr","binaries":[],"exports":[],"manifest":".../demo/sprig.toml","lockfile":".../demo/sprig.lock","lockStatus":"current","sprigDependencies":[],"jvmDependencies":[],"dependencyResolution":"not-needed","cacheRoot":"/Users/wu/.sprig","gitAvailable":true}}
+{"schemaVersion":1,"command":"project","exitCode":0,"project":{"schemaVersion":1,"root":".../demo","name":"demo","version":"0.1.0","language":"0.8","source":"src","entry":"src/main.spr","binaries":[],"exports":[],"manifest":".../demo/sprig.toml","lockfile":".../demo/sprig.lock","lockStatus":"current","sprigDependencies":[],"jvmDependencies":[],"dependencyResolution":"not-needed","generatedPackage":"sprig.user.demo","cacheRoot":"/Users/wu/.sprig","gitAvailable":true}}
 ```
 
 ## 23.6 Formatting: fmt

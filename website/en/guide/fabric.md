@@ -37,7 +37,7 @@ sprig {
 }
 ```
 
-Fabric dependencies, split source sets, the mod entry point and the Java version are all ordinary Loom configuration. The Sprig plugin compiles the bridge code, supplies the real classpath, generates sources, adds the runtime sources and hooks all of it into Gradle's build.
+Fabric dependencies, split source sets, the mod entry point and the Java version are all ordinary Loom configuration. The Sprig plugin compiles the bridge code, supplies the real classpath, generates sources, adds the mod's own copy of the runtime and hooks all of it into Gradle's build.
 
 ## Who does what
 
@@ -51,6 +51,22 @@ Fabric dependencies, split source sets, the mod entry point and the Java version
 | `build/generated/sprig/main/java/` | The generated Java, which you can read |
 
 Gradle and Loom handle dependencies, source sets, javac and the jar. Sprig handles type checking, code generation, lock validation and the Sprig tests. The plugin connects the two. Dependencies never update by themselves: `check` and `build` only read the current `sprig.lock`, and only an explicit `./gradlew sprigResolve` updates it.
+
+## Renaming the project, and living next to other Sprig mods
+
+Fabric puts every mod in one class loader, so two mods can't have a class with the same name. That's why everything Sprig adds to your jar is in a package named after your project: the generated classes in `sprig.user.<project>`, and the mod's own copy of the runtime in `sprig.user.<project>.runtime`. The template's project is called `sprig-fabric-counter`, so its Java entry point calls Sprig like this:
+
+```java
+CounterActions counter = sprig.user.sprig_fabric_counter.$M_main.fn$new_counter();
+```
+
+- **Change `name` in `sprig.toml`, then the package in Java.** `javac` points at the two calls in `SprigItems.java` and `SprigCounterClient.java` that still use the old package, and `./gradlew sprigInfo` prints the new one.
+- **Give each mod its own project name.** Two mods with the same `name` get the same package.
+- **Mods pass values to each other as Java types.** Each mod has its own runtime, so one mod's Sprig `List` isn't another's. Pass a `String`, a number, or a Java interface both mods know.
+
+::: tip This describes the `main` branch
+SDK v0.8.0-beta.1 and earlier generate every mod's classes into `sprig.user`, with the runtime in `sprig.runtime`, so two Sprig mods in one game have classes with the same names.
+:::
 
 ## Tested versions
 

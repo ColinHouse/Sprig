@@ -1,6 +1,6 @@
 # Gradle 集成
 
-已经有一个用 Gradle 构建的 Java 项目？可以用官方的 `dev.sprig` 插件把 Sprig 代码加进去。插件会读取项目真实的编译 classpath，编译可选的 Java 桥接代码，运行 Sprig 的检查和测试，把生成的 Java 和运行时源码加进项目，并接入 Gradle 平常的构建流程。
+已经有一个用 Gradle 构建的 Java 项目？可以用官方的 `dev.sprig` 插件把 Sprig 代码加进去。插件会读取项目真实的编译 classpath，编译可选的 Java 桥接代码，运行 Sprig 的检查和测试，把生成的 Java 连同项目自己的一份运行时加进项目，并接入 Gradle 平常的构建流程。
 
 ::: tip 需要 v0.6.0-beta.1 或更新的版本
 这个插件从 v0.6.0-beta.1 开始随 SDK 一起发布。如果 `sprig version` 显示的版本更旧，先运行 `sprig upgrade`。
@@ -44,11 +44,34 @@ sprig {
 ```
 
 - `check` 会运行 `sprigCheck` 和 `sprigTest`。
-- `build` 会生成检查过的 Java 代码，连同运行时源码一起编译。
+- `build` 会生成检查过的 Java 代码和项目自己的一份运行时，一起编译。
 - Java 桥接代码默认放在 `src/sprigBridge/java/`。生成的 Java 在 `build/generated/sprig/<sourceSet>/java/`，可以打开查看。
 - Sprig 的任务只读取 `sprig.lock`，不会联网。要更新依赖，需要明确运行 `./gradlew sprigResolve`。
-- `./gradlew sprigInfo` 会列出当前用的编译器和运行时、目标 source set、桥接代码、生成目录、测试目录、锁文件状态和 classpath 的大小。
+- `./gradlew sprigInfo` 会列出当前用的编译器和运行时、目标 source set、桥接代码、生成目录、生成的包名、测试目录、锁文件状态和 classpath 的大小。
 
 插件会按顺序查找 `sprig` 编译器：先看 `sprig { executable = ... }` 等显式设置，再看 `SPRIG_HOME`，然后是 `PATH`，最后是 `~/.sprig` 里安装的 SDK。
+
+## 在 Java 里用 Sprig 写的类
+
+Sprig 生成的类都在以项目名命名的包里。`sprig.toml` 里写的是 `name = "ordinary-project"`，包就是 `sprig.user.ordinary_project`（Java 包名里不能出现的字符都换成 `_`）。项目里的 Java 代码带着这个包名引用它们：
+
+```java
+import sprig.user.ordinary_project.$Counter;
+
+System.out.println(new $Counter().current());
+```
+
+记不住包名就运行 `./gradlew sprigInfo`，输出里有一行 `Generated package`。
+
+项目用到的 Sprig 运行时也在这个包下面（`sprig.user.ordinary_project.runtime`），每个项目各带一份。所以两个用 Sprig 构建的 jar 没有任何同名的类，放进同一个 JVM 也互不影响，比如同一个游戏里的两个 Fabric 模组。
+
+有两件事要记住：
+
+- 改了项目名，包名就跟着变。`javac` 会指出每一处还在用旧包名的 Java 代码。
+- 两个这样的 jar 之间要用 Java 的类型传值（`String`、数字、你自己写的接口）。它们各有一份运行时，一个项目的 Sprig `List` 不是另一个项目的 `List`。
+
+::: tip 这是 `main` 分支上的行为
+v0.8.0-beta.1 和更早的 SDK 把所有项目的类都生成到 `sprig.user`，运行时在 `sprig.runtime`。从这些版本升级时，把 Java 代码里的 `sprig.user.` 改成 `sprig.user.<项目名>.`。
+:::
 
 其他配置项、兼容性和各个任务的细节，见 [`dev.sprig` 插件说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md)。这个插件只是省掉了每个项目都要重复写的构建配置，它不能代替 Gradle、Loom 或 Java，也不能说明 Sprig 的开发效率比 Java 高。

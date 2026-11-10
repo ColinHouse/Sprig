@@ -1,6 +1,6 @@
 # Gradle integration
 
-Already have a Java project built with Gradle? The official `dev.sprig` plugin lets you add Sprig code to it. The plugin reads the project's real compile classpath, compiles the optional Java bridge code, runs Sprig's checks and tests, adds the generated Java and runtime sources to the project, and hooks all of it into Gradle's usual build.
+Already have a Java project built with Gradle? The official `dev.sprig` plugin lets you add Sprig code to it. The plugin reads the project's real compile classpath, compiles the optional Java bridge code, runs Sprig's checks and tests, adds the generated Java and the project's own copy of the runtime to the project, and hooks all of it into Gradle's usual build.
 
 ::: tip Needs v0.6.0-beta.1 or newer
 The plugin ships with the SDK starting with v0.6.0-beta.1. If `sprig version` shows an older version, run `sprig upgrade` first.
@@ -44,11 +44,34 @@ Use Gradle as usual:
 ```
 
 - `check` runs `sprigCheck` and `sprigTest`.
-- `build` generates Java from your checked Sprig code and compiles it along with the runtime sources.
+- `build` generates Java from your checked Sprig code and compiles it along with the project's own copy of the runtime.
 - Java bridge code goes in `src/sprigBridge/java/` by default. The generated Java ends up in `build/generated/sprig/<sourceSet>/java/`, where you can read it.
 - Sprig's tasks only read `sprig.lock` and never go online. To update dependencies, run `./gradlew sprigResolve` explicitly.
-- `./gradlew sprigInfo` shows which compiler and runtime are in use, the target source set, the bridge code, the generated and test directories, the lock status and the size of the classpath.
+- `./gradlew sprigInfo` shows which compiler and runtime are in use, the target source set, the bridge code, the generated directory and package, the test directory, the lock status and the size of the classpath.
 
 The plugin looks for the `sprig` compiler in this order: an explicit setting such as `sprig { executable = ... }`, then `SPRIG_HOME`, then your `PATH`, and finally an SDK installed under `~/.sprig`.
+
+## Using Sprig classes from Java
+
+Sprig generates your classes into a package named after the project. With `name = "ordinary-project"` in `sprig.toml`, the package is `sprig.user.ordinary_project` (every character a Java package name can't hold becomes `_`). Java code in the project names the classes with that package:
+
+```java
+import sprig.user.ordinary_project.$Counter;
+
+System.out.println(new $Counter().current());
+```
+
+If you forget the package, run `./gradlew sprigInfo` and look for the `Generated package` line.
+
+The Sprig runtime your project uses sits below the same package (`sprig.user.ordinary_project.runtime`), one copy per project. So two jars built with Sprig have no class name in common, and they can share a JVM without getting in each other's way: two Fabric mods in one game, for example.
+
+Two things to keep in mind:
+
+- Rename the project and the package changes with it. `javac` points at every piece of Java code that still uses the old one.
+- Pass values between two such jars as Java types (`String`, numbers, an interface of your own). Each has its own runtime, so one project's Sprig `List` isn't the other's.
+
+::: tip This describes the `main` branch
+SDK v0.8.0-beta.1 and earlier generate every project's classes into `sprig.user`, with the runtime in `sprig.runtime`. When you move on from one of them, change `sprig.user.` in your Java code to `sprig.user.<project>.`.
+:::
 
 The [`dev.sprig` plugin guide](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md) covers the remaining options, compatibility and every task in detail. The plugin saves you from writing the same build setup in every project. It doesn't replace Gradle, Loom or Java, and it says nothing about whether Sprig is more productive than Java.
