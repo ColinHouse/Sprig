@@ -373,7 +373,7 @@ public final class ConformanceChecker {
     /**
      * Every overridable declaration of a class chain and its interfaces, up
      * to and including {@code Object}; public or protected instance methods
-     * only (package-private ones cannot be overridden from sprig.user).
+     * only (package-private ones cannot be overridden from the generated package).
      * Static methods are kept apart: an instance method cannot hide one.
      */
     private void collectChain(Class<?> target, Map<String, List<Method>> out, Map<String, Method> statics) {

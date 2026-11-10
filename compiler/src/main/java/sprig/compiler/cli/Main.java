@@ -36,6 +36,7 @@ import sprig.compiler.diag.Span;
 import sprig.compiler.diag.Version;
 import sprig.compiler.front.SourceFormatter;
 import sprig.compiler.gen.JavaGenerator;
+import sprig.compiler.gen.Packages;
 import sprig.compiler.jvm.JavaRunner;
 import sprig.compiler.jvm.JavacRunner;
 import sprig.compiler.jvm.JvmClasspath;
@@ -134,6 +135,7 @@ public final class Main {
         out.println("  run   [file.spr] [--bin NAME] [--json] [--keep] [--no-cache] [--stacktrace] [-- a b] compile and execute on the JVM");
         out.println("  test [PATH] [--filter TEXT] [--classpath PATH] [--json] [--offline] run project tests and compile-fail fixtures");
         out.println("  build [file.spr] [--bin NAME] [-d dir] [--emit-java-only] [--json] emit Java sources + .class files");
+        out.println("  build [file.spr] [--bin NAME] [-d dir] --emit-java-only --with-runtime [--json] Java sources with their own copy of the runtime");
         out.println("  build [file.spr] [--bin NAME] [-d dir] --bundle [--archive] [--json] also write a self-contained bundle (own Java runtime)");
         out.println("  explain <SPR-CODE>                          explain a diagnostic code");
         out.println("  codes [--json]                              list every diagnostic code");
@@ -881,7 +883,8 @@ public final class Main {
             report(diagnostics, options.json, "build", 1, null);
             return 1;
         }
-        JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics).generate();
+        Packages packages = packages(sourcePrep.graph, options.withRuntime);
+        JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics, packages).generate();
         Path outDir = options.outDir != null ? options.outDir : Path.of("sprig-build");
         Path javaDir = outDir.resolve("java");
         Path classesDir = outDir.resolve("classes");
@@ -895,13 +898,27 @@ public final class Main {
             }
             Map<String, Object> details = new java.util.LinkedHashMap<>();
             details.put("javaSources", output.sources.keySet().stream().map(f -> javaDir.resolve(f).toAbsolutePath().toString()).toList());
+            if (options.withRuntime) {
+                // The tree then compiles on its own: the generated code refers to this copy.
+                RuntimeClasses runtime = RuntimeClasses.locate();
+                if (runtime == null) {
+                    RuntimeClasses.reportMissing(diagnostics);
+                    report(diagnostics, options.json, "build", 1, null);
+                    return 1;
+                }
+                details.put("runtimeSources", runtime.writeSources(packages.runtime(), javaDir).stream()
+                        .map(file -> file.toAbsolutePath().toString()).toList());
+            }
             details.put("mainClass", output.mainClass);
+            details.put("generatedPackage", packages.generated());
+            details.put("runtimePackage", packages.runtime());
             details.put("javacInvoked", false);
             if (options.json) System.out.print(JsonWriter.result(diagnostics.all(), null, "build", 0, null, details));
             else report(diagnostics, false, "build", 0, null);
             if (!options.json) {
                 System.out.println("Java sources: " + javaDir.toAbsolutePath());
                 System.out.println("Main class: " + output.mainClass);
+                if (options.withRuntime) System.out.println("Runtime package: " + packages.runtime());
             }
             return 0;
         }
@@ -979,6 +996,14 @@ public final class Main {
         return fileName.endsWith(".spr") ? fileName.substring(0, fileName.length() - 4) : fileName;
     }
 
+    /**
+     * The Java packages of a compilation: the project's own when it compiles in
+     * project context, the base package for a file outside a project.
+     */
+    static Packages packages(DependencyResolver.Result graph, boolean ownRuntime) {
+        return Packages.of(graph == null ? null : graph.root.project.name, ownRuntime);
+    }
+
     private static int run(String[] args) throws IOException, InterruptedException {
         Options options = Options.parse(args, 1);
         Diagnostics diagnostics = new Diagnostics();
@@ -999,7 +1024,8 @@ public final class Main {
         }
         Compilation compilation = runCompiler.compile(source);
         if (!diagnostics.hasErrors()) {
-            JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics).generate();
+            JavaGenerator.Output output = new JavaGenerator(compilation, diagnostics,
+                    packages(sourcePrep.graph, false)).generate();
             Path work = Files.createTempDirectory("sprig-run-");
             try {
                 Path javaDir = work.resolve("java");
@@ -1463,6 +1489,7 @@ public final class Main {
                     map.put("resolvedJvmDependencies", 0);
                 }
             }
+            map.put("generatedPackage", Packages.of(project.name, false).generated());
             map.put("cacheRoot", Path.of(System.getProperty("user.home"), ".sprig").toString());
             GitCache git = new GitCache(GitCache.defaultRoot(), true);
             map.put("gitAvailable", git.available());
@@ -1477,6 +1504,7 @@ public final class Main {
             for (Project.Bin bin : project.bins) {
                 System.out.println("bin: " + bin.name + " -> " + bin.entry);
             }
+            System.out.println("generated package: " + Packages.of(project.name, false).generated());
             System.out.println("lockfile: " + (Files.isRegularFile(project.lockPath())
                     ? "present" : "absent"));
             System.out.println("dependencies: " + project.dependencies.size()
@@ -2114,6 +2142,7 @@ public final class Main {
         Path outDir;
         boolean outDirSpecified;
         boolean emitJavaOnly;
+        boolean withRuntime;
         boolean bundle;
         boolean archive;
         boolean stacktrace;
@@ -2140,6 +2169,7 @@ public final class Main {
                     case "--no-cache" -> options.noCache = true;
                     case "--force" -> options.force = true;
                     case "--emit-java-only" -> options.emitJavaOnly = true;
+                    case "--with-runtime" -> options.withRuntime = true;
                     case "--bundle" -> options.bundle = true;
                     case "--archive" -> options.archive = true;
                     case "--bin" -> {
@@ -2193,6 +2223,7 @@ public final class Main {
         String violation(String command) {
             if (syntaxOnly && !command.equals("check")) return "--syntax-only is only valid with check";
             if (emitJavaOnly && !command.equals("build")) return "--emit-java-only is only valid with build";
+            if (withRuntime && !emitJavaOnly) return "--with-runtime is only valid with build --emit-java-only";
             if (bundle && !command.equals("build")) return "--bundle is only valid with build";
             if (archive && !bundle) return "--archive is only valid with build --bundle";
             if (bundle && emitJavaOnly) return "--bundle needs compiled classes; drop --emit-java-only";

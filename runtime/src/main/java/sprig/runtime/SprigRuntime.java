@@ -39,13 +39,24 @@ public final class SprigRuntime {
         // A location repeats in a recursion; its first, innermost, line is enough.
         java.util.Set<String> printed = new java.util.HashSet<>();
         for (StackTraceElement frame : failure.getStackTrace()) {
-            if (frame.getClassName().startsWith("sprig.user.")) {
+            if (generatedCode(frame.getClassName())) {
                 String location = frame.getFileName() + ":" + frame.getLineNumber();
                 if (printed.add(location)) {
                     System.err.println(FRAME_PREFIX + " " + location);
                 }
             }
         }
+    }
+
+    /**
+     * Whether a class was generated from Sprig source: it is in
+     * {@code sprig.user} or in a project's package below it, and its name
+     * starts with the {@code $} every generated class name starts with. A
+     * project's own copy of this runtime is below {@code sprig.user} as well;
+     * its class names have no {@code $}.
+     */
+    private static boolean generatedCode(String className) {
+        return className.startsWith("sprig.user.") && className.charAt(className.lastIndexOf('.') + 1) == '$';
     }
 
     /**
