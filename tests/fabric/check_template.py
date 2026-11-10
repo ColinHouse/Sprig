@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "libraries" / "sprig-fabric" / "template"
@@ -36,7 +37,11 @@ def main() -> int:
     parser.add_argument("--sdk", type=Path, default=Path(os.environ.get("SPRIG_HOME", ROOT)),
                         help="Sprig SDK root containing bin/sprig and libraries/sprig-gradle")
     parser.add_argument("--run-client", action="store_true", help="also launch the Fabric client smoke test")
+    parser.add_argument("--with-example", action="append", default=[], metavar="NAME",
+                        help="with --run-client: also install the mod of examples/NAME in that client, "
+                             "to see two Sprig mods load in one game (for example fabric_waypoints)")
     args = parser.parse_args()
+    require(args.run_client or not args.with_example, "--with-example needs --run-client")
     sdk = args.sdk.resolve()
     launcher = sdk / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
     require(TEMPLATE.is_dir(), f"Fabric starter template is missing: {TEMPLATE}")
@@ -81,17 +86,24 @@ def main() -> int:
         require(jars, "Fabric build must produce a mod jar")
         jar = run(["jar", "tf", str(jars[-1])], cwd=project, env=env)
         require(jar.returncode == 0, "the produced Fabric jar must be readable")
+        entries = jar.stdout.splitlines()
         for entry in ("dev/sprig/fabric/SprigCounterClient.class",
                       "dev/sprig/fabric/CounterActions.class",
-                      "sprig/user/$M_main.class", "sprig/runtime/SprigRuntime.class",
+                      "sprig/user/sprig_fabric_counter/$M_main.class",
+                      "sprig/user/sprig_fabric_counter/runtime/SprigRuntime.class",
                       "fabric.mod.json"):
-            require(entry in jar.stdout,
-                    f"the packaged mod jar must contain {entry}; contents were:\n{jar.stdout}")
-            require(jar.stdout.splitlines().count(entry) == 1,
-                    f"the packaged mod jar must contain exactly one {entry}")
-        generated = project / "build/generated/sprig/main/java/sprig/user/$M_main.java"
+            require(entries.count(entry) == 1,
+                    f"the packaged mod jar must contain exactly one {entry}; contents were:\n{jar.stdout}")
+        # Fabric loads every mod in one class loader: what Sprig adds to this jar
+        # must all be in the project's own package, so a second Sprig mod has no
+        # class name in common with it.
+        outside = [entry for entry in entries if entry.startswith("sprig/") and entry.endswith(".class")
+                   and not entry.startswith("sprig/user/sprig_fabric_counter/")]
+        require(not outside, f"every Sprig class of the mod must be in its project's package, found {outside[:5]}")
+        package_directory = project / "build/generated/sprig/main/java/sprig/user/sprig_fabric_counter"
+        generated = package_directory / "$M_main.java"
         require(generated.is_file(), "generated Sprig Java must stay inspectable under build/")
-        wand = project / "build/generated/sprig/main/java/sprig/user/$Wand.java"
+        wand = package_directory / "$Wand.java"
         require(wand.is_file() and "extends net.minecraft.world.item.Item" in wand.read_text(encoding="utf-8")
                 and "$Wand.super.use(" in wand.read_text(encoding="utf-8"),
                 "the Sprig wand must compile to an Item subclass that calls the inherited use")
@@ -99,6 +111,23 @@ def main() -> int:
                 "generated code must not be written into source trees")
 
         if args.run_client:
+            # Other Sprig mods for the same game: Fabric loads them and the starter
+            # in one class loader, which is where shared class names would collide.
+            installed = []
+            for name in args.with_example:
+                example = Path(temp) / f"example {name}"
+                shutil.copytree(ROOT / "examples" / name, example,
+                                ignore=shutil.ignore_patterns(".gradle", "build", "run"))
+                built = run([str(example / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon",
+                             "clean", "build"], cwd=example, env=env)
+                require(built.returncode == 0, f"example {name} must build its mod jar")
+                mods = [path for path in (example / "build" / "libs").glob("*.jar")
+                        if not path.name.endswith("-sources.jar")]
+                require(len(mods) == 1, f"example {name}: expected one mod jar, found {[m.name for m in mods]}")
+                with zipfile.ZipFile(mods[0]) as mod:
+                    installed.append(json.loads(mod.read("fabric.mod.json").decode("utf-8"))["id"])
+                (project / "run" / "mods").mkdir(parents=True, exist_ok=True)
+                shutil.copy(mods[0], project / "run" / "mods" / mods[0].name)
             capture = project.parent / "runClient-smoke.log"
             capture.parent.mkdir(parents=True, exist_ok=True)
             command = [str(project / ("gradlew.bat" if os.name == "nt" else "gradlew")), "--no-daemon", "clean", "runClient"]
@@ -141,6 +170,13 @@ def main() -> int:
                     f"output was:\n{startup[-6000:]}")
             require("NoClassDefFoundError" not in startup and "Could not find or load main class" not in startup,
                     f"runClient reported a classpath failure:\n{startup[-6000:]}")
+            # Main entry points run before client ones, so the starter's client line
+            # above also says that every installed mod's main entry point returned.
+            for mod_id in ["sprig_counter", *installed]:
+                require(f"- {mod_id} " in startup,
+                        f"Fabric did not list the mod {mod_id} as loaded:\n{startup[-6000:]}")
+            if installed:
+                print(f"client started with {', '.join(['sprig_counter', *installed])} loaded together")
 
     print("Fabric/Loom starter integration: passed")
     return 0

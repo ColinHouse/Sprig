@@ -25,12 +25,15 @@ ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "libraries" / "sprig-fabric" / "template"
 # What each example's mod jar and generated Java must contain. A new
 # examples/fabric_* directory must be listed here, so none is skipped.
+# "package" is where the example's Sprig classes are generated: sprig.user plus
+# the project name of its sprig.toml.
 EXAMPLES = {
     "fabric_waypoints": {
+        "package": "sprig/user/sprig_waypoints",
         "entries": ["dev/sprig/waypoints/SprigWaypoints.class",
-                    "sprig/user/$M_main.class", "sprig/user/$WaypointMarker.class",
-                    "sprig/user/$TabEntry.class", "sprig/user/$M_store.class",
-                    "sprig/runtime/SprigRuntime.class",
+                    "sprig/user/sprig_waypoints/$M_main.class", "sprig/user/sprig_waypoints/$WaypointMarker.class",
+                    "sprig/user/sprig_waypoints/$TabEntry.class", "sprig/user/sprig_waypoints/$M_store.class",
+                    "sprig/user/sprig_waypoints/runtime/SprigRuntime.class",
                     "assets/sprig_waypoints/lang/en_us.json",
                     "assets/sprig_waypoints/items/waypoint_marker.json",
                     "assets/sprig_waypoints/models/item/waypoint_marker.json"],
@@ -105,6 +108,11 @@ def check_example(name: str, spec: dict, *, sdk: Path, offline: bool) -> None:
             names = jar.namelist()
             for entry in ["fabric.mod.json", *spec["entries"]]:
                 require(names.count(entry) == 1, f"{name}: the mod jar must contain exactly one {entry}")
+            # One class loader holds every mod: nothing of Sprig's may sit outside
+            # the project's own package, where another Sprig mod could have it too.
+            outside = [entry for entry in names if entry.startswith("sprig/") and entry.endswith(".class")
+                       and not entry.startswith(spec["package"] + "/")]
+            require(not outside, f"{name}: every Sprig class must be under {spec['package']}, found {outside[:5]}")
             metadata = json.loads(jar.read("fabric.mod.json").decode("utf-8"))
         require(metadata.get("version") == version, f"{name}: fabric.mod.json must carry version {version}")
         for kind, entrypoints in metadata.get("entrypoints", {}).items():
@@ -112,7 +120,7 @@ def check_example(name: str, spec: dict, *, sdk: Path, offline: bool) -> None:
                 class_file = entrypoint.replace(".", "/") + ".class"
                 require(class_file in names, f"{name}: the {kind} entrypoint {entrypoint} is not in the jar")
 
-        generated = project / "build/generated/sprig/main/java/sprig/user"
+        generated = project / "build/generated/sprig/main/java" / spec["package"]
         for file, fragments in spec["generated"].items():
             text = (generated / file).read_text(encoding="utf-8") if (generated / file).is_file() else ""
             for fragment in fragments:

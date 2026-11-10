@@ -15,6 +15,10 @@ import net.minecraft.world.item.Item;
  * side free of registry calls; Sprig can register too, through the String
  * overload (the ResourceKey and Identifier overloads declare the bound
  * T extends V, which Sprig's interop rejects): see examples/fabric_waypoints.
+ *
+ * <p>The generated classes are in the package sprig.user.sprig_fabric_counter,
+ * named after the project in sprig.toml: rename the project and this call's
+ * package changes with it ({@code ./gradlew sprigInfo} prints the package).
  */
 public final class SprigItems implements ModInitializer {
     public static final ResourceKey<Item> WAND_KEY =
@@ -22,7 +26,7 @@ public final class SprigItems implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        Item wand = sprig.user.$M_main.fn$new_wand(new Item.Properties().setId(WAND_KEY));
+        Item wand = sprig.user.sprig_fabric_counter.$M_main.fn$new_wand(new Item.Properties().setId(WAND_KEY));
         Registry.register(BuiltInRegistries.ITEM, WAND_KEY, wand);
     }
 }
