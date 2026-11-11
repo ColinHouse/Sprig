@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## 现在能用吗？
 
-Sprig 还在早期。当前发布的版本是实验性的 [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1)，需要 JDK 21+；上面列出的功能和教程使用的语法已包含在这个 SDK 里。它没有 Sprig 类继承，泛型没有协变和逆变，也不建议用在生产环境。网站随 `main` 分支维护，后续改动以[发布状态](/project/release-status)和你安装的编译器输出为准。完整限制见[已知限制](/en/reference/language/known-limitations)（英文）。
+Sprig 还在早期。当前发布的版本是实验性的 [v0.9.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1)，需要 JDK 21+；上面列出的功能和教程使用的语法已包含在这个 SDK 里。它没有 Sprig 类继承，泛型没有协变和逆变，也不建议用在生产环境。网站随 `main` 分支维护，后续改动以[发布状态](/project/release-status)和你安装的编译器输出为准。完整限制见[已知限制](/en/reference/language/known-limitations)（英文）。
 
 ## 五分钟跑起来
 

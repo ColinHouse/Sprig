@@ -65,7 +65,7 @@ Common problems:
 
 ## 1.3 Install Sprig, and check the version
 
-The syntax and standard modules used by this book are included in the published [v0.8.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1). Install the SDK to begin; you do not need to build the compiler first.
+The syntax and standard modules used by this book are included in the published [v0.9.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1). Install the SDK to begin; you do not need to build the compiler first.
 
 ### Linux / macOS: install the SDK
 
@@ -94,7 +94,7 @@ sprig version
 The current SDK prints:
 
 ```text
-sprig-compiler 0.8.0-beta.1
+sprig-compiler 0.9.0-beta.1
 ```
 
 This is the **SDK/compiler release version**. If it shows an older version, run `sprig upgrade` for a managed installation, or download a new ZIP for a manual installation. If the old version persists, check that `PATH` and **Sprig: Compiler Path** do not point to another compiler.
@@ -154,7 +154,7 @@ The first few lines on this machine are:
 
 ```text
 schemaVersion: 1
-compilerVersion: 0.8.0-beta.1
+compilerVersion: 0.9.0-beta.1
 languageVersion: 0.8-dev
 jdkMinimum: 21
 javaVersion: 26.0.1
@@ -170,7 +170,7 @@ Many lines follow, listing `javaHome`, class paths, cache locations and more. Th
 
 - The terminal is where you type commands; `cd`, `pwd` and `ls` get you around.
 - You need JDK 21+; both `java -version` and `javac -version` must produce output.
-- Install the published v0.8.0-beta.1 SDK; building from source is optional.
+- Install the published v0.9.0-beta.1 SDK; building from source is optional.
 - `sprig version` identifies the SDK release; `sprig capabilities` lists features and the separate language version.
 - `sprig doctor` is the check-up; `jdkMinimum` should be 21.
 - Indent with spaces, never tabs.
@@ -199,10 +199,10 @@ Your numbers will differ (21, 22, 23, ... are all fine), as long as both major v
 For the current published SDK:
 
 ```text
-sprig-compiler 0.8.0-beta.1
+sprig-compiler 0.9.0-beta.1
 ```
 
-The capability list reports compiler `0.8.0-beta.1` and language `0.8-dev`. A newer SDK may have a different version; an older SDK should be upgraded as in 1.3.
+The capability list reports compiler `0.9.0-beta.1` and language `0.8-dev`. A newer SDK may have a different version; an older SDK should be upgraded as in 1.3.
 :::
 
 3. Run `sprig doctor`, find the `jdkMinimum` and `javacAvailable` lines, and say what they should be.

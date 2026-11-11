@@ -48,7 +48,7 @@ done
 
 这本书使用 0.8 语言，编译器在 `sprig capabilities` 中将它写成 `language 0.8-dev`。SDK 的发布版本与语言版本是两回事。
 
-当前已发布的 [v0.8.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1)包含本书使用的语法和标准模块，需要 JDK 21+。直接安装 SDK 即可开始，不需要先构建编译器。第 1 章会一步步说明[安装和版本检查](/tutorial/ch01-tools)。网站随 `main` 分支维护；后续版本差异见[发布状态](/project/release-status)，实际功能以 `sprig capabilities --json` 为准。
+当前已发布的 [v0.9.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1)包含本书使用的语法和标准模块，需要 JDK 21+。直接安装 SDK 即可开始，不需要先构建编译器。第 1 章会一步步说明[安装和版本检查](/tutorial/ch01-tools)。网站随 `main` 分支维护；后续版本差异见[发布状态](/project/release-status)，实际功能以 `sprig capabilities --json` 为准。
 
 ## 章节地图
 

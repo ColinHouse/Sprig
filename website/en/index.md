@@ -55,7 +55,7 @@ SPR-MATCH-NONEXHAUSTIVE [FLOW] main.spr:9:12: Missing case: Shape.Triangle
 
 ## Can I use it yet?
 
-Sprig is young. The current release is the experimental [v0.8.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1), requiring JDK 21+. The features above and the syntax used by the tutorial are included in this SDK. It has no Sprig class inheritance or variance and is not meant for production use yet. This site follows `main`; consult [release status](/en/project/release-status) and your installed compiler for later changes. See [known limitations](/en/reference/language/known-limitations) for the full list.
+Sprig is young. The current release is the experimental [v0.9.0-beta.1](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1), requiring JDK 21+. The features above and the syntax used by the tutorial are included in this SDK. It has no Sprig class inheritance or variance and is not meant for production use yet. This site follows `main`; consult [release status](/en/project/release-status) and your installed compiler for later changes. See [known limitations](/en/reference/language/known-limitations) for the full list.
 
 ## Up and running in five minutes
 
