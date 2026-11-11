@@ -64,7 +64,7 @@ CounterActions counter = sprig.user.sprig_fabric_counter.$M_main.fn$new_counter(
 - **Give each mod its own project name.** Two mods with the same `name` get the same package.
 - **Mods pass values to each other as Java types.** Each mod has its own runtime, so one mod's Sprig `List` isn't another's. Pass a `String`, a number, or a Java interface both mods know.
 
-::: tip This describes the `main` branch
+::: tip Needs v0.9.0-beta.1 or newer
 SDK v0.8.0-beta.1 and earlier generate every mod's classes into `sprig.user`, with the runtime in `sprig.runtime`, so two Sprig mods in one game have classes with the same names.
 :::
 

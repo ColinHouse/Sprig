@@ -48,7 +48,7 @@ Each chapter starts with what you will learn and ends with a summary and exercis
 
 This book uses the 0.8 language, reported as `language 0.8-dev` by `sprig capabilities`. The SDK release version and the language version describe different things.
 
-The published [v0.8.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1) includes the syntax and standard modules used in this book and requires JDK 21+. Install the SDK directly; you do not need to build the compiler first. Chapter 1 explains [installation and version checks](/en/tutorial/ch01-tools). This site follows `main`; see [release status](/en/project/release-status) for later differences and `sprig capabilities --json` for your installed compiler's capabilities.
+The published [v0.9.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1) includes the syntax and standard modules used in this book and requires JDK 21+. Install the SDK directly; you do not need to build the compiler first. Chapter 1 explains [installation and version checks](/en/tutorial/ch01-tools). This site follows `main`; see [release status](/en/project/release-status) for later differences and `sprig capabilities --json` for your installed compiler's capabilities.
 
 ## Chapter map
 

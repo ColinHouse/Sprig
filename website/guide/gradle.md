@@ -70,7 +70,7 @@ System.out.println(new $Counter().current());
 - 改了项目名，包名就跟着变。`javac` 会指出每一处还在用旧包名的 Java 代码。
 - 两个这样的 jar 之间要用 Java 的类型传值（`String`、数字、你自己写的接口）。它们各有一份运行时，一个项目的 Sprig `List` 不是另一个项目的 `List`。
 
-::: tip 这是 `main` 分支上的行为
+::: tip 需要 v0.9.0-beta.1 或更新的版本
 v0.8.0-beta.1 和更早的 SDK 把所有项目的类都生成到 `sprig.user`，运行时在 `sprig.runtime`。从这些版本升级时，把 Java 代码里的 `sprig.user.` 改成 `sprig.user.<项目名>.`。
 :::
 

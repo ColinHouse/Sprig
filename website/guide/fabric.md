@@ -64,7 +64,7 @@ CounterActions counter = sprig.user.sprig_fabric_counter.$M_main.fn$new_counter(
 - **每个模组用自己的项目名。** 两个模组的 `name` 相同，包名就相同。
 - **模组之间用 Java 的类型传值。** 每个模组各有一份运行时，一个模组的 Sprig `List` 不是另一个模组的。传 `String`、数字，或者双方都认识的 Java 接口。
 
-::: tip 这是 `main` 分支上的行为
+::: tip 需要 v0.9.0-beta.1 或更新的版本
 v0.8.0-beta.1 和更早的 SDK 把所有模组的类都生成到 `sprig.user`，运行时在 `sprig.runtime`，所以两个 Sprig 模组装进同一个游戏时会有同名的类。
 :::
 
