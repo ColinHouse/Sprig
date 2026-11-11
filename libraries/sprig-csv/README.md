@@ -1,7 +1,7 @@
 # sprig-csv
 
-A small text-only CSV API backed by Apache Commons CSV 1.14.1. Available by
-path from this source checkout; not yet published in an SDK or registry release.
+A small text-only CSV API backed by Apache Commons CSV 1.14.1. It ships in the
+SDK from v0.9.0-beta.1 and is used by path; it is not in the registry yet.
 
 ```toml
 [[dependency]]

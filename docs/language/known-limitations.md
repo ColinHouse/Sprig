@@ -1,4 +1,4 @@
-# Known limitations (main, after v0.8.0-beta.1)
+# Known limitations (main, after v0.9.0-beta.1)
 
 This list describes the Java stage-0 implementation, not every feature proposed
 by the historical design kit in `docs/history/design-kit/`.
@@ -109,6 +109,15 @@ by the historical design kit in `docs/history/design-kit/`.
   `sprig.runtime.SprigError: message`. An error class (`conform E to
   Error(message)`) is the only way to define an error type: there is no
   hierarchy below it, and a function type still declares `throws Error`.
+- Java code that calls a generated function, such as
+  `sprig.user.<project>.$M_main.fn$name(...)` from a Fabric entry point, does
+  not run the module's top-level statements first. A top-level binding the
+  function reads is then still at its Java default (`null`, `0`, `false`). A
+  program started through its generated `main` is not affected. From Java,
+  call `$init()` on the module's class once before the first function, or
+  keep such state in a class. A project's generated classes are in
+  `sprig.user.<project>`; two projects with the same name, or names that differ
+  only in characters a Java package name cannot hold, get the same package.
 - Expression `match` and `if` branches hold one expression each, and neither
   form can be written inside parentheses, brackets or braces, where the layout
   adapter ignores line breaks, or be the operand of an operator. Bind the
@@ -182,7 +191,7 @@ by the historical design kit in `docs/history/design-kit/`.
   non-ASCII text). `print` ends lines with the JVM line
   separator, CRLF on Windows, and JSON `programOutput` reports those bytes.
 - The stage-1 frontend is a subset probe, not a self-hosted compiler.
-- This is the development line after v0.8.0-beta.1, an experimental Beta under
+- This is the development line after v0.9.0-beta.1, an experimental Beta under
   Apache-2.0 (`LICENSE`, `NOTICE`), not a production stability or numerical
   correctness guarantee.
 
