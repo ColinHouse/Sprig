@@ -69,6 +69,8 @@ def main() -> int:
                      "sprigInfo"], cwd=project, env=env)
         require(first.returncode == 0, "ordinary Java project must pass Gradle check/build/run")
         output = first.stdout + first.stderr
+        # Main.java makes the Counter with `new` and runs no generated main; 42 is a
+        # top-level binding of main.spr, which the constructor initializes first.
         require("42" in output, "Java must call the generated Sprig implementation")
         require('"passed":1' in output, "Gradle check must execute the Sprig test")
         require(f"Compiler home: {sdk_home}" in output,
@@ -107,7 +109,7 @@ def main() -> int:
         second = Path(temp) / "second project"
         shutil.copytree(FIXTURE, second)
         for relative, old, new in (("sprig.toml", 'name = "ordinary-project"', 'name = "second-project"'),
-                                   ("src/main.spr", "return 42", "return 7"),
+                                   ("src/main.spr", "let answer = 42", "let answer = 7"),
                                    ("src/main/java/demo/Main.java", "sprig.user.ordinary_project",
                                     "sprig.user.second_project")):
             path = second / relative
