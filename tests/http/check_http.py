@@ -26,6 +26,12 @@ class Handler(BaseHTTPRequestHandler):
         for name, value in headers:
             self.send_header(name, value)
         self.send_header("Content-Length", str(len(body)))
+        # This server answers HTTP/1.0 and closes the connection after every response.
+        # The JDK client goes by the Connection header alone: without it, it kept each
+        # connection for the next request and could write that request after the close.
+        # It sends a GET again by itself, but a POST or PATCH failed now and then with
+        # "HTTP transport failure (IOException)".
+        self.send_header("Connection", "close")
         self.end_headers()
         if body:
             try:
