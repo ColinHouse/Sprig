@@ -31,7 +31,12 @@ Requests block the calling thread. `get` and `post_text` are small conveniences;
   network, timeout, invalid UTF-8 response and interruption failures raise
   Sprig `Error`. Interruption restores the JVM thread interrupt flag.
 - The positive `timeout_ms` is a request-level timeout. Redirects are disabled;
-  there are no retries.
+  the package adds no retries.
+- The JDK client keeps HTTP/1.1 connections open and reuses them. When the
+  server has closed a connection the client reuses and no byte of the response
+  arrives, the JDK sends a `GET` or `HEAD` again by itself. It does not send any
+  other method again, because the server may have received the request: that
+  call raises `Error`.
 - Non-2xx status codes are ordinary `Response` values. Callers choose how to
   handle them.
 - Request and response bodies are UTF-8 text. Binary and streaming bodies are
