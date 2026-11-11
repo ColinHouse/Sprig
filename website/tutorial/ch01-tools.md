@@ -65,7 +65,7 @@ javac 26.0.1
 
 ## 1.3 装 Sprig，并且确认版本
 
-本书使用的语法和标准模块已包含在 [v0.8.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1) 中。安装发布的 SDK 就能开始，不需要先构建编译器。
+本书使用的语法和标准模块已包含在 [v0.9.0-beta.1 SDK](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1) 中。安装发布的 SDK 就能开始，不需要先构建编译器。
 
 ### Linux / macOS：安装 SDK
 
@@ -94,7 +94,7 @@ sprig version
 当前 SDK 的输出是：
 
 ```text
-sprig-compiler 0.8.0-beta.1
+sprig-compiler 0.9.0-beta.1
 ```
 
 这表示 **SDK/编译器发布版本**。如果显示旧版本，在托管安装中运行 `sprig upgrade`；手动解压的 SDK 则重新下载。若仍显示旧版本，检查 `PATH` 和编辑器的 **Sprig: Compiler Path** 是否指向另一份编译器。
@@ -154,7 +154,7 @@ sprig doctor
 
 ```text
 schemaVersion: 1
-compilerVersion: 0.8.0-beta.1
+compilerVersion: 0.9.0-beta.1
 languageVersion: 0.8-dev
 jdkMinimum: 21
 javaVersion: 26.0.1
@@ -170,7 +170,7 @@ javaVersion: 26.0.1
 
 - 终端是输入命令的地方；`cd`、`pwd`、`ls` 是三个最常用的导航命令。
 - 需要 JDK 21+，`java -version` 和 `javac -version` 都要有输出。
-- 安装已发布的 v0.8.0-beta.1 SDK 即可；从源码构建是可选步骤。
+- 安装已发布的 v0.9.0-beta.1 SDK 即可；从源码构建是可选步骤。
 - `sprig version` 确认 SDK 发布版本；`sprig capabilities` 列出功能和独立的语言版本。
 - `sprig doctor` 做环境体检，`jdkMinimum` 应为 21。
 - 缩进只用空格，不用 Tab。
@@ -197,10 +197,10 @@ javaVersion: 26.0.1
    当前发布的 SDK 输出：
 
    ```text
-   sprig-compiler 0.8.0-beta.1
+   sprig-compiler 0.9.0-beta.1
    ```
 
-   功能清单显示编译器 `0.8.0-beta.1`、语言 `0.8-dev`。新 SDK 的数字可能不同；若版本较旧，按 1.3 升级。
+   功能清单显示编译器 `0.9.0-beta.1`、语言 `0.8-dev`。新 SDK 的数字可能不同；若版本较旧，按 1.3 升级。
    :::
 
 3. 运行 `sprig doctor`，找出 `jdkMinimum` 和 `javacAvailable` 两行，说出它们应该是什么。

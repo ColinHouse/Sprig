@@ -70,7 +70,7 @@ Two things to keep in mind:
 - Rename the project and the package changes with it. `javac` points at every piece of Java code that still uses the old one.
 - Pass values between two such jars as Java types (`String`, numbers, an interface of your own). Each has its own runtime, so one project's Sprig `List` isn't the other's.
 
-::: tip This describes the `main` branch
+::: tip Needs v0.9.0-beta.1 or newer
 SDK v0.8.0-beta.1 and earlier generate every project's classes into `sprig.user`, with the runtime in `sprig.runtime`. When you move on from one of them, change `sprig.user.` in your Java code to `sprig.user.<project>.`.
 :::
 

@@ -25,19 +25,19 @@ sprig version
 
 To upgrade later, run `sprig upgrade --check` to see whether there's a new version, then `sprig upgrade`.
 
-::: tip Current published release: v0.8.0-beta.1
-The installer selects the newest published release, including Betas. The current v0.8.0-beta.1 includes the tutorial's `if` expressions, contract classes, function references and `@std/concurrent`; building from source is optional. SDK, language and extension versions are independent. Query `sprig capabilities --json` for exact capabilities and see [release status](/en/project/release-status).
+::: tip Current published release: v0.9.0-beta.1
+The installer selects the newest published release, including Betas. The current v0.9.0-beta.1 includes the tutorial's `if` expressions, contract classes, function references and `@std/concurrent`; building from source is optional. SDK, language and extension versions are independent. Query `sprig capabilities --json` for exact capabilities and see [release status](/en/project/release-status).
 :::
 
 ### Manual download
 
-You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.8.0-beta.1), verify it and unpack it yourself:
+You can also download the ZIP from the [release page](https://github.com/ColinHouse/Sprig/releases/tag/v0.9.0-beta.1), verify it and unpack it yourself:
 
 ```bash
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.8.0-beta.1/sprig-v0.8.0-beta.1-jdk.zip
-curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.8.0-beta.1/sprig-v0.8.0-beta.1-jdk.zip.sha256
-shasum -a 256 -c sprig-v0.8.0-beta.1-jdk.zip.sha256
-unzip sprig-v0.8.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.9.0-beta.1/sprig-v0.9.0-beta.1-jdk.zip
+curl -LO https://github.com/ColinHouse/Sprig/releases/download/v0.9.0-beta.1/sprig-v0.9.0-beta.1-jdk.zip.sha256
+shasum -a 256 -c sprig-v0.9.0-beta.1-jdk.zip.sha256
+unzip sprig-v0.9.0-beta.1-jdk.zip
 ```
 
 On Linux, `sha256sum -c` works too. If the checksum doesn't match, download the file again; don't skip the check. Then add the unpacked directory's `bin` to your `PATH`.
