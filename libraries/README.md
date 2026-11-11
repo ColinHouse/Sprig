@@ -32,10 +32,10 @@ Packages are source distributions reached by path or Git. The repository's
 `registry/` directory is the default package registry: `sprig search` lists
 released libraries and `sprig add NAME` adds one as a Git dependency at its
 released tag. Use Maven coordinates for third-party JVM dependencies.
-The v0.8.0-beta.1 SDK includes the released first-party packages and their documented
+The v0.9.0-beta.1 SDK includes the released first-party packages and their documented
 examples. They remain experimental Beta APIs; check each package guide and the
 installed SDK's capabilities before adopting them.
 
-`sprig-csv` is available from this source checkout by path; it is not yet
-in a published SDK or registry release. See its package guide and runnable
+`sprig-csv` is new in the v0.9.0-beta.1 SDK. Depend on it by path; it is not in
+the registry yet. See its package guide and runnable
 [`examples/csv`](../examples/csv/README.md) project.

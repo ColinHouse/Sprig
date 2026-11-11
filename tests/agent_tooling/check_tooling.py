@@ -194,7 +194,7 @@ public class DeprecationFixture {
 def main():
     check_java_deprecation()
     catalog = obj(run("capabilities", "--json"))
-    check("catalog-version", catalog["compilerVersion"] == "0.8.0-beta.1"
+    check("catalog-version", catalog["compilerVersion"] == "0.9.0-beta.1"
           and catalog["languageVersion"] == "0.8-dev" and catalog["jdk"]["minimum"] == 21)
     check("catalog-types", catalog["collectionTypes"] ==
           ["List[T]", "MutableList[T]", "Map[K,V]", "MutableMap[K,V]"])

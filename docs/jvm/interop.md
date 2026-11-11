@@ -1,4 +1,4 @@
-# Implemented JVM interop (main, after v0.8.0-beta.1)
+# Implemented JVM interop (main, after v0.9.0-beta.1)
 
 For verified before/after recipes, read the [Java interop cookbook](https://colinhouse.github.io/Sprig/en/guide/java-interop-cookbook) ([中文](https://colinhouse.github.io/Sprig/guide/java-interop-cookbook)).
 

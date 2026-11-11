@@ -20,5 +20,5 @@ second line
 ```
 
 See the [package contract](../../libraries/sprig-csv/README.md) for delimiter,
-header, blank-record, error and memory behavior. This source package is not yet
-part of a published SDK or registry release.
+header, blank-record, error and memory behavior. The package ships in the SDK
+from v0.9.0-beta.1; it is not in the registry yet.
