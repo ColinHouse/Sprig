@@ -57,6 +57,49 @@ Sprig-built libraries on one classpath. The
 [plugin guide](../../libraries/sprig-gradle/README.md#generated-package-and-runtime)
 has the details.
 
+## Calling Sprig code from Java
+
+Java code in the project calls a module's function as a static method of the
+module's class, and makes a Sprig object with `new`:
+
+```java
+sprig.user.ordinary_project.$M_store.fn$remember("x");
+long current = new sprig.user.ordinary_project.$Counter().current();
+```
+
+Neither needs a start call first. A module's top-level statements, among them
+the initializers of its top-level `let` and `var` bindings, run once before the
+module is used. In a program started by `sprig run` or its generated `main`
+that is at start-up. A Java host starts no such program, so they run when Java
+code first calls one of the module's functions, or first makes an object of one
+of its classes that has methods: the statements of the modules it imports
+first, in import order, then its own, as on import. Sprig code entered this way
+finds its top-level bindings initialized, as it does in a program started
+through `main`, and not at their Java defaults (`null`, `0`, `false`).
+
+- **A statement that throws** fails the call that started the statements. An
+  unchecked failure, a Sprig `Error` among them, arrives as it is; a checked
+  Java exception, which a top-level statement may leave uncaught, arrives as
+  the cause of an `IllegalStateException` that names the module. The statements
+  are not run again, and the bindings they did not reach stay without a value:
+  treat the failure as fatal, as `sprig run` does.
+- **Threads.** The statements run on the thread that makes the first call, and
+  once, also when several threads make their first call at the same time. A
+  call from another thread that arrives while they are still running does not
+  wait for them and can find a binding that has no value yet. Make the first
+  call before other threads use the code; a framework's initializer, such as a
+  Fabric `ModInitializer`, is that place.
+- **A binding read as a Java field.** `$M_store.names` read from Java before
+  any call is still `null`: reading a field cannot start the module. Read
+  top-level state through a function.
+- **Cost.** Only a module that has a top-level statement, or imports a module
+  that has one, carries the check: at the start of its functions and of the
+  constructors of its classes with methods. In a program started through `main`
+  the check is a constant, and the JIT removes it.
+
+`tests/java_callers/check_java_callers.py` runs Java drivers against generated
+classes for each of these rules.
+
 ## Responsibilities
 
 | Owner | Responsibilities |

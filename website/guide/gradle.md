@@ -74,4 +74,29 @@ System.out.println(new $Counter().current());
 v0.8.0-beta.1 和更早的 SDK 把所有项目的类都生成到 `sprig.user`，运行时在 `sprig.runtime`。从这些版本升级时，把 Java 代码里的 `sprig.user.` 改成 `sprig.user.<项目名>.`。
 :::
 
+## 从 Java 调用时，顶层的 `let` 何时初始化 {#calling-from-java}
+
+用 `sprig run` 运行程序时，模块顶层的语句（包括顶层 `let`、`var` 的初始值）在程序一启动就运行。Java 项目里没有这一步：Java 是直接调用某个函数，或者直接 `new` 一个对象。比如 `src/store.spr` 是这样一个模块：
+
+<<< @/snippets/guide/java_caller_store.spr
+
+Java 直接这样用它，前面不用先调用什么“初始化”方法：
+
+```java
+sprig.user.ordinary_project.$M_store.fn$remember("x");
+System.out.println(sprig.user.ordinary_project.$M_store.fn$seen());   // 1
+```
+
+Java 第一次调用一个模块的函数，或者第一次 `new` 一个带方法的类，这个模块的顶层语句就会先运行：先是它导入的模块的，再是它自己的，而且只运行一次。所以不管从哪里进来，Sprig 代码读到的顶层变量都已经有值了。
+
+有三件事要留意：
+
+- **顶层语句出错，失败的就是那第一次调用。** 抛出的是 Sprig 的 `Error` 这类非受检异常时，Java 收到的就是它本身；抛出的是 Java 的受检异常时，Java 收到的是一个 `IllegalStateException`，原来的异常是它的 cause。顶层语句不会再运行第二遍，所以把它当作致命错误处理。
+- **第一次调用要发生在其他线程用到这些代码之前。** 顶层语句在发起第一次调用的线程上运行，只运行一次。这期间别的线程调进来不会等它运行完，可能读到还没有值的变量。框架的初始化入口（比如 Fabric 的 `ModInitializer`）就是做第一次调用的合适位置。
+- **别在 Java 里直接读顶层变量对应的字段**，比如 `$M_store.names`。读字段不会让顶层语句运行，在第一次调用之前它还是 `null`。要读就通过函数读。
+
+::: tip 这是 `main` 分支上的行为
+v0.9.0-beta.1 和更早的 SDK 不会这样做：Java 直接调用函数时，顶层语句还没运行过，顶层变量是 `null` 或 `0`。用这些版本时，在第一次调用之前先调用一次模块类的 `$init()`，比如 `sprig.user.ordinary_project.$M_store.$init()`（它声明了 `throws Exception`）。
+:::
+
 其他配置项、兼容性和各个任务的细节，见 [`dev.sprig` 插件说明（英文）](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md)。这个插件只是省掉了每个项目都要重复写的构建配置，它不能代替 Gradle、Loom 或 Java，也不能说明 Sprig 的开发效率比 Java 高。

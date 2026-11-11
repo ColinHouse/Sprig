@@ -71,6 +71,31 @@ In the Sprig repository, `python3 tests/fabric/check_template.py --run-client
 --with-example fabric_waypoints` starts a client with the starter and the
 waypoint example installed together.
 
+## Top-level `let` and `var` in a mod
+
+The Java entry points call into Sprig without starting anything first:
+`SprigItems` calls `$M_main.fn$new_wand(...)`, and later Minecraft calls the
+wand's `use`. No generated `main` runs in the game. The first call from Java
+runs the top-level statements of `main.spr`, after those of the modules it
+imports, and once. A `let` or `var` at the top of a module therefore has its
+value in every function and method of the mod, as it has under `sprig test`:
+
+```sprig
+let cooldown_ticks = 20
+```
+
+- **Call into Sprig from the mod's initializer**, as the template does. The
+  statements then have run before the game's other threads call the mod; a
+  call from another thread does not wait for statements that are still
+  running.
+- **A top-level statement that throws** fails the call that started it, and
+  Fabric reports it for that entry point. The statements are not run again.
+- **Read top-level state through a Sprig function**, not as a Java field such
+  as `$M_main.cooldown_ticks`: reading a field does not run the statements.
+
+[Gradle integration](../../docs/jvm/gradle.md#calling-sprig-code-from-java)
+has the complete rules.
+
 ## Verified version combination
 
 The maintained starter is exercised with Minecraft 26.3, Fabric Loader 0.19.5,

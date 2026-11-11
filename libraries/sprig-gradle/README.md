@@ -114,6 +114,33 @@ Two things follow from it:
 `sprig build --emit-java-only --with-runtime -d <dir>` writes the same tree
 without Gradle, for another build tool to compile.
 
+### Calling in from Java
+
+Java calls a module's function as a static method of the module's class and
+makes a Sprig object with `new`. No start call comes first:
+
+```java
+sprig.user.ordinary_project.$M_store.fn$remember("x");
+long current = new sprig.user.ordinary_project.$Counter().current();
+```
+
+The first function Java calls, or the first object with methods it makes, runs
+the module's top-level statements first, after those of the modules it
+imports, and once. A top-level `let` or `var` has its value whenever Sprig
+code reads it, as it has in a program started by `sprig run`.
+
+- **A failing statement fails that first call**: an unchecked failure as it
+  is, a checked Java exception as the cause of an `IllegalStateException` that
+  names the module. The statements are not run again; treat it as fatal.
+- **Make the first call before other threads use the code.** The statements
+  run once, on the thread of the first call, and a call from another thread
+  does not wait for them to finish.
+- **Read top-level state through a function.** A binding's static field, such
+  as `$M_store.names`, read from Java before any call is still `null`.
+
+[Gradle integration](../../docs/jvm/gradle.md#calling-sprig-code-from-java)
+has the complete rules and what the check costs.
+
 ## Tasks and Gradle lifecycle
 
 | Task | Purpose |

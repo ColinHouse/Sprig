@@ -49,6 +49,7 @@ On `main` and not in v0.8.0-beta.1 yet:
 - the `example` link on diagnostics about Java calls, and the [Java interop cookbook](/en/guide/java-interop-cookbook) it points to;
 - building a long text with `text += part` in a function's loop in time proportional to the text;
 - a package of its own for each project's generated classes, `sprig.user.<project>`, and in Gradle builds the project's own copy of the runtime, so two Sprig mods work in one game. Java code that names a generated class adds the project's package; see [Gradle integration](/en/guide/gradle#using-sprig-classes-from-java).
+- a module's top-level statements run first when Java calls a generated function or makes a generated class with `new`, so top-level `let`s and `var`s have their values; see [Gradle integration](/en/guide/gradle#calling-from-java). This one is not in v0.9.0-beta.1 either: there they are still `null` or `0`, and a Fabric mod's entry point calls Sprig exactly that way.
 
 ## How it was verified
 

@@ -332,7 +332,9 @@ the user program executes that class. See [dependencies](../projects/dependencie
 `sprig api` includes Java's declared exception types. Inside a named Sprig
 function, checked Java exceptions must be caught or covered by that function's
 `throws` declaration. Top-level module statements currently may leave a
-checked Java exception uncaught; it then aborts the program at runtime. This
+checked Java exception uncaught; it then aborts the program at runtime, or,
+when a call from Java started the statements, fails that call as the cause of an
+`IllegalStateException` (see [Gradle integration](gradle.md#calling-sprig-code-from-java)). This
 top-level rule is provisional, as described in [known limitations](../language/known-limitations.md). Java
 library arithmetic and nullability are not magically upgraded to Sprig's
 checked numeric or non-null contracts. A caught Java exception's `message` is

@@ -68,6 +68,26 @@ CounterActions counter = sprig.user.sprig_fabric_counter.$M_main.fn$new_counter(
 SDK v0.8.0-beta.1 and earlier generate every mod's classes into `sprig.user`, with the runtime in `sprig.runtime`, so two Sprig mods in one game have classes with the same names.
 :::
 
+## Top-level `let` and `var` in a mod
+
+Nothing in the game "runs `main.spr`". Fabric calls the Java entry point, the entry point calls `$M_main.fn$new_wand(...)`, and later Minecraft calls the wand's `use`. The first time Java calls into Sprig, the top-level statements of `main.spr` and of the modules it imports run first, and only once. So when you write this line at the top of a module:
+
+```sprig
+let cooldown_ticks = 20
+```
+
+every function and method of the mod reads `20`, just as under `sprig test`.
+
+- **Make the first call from the mod's initializer**, as the template does. The top-level statements have then finished before the game's other threads call the mod; while they're still running, a call from another thread doesn't wait for them.
+- **If a top-level statement throws, the call that started it is what fails**, and Fabric reports it for that entry point. The statements don't run a second time.
+- **Read top-level variables through a Sprig function**, not as a Java field such as `$M_main.cooldown_ticks`: reading a field doesn't run the statements.
+
+[Gradle integration](/en/guide/gradle#calling-from-java) has the full details.
+
+::: tip This describes the `main` branch
+With SDK v0.9.0-beta.1 and earlier, the top-level statements don't run when a Java entry point calls a function directly, and top-level variables are `null` or `0`. With one of those versions, call `$M_main.$init()` once in the entry point first (it declares `throws Exception`).
+:::
+
 ## Tested versions
 
 The template is tested with Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3, Fabric Loom 1.18.2, Gradle 9.7.1 and OpenJDK 26.0.1 (targeting Java 25). That's one combination that has actually been tested, not a promise that every Fabric or Loom version works.

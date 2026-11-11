@@ -19,6 +19,11 @@ import net.minecraft.world.item.Item;
  * <p>The generated classes are in the package sprig.user.sprig_fabric_counter,
  * named after the project in sprig.toml: rename the project and this call's
  * package changes with it ({@code ./gradlew sprigInfo} prints the package).
+ *
+ * <p>No generated main runs in the game: the first call from Java, this one,
+ * runs the top-level statements of main.spr and of the modules it imports. A
+ * top-level {@code let} you add there has its value in every function and
+ * method of the mod.
  */
 public final class SprigItems implements ModInitializer {
     public static final ResourceKey<Item> WAND_KEY =

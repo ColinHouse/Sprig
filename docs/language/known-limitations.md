@@ -110,14 +110,17 @@ by the historical design kit in `docs/history/design-kit/`.
   Error(message)`) is the only way to define an error type: there is no
   hierarchy below it, and a function type still declares `throws Error`.
 - Java code that calls a generated function, such as
-  `sprig.user.<project>.$M_main.fn$name(...)` from a Fabric entry point, does
-  not run the module's top-level statements first. A top-level binding the
-  function reads is then still at its Java default (`null`, `0`, `false`). A
-  program started through its generated `main` is not affected. From Java,
-  call `$init()` on the module's class once before the first function, or
-  keep such state in a class. A project's generated classes are in
-  `sprig.user.<project>`; two projects with the same name, or names that differ
-  only in characters a Java package name cannot hold, get the same package.
+  `sprig.user.<project>.$M_main.fn$name(...)` from a Fabric entry point, or
+  makes an object with methods, starts the module's top-level statements
+  first. Two things stay outside that: a top-level binding read from Java as a
+  static field is not initialized by the read, and a call from a second thread
+  does not wait for statements that are still running on the first. See
+  [Gradle integration](../jvm/gradle.md#calling-sprig-code-from-java).
+  v0.9.0-beta.1 and earlier do not start the module: there, call `$init()` on
+  the module's class once before the first function.
+- A project's generated classes are in `sprig.user.<project>`; two projects
+  with the same name, or names that differ only in characters a Java package
+  name cannot hold, get the same package.
 - Expression `match` and `if` branches hold one expression each, and neither
   form can be written inside parentheses, brackets or braces, where the layout
   adapter ignores line breaks, or be the operand of an operator. Bind the
