@@ -38,6 +38,10 @@ Sprig source needs no change. What this MINOR upgrade asks for is in the Java co
 
 The site follows `main`. The current tutorial's features are published; later source changes may precede the next SDK. `sprig version` identifies the SDK/compiler release, and `sprig capabilities --json` reports its language version and features. `languageVersion: 0.8-dev` does not mean that the SDK is unpublished.
 
+On `main` and not in v0.9.0-beta.1 yet:
+
+- a module's top-level statements run first when Java calls a generated function or makes a generated class with `new`, so top-level `let`s and `var`s have their values; see [Gradle integration](/en/guide/gradle#calling-from-java). In v0.9.0-beta.1 they are still `null` or `0` there, and a Fabric mod's entry point calls Sprig exactly that way.
+
 ## How it was verified
 
 The release workflow passed the downloaded-SDK checks on Linux/macOS × JDK 21/26. A fresh local ZIP download on macOS/JDK 26.0.1 also passed SHA-256 verification and `init → resolve → run`, and `sprig upgrade` from v0.8.0-beta.1 worked in an isolated home directory. See the [release validation record](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md) for the source commit, digest, CI links and limits. The local smoke check does not imply manual Windows or complete editor-interaction coverage.

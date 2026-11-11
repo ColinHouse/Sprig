@@ -124,7 +124,8 @@
       "full": false
     },
     "tests/csv/check_csv.py": {},
-    "tests/project_package/check_project_package.py": {}
+    "tests/project_package/check_project_package.py": {},
+    "tests/java_callers/check_java_callers.py": {}
   },
   "smoke": {
     "build": "scripts/build.py",
@@ -590,6 +591,16 @@
       ],
       "gates": [
         "tests/project_package/check_project_package.py"
+      ]
+    },
+    {
+      "paths": [
+        "tests/java_callers/**",
+        "compiler/src/main/java/sprig/compiler/gen/**",
+        "runtime/**"
+      ],
+      "gates": [
+        "tests/java_callers/check_java_callers.py"
       ]
     }
   ]

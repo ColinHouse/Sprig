@@ -24,6 +24,17 @@ SPRIG = ROOT / "bin" / ("sprig.cmd" if os.name == "nt" else "sprig")
 PROGRAMS = ("blog", "todo", "tasks", "crawler")
 FABRIC_MOD = "fabric_waypoints"
 FABRIC_GLUE = "main.spr"  # the one module of the mod that talks to Minecraft
+# Use the marker, then sneak-use it, as main.spr's act does for a player at 10 64 -20.
+GAME = """public final class Game {
+    public static void main(String[] args) {
+        String file = PACKAGE.$M_store.fn$world_file(args[0]);
+        PACKAGE.$Position here = new PACKAGE.$Position("minecraft:overworld", 10L, 64L, -20L);
+        System.out.println(PACKAGE.$M_marker.fn$record_at(file, "Home", here));
+        System.out.println(PACKAGE.$M_marker.fn$list_from(file, here));
+    }
+}
+"""
+GAME_OUTPUT = "[Saved Home at 10, 64, -20 (overworld).]\n[1 waypoint:,   Home: here]\n"
 FAILURES = []
 COUNT = 0
 
@@ -120,6 +131,32 @@ def main():
         tested = sprig(mod, "test", "--offline")
         check(f"{FABRIC_MOD}-test-without-minecraft", tested.returncode == 0 and tests > 0 and f"{tests} passed, 0 failed" in tested.stdout,
               tested.stdout[-800:] + tested.stderr[-300:])
+
+        # In the game no generated main runs: SprigWaypoints calls a function of
+        # main.spr, and Minecraft calls the marker's use method. The modules'
+        # top-level bindings (the file name, the format version, the list limit)
+        # are there only because the first call from Java initializes them. This
+        # enters the domain modules the way main.spr's act does, from Java.
+        built = sprig(mod, "build", "src/marker.spr", "--offline", "--json")
+        payload = json.loads(built.stdout) if built.stdout.strip().startswith("{") else {}
+        package = payload.get("mainClass", "").rpartition(".")[0]
+        game = work / "game"
+        game.mkdir()
+        (game / "Game.java").write_text(GAME.replace("PACKAGE", package), encoding="utf-8")
+        javac, java = shutil.which("javac"), shutil.which("java")
+        classes = payload.get("classes", "")
+        compiled = subprocess.run([javac, "-encoding", "UTF-8", "-cp", classes, "-d", str(game / "classes"),
+                                   str(game / "Game.java")], text=True, encoding="utf-8", capture_output=True)
+        world = work / "waypoint world"
+        world.mkdir()
+        played = subprocess.run([java, "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-cp",
+                                 os.pathsep.join([str(game / "classes"), classes]), "Game", str(world)],
+                                text=True, encoding="utf-8", capture_output=True)
+        saved = world / "sprig_waypoints.json"
+        check(f"{FABRIC_MOD}-entered-from-java", built.returncode == 0 and compiled.returncode == 0
+              and played.returncode == 0 and played.stdout == GAME_OUTPUT
+              and saved.is_file() and '"version": 1' in saved.read_text(encoding="utf-8"),
+              f"{built.stdout[-300:]} {compiled.stderr[-600:]} {played.stdout[-300:]} {played.stderr[-900:]}")
 
     print(f"dogfood programs: {COUNT - len(FAILURES)} checks passed, {len(FAILURES)} failed")
     for failure in FAILURES:

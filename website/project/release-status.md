@@ -38,6 +38,10 @@ Sprig 源码不用改。这次 MINOR 升级要改的是 Gradle 项目（包括 F
 
 网站随 `main` 分支维护。当前教程使用的功能已经发布；后续源码可能先于下次 SDK 发布增加改动。`sprig version` 确认 SDK/编译器版本，`sprig capabilities --json` 确认语言版本和实际功能。`languageVersion: 0.8-dev` 不代表 SDK 没有发布。
 
+下面这项已经在 `main` 上，但还不在 v0.9.0-beta.1 里：
+
+- Java 直接调用生成的函数或 `new` 一个生成的类时，模块的顶层语句会先运行，所以顶层的 `let`、`var` 已经有值，见 [Gradle 集成](/guide/gradle#calling-from-java)。v0.9.0-beta.1 里它们还是 `null` 或 `0`，而 Fabric 模组的入口就是这样调用的。
+
 ## 怎么验证的
 
 发布流程已通过 Linux/macOS × JDK 21/26 的下载 SDK 验证。另在 macOS/JDK 26.0.1 上重新下载官方 ZIP、核对 SHA-256，跑通 `init → resolve → run`，并在隔离的主目录里用 `sprig upgrade` 从 v0.8.0-beta.1 升级成功。源码提交、校验值、CI 链接及验证范围见[发布验证记录（英文）](https://github.com/ColinHouse/Sprig/blob/main/docs/releases/validation.md)。本地冒烟检查不代表 Windows 或全部编辑器交互都经过人工验证。

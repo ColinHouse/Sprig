@@ -73,7 +73,10 @@ The entrypoint is the one Java class, because `fabric.mod.json` names it by
 class and the classes Sprig generates (`sprig.user.sprig_waypoints.$M_main` and
 so on, in a package named after the project in `sprig.toml`) are compiler
 output, not names to publish in mod metadata. `javac` checks its call into
-Sprig at build time.
+Sprig at build time. That call is also what starts the modules: no generated
+`main` runs in the game, so the first call from Java runs their top-level
+statements, and `store.spr`'s file name and `compass.spr`'s list limit have
+their values when the marker is used.
 
 Three things you meet when you write the glue yourself:
 

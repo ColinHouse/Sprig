@@ -83,6 +83,8 @@ public final class JavaGenerator {
     // Top-level bindings that functions, lambdas or field defaults may reach
     // before their initializer runs; those uses are checked at runtime.
     private final Set<Symbol> guardedBindings = new java.util.HashSet<>();
+    /** What initializes(module) found, by module. */
+    private final Map<Module, Boolean> moduleInitializes = new IdentityHashMap<>();
     private boolean emittingModuleInit;
     private int fieldDefaultDepth;
     private final Map<Decl, String> typeNames = new IdentityHashMap<>();
@@ -704,6 +706,11 @@ public final class JavaGenerator {
             }
             w.line("    super(" + String.join(", ", superArguments) + ");");
         }
+        if (!classDecl.methods.isEmpty() && initializes(currentModule)) {
+            // Java code can make the object itself; its methods are Sprig code that
+            // reads the module's bindings. A class without methods runs none.
+            w.line("    " + moduleClassName(currentModule) + ".$ensureInit();");
+        }
         for (Decl.Field field : classDecl.fields) {
             w.line("    this." + mangle(field.name) + " = " + mangle(field.name) + ";");
         }
@@ -745,19 +752,23 @@ public final class JavaGenerator {
         w.line("// Top-level statements run once, in source order; imports first.");
         w.map(module.topStatements.isEmpty() ? null : module.topStatements.get(0).span);
         w.open("public static void $init() throws java.lang.Exception");
+        if (initializes(module)) {
+            // The first calls of two Java threads may come at the same time: the
+            // claim is made under a lock, so one of them runs the statements. A
+            // thread that finds the module claimed does not wait for them. It
+            // cannot be told from a task the statements start and wait for, which
+            // calls the module's functions while they run.
+            w.open("synchronized (" + moduleClassNames.get(module) + ".class)");
+        }
         w.line("if ($initialized) {");
         w.line("    return;");
         w.line("}");
         w.line("$initialized = true;");
-        for (Decl.Import imp : module.imports) {
-            if (!imp.fileImport) {
-                continue;
-            }
-            String alias = sprig.compiler.sem.ImportNames.aliasFor(imp);
-            Module dependency = module.importedModules.get(alias);
-            if (dependency != null) {
-                w.line(moduleClassName(dependency) + ".$init();");
-            }
+        if (initializes(module)) {
+            w.close();
+        }
+        for (Module dependency : fileImports(module)) {
+            w.line(moduleClassName(dependency) + ".$init();");
         }
         resetLocals();
         markTextAccumulators(module.topStatements, 0, new HashMap<>());
@@ -775,6 +786,9 @@ public final class JavaGenerator {
         }
         emittingModuleInit = false;
         w.close();
+        if (initializes(module)) {
+            emitEntryCheck(w, module);
+        }
         w.blank();
         w.line("// Checked JVM exceptions at top level surface as runtime failures.");
         w.open("public static void sprigMain() throws java.lang.Exception");
@@ -794,6 +808,82 @@ public final class JavaGenerator {
         w.close();
         String file = pkgDir + "/" + moduleClassNames.get(module) + ".java";
         emitFile(file, w);
+    }
+
+    /** The Sprig modules a module imports, in import order: $init() starts them in this order. */
+    private static List<Module> fileImports(Module module) {
+        List<Module> imported = new ArrayList<>();
+        for (Decl.Import imp : module.imports) {
+            if (!imp.fileImport) {
+                continue;
+            }
+            Module dependency = module.importedModules.get(sprig.compiler.sem.ImportNames.aliasFor(imp));
+            if (dependency != null) {
+                imported.add(dependency);
+            }
+        }
+        return imported;
+    }
+
+    /**
+     * Whether $init() of a module does anything: the module has a top-level
+     * statement, or imports a module that has. Only such a module has an entry
+     * check, so a module of declarations alone is generated without one.
+     */
+    private boolean initializes(Module module) {
+        Boolean known = moduleInitializes.get(module);
+        if (known != null) {
+            return known;
+        }
+        // Import cycles are rejected before generation; this entry only ends a recursion.
+        moduleInitializes.put(module, false);
+        boolean result = !module.topStatements.isEmpty();
+        for (Module dependency : fileImports(module)) {
+            result = result || initializes(dependency);
+        }
+        moduleInitializes.put(module, result);
+        return result;
+    }
+
+    /**
+     * The check at the start of every function of a module and of every
+     * constructor of its classes with methods. A program started through main
+     * has run $init() before any of them; Java code that calls a function or
+     * makes an object directly, as a host framework's entry point does, has
+     * not, and would find every top-level binding at its Java default.
+     */
+    private void emitEntryCheck(JavaWriter w, Module module) {
+        w.blank();
+        w.line("// Every function of this module, and every constructor of a class of it that has");
+        w.line("// methods, begins here. Java code may call them without having run $init(): the");
+        w.line("// top-level statements then run first, as they do when the module is imported.");
+        w.open("static void $ensureInit()");
+        w.open("if (!$Started.BEFORE_FIRST_ENTRY && !$initialized)");
+        w.line("$initOnEntry();");
+        w.close();
+        w.close();
+        w.blank();
+        w.line("// Whether $init() had begun when the first function or constructor was entered. It");
+        w.line("// has in every program started through main, and this constant then lets the JIT");
+        w.line("// drop the check; otherwise the check reads $initialized on each entry.");
+        w.open("private static final class $Started");
+        w.line("static final boolean BEFORE_FIRST_ENTRY = $initialized;");
+        w.close();
+        w.blank();
+        w.line("// What the statements throw reaches the caller: an unchecked failure as it is, a");
+        w.line("// checked exception, which the function entered does not declare, as a cause.");
+        w.open("private static void $initOnEntry()");
+        w.open("try");
+        w.line("$init();");
+        w.close();
+        w.open("catch (java.lang.RuntimeException | java.lang.Error failure)");
+        w.line("throw failure;");
+        w.close();
+        w.open("catch (java.lang.Exception failure)");
+        w.line("throw new java.lang.IllegalStateException("
+                + quote("Sprig module '" + module.name + "' failed to initialize: ") + " + failure, failure);");
+        w.close();
+        w.close();
     }
 
     /**
@@ -911,6 +1001,9 @@ public final class JavaGenerator {
             w.line("@Override"); // javac confirms the witness really overrides the Java method
         }
         w.open(sig.toString());
+        if (owner == null && initializes(currentModule)) {
+            w.line("$ensureInit();");
+        }
         if (func.foreignBoundary) {
             // Foreign conformance methods are a checked JVM boundary: a Java
             // caller can pass null, so non-null reference parameters are

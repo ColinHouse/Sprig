@@ -68,6 +68,26 @@ CounterActions counter = sprig.user.sprig_fabric_counter.$M_main.fn$new_counter(
 v0.8.0-beta.1 和更早的 SDK 把所有模组的类都生成到 `sprig.user`，运行时在 `sprig.runtime`，所以两个 Sprig 模组装进同一个游戏时会有同名的类。
 :::
 
+## 在模组里用顶层的 `let` 和 `var`
+
+游戏里没有“运行 `main.spr`”这一步。Fabric 调用 Java 入口，Java 入口调用 `$M_main.fn$new_wand(...)`，之后 Minecraft 再调用法杖的 `use`。Java 第一次调进 Sprig 时，`main.spr` 和它导入的模块的顶层语句会先运行，而且只运行一次。所以在模块顶层写下这一行：
+
+```sprig
+let cooldown_ticks = 20
+```
+
+模组里的每个函数和方法读到的都是 `20`，和在 `sprig test` 里一样。
+
+- **第一次调用放在模组的初始化入口里**，模板就是这么做的。这样游戏的其他线程调进来之前，顶层语句已经运行完了；它们还在运行的时候，别的线程调进来是不会等的。
+- **顶层语句抛出错误，失败的是触发它的那次调用**，Fabric 会把它报在对应的入口上。顶层语句不会再运行第二遍。
+- **顶层变量通过 Sprig 函数来读**，别在 Java 里直接读 `$M_main.cooldown_ticks` 这样的字段：读字段不会让顶层语句运行。
+
+更完整的说明见 [Gradle 集成](/guide/gradle#calling-from-java)。
+
+::: tip 这是 `main` 分支上的行为
+v0.9.0-beta.1 和更早的 SDK 里，Java 入口直接调用函数时顶层语句不会运行，顶层变量是 `null` 或 `0`。用这些版本时，先在入口里调用一次 `$M_main.$init()`（它声明了 `throws Exception`）。
+:::
+
 ## 测试过的版本
 
 模板在这组版本上测试过：Minecraft 26.3、Fabric Loader 0.19.5、Fabric API 0.161.0+26.3、Fabric Loom 1.18.2、Gradle 9.7.1，以及 OpenJDK 26.0.1（编译目标为 Java 25）。这只是实际测过的一组组合，不代表所有 Fabric 或 Loom 版本都能用。

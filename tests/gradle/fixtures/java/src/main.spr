@@ -1,7 +1,11 @@
 import dev.sprig.fixture.Meter as Meter
 
+# demo.Main makes the Counter itself, with `new`, and no generated main runs:
+# the constructor is what runs this top-level statement first.
+let answer = 42
+
 class Counter:
     func current() -> Int:
-        return 42
+        return answer
 
 conform Counter to Meter

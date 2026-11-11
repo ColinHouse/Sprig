@@ -1,0 +1,7 @@
+let names: MutableList[String] = []
+
+func remember(name: String) -> Unit:
+    names.append(name)
+
+func seen() -> Int:
+    return names.size()

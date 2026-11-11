@@ -74,4 +74,29 @@ Two things to keep in mind:
 SDK v0.8.0-beta.1 and earlier generate every project's classes into `sprig.user`, with the runtime in `sprig.runtime`. When you move on from one of them, change `sprig.user.` in your Java code to `sprig.user.<project>.`.
 :::
 
+## When a top-level `let` is initialized for Java callers {#calling-from-java}
+
+Under `sprig run`, a module's top-level statements, including the initial values of its top-level `let`s and `var`s, run as soon as the program starts. A Java project has no such start: Java calls a function directly, or makes an object with `new`. Say `src/store.spr` is this module:
+
+<<< @/snippets/guide/java_caller_store.spr
+
+Java uses it like this, with no "init" call first:
+
+```java
+sprig.user.ordinary_project.$M_store.fn$remember("x");
+System.out.println(sprig.user.ordinary_project.$M_store.fn$seen());   // 1
+```
+
+The first time Java calls one of a module's functions, or makes an object of one of its classes that has methods, that module's top-level statements run first: those of the modules it imports, then its own, and only once. So however your Sprig code is entered, the top-level variables it reads already have their values.
+
+Three things to keep in mind:
+
+- **If a top-level statement fails, that first call is what fails.** An unchecked failure such as Sprig's `Error` reaches Java as it is. A checked Java exception arrives as an `IllegalStateException` with the original as its cause. The statements don't run a second time, so treat it as fatal.
+- **Make the first call before other threads use the code.** The statements run once, on the thread that makes the first call. A call from another thread during that time doesn't wait for them, and it may read a variable that has no value yet. A framework's initializer, such as Fabric's `ModInitializer`, is the right place for the first call.
+- **Don't read a top-level variable's field from Java**, such as `$M_store.names`. Reading a field doesn't run the statements, so before the first call it's still `null`. Read it through a function.
+
+::: tip This describes the `main` branch
+SDK v0.9.0-beta.1 and earlier don't do this: when Java calls a function directly, the top-level statements haven't run, and top-level variables are `null` or `0`. With one of those versions, call `$init()` on the module's class once before the first call, for example `sprig.user.ordinary_project.$M_store.$init()` (it declares `throws Exception`).
+:::
+
 The [`dev.sprig` plugin guide](https://github.com/ColinHouse/Sprig/blob/main/libraries/sprig-gradle/README.md) covers the remaining options, compatibility and every task in detail. The plugin saves you from writing the same build setup in every project. It doesn't replace Gradle, Loom or Java, and it says nothing about whether Sprig is more productive than Java.
